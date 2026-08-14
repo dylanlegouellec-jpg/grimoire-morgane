@@ -82,7 +82,7 @@ function demoRecipes() {
   return [
     {
       id: "r1",
-      title: "Kouign-amann",
+      title: "Kouign-am",
       type: "sucre",
       time: 70,
       servings: 8,
