@@ -1,12 +1,12 @@
 import { supabase } from './supabase';
 
 export const saveNewRecipe = async (recipeData) => {
-  // 1. Validation sur le titre et les ingrédients
+  // 1. Validation : on vérifie bien le title
   if (!recipeData.title || !recipeData.ingredients || recipeData.ingredients.length === 0) {
     throw new Error("Recette invalide : titre ou ingrédients manquants.");
   }
 
-  // 2. Envoi avec les noms de colonnes exacts de ta base Supabase
+  // 2. Envoi avec les vrais noms de colonnes de ta table Supabase
   const { data, error } = await supabase
     .from('recipes')
     .insert([{
