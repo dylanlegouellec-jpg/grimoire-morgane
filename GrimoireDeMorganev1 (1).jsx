@@ -1428,7 +1428,7 @@ useEffect(() => {
     /* pas d'URL exploitable */
   }
 }, []);
-
+  
  useEffect(() => { if (ready) saveKey("grimoire:recipes", recipes); }, [recipes, ready]);
 useEffect(() => { if (ready) saveKey("grimoire:pantry", pantry); }, [pantry, ready]);
 useEffect(() => { if (ready) saveKey("grimoire:shoppingSelected", shoppingSelected); }, [shoppingSelected, ready]);
