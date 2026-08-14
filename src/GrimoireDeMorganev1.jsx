@@ -1456,10 +1456,12 @@ const toggleFavorite = async (id) => {
 
     const newFavoriteStatus = !recipeToUpdate.is_favorite;
 
-    // Mise à jour instantanée de l'interface
-    setRecipes((prev) => prev.map((r) => (r.id === id ? { ...r, is_favorite: newFavoriteStatus } : r)));
+    // 1. Mise à jour instantanée de l'interface locale
+    setRecipes((prev) => 
+      prev.map((r) => (r.id === id ? { ...r, is_favorite: newFavoriteStatus } : r))
+    );
 
-    // Mise à jour dans Supabase
+    // 2. Mise à jour de la base de données Supabase
     try {
       const { error } = await supabase
         .from('recipe')
