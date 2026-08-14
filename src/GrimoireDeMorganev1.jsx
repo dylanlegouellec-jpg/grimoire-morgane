@@ -211,26 +211,6 @@ function demoRecipes() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  STOCKAGE PERSISTANT                                                */
-/* ------------------------------------------------------------------ */
-
-async function loadKey(key, fallback) {
-  try {
-    const res = await window.storage.get(key, false);
-    return res ? JSON.parse(res.value) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-async function saveKey(key, value) {
-  try {
-    await window.storage.set(key, JSON.stringify(value), false);
-  } catch {
-    /* silencieux : le grimoire continue de fonctionner en mémoire */
-  }
-}
-
-/* ------------------------------------------------------------------ */
 /*  PARTAGE, IMPORT / EXPORT, IMPRESSION                               */
 /* ------------------------------------------------------------------ */
 
@@ -320,6 +300,23 @@ function buildPrintHTML(recipe, servings, ingredients) {
   </div>
 </body></html>`;
 }
+
+/* ------------------------------------------------------------------ */
+/*  LocalStorage Superbase                 */
+/* ------------------------------------------------------------------ */
+
+import { saveNewRecipe } from './src/recipeService';
+
+// ... dans ta fonction de soumission de recette :
+const handleSave = async (recipe) => {
+  try {
+    await saveNewRecipe(recipe);
+    showToast("Recette enregistrée sur Supabase !");
+  } catch (error) {
+    console.error("Erreur lors de l'enregistrement :", error);
+    showToast("Erreur de sauvegarde.");
+  }
+};
 
 /* ------------------------------------------------------------------ */
 /*  DÉCLENCHEUR SECRET (triple-clic ou appui long 2s)                  */
