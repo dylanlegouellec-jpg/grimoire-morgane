@@ -1404,7 +1404,7 @@ export default function GrimoireDeMorgane() {
     else setTextModal({ title: label, text });
   };
 
-  useEffect(() => {
+useEffect(() => {
   const r = loadKey("grimoire:recipes", null);
   const pn = loadKey("grimoire:pantry", []);
   const ss = loadKey("grimoire:shoppingSelected", []);
@@ -1415,21 +1415,19 @@ export default function GrimoireDeMorgane() {
   setShoppingSelected(ss || []);
   setShoppingList(sl || []);
   setReady(true);
+
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("import");
+    if (code) {
+      const parsed = decodeRecipeCode(code);
+      if (parsed) setPendingImport(parsed);
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  } catch {
+    /* pas d'URL exploitable */
+  }
 }, []);
-  
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const code = params.get("import");
-        if (code) {
-          const parsed = decodeRecipeCode(code);
-          if (parsed) setPendingImport(parsed);
-          window.history.replaceState({}, "", window.location.pathname);
-        }
-      } catch {
-        /* pas d'URL exploitable */
-      }
-    })();
-  }, []);
 
  useEffect(() => { if (ready) saveKey("grimoire:recipes", recipes); }, [recipes, ready]);
 useEffect(() => { if (ready) saveKey("grimoire:pantry", pantry); }, [pantry, ready]);
