@@ -302,6 +302,23 @@ function buildPrintHTML(recipe, servings, ingredients) {
 }
 
 /* ------------------------------------------------------------------ */
+/*  LocalStorage Superbase                 */
+/* ------------------------------------------------------------------ */
+
+import { saveNewRecipe } from './recipeService';
+
+// ... dans ta fonction de soumission de recette :
+const handleSave = async (recipe) => {
+  try {
+    await saveNewRecipe(recipe);
+    showToast("Recette enregistrée sur Supabase !");
+  } catch (error) {
+    console.error("Erreur lors de l'enregistrement :", error);
+    showToast("Erreur de sauvegarde.");
+  }
+};
+
+/* ------------------------------------------------------------------ */
 /*  DÉCLENCHEUR SECRET (triple-clic ou appui long 2s)                  */
 /* ------------------------------------------------------------------ */
 
