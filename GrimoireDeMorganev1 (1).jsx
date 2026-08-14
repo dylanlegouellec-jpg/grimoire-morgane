@@ -226,7 +226,7 @@ async function loadKey(key, fallback) {
   return fallback;
 }
 
-async function saveKey(key, value) {
+function saveKey(key, value) {
   try {
     if (typeof window !== "undefined") {
       localStorage.setItem(key, JSON.stringify(value));
@@ -1379,41 +1379,36 @@ export default function GrimoireDeMorgane() {
     else setTextModal({ title: label, text });
   };
 
-  // Gestion des paramètres d'URL au chargement
-useEffect(() => {
-  try {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get("import");
-    if (code) {
-      const parsed = decodeRecipeCode(code);
-      if (parsed) setPendingImport(parsed);
-      window.history.replaceState({}, "", window.location.pathname);
+ // 1. Déclaration des états (EN PREMIER)
+  const [recipes, setRecipes] = useState(() => {
+    const saved = loadKey("grimoire:recipes", null);
+    return saved && saved.length ? saved : demoRecipes();
+  });
+
+  const [pantry, setPantry] = useState(() => loadKey("grimoire:pantry", []));
+  const [shoppingSelected, setShoppingSelected] = useState(() => loadKey("grimoire:shoppingSelected", []));
+  const [shoppingList, setShoppingList] = useState(() => loadKey("grimoire:shoppingList", []));
+
+  // 2. Traitement de l'URL au chargement
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("import");
+      if (code) {
+        const parsed = decodeRecipeCode(code);
+        if (parsed) setPendingImport(parsed);
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    } catch {
+      /* pas d'URL exploitable */
     }
-  } catch {
-    /* pas d'URL exploitable */
-  }
-}, []);
+  }, []);
 
-// Sauvegardes automatiques dès qu'un state change
-useEffect(() => { saveKey("grimoire:recipes", recipes); }, [recipes]);
-useEffect(() => { saveKey("grimoire:pantry", pantry); }, [pantry]);
-useEffect(() => { saveKey("grimoire:shoppingSelected", shoppingSelected); }, [shoppingSelected]);
-useEffect(() => { saveKey("grimoire:shoppingList", shoppingList); }, [shoppingList]);
-
- useEffect(() => { saveKey("grimoire:recipes", recipes); }, [recipes]);
-useEffect(() => { saveKey("grimoire:pantry", pantry); }, [pantry]);
-useEffect(() => { saveKey("grimoire:shoppingSelected", shoppingSelected); }, [shoppingSelected]);
-useEffect(() => { saveKey("grimoire:shoppingList", shoppingList); }, [shoppingList]);
-  
-// L'initialisation lit le LocalStorage AVANT le premier rendu
-const [recipes, setRecipes] = useState(() => {
-  const saved = loadKey("grimoire:recipes", null);
-  return saved && saved.length ? saved : demoRecipes();
-});
-
-const [pantry, setPantry] = useState(() => loadKey("grimoire:pantry", []));
-const [shoppingSelected, setShoppingSelected] = useState(() => loadKey("grimoire:shoppingSelected", []));
-const [shoppingList, setShoppingList] = useState(() => loadKey("grimoire:shoppingList", []));
+  // 3. Sauvegardes automatiques (JUSTE APRÈS)
+  useEffect(() => { saveKey("grimoire:recipes", recipes); }, [recipes]);
+  useEffect(() => { saveKey("grimoire:pantry", pantry); }, [pantry]);
+  useEffect(() => { saveKey("grimoire:shoppingSelected", shoppingSelected); }, [shoppingSelected]);
+  useEffect(() => { saveKey("grimoire:shoppingList", shoppingList); }, [shoppingList]);
   
   const toggleFavorite = (id) => {
     setRecipes((prev) => prev.map((r) => (r.id === id ? { ...r, favorite: !r.favorite } : r)));
