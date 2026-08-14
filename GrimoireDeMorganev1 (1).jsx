@@ -213,11 +213,11 @@ function demoRecipes() {
 /* ------------------------------------------------------------------ */
 /*  STOCKAGE PERSISTANT (Compatibilité unifiée)                       */
 /* ------------------------------------------------------------------ */
-
 function loadKey(key, fallback) {
   try {
     if (typeof window !== "undefined") {
       const local = localStorage.getItem(key);
+      console.log(`[LOAD] ${key} ->`, local);
       return local ? JSON.parse(local) : fallback;
     }
   } catch (e) {
@@ -229,13 +229,13 @@ function loadKey(key, fallback) {
 function saveKey(key, value) {
   try {
     if (typeof window !== "undefined") {
+      console.log(`[SAVE] ${key} ->`, value);
       localStorage.setItem(key, JSON.stringify(value));
     }
   } catch (e) {
     console.error("Erreur écriture LocalStorage", e);
   }
 }
-
 /* ------------------------------------------------------------------ */
 /*  PARTAGE, IMPORT / EXPORT, IMPRESSION                               */
 /* ------------------------------------------------------------------ */
