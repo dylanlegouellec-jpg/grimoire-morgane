@@ -1414,7 +1414,6 @@ useEffect(() => {
   setPantry(pn || []);
   setShoppingSelected(ss || []);
   setShoppingList(sl || []);
-  setReady(true);
 
   try {
     const params = new URLSearchParams(window.location.search);
@@ -1429,10 +1428,10 @@ useEffect(() => {
   }
 }, []);
   
- useEffect(() => { if (ready) saveKey("grimoire:recipes", recipes); }, [recipes, ready]);
-useEffect(() => { if (ready) saveKey("grimoire:pantry", pantry); }, [pantry, ready]);
-useEffect(() => { if (ready) saveKey("grimoire:shoppingSelected", shoppingSelected); }, [shoppingSelected, ready]);
-useEffect(() => { if (ready) saveKey("grimoire:shoppingList", shoppingList); }, [shoppingList, ready]);
+ useEffect(() => { saveKey("grimoire:recipes", recipes); }, [recipes]);
+useEffect(() => { saveKey("grimoire:pantry", pantry); }, [pantry]);
+useEffect(() => { saveKey("grimoire:shoppingSelected", shoppingSelected); }, [shoppingSelected]);
+useEffect(() => { saveKey("grimoire:shoppingList", shoppingList); }, [shoppingList]);
 
   const saveRecipe = (recipe) => {
   setRecipes((prev) => {
