@@ -1390,12 +1390,16 @@ export default function GrimoireDeMorgane() {
 
     // Si le LocalStorage contient un tableau avec des recettes, on prend 'r'.
     // S'il est vide ([]) ou inexistant, on charge 'demoRecipes()'.
+    let initialRecipes = demoRecipes();
+
     if (r && Array.isArray(r) && r.length > 0) {
-      setRecipes(r);
+      initialRecipes = r;
     } else {
-      setRecipes(demoRecipes());
+      // Force l'écriture dans le LocalStorage s'il est vide au tout premier lancement
+      await saveKey("grimoire:recipes", initialRecipes);
     }
 
+    setRecipes(initialRecipes);
     setPantry(pn || []);
     setShoppingSelected(ss || []);
     setShoppingList(sl || []);
