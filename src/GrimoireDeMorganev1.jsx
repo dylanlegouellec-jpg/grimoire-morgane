@@ -723,7 +723,7 @@ function RecipeCard({ recipe, onOpen, onToggleFavorite }) {
         <DishArt recipe={recipe} />
         <button
           type="button"
-         className={&#96;fav-btn ${recipe.is_favorite ? "active" : ""}&#96;}
+      className={`fav-btn ${recipe.is_favorite ? "active" : ""}`}
           onClick={(e) => {
             e.stopPropagation();
             onToggleFavorite(recipe.id);
