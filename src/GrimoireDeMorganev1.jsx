@@ -1354,8 +1354,8 @@ const TABS = [
 ];
 const FILTERS = [
   { key: "tout", label: "Tout" },
-  { key: "sale", label: "Salé" },
-  { key: "sucre", label: "Sucré" },
+  { key: "salé", label: "Salé" },
+  { key: "sucré", label: "Sucré" },
 ];
 
 /* ------------------------------------------------------------------ */
