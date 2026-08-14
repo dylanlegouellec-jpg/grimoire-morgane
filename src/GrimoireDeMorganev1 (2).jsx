@@ -217,8 +217,8 @@ function demoRecipes() {
 // ⚠️ À compléter avec ton propre projet Supabase.
 // Tant que ces valeurs sont vides, l'app fonctionne en mémoire avec les
 // recettes de démonstration, sans planter.
-const SUPABASE_URL = ""; // ex: "https://xxxxxxxx.supabase.co"
-const SUPABASE_ANON_KEY = ""; // ta clé "anon public"
+const SUPABASE_URL = "mdvzdbbbueekrbzghetd"https://TON_PROJET.supabase.co";"; // ex: "https://xxxxxxxx.supabase.co"
+const SUPABASE_ANON_KEY = "sb_publishable_0gw7r9y0kbMEWhitsUcNqA_cwhTKNFh"; // ta clé "anon public"
 
 const SUPABASE_READY = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
