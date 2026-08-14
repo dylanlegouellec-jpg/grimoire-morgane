@@ -1089,15 +1089,9 @@ function RecipesView({ recipes, filter, search, favoritesOnly, onToggleFavorite,
   const q = search.trim().toLowerCase();
   const filtered = recipes.filter((r) => {
 if (filter !== "tout") {
-      const normalize = (str) => (str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "");
-      if (!r.category || normalize(r.category) !== normalize(filter)) return false;
-    }
-
-    if (filter !== "tout") {
-      const normalize = (str) => (str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "");
-      console.log("Filtre cliqué:", filter, "| Catégorie en base:", r.category);
-      if (!r.category || normalize(r.category) !== normalize(filter)) return false;
-    }
+    const normalize = (str) => (str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "");
+    if (!r.category || normalize(r.category) !== normalize(filter)) return false;
+  }
     
     if (favoritesOnly && !r.is_favorite) return false;
     if (q) {
