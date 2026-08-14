@@ -97,7 +97,7 @@ function demoRecipes() {
       ],
       steps: [
         "Pétrir la farine, l'eau, la levure et le sel en une pâte souple.",
-        "Laisser lever 1 heure, puis étaler et incorporer le beurre en tourant comme une pâte feuilletée.",
+        "Laisser lever 1 heure, puis étaler et incorporer le beurre en tournant comme une pâte feuilletée.",
         "Saupoudrer généreusement de sucre entre chaque tour.",
         "Façonner en cercle, laisser reposer 20 minutes puis cuire 35 min à 210°C.",
       ],
@@ -211,28 +211,33 @@ function demoRecipes() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  STOCKAGE PERSISTANT                                                */
+/*  STOCKAGE PERSISTANT (Compatibilité unifiée)                       */
 /* ------------------------------------------------------------------ */
 
-// Remplace window.storage par le localStorage standard
-const storage = {
-  get: async (key) => {
-    try {
-      const value = localStorage.getItem(key);
-      return value ? JSON.parse(value) : null;
-    } catch (e) {
-      console.error("Erreur lecture storage", e);
-      return null;
+async function loadKey(key, fallback) {
+  try {
+    if (typeof window !== "undefined" && window.storage && typeof window.storage.get === "function") {
+      const res = await window.storage.get(key, false);
+      return res ? JSON.parse(res.value) : fallback;
     }
-  },
-  set: async (key, value) => {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-    } catch (e) {
-      console.error("Erreur écriture storage", e);
-    }
+    const local = localStorage.getItem(key);
+    return local ? JSON.parse(local) : fallback;
+  } catch {
+    return fallback;
   }
-};
+}
+
+async function saveKey(key, value) {
+  try {
+    if (typeof window !== "undefined" && window.storage && typeof window.storage.set === "function") {
+      await window.storage.set(key, JSON.stringify(value), false);
+      return;
+    }
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* fallback silencieux en mémoire */
+  }
+}
 
 /* ------------------------------------------------------------------ */
 /*  PARTAGE, IMPORT / EXPORT, IMPRESSION                               */
@@ -268,7 +273,7 @@ function extractCodeFromInput(raw) {
     const fromUrl = url.searchParams.get("import");
     if (fromUrl) return fromUrl;
   } catch {
-    /* pas une URL, on considère que c'est le code brut */
+    /* pas une URL */
   }
   return trimmed;
 }
@@ -366,7 +371,7 @@ function useSecretTrigger(onTrigger) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  ILLUSTRATIONS SVG "AQUARELLE CULINAIRE" (aucune image externe)      */
+/*  ILLUSTRATIONS SVG "AQUARELLE CULINAIRE"                           */
 /* ------------------------------------------------------------------ */
 
 function TarteSVG({ uid }) {
@@ -1343,30 +1348,11 @@ const FILTERS = [
 /* ------------------------------------------------------------------ */
 
 export default function GrimoireDeMorgane() {
-const [ready, setReady] = useState(true);
-
-  const [recipes, setRecipes] = useState(() => {
-    try {
-      const saved = localStorage.getItem('grimoire_recipes');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) { return []; }
-  });
-
-  const [pantry, setPantry] = useState(() => {
-    try {
-      const saved = localStorage.getItem('grimoire_pantry');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) { return []; }
-  });
-
+  const [ready, setReady] = useState(false);
+  const [recipes, setRecipes] = useState([]);
+  const [pantry, setPantry] = useState([]);
   const [shoppingSelected, setShoppingSelected] = useState([]);
-
-  const [shoppingList, setShoppingList] = useState(() => {
-    try {
-      const saved = localStorage.getItem('grimoire_shopping');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) { return []; }
-  });
+  const [shoppingList, setShoppingList] = useState([]);
 
   const [tab, setTab] = useState("recettes");
   const [filter, setFilter] = useState("tout");
@@ -1381,18 +1367,6 @@ const [ready, setReady] = useState(true);
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
 
-  useEffect(() => {
-  localStorage.setItem('grimoire_recipes', JSON.stringify(recipes));
-}, [recipes]);
-
-useEffect(() => {
-  localStorage.setItem('grimoire_pantry', JSON.stringify(pantry));
-}, [pantry]);
-
-useEffect(() => {
-  localStorage.setItem('grimoire_shopping', JSON.stringify(shoppingList));
-}, [shoppingList]);
-  
   const touchStart = useRef(null);
   const secretHeader = useSecretTrigger(() => setShowSecretSettings(true));
 
@@ -1408,6 +1382,20 @@ useEffect(() => {
     else setTextModal({ title: label, text });
   };
 
+  useEffect(() => {
+    (async () => {
+      const [r, pn, ss, sl] = await Promise.all([
+        loadKey("grimoire:recipes", null),
+        loadKey("grimoire:pantry", []),
+        loadKey("grimoire:shoppingSelected", []),
+        loadKey("grimoire:shoppingList", []),
+      ]);
+      setRecipes(r && r.length ? r : demoRecipes());
+      setPantry(pn || []);
+      setShoppingSelected(ss || []);
+      setShoppingList(sl || []);
+      setReady(true);
+
       try {
         const params = new URLSearchParams(window.location.search);
         const code = params.get("import");
@@ -1417,7 +1405,7 @@ useEffect(() => {
           window.history.replaceState({}, "", window.location.pathname);
         }
       } catch {
-        /* pas d'URL exploitable, tant pis */
+        /* pas d'URL exploitable */
       }
     })();
   }, []);
@@ -1480,8 +1468,6 @@ useEffect(() => {
 
   const filterIndex = FILTERS.findIndex((f) => f.key === filter);
 
-  // Le swipe ne fait basculer que les filtres Recettes ("Tout" / "Salé" / "Sucré").
-  // La navigation principale du bas (Recettes / Mon Frigo / Courses) reste fixe.
   const onTouchStart = (e) => { touchStart.current = e.touches[0].clientX; };
   const onTouchEnd = (e) => {
     if (touchStart.current == null || tab !== "recettes") { touchStart.current = null; return; }
@@ -1623,7 +1609,6 @@ useEffect(() => {
     </div>
   );
 }
-
 
 /* ------------------------------------------------------------------ */
 /*  CSS                                                                 */
@@ -1808,7 +1793,7 @@ const CSS = `
 }
 .portions-stepper span { min-width: 18px; text-align: center; font-family: 'EB Garamond', serif; font-size: 1rem; color: var(--ink); }
 .scaled-note { font-style: italic; font-weight: normal; text-transform: none; letter-spacing: 0; font-size: 0.78rem; color: var(--ink-soft); }
-.detail-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.detail-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
 .detail-actions .seal { flex: 1; justify-content: center; }
 
 /* --- Sceaux / boutons --- */
@@ -1840,6 +1825,7 @@ const CSS = `
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 6px 14px rgba(0,0,0,0.3);
   cursor: pointer;
+  z-index: 10;
 }
 @media (max-width: 520px) { .fab { right: 18px; } }
 
@@ -1873,148 +1859,63 @@ const CSS = `
   background: var(--gold); color: #2a1c07; display: flex; align-items: center; justify-content: center; cursor: pointer;
 }
 .shopping-actions { display: flex; gap: 18px; margin-bottom: 10px; }
+.link-btn { background: none; border: none; color: var(--ink-soft); cursor: pointer; font-family: 'Cinzel', serif; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 4px; padding: 0; }
 .recipe-select-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
 .recipe-select-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; }
-.recipe-select-row span:nth-child(2) { flex: 1; }
+.recipe-select-row span:nth-child(2) { flex: 1; font-family: 'Cinzel', serif; font-size: 0.88rem; }
 .shopping-result { margin-top: 20px; }
 .aisle-block { margin-bottom: 16px; }
-.aisle-block h4 { font-family: 'Cinzel', serif; font-size: 0.78rem; letter-spacing: 1px; color: var(--gold); text-transform: uppercase; margin-bottom: 8px; border-bottom: 1px dashed var(--line); padding-bottom: 4px; }
+.aisle-block h4 { font-family: 'Cinzel', serif; font-size: 0.82rem; letter-spacing: 1px; color: var(--gold); border-bottom: 1px dashed var(--line); padding-bottom: 4px; margin: 12px 0 8px; }
 .shopping-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
-.shopping-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 0.92rem; }
+.shopping-list li { display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.3); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line); font-size: 0.92rem; }
 .checkbox-row { display: flex; align-items: center; gap: 10px; cursor: pointer; flex: 1; }
-.shopping-list li.checked { opacity: 0.45; text-decoration: line-through; }
-.checkbox {
-  width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid var(--gold);
-  display: flex; align-items: center; justify-content: center; color: var(--gold); flex-shrink: 0;
-}
-.qty-stepper { display: flex; gap: 4px; opacity: 0.45; flex-shrink: 0; }
-.qty-stepper button {
-  width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--line);
-  background: rgba(255,255,255,0.5); color: var(--ink-soft); display: flex; align-items: center; justify-content: center; cursor: pointer;
-}
-.bought-block h4 { color: var(--ink-soft); }
+.checkbox { width: 18px; height: 18px; border: 1px solid var(--gold); border-radius: 4px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.5); }
+.checked .checkbox { background: var(--gold); color: #fff; }
+.checked span { text-decoration: line-through; opacity: 0.6; }
+.qty-stepper { display: flex; gap: 4px; }
+.qty-stepper button { width: 22px; height: 22px; border-radius: 4px; border: 1px solid var(--line); background: rgba(255,255,255,0.5); display: flex; align-items: center; justify-content: center; cursor: pointer; }
 
-/* --- Navigation basse --- */
-.bottom-nav {
-  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-  width: 100%; max-width: 480px;
-  display: flex; justify-content: space-around;
-  background: var(--ink);
-  border-top: 2px solid var(--gold);
-  padding: 10px 0 max(10px, env(safe-area-inset-bottom));
-}
-.nav-btn {
-  background: none; border: none; color: #b6a884;
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.5px;
-  cursor: pointer; padding: 4px 10px;
-}
-.nav-btn.active { color: var(--gold-light); }
+/* --- Modales & Overlays --- */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(20,14,4,0.65); backdrop-filter: blur(3px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.modal { background: var(--parchment); border: 2px solid var(--gold); border-radius: 12px; padding: 22px 20px; width: 100%; max-width: 440px; max-height: 85vh; overflow-y: auto; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+.modal-close { position: absolute; top: 14px; right: 14px; background: none; border: none; color: var(--ink-soft); cursor: pointer; z-index: 2; }
+.dropcap-title { font-family: 'Cinzel Decorative', 'Cinzel', serif; font-size: 1.25rem; margin: 0 0 4px; color: var(--ink); text-align: center; }
+.flourish { text-align: center; color: var(--gold); font-size: 1.2rem; margin: 6px 0 12px; }
 
-/* --- Modales / page de grimoire --- */
-.modal-backdrop {
-  position: fixed; inset: 0; background: rgba(20,14,4,0.55);
-  display: flex; align-items: flex-end; justify-content: center; z-index: 50;
-  padding: 0;
-}
-.modal, .grimoire-page {
-  background: var(--parchment);
-  width: 100%; max-width: 480px; max-height: 88vh; overflow-y: auto; overflow-x: hidden;
-  border-radius: 18px 18px 0 0;
-  padding: 22px 20px 30px;
-  position: relative;
-  border-top: 3px solid var(--gold);
-  animation: slideUp 0.28s ease;
-}
-.form-clean { max-width: 100%; overflow-x: hidden; }
-@keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-.modal-close {
-  position: absolute; top: 14px; right: 14px; z-index: 5;
-  background: rgba(0,0,0,0.06); border: none; border-radius: 50%;
-  width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
-  color: var(--ink-soft); cursor: pointer;
-}
-.dropcap-title { font-family: 'Cinzel', serif; font-size: 1.3rem; margin: 10px 0 4px; }
-.flourish { text-align: center; color: var(--gold); font-size: 1.1rem; margin: 12px 0; }
-.modal h4 { font-family: 'Cinzel', serif; font-size: 0.85rem; letter-spacing: 0.5px; margin: 16px 0 8px; color: var(--ink-soft); }
-.ingredient-list, .steps-list { padding-left: 20px; margin: 0 0 12px; }
-.ingredient-list li, .steps-list li { margin-bottom: 5px; font-size: 0.95rem; }
-
-.field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; font-size: 0.82rem; color: var(--ink-soft); font-family: 'Cinzel', serif; letter-spacing: 0.3px; max-width: 100%; }
-.field input, .field select, .field textarea {
-  font-family: 'EB Garamond', serif; font-size: 1rem; color: var(--ink);
-  background: rgba(255,255,255,0.5); border: 1px solid var(--line); border-radius: 8px;
-  padding: 9px 10px; resize: vertical; width: 100%; max-width: 100%;
-}
-.field-row { display: flex; gap: 10px; max-width: 100%; }
-.field-row .field { flex: 1; min-width: 0; }
-.field-discreet { opacity: 0.8; }
-.field-discreet span { font-size: 0.72rem; }
-.field-discreet input { font-size: 0.9rem; padding: 7px 9px; }
-
-/* --- Petits liens texte --- */
-.link-btn {
-  background: none; border: none; color: var(--gold);
-  font-family: 'Cinzel', serif; font-size: 0.66rem; letter-spacing: 0.5px;
-  display: inline-flex; align-items: center; gap: 5px;
-  cursor: pointer; padding: 4px 0; text-transform: uppercase;
-}
-
-/* --- Import / partage --- */
-.import-panel { margin: 10px 0 6px; display: flex; flex-direction: column; gap: 8px; }
-.import-panel textarea {
-  font-family: 'EB Garamond', serif; font-size: 0.9rem; color: var(--ink);
-  background: rgba(255,255,255,0.5); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px;
-  width: 100%; max-width: 100%;
-}
+.form-clean { display: flex; flex-direction: column; gap: 12px; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field span { font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.5px; color: var(--ink-soft); text-transform: uppercase; }
+.field input, .field select, .field textarea, .share-textarea { border: 1px solid var(--line); background: rgba(255,255,255,0.5); border-radius: 6px; padding: 8px 10px; font-family: 'EB Garamond', serif; font-size: 0.95rem; color: var(--ink); outline: none; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.field-discreet { opacity: 0.85; }
+.import-panel { background: rgba(179,135,42,0.1); border: 1px dashed var(--gold); padding: 10px; border-radius: 8px; margin-bottom: 10px; }
+.import-panel textarea { width: 100%; margin-bottom: 6px; }
 .import-panel-actions { display: flex; justify-content: space-between; align-items: center; }
-.import-error { color: var(--wine); font-size: 0.8rem; margin: 0; }
-.share-textarea {
-  width: 100%; font-family: monospace; font-size: 0.78rem; color: var(--ink-soft);
-  background: rgba(255,255,255,0.5); border: 1px solid var(--line); border-radius: 8px;
-  padding: 10px; margin-bottom: 14px; resize: vertical;
-}
-.share-option-row { display: flex; gap: 10px; flex-wrap: wrap; }
-.share-option-row .seal { flex: 1; justify-content: center; }
+.import-error { color: var(--wine); font-size: 0.8rem; margin: 4px 0; }
+.share-textarea { width: 100%; font-family: monospace; font-size: 0.8rem; margin-bottom: 12px; }
+.share-option-row { display: flex; gap: 8px; margin-top: 8px; }
+.share-option-row .seal { flex: 1; justify-content: center; font-size: 0.65rem; padding: 8px 12px; }
 
-/* --- Toast --- */
-.toast {
-  position: fixed; bottom: 78px; left: 50%; transform: translateX(-50%);
-  background: var(--ink); color: var(--gold-light);
-  font-family: 'Cinzel', serif; font-size: 0.72rem; letter-spacing: 0.5px;
-  padding: 10px 18px; border-radius: 999px; border: 1px solid var(--gold);
-  box-shadow: 0 6px 16px rgba(0,0,0,0.3); z-index: 70; text-align: center;
-  animation: fadeIn 0.25s ease;
-}
+/* --- Mode Cuisine --- */
+.cookmode-backdrop { position: fixed; inset: 0; background: var(--parchment); z-index: 150; padding: 20px; overflow-y: auto; }
+.cookmode { max-width: 440px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.cookmode-progress { font-family: 'Cinzel', serif; font-size: 0.75rem; color: var(--gold); letter-spacing: 1.5px; text-transform: uppercase; text-align: center; }
+.cookmode-steps { display: flex; flex-direction: column; gap: 10px; }
+.cookmode-step-card { background: rgba(255,255,255,0.5); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: flex; gap: 12px; cursor: pointer; transition: opacity 0.2s; }
+.cookmode-step-card.done { opacity: 0.45; background: rgba(0,0,0,0.03); }
+.step-check { width: 20px; height: 20px; border: 1px solid var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-top: 2px; flex-shrink: 0; }
+.cookmode-step-card.done .step-check { background: var(--gold); color: #fff; }
+.step-body { flex: 1; }
+.cookmode-step-text { margin: 0 0 6px; font-size: 1rem; line-height: 1.35; }
+.timer-btn { display: inline-flex; align-items: center; gap: 5px; font-family: 'Cinzel', serif; font-size: 0.68rem; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--gold); background: rgba(255,255,255,0.6); color: var(--ink); cursor: pointer; }
+.timer-btn.running { background: var(--gold); color: #fff; }
+.timer-btn.done { background: #3E7A3E; border-color: #3E7A3E; color: #fff; }
 
-/* --- Mode cuisine --- */
-.cookmode-backdrop {
-  position: fixed; inset: 0; z-index: 60; background: var(--ink);
-  display: flex; align-items: center; justify-content: center;
-}
-.cookmode {
-  width: 100%; max-width: 480px; height: 100%; padding: 30px 20px;
-  color: var(--parchment); position: relative;
-  display: flex; flex-direction: column; gap: 16px; overflow-y: auto;
-}
-.cookmode .modal-close { background: rgba(255,255,255,0.12); color: var(--parchment); }
-.cookmode-progress { font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 2px; color: var(--gold-light); text-transform: uppercase; }
-.cookmode .dropcap-title { color: var(--parchment); margin: 0; }
-.cookmode-steps { display: flex; flex-direction: column; gap: 12px; flex: 1; }
-.cookmode-step-card {
-  background: rgba(255,255,255,0.06); border: 1px solid rgba(217,180,92,0.3); border-radius: 12px;
-  padding: 14px; display: flex; gap: 12px; cursor: pointer;
-}
-.cookmode-step-card.done { opacity: 0.5; }
-.cookmode-step-card.done .cookmode-step-text { text-decoration: line-through; }
-.step-check {
-  width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--gold-light);
-  display: flex; align-items: center; justify-content: center; color: var(--gold-light); flex-shrink: 0; margin-top: 2px;
-}
-.step-body { flex: 1; display: flex; flex-direction: column; gap: 10px; }
-.cookmode-step-text { font-size: 1.12rem; line-height: 1.5; margin: 0; }
-.timer-btn.running { background: linear-gradient(180deg, #e0e0e0, #b8b8b8); }
-.timer-btn.done { background: linear-gradient(180deg, #8fbf7a, #5f9a4a); border-color: #5f9a4a; }
-.cookmode-nav { display: flex; gap: 12px; justify-content: space-between; margin-top: auto; }
-.cookmode-nav .seal { flex: 1; justify-content: center; }
+/* --- Navigation Basse --- */
+.bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; height: 68px; background: rgba(241,230,200,0.92); backdrop-filter: blur(8px); border-top: 1px solid var(--line); display: flex; justify-content: space-around; align-items: center; z-index: 50; }
+.nav-btn { display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: none; color: var(--ink-soft); cursor: pointer; font-family: 'Cinzel', serif; font-size: 0.65rem; letter-spacing: 0.5px; }
+.nav-btn.active { color: var(--gold); font-weight: 700; }
+
+.toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--gold-light); border: 1px solid var(--gold); padding: 8px 18px; border-radius: 999px; font-family: 'Cinzel', serif; font-size: 0.75rem; z-index: 200; box-shadow: 0 4px 12px rgba(0,0,0,0.25); animation: pop 0.2s ease; }
+@keyframes pop { from { transform: translate(-50%, 10px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
 `;
