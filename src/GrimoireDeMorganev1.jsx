@@ -1088,7 +1088,10 @@ function RecipeForm({ onClose, onSave, initialRecipe }) {
 function RecipesView({ recipes, filter, search, favoritesOnly, onToggleFavorite, onAddRequest, onOpen }) {
   const q = search.trim().toLowerCase();
   const filtered = recipes.filter((r) => {
-if (filter !== "tout" && (!r.category || r.category.toLowerCase() !== filter.toLowerCase())) return false;
+if (filter !== "tout") {
+      console.log("Filtre actif:", filter, "| Catégorie de la recette:", r.category);
+      if (!r.category || r.category.toLowerCase() !== filter.toLowerCase()) return false;
+    }
     if (favoritesOnly && !r.is_favorite) return false;
     if (q) {
       const inTitle = r.title.toLowerCase().includes(q);
