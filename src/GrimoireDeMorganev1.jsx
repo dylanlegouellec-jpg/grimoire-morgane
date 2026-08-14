@@ -22,6 +22,8 @@ import {
   FileText,
 } from "lucide-react";
 import { fetchRecipes, saveNewRecipe } from './recipeService';
+import { supabase } from './supabase';
+
 /* ------------------------------------------------------------------ */
 /*  DONNÉES                                                            */
 /* ------------------------------------------------------------------ */
