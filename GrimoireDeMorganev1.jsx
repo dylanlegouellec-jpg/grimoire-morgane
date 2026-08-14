@@ -1404,20 +1404,6 @@ useEffect(() => {
     else setTextModal({ title: label, text });
   };
 
-  useEffect(() => {
-    (async () => {
-      const [r, pn, ss, sl] = await Promise.all([
-        loadKey("grimoire:recipes", null),
-        loadKey("grimoire:pantry", []),
-        loadKey("grimoire:shoppingSelected", []),
-        loadKey("grimoire:shoppingList", []),
-      ]);
-      setRecipes(r && r.length ? r : demoRecipes());
-      setPantry(pn || []);
-      setShoppingSelected(ss || []);
-      setShoppingList(sl || []);
-      setReady(true);
-
       try {
         const params = new URLSearchParams(window.location.search);
         const code = params.get("import");
