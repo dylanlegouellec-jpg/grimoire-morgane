@@ -21,11 +21,11 @@ import {
   Square,
   FileText,
 } from "lucide-react";
-
+ 
 /* ------------------------------------------------------------------ */
 /*  DONNÉES                                                            */
 /* ------------------------------------------------------------------ */
-
+ 
 const AISLES = [
   { key: "fruits-legumes", label: "Fruits & Légumes", test: /oignon|ail|carotte|tomate|pomme|citron|herbe|persil|basilic|thym|laurier|échalote|poireau|courgette|champignon|salade|pêche|fraise|orange|banane|aubergine|poivron/i },
   { key: "boucherie", label: "Boucherie & Poissonnerie", test: /poulet|boeuf|bœuf|porc|veau|agneau|lardon|jambon|poisson|saumon|crevette|canard/i },
@@ -34,12 +34,12 @@ const AISLES = [
   { key: "epicerie-sucree", label: "Épicerie sucrée", test: /sucre|chocolat|vanille|miel|levure|cannelle|amande|noisette|confiture/i },
   { key: "boulangerie", label: "Boulangerie", test: /pain|baguette|brioche|pâte feuilletée|pâte brisée/i },
 ];
-
+ 
 function guessAisle(name) {
   const found = AISLES.find((a) => a.test.test(name));
   return found ? found.label : "Autre";
 }
-
+ 
 function estimateNutriscore(ingredients = []) {
   try {
     let score = 0;
@@ -56,7 +56,7 @@ function estimateNutriscore(ingredients = []) {
     return "C";
   }
 }
-
+ 
 function parseDurationMinutes(text = "") {
   try {
     const hMatch = text.match(/(\d+)\s*h\s*(\d{1,2})?/i);
@@ -72,12 +72,12 @@ function parseDurationMinutes(text = "") {
     return null;
   }
 }
-
+ 
 const NUTRI_COLORS = { A: "#3E7A3E", B: "#7A9A3E", C: "#C9A227", D: "#B8722B", E: "#A6432E" };
-
+ 
 let uid = 100;
 const nextId = () => `r${++uid}`;
-
+ 
 function demoRecipes() {
   return [
     {
@@ -209,11 +209,11 @@ function demoRecipes() {
     },
   ];
 }
-
+ 
 /* ------------------------------------------------------------------ */
 /*  STOCKAGE PERSISTANT                                                */
 /* ------------------------------------------------------------------ */
-
+ 
 async function loadKey(key, fallback) {
   try {
     const res = await window.storage.get(key, false);
@@ -229,11 +229,11 @@ async function saveKey(key, value) {
     /* silencieux : le grimoire continue de fonctionner en mémoire */
   }
 }
-
+ 
 /* ------------------------------------------------------------------ */
 /*  PARTAGE, IMPORT / EXPORT, IMPRESSION                               */
 /* ------------------------------------------------------------------ */
-
+ 
 function encodeRecipeCode(recipe) {
   try {
     return btoa(unescape(encodeURIComponent(JSON.stringify(recipe))));
@@ -327,15 +327,15 @@ function buildPrintHTML(recipe, servings, ingredients) {
   </div>
 </body></html>`;
 }
-
+ 
 /* ------------------------------------------------------------------ */
 /*  DÉCLENCHEUR SECRET (triple-clic ou appui long 2s)                  */
 /* ------------------------------------------------------------------ */
-
+ 
 function useSecretTrigger(onTrigger) {
   const clicksRef = useRef({ count: 0, timer: null });
   const pressTimerRef = useRef(null);
-
+ 
   const registerClick = () => {
     clicksRef.current.count += 1;
     if (clicksRef.current.timer) clearTimeout(clicksRef.current.timer);
@@ -346,7 +346,7 @@ function useSecretTrigger(onTrigger) {
     }
     clicksRef.current.timer = setTimeout(() => { clicksRef.current.count = 0; }, 600);
   };
-
+ 
   const startPress = () => {
     pressTimerRef.current = setTimeout(onTrigger, 2000);
   };
@@ -356,7 +356,7 @@ function useSecretTrigger(onTrigger) {
       pressTimerRef.current = null;
     }
   };
-
+ 
   return {
     onClick: registerClick,
     onMouseDown: startPress,
@@ -367,11 +367,11 @@ function useSecretTrigger(onTrigger) {
     style: { cursor: "pointer", userSelect: "none" },
   };
 }
-
+ 
 /* ------------------------------------------------------------------ */
 /*  ILLUSTRATIONS SVG "AQUARELLE CULINAIRE" (aucune image externe)      */
 /* ------------------------------------------------------------------ */
-
+ 
 function TarteSVG({ uid }) {
   return (
     <>
@@ -386,7 +386,7 @@ function TarteSVG({ uid }) {
     </>
   );
 }
-
+ 
 function ChocolatSVG({ uid }) {
   return (
     <>
@@ -402,7 +402,7 @@ function ChocolatSVG({ uid }) {
     </>
   );
 }
-
+ 
 function CrepeSVG({ uid }) {
   return (
     <>
@@ -415,7 +415,7 @@ function CrepeSVG({ uid }) {
     </>
   );
 }
-
+ 
 function PouletSVG({ uid }) {
   return (
     <>
@@ -431,7 +431,7 @@ function PouletSVG({ uid }) {
     </>
   );
 }
-
+ 
 function RatatouilleSVG({ uid }) {
   const colors = ["#6f8f4a", "#b1462f", "#7a5a86", "#c98a2c"];
   const dots = [-42, -28, -14, 0, 14, 28, 42];
@@ -445,7 +445,7 @@ function RatatouilleSVG({ uid }) {
     </>
   );
 }
-
+ 
 function QuicheSVG({ uid }) {
   return (
     <>
@@ -460,7 +460,7 @@ function QuicheSVG({ uid }) {
     </>
   );
 }
-
+ 
 function DessertDefaultSVG({ uid }) {
   return (
     <>
@@ -472,7 +472,7 @@ function DessertDefaultSVG({ uid }) {
     </>
   );
 }
-
+ 
 function PlatDefaultSVG({ uid }) {
   return (
     <>
@@ -485,7 +485,7 @@ function PlatDefaultSVG({ uid }) {
     </>
   );
 }
-
+ 
 const ILLUSTRATIONS = {
   tarte: { label: "Tarte dorée", palette: ["#f2c869", "#c9862c", "#7c4a1e"], render: TarteSVG },
   chocolat: { label: "Fondant au chocolat", palette: ["#8a5a3a", "#5a2f1e", "#2e160c"], render: ChocolatSVG },
@@ -496,7 +496,7 @@ const ILLUSTRATIONS = {
   dessert: { label: "Dessert gourmand", palette: ["#e6a8bb", "#b5637e", "#5a3a4a"], render: DessertDefaultSVG },
   plat: { label: "Plat mijoté", palette: ["#c9d3a8", "#8a9a5e", "#4a5c34"], render: PlatDefaultSVG },
 };
-
+ 
 const DISH_MATCH = [
   { test: /kouign|amann|tarte/i, key: "tarte" },
   { test: /chocolat|fondant|cacao/i, key: "chocolat" },
@@ -505,14 +505,14 @@ const DISH_MATCH = [
   { test: /ratatouille|légume|legume|provenç/i, key: "ratatouille" },
   { test: /quiche/i, key: "quiche" },
 ];
-
+ 
 function resolveIllustrationKey(recipe) {
   if (recipe.illustrationKey && ILLUSTRATIONS[recipe.illustrationKey]) return recipe.illustrationKey;
   const match = DISH_MATCH.find((d) => d.test.test(recipe.title || ""));
   if (match) return match.key;
   return recipe.type === "sucre" ? "dessert" : "plat";
 }
-
+ 
 let dishArtCounter = 0;
 function DishArt({ recipe }) {
   const idRef = useRef(null);
@@ -546,15 +546,15 @@ function DishArt({ recipe }) {
     </div>
   );
 }
-
+ 
 /* ------------------------------------------------------------------ */
 /*  PETITS COMPOSANTS PARTAGÉS                                         */
 /* ------------------------------------------------------------------ */
-
+ 
 function Flourish() {
   return <div className="flourish" aria-hidden="true">❦</div>;
 }
-
+ 
 function Seal({ children, onClick, tone = "gold", disabled, type = "button", haptic = 15 }) {
   const handleClick = (e) => {
     if (disabled) return;
@@ -567,11 +567,11 @@ function Seal({ children, onClick, tone = "gold", disabled, type = "button", hap
     </button>
   );
 }
-
+ 
 /* ------------------------------------------------------------------ */
 /*  MODALES : PARTAGE, IMPORT, RÉGLAGES SECRETS                        */
 /* ------------------------------------------------------------------ */
-
+ 
 function TextShareModal({ title, text, onClose }) {
   const ref = useRef(null);
   useEffect(() => {
@@ -600,7 +600,7 @@ function TextShareModal({ title, text, onClose }) {
     </div>
   );
 }
-
+ 
 function ImportConfirmModal({ recipe, onConfirm, onCancel }) {
   return (
     <div className="modal-backdrop" onClick={onCancel}>
@@ -619,7 +619,7 @@ function ImportConfirmModal({ recipe, onConfirm, onCancel }) {
     </div>
   );
 }
-
+ 
 function SecretSettingsModal({ onClose, onExport, onImportFile }) {
   const fileRef = useRef(null);
   return (
@@ -648,14 +648,14 @@ function SecretSettingsModal({ onClose, onExport, onImportFile }) {
     </div>
   );
 }
-
+ 
 function ShareRecipeModal({ recipe, servings, ingredients, onClose, shareText, showToast }) {
   const doCopyCode = () => {
     const code = encodeRecipeCode(recipe);
     if (!code) { showToast("Impossible de générer le code."); return; }
     shareText(buildImportLink(code), "Lien de la recette");
   };
-
+ 
   const doDownloadFile = () => {
     try {
       const blob = new Blob([JSON.stringify(recipe, null, 2)], { type: "application/json" });
@@ -672,7 +672,7 @@ function ShareRecipeModal({ recipe, servings, ingredients, onClose, shareText, s
       showToast("Téléchargement impossible sur cet appareil.");
     }
   };
-
+ 
   const doExportPDF = () => {
     try {
       const win = window.open("", "_blank");
@@ -690,7 +690,7 @@ function ShareRecipeModal({ recipe, servings, ingredients, onClose, shareText, s
       showToast("Export PDF impossible sur cet appareil.");
     }
   };
-
+ 
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal grimoire-page" onClick={(e) => e.stopPropagation()}>
@@ -708,11 +708,11 @@ function ShareRecipeModal({ recipe, servings, ingredients, onClose, shareText, s
     </div>
   );
 }
-
+ 
 /* ------------------------------------------------------------------ */
 /*  VUE : RECETTES                                                     */
 /* ------------------------------------------------------------------ */
-
+ 
 function RecipeCard({ recipe, onOpen, onToggleFavorite }) {
   const nutri = estimateNutriscore(recipe.ingredients);
   return (
@@ -745,14 +745,14 @@ function RecipeCard({ recipe, onOpen, onToggleFavorite }) {
     </div>
   );
 }
-
+ 
 function RecipeDetail({ recipe, onClose, onCook, onEdit, shareText, showToast }) {
   const [servings, setServings] = useState(() => Number(recipe && recipe.servings) || 1);
   const [showShare, setShowShare] = useState(false);
   const scrollRef = useRef(null);
   const overscrollRef = useRef(0);
   const touchYRef = useRef(null);
-
+ 
   if (!recipe) return null;
   const nutri = estimateNutriscore(recipe.ingredients);
   const ratio = servings / recipe.servings;
@@ -760,12 +760,12 @@ function RecipeDetail({ recipe, onClose, onCook, onEdit, shareText, showToast })
     ...ing,
     qty: Math.round(ing.qty * ratio * 100) / 100,
   }));
-
+ 
   const triggerEdit = () => {
     overscrollRef.current = 0;
     onEdit(recipe);
   };
-
+ 
   const handleWheel = (e) => {
     const el = scrollRef.current;
     if (!el) return;
@@ -792,7 +792,7 @@ function RecipeDetail({ recipe, onClose, onCook, onEdit, shareText, showToast })
       touchYRef.current = e.touches[0].clientY;
     }
   };
-
+ 
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
@@ -861,13 +861,13 @@ function RecipeDetail({ recipe, onClose, onCook, onEdit, shareText, showToast })
     </div>
   );
 }
-
+ 
 function StepTimer({ minutes }) {
   const fullSeconds = minutes * 60;
   const [seconds, setSeconds] = useState(fullSeconds);
   const [running, setRunning] = useState(false);
   const intervalRef = useRef(null);
-
+ 
   useEffect(() => {
     if (running && seconds > 0) {
       intervalRef.current = setInterval(() => {
@@ -883,7 +883,7 @@ function StepTimer({ minutes }) {
     }
     return () => clearInterval(intervalRef.current);
   }, [running]);
-
+ 
   const fmt = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   const label =
     seconds === 0
@@ -893,7 +893,7 @@ function StepTimer({ minutes }) {
       : seconds === fullSeconds
       ? `Lancer (${minutes} min)`
       : `▶ Reprendre (${fmt(seconds)})`;
-
+ 
   return (
     <button
       type="button"
@@ -904,12 +904,12 @@ function StepTimer({ minutes }) {
     </button>
   );
 }
-
+ 
 function CookMode({ recipe, onClose }) {
   const [done, setDone] = useState(() => recipe.steps.map(() => false));
   const toggleDone = (i) => setDone((prev) => prev.map((d, idx) => (idx === i ? !d : d)));
   const completedCount = done.filter(Boolean).length;
-
+ 
   return (
     <div className="cookmode-backdrop">
       <div className="cookmode cookmode-list">
@@ -935,11 +935,11 @@ function CookMode({ recipe, onClose }) {
     </div>
   );
 }
-
+ 
 /* ------------------------------------------------------------------ */
 /*  FORMULAIRE RECETTE (ajout / édition)                               */
 /* ------------------------------------------------------------------ */
-
+ 
 const UNIT_OPTIONS = [
   { value: "g", label: "g" },
   { value: "kg", label: "kg" },
@@ -952,7 +952,7 @@ const UNIT_OPTIONS = [
   { value: "c. à café", label: "c. à café" },
   { value: "", label: "Sans unité" },
 ];
-
+ 
 function RecipeForm({ onClose, onSave, initialRecipe }) {
   const isEdit = !!initialRecipe;
   const [title, setTitle] = useState(initialRecipe ? initialRecipe.title : "");
@@ -972,9 +972,9 @@ function RecipeForm({ onClose, onSave, initialRecipe }) {
   const [importText, setImportText] = useState("");
   const [importError, setImportError] = useState("");
   const [formError, setFormError] = useState("");
-
+ 
   const secretImport = useSecretTrigger(() => setImportUnlocked(true));
-
+ 
   const addIngredientRow = () => {
     triggerHaptic(15);
     setIngredientRows((prev) => [...prev, { id: newRowId(), qty: "", unit: "g", name: "" }]);
@@ -986,12 +986,12 @@ function RecipeForm({ onClose, onSave, initialRecipe }) {
   const updateIngredientRow = (id, field, value) => {
     setIngredientRows((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
   };
-
+ 
   const hasTitle = title.trim().length > 0;
   const hasIngredients = ingredientRows.some((r) => r.name.trim().length > 0);
   const hasSteps = stepsText.trim().length > 0;
   const canSubmit = hasTitle && hasIngredients && hasSteps;
-
+ 
   const submit = (e) => {
     e.preventDefault();
     if (!canSubmit) {
@@ -1020,7 +1020,7 @@ function RecipeForm({ onClose, onSave, initialRecipe }) {
     });
     onClose();
   };
-
+ 
   const submitImport = () => {
     const code = extractCodeFromInput(importText);
     const parsed = decodeRecipeCode(code);
@@ -1031,7 +1031,7 @@ function RecipeForm({ onClose, onSave, initialRecipe }) {
     onSave({ ...parsed, id: nextId(), favorite: false });
     onClose();
   };
-
+ 
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <form
@@ -1043,7 +1043,7 @@ function RecipeForm({ onClose, onSave, initialRecipe }) {
         <h2 className="dropcap-title" {...(isEdit ? {} : secretImport)}>
           {isEdit ? "Modifier la recette" : "Invoquer une recette"}
         </h2>
-
+ 
         {!isEdit && importUnlocked && (
           <div className="import-panel">
             <textarea
@@ -1059,7 +1059,7 @@ function RecipeForm({ onClose, onSave, initialRecipe }) {
             </div>
           </div>
         )}
-
+ 
         <Flourish />
         <label className="field">
           <span>Nom de la recette</span>
@@ -1086,7 +1086,7 @@ function RecipeForm({ onClose, onSave, initialRecipe }) {
           <span>Glucides (g par portion) — facultatif</span>
           <input type="number" min="0" value={carbs} onChange={(e) => setCarbs(e.target.value)} placeholder="Ex. 30" />
         </label>
-
+ 
         <label className="field">
           <span>Ingrédients</span>
         </label>
@@ -1132,7 +1132,7 @@ function RecipeForm({ onClose, onSave, initialRecipe }) {
         <button type="button" className="link-btn add-ingredient-btn" onClick={addIngredientRow}>
           <Plus size={14} /> Ajouter un ingrédient
         </button>
-
+ 
         <label className="field" style={{ marginTop: 14 }}>
           <span>Étapes (une par ligne)</span>
           <textarea rows={4} value={stepsText} onChange={(e) => setStepsText(e.target.value)} placeholder={"Mélanger les ingrédients…\nEnfourner 20 minutes…"} />
@@ -1145,11 +1145,11 @@ function RecipeForm({ onClose, onSave, initialRecipe }) {
     </div>
   );
 }
-
+ 
 /* ------------------------------------------------------------------ */
 /*  VUE : RECETTES (liste + recherche + favoris)                       */
 /* ------------------------------------------------------------------ */
-
+ 
 function RecipesView({ recipes, filter, search, favoritesOnly, onToggleFavorite, onAddRequest, onOpen }) {
   const q = search.trim().toLowerCase();
   const filtered = recipes.filter((r) => {
@@ -1179,11 +1179,11 @@ function RecipesView({ recipes, filter, search, favoritesOnly, onToggleFavorite,
     </div>
   );
 }
-
+ 
 /* ------------------------------------------------------------------ */
 /*  VUE : MON FRIGO                                                    */
 /* ------------------------------------------------------------------ */
-
+ 
 function collectPantryOptions(recipes) {
   const seen = new Map();
   recipes.forEach((r) => {
@@ -1196,24 +1196,24 @@ function collectPantryOptions(recipes) {
     .map(([key, label]) => ({ key, label }))
     .sort((a, b) => a.label.localeCompare(b.label));
 }
-
+ 
 function missingIngredients(recipe, pantrySet) {
   return recipe.ingredients.filter((ing) => !pantrySet.has(ing.name.trim().toLowerCase()));
 }
-
+ 
 function FridgeView({ recipes, pantry, setPantry, onOpen }) {
   const options = collectPantryOptions(recipes);
   const pantrySet = new Set(pantry);
-
+ 
   const toggle = (key) => {
     triggerHaptic(12);
     setPantry((prev) => (prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key]));
   };
-
+ 
   const ranked = recipes
     .map((r) => ({ recipe: r, missing: missingIngredients(r, pantrySet) }))
     .sort((a, b) => a.missing.length - b.missing.length);
-
+ 
   return (
     <div className="view">
       <p className="hint">Coche ce que tu as sous la main…</p>
@@ -1233,7 +1233,7 @@ function FridgeView({ recipes, pantry, setPantry, onOpen }) {
           ))}
         </div>
       )}
-
+ 
       <Flourish />
       <h4>Réalisable avec ton frigo</h4>
       <div className="fridge-results">
@@ -1254,16 +1254,16 @@ function FridgeView({ recipes, pantry, setPantry, onOpen }) {
     </div>
   );
 }
-
+ 
 /* ------------------------------------------------------------------ */
 /*  VUE : COURSES (minimaliste)                                        */
 /* ------------------------------------------------------------------ */
-
+ 
 function AppleSwipeControl({ onSwipeRight, onSwipeLeft }) {
   const startRef = useRef(null);
   const [dragX, setDragX] = useState(0);
   const draggingRef = useRef(false);
-
+ 
   const handlePointerDown = (e) => {
     startRef.current = e.clientX;
     draggingRef.current = true;
@@ -1290,9 +1290,9 @@ function AppleSwipeControl({ onSwipeRight, onSwipeLeft }) {
     draggingRef.current = false;
     setDragX(0);
   };
-
+ 
   const hintClass = dragX > 24 ? "hint-right" : dragX < -24 ? "hint-left" : "";
-
+ 
   return (
     <div className={`apple-swipe ${hintClass}`}>
       <div
@@ -1310,16 +1310,16 @@ function AppleSwipeControl({ onSwipeRight, onSwipeLeft }) {
     </div>
   );
 }
-
+ 
 function ShoppingView({ recipes, selected, setSelected, list, setList, showToast }) {
   const [manualInput, setManualInput] = useState("");
-
+ 
   const toggleRecipe = (id) => {
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
   const selectAll = () => setSelected(recipes.map((r) => r.id));
   const selectNone = () => setSelected([]);
-
+ 
   const generateList = () => {
     setList((prevList) => {
       const map = new Map(prevList.map((it) => [`${it.name.toLowerCase()}__${it.unit}`, { ...it }]));
@@ -1338,14 +1338,14 @@ function ShoppingView({ recipes, selected, setSelected, list, setList, showToast
       return Array.from(map.values());
     });
   };
-
+ 
   const addManual = () => {
     const name = manualInput.trim();
     if (!name) return;
     setList((prev) => [{ id: nextId(), name, qty: 1, unit: "", checked: false, aisle: guessAisle(name) }, ...prev]);
     setManualInput("");
   };
-
+ 
   const toggleItem = (id) => {
     triggerHaptic(12);
     setList((prev) => prev.map((it) => (it.id === id ? { ...it, checked: !it.checked } : it)));
@@ -1354,7 +1354,7 @@ function ShoppingView({ recipes, selected, setSelected, list, setList, showToast
     triggerHaptic(10);
     setList((prev) => prev.map((it) => (it.id === id ? { ...it, qty: Math.max(0, Math.round((it.qty + delta) * 100) / 100) } : it)));
   };
-
+ 
   const unchecked = list.filter((i) => !i.checked);
   const bought = list.filter((i) => i.checked);
   const grouped = unchecked.reduce((acc, item) => {
@@ -1362,7 +1362,7 @@ function ShoppingView({ recipes, selected, setSelected, list, setList, showToast
     acc[item.aisle].push(item);
     return acc;
   }, {});
-
+ 
   const buildListText = () => {
     const lines = ["🛒 Liste de courses — Le Grimoire de Morgane", ""];
     Object.entries(grouped).forEach(([aisle, items]) => {
@@ -1376,7 +1376,7 @@ function ShoppingView({ recipes, selected, setSelected, list, setList, showToast
     }
     return lines.join("\n").trim();
   };
-
+ 
   const handleAppleCopy = async () => {
     await copyText(buildListText());
     showToast("Liste copiée !");
@@ -1388,11 +1388,11 @@ function ShoppingView({ recipes, selected, setSelected, list, setList, showToast
     showToast("Liste réinitialisée !");
     triggerHaptic([60, 30, 60]);
   };
-
+ 
   return (
     <div className="view">
       <AppleSwipeControl onSwipeRight={handleAppleCopy} onSwipeLeft={handleAppleReset} />
-
+ 
       <div className="manual-add-row">
         <input
           value={manualInput}
@@ -1402,7 +1402,7 @@ function ShoppingView({ recipes, selected, setSelected, list, setList, showToast
         />
         <button type="button" onClick={addManual}><Plus size={16} /></button>
       </div>
-
+ 
       <p className="hint">Ou sélectionne des recettes pour convoquer leurs ingrédients.</p>
       <div className="shopping-actions">
         <button type="button" className="link-btn" onClick={selectAll}><CheckSquare size={14} /> Tout cocher</button>
@@ -1420,7 +1420,7 @@ function ShoppingView({ recipes, selected, setSelected, list, setList, showToast
       <Seal tone="gold" onClick={generateList} disabled={selected.length === 0}>
         <ShoppingBasket size={16} /> Générer la liste de courses
       </Seal>
-
+ 
       {(list.length > 0) && (
         <div className="shopping-result">
           <Flourish />
@@ -1463,11 +1463,11 @@ function ShoppingView({ recipes, selected, setSelected, list, setList, showToast
     </div>
   );
 }
-
+ 
 /* ------------------------------------------------------------------ */
 /*  NAVIGATION                                                         */
 /* ------------------------------------------------------------------ */
-
+ 
 const TABS = [
   { key: "recettes", label: "Recettes", icon: BookOpen },
   { key: "frigo", label: "Mon Frigo", icon: Refrigerator },
@@ -1478,18 +1478,18 @@ const FILTERS = [
   { key: "sale", label: "Salé" },
   { key: "sucre", label: "Sucré" },
 ];
-
+ 
 /* ------------------------------------------------------------------ */
 /*  APP PRINCIPALE                                                     */
 /* ------------------------------------------------------------------ */
-
+ 
 export default function GrimoireDeMorgane() {
   const [ready, setReady] = useState(false);
   const [recipes, setRecipes] = useState([]);
   const [pantry, setPantry] = useState([]);
   const [shoppingSelected, setShoppingSelected] = useState([]);
   const [shoppingList, setShoppingList] = useState([]);
-
+ 
   const [tab, setTab] = useState("recettes");
   const [filter, setFilter] = useState("tout");
   const [search, setSearch] = useState("");
@@ -1502,22 +1502,22 @@ export default function GrimoireDeMorgane() {
   const [showSecretSettings, setShowSecretSettings] = useState(false);
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
-
+ 
   const touchStart = useRef(null);
   const secretHeader = useSecretTrigger(() => setShowSecretSettings(true));
-
+ 
   const showToast = (msg) => {
     setToast(msg);
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(null), 2500);
   };
-
+ 
   const shareText = async (text, label) => {
     const ok = await copyText(text);
     if (ok) showToast(`${label} copié(e) !`);
     else setTextModal({ title: label, text });
   };
-
+ 
   useEffect(() => {
     (async () => {
       const [r, pn, ss, sl] = await Promise.all([
@@ -1531,7 +1531,7 @@ export default function GrimoireDeMorgane() {
       setShoppingSelected(ss || []);
       setShoppingList(sl || []);
       setReady(true);
-
+ 
       try {
         const params = new URLSearchParams(window.location.search);
         const code = params.get("import");
@@ -1545,20 +1545,20 @@ export default function GrimoireDeMorgane() {
       }
     })();
   }, []);
-
+ 
   useEffect(() => { if (ready) saveKey("grimoire:recipes", recipes); }, [recipes, ready]);
   useEffect(() => { if (ready) saveKey("grimoire:pantry", pantry); }, [pantry, ready]);
   useEffect(() => { if (ready) saveKey("grimoire:shoppingSelected", shoppingSelected); }, [shoppingSelected, ready]);
   useEffect(() => { if (ready) saveKey("grimoire:shoppingList", shoppingList); }, [shoppingList, ready]);
-
+ 
   const saveRecipe = (recipe) => {
     setRecipes((prev) => (prev.some((r) => r.id === recipe.id) ? prev.map((r) => (r.id === recipe.id ? recipe : r)) : [recipe, ...prev]));
   };
-
+ 
   const toggleFavorite = (id) => {
     setRecipes((prev) => prev.map((r) => (r.id === id ? { ...r, favorite: !r.favorite } : r)));
   };
-
+ 
   const exportGrimoire = () => {
     try {
       const blob = new Blob([JSON.stringify(recipes, null, 2)], { type: "application/json" });
@@ -1575,7 +1575,7 @@ export default function GrimoireDeMorgane() {
       showToast("Export impossible sur cet appareil.");
     }
   };
-
+ 
   const handleImportFile = (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
@@ -1594,16 +1594,16 @@ export default function GrimoireDeMorgane() {
     reader.readAsText(file);
     e.target.value = "";
   };
-
+ 
   const confirmPendingImport = () => {
     if (!pendingImport) return;
     saveRecipe({ ...pendingImport, id: nextId(), favorite: false });
     setPendingImport(null);
     showToast("Recette ajoutée !");
   };
-
+ 
   const filterIndex = FILTERS.findIndex((f) => f.key === filter);
-
+ 
   // Le swipe ne fait basculer que les filtres Recettes ("Tout" / "Salé" / "Sucré").
   // La navigation principale du bas (Recettes / Mon Frigo / Courses) reste fixe.
   const onTouchStart = (e) => { touchStart.current = e.touches[0].clientX; };
@@ -1615,7 +1615,7 @@ export default function GrimoireDeMorgane() {
     const next = dx < 0 ? Math.min(filterIndex + 1, FILTERS.length - 1) : Math.max(filterIndex - 1, 0);
     setFilter(FILTERS[next].key);
   };
-
+ 
   if (!ready) {
     return (
       <div className="loading-screen">
@@ -1625,16 +1625,16 @@ export default function GrimoireDeMorgane() {
       </div>
     );
   }
-
+ 
   return (
     <div className="grimoire-app">
       <style>{CSS}</style>
-
+ 
       <header className="app-header">
         <h1 {...secretHeader}>Le Grimoire de Morgane</h1>
         <p className="subtitle">LIVRE DE MORGANE · SALÉ &amp; SUCRÉ</p>
       </header>
-
+ 
       {tab === "recettes" && (
         <>
           <div className="search-bar">
@@ -1665,7 +1665,7 @@ export default function GrimoireDeMorgane() {
           </div>
         </>
       )}
-
+ 
       <main className="app-content" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         {tab === "recettes" && (
           <RecipesView
@@ -1692,7 +1692,7 @@ export default function GrimoireDeMorgane() {
           />
         )}
       </main>
-
+ 
       <nav className="bottom-nav">
         {TABS.map(({ key, label, icon: Icon }) => (
           <button
@@ -1705,7 +1705,7 @@ export default function GrimoireDeMorgane() {
           </button>
         ))}
       </nav>
-
+ 
       {formTarget && (
         <RecipeForm
           onClose={() => setFormTarget(null)}
@@ -1748,14 +1748,14 @@ export default function GrimoireDeMorgane() {
     </div>
   );
 }
-
+ 
 /* ------------------------------------------------------------------ */
 /*  CSS                                                                 */
 /* ------------------------------------------------------------------ */
-
+ 
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cinzel+Decorative:wght@700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap');
-
+ 
 :root {
   --parchment: #f1e6c8;
   --parchment-deep: #e6d5a8;
@@ -1767,7 +1767,7 @@ const CSS = `
   --plum: #5a3a63;
   --line: rgba(42,32,19,0.18);
 }
-
+ 
 .grimoire-app, .loading-screen {
   font-family: 'EB Garamond', Georgia, serif;
   color: var(--ink);
@@ -1782,15 +1782,15 @@ const CSS = `
   box-shadow: 0 0 40px rgba(0,0,0,0.15);
   overflow-x: hidden;
 }
-
+ 
 .loading-screen {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 12px; min-height: 100vh; color: var(--gold);
 }
 .loading-screen p { color: var(--ink-soft); font-style: italic; }
-
+ 
 * { box-sizing: border-box; }
-
+ 
 .app-header {
   text-align: center;
   padding: 28px 20px 16px;
@@ -1812,7 +1812,7 @@ const CSS = `
   color: var(--gold);
   text-transform: uppercase;
 }
-
+ 
 .search-bar {
   display: flex; align-items: center; gap: 8px;
   margin: 14px 16px 0; padding: 9px 12px;
@@ -1823,7 +1823,7 @@ const CSS = `
   border: none; background: transparent; outline: none; flex: 1;
   font-family: 'EB Garamond', serif; font-size: 0.95rem; color: var(--ink);
 }
-
+ 
 .filter-bar {
   display: flex; gap: 8px; padding: 14px 16px 4px; overflow-x: auto;
 }
@@ -1843,13 +1843,13 @@ const CSS = `
 .filter-pill.active { background: var(--ink); color: var(--parchment); border-color: var(--ink); }
 .heart-pill { display: inline-flex; align-items: center; gap: 5px; }
 .heart-pill.active { color: #e8607a; border-color: #e8607a; background: rgba(232,96,122,0.12); }
-
+ 
 .app-content { padding: 16px; min-height: 50vh; overflow-x: hidden; }
 .view { animation: fadeIn 0.35s ease; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px);} to { opacity: 1; transform: translateY(0);} }
-
+ 
 .hint { color: var(--ink-soft); font-style: italic; font-size: 0.92rem; margin: 4px 0 14px; }
-
+ 
 /* --- Cartes --- */
 .card {
   background: rgba(255,255,255,0.4);
@@ -1857,7 +1857,7 @@ const CSS = `
   border-radius: 10px;
   box-shadow: 0 2px 0 rgba(42,32,19,0.06), 0 6px 14px rgba(42,32,19,0.07);
 }
-
+ 
 .recipes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-bottom: 110px; }
 .recipe-card { overflow: hidden; cursor: pointer; transition: transform 0.15s ease; }
 .recipe-card:active { transform: scale(0.97); }
@@ -1871,7 +1871,7 @@ const CSS = `
   background: rgba(179,135,42,0.15); color: var(--gold); border: 1px solid rgba(179,135,42,0.4);
   padding: 3px 8px; border-radius: 999px;
 }
-
+ 
 .chip {
   font-family: 'Cinzel', serif;
   font-size: 0.58rem;
@@ -1883,14 +1883,14 @@ const CSS = `
 }
 .chip-sale { background: var(--wine); }
 .chip-sucre { background: var(--plum); }
-
+ 
 .nutri-badge {
   width: 20px; height: 20px; border-radius: 50%;
   color: #fff; font-weight: 700; font-size: 0.68rem;
   display: flex; align-items: center; justify-content: center;
   font-family: 'Cinzel', serif;
 }
-
+ 
 .illus {
   width: 100%; aspect-ratio: 4/3;
   display: flex; align-items: center; justify-content: center;
@@ -1908,7 +1908,7 @@ const CSS = `
 .fav-btn.active { color: #e8607a; background: rgba(20,14,4,0.55); }
 .spin-wand { animation: spin 1.4s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-
+ 
 /* --- Fiche recette --- */
 .detail-hero { position: relative; margin: -22px -20px 0; width: calc(100% + 40px); aspect-ratio: 16/10; overflow: hidden; }
 .detail-hero .illus { aspect-ratio: auto; height: 100%; }
@@ -1934,7 +1934,7 @@ const CSS = `
 .scaled-note { font-style: italic; font-weight: normal; text-transform: none; letter-spacing: 0; font-size: 0.78rem; color: var(--ink-soft); }
 .detail-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .detail-actions .seal { flex: 1; justify-content: center; }
-
+ 
 /* --- Sceaux / boutons --- */
 .seal {
   font-family: 'Cinzel', serif;
@@ -1953,7 +1953,7 @@ const CSS = `
 }
 .seal:active { transform: translateY(2px); box-shadow: 0 1px 0 #8a651c; }
 .seal:disabled { opacity: 0.45; cursor: not-allowed; }
-
+ 
 .fab {
   position: fixed;
   right: calc(50% - 240px + 18px);
@@ -1966,7 +1966,7 @@ const CSS = `
   cursor: pointer;
 }
 @media (max-width: 520px) { .fab { right: 18px; } }
-
+ 
 /* --- Mon Frigo --- */
 .pantry-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
 .pantry-chip {
@@ -1982,7 +1982,7 @@ const CSS = `
 .fridge-row-body h5 { margin: 0 0 4px; font-family: 'Cinzel', serif; font-size: 0.85rem; }
 .fridge-ready { color: #3E7A3E; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; }
 .fridge-missing { color: var(--wine); font-size: 0.78rem; }
-
+ 
 /* --- Courses --- */
 .manual-add-row {
   display: flex; gap: 8px; margin-bottom: 16px;
@@ -2017,7 +2017,7 @@ const CSS = `
   background: rgba(255,255,255,0.5); color: var(--ink-soft); display: flex; align-items: center; justify-content: center; cursor: pointer;
 }
 .bought-block h4 { color: var(--ink-soft); }
-
+ 
 /* --- Navigation basse --- */
 .bottom-nav {
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
@@ -2034,7 +2034,7 @@ const CSS = `
   cursor: pointer; padding: 4px 10px;
 }
 .nav-btn.active { color: var(--gold-light); }
-
+ 
 /* --- Modales / page de grimoire --- */
 .modal-backdrop {
   position: fixed; inset: 0; background: rgba(20,14,4,0.55);
@@ -2063,7 +2063,7 @@ const CSS = `
 .modal h4 { font-family: 'Cinzel', serif; font-size: 0.85rem; letter-spacing: 0.5px; margin: 16px 0 8px; color: var(--ink-soft); }
 .ingredient-list, .steps-list { padding-left: 20px; margin: 0 0 12px; }
 .ingredient-list li, .steps-list li { margin-bottom: 5px; font-size: 0.95rem; }
-
+ 
 .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; font-size: 0.82rem; color: var(--ink-soft); font-family: 'Cinzel', serif; letter-spacing: 0.3px; max-width: 100%; }
 .field input, .field select, .field textarea {
   font-family: 'EB Garamond', serif; font-size: 1rem; color: var(--ink);
@@ -2075,7 +2075,7 @@ const CSS = `
 .field-discreet { opacity: 0.8; }
 .field-discreet span { font-size: 0.72rem; }
 .field-discreet input { font-size: 0.9rem; padding: 7px 9px; }
-
+ 
 /* --- Ingrédients structurés (formulaire) --- */
 .ingredient-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 6px; }
 .ingredient-row { display: flex; gap: 6px; align-items: center; max-width: 100%; }
@@ -2096,7 +2096,7 @@ const CSS = `
   background: rgba(255,255,255,0.4); color: var(--wine); display: flex; align-items: center; justify-content: center; cursor: pointer;
 }
 .add-ingredient-btn { margin-bottom: 16px; }
-
+ 
 /* --- Pomme à glisser (onglet Courses) --- */
 .apple-swipe {
   display: flex; flex-direction: column; align-items: center; gap: 6px;
@@ -2113,7 +2113,7 @@ const CSS = `
 }
 .apple-swipe.hint-right .apple-hint { color: #3E7A3E; opacity: 1; }
 .apple-swipe.hint-left .apple-hint { color: var(--wine); opacity: 1; }
-
+ 
 /* --- Petits liens texte --- */
 .link-btn {
   background: none; border: none; color: var(--gold);
@@ -2121,7 +2121,7 @@ const CSS = `
   display: inline-flex; align-items: center; gap: 5px;
   cursor: pointer; padding: 4px 0; text-transform: uppercase;
 }
-
+ 
 /* --- Import / partage --- */
 .import-panel { margin: 10px 0 6px; display: flex; flex-direction: column; gap: 8px; }
 .import-panel textarea {
@@ -2138,7 +2138,7 @@ const CSS = `
 }
 .share-option-row { display: flex; gap: 10px; flex-wrap: wrap; }
 .share-option-row .seal { flex: 1; justify-content: center; }
-
+ 
 /* --- Toast --- */
 .toast {
   position: fixed; bottom: 78px; left: 50%; transform: translateX(-50%);
@@ -2148,7 +2148,7 @@ const CSS = `
   box-shadow: 0 6px 16px rgba(0,0,0,0.3); z-index: 70; text-align: center;
   animation: fadeIn 0.25s ease;
 }
-
+ 
 /* --- Mode cuisine --- */
 .cookmode-backdrop {
   position: fixed; inset: 0; z-index: 60; background: var(--ink);
