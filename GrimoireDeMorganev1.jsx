@@ -211,26 +211,6 @@ function demoRecipes() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  STOCKAGE PERSISTANT                                                */
-/* ------------------------------------------------------------------ */
-
-async function loadKey(key, fallback) {
-  try {
-    const res = await window.storage.get(key, false);
-    return res ? JSON.parse(res.value) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-async function saveKey(key, value) {
-  try {
-    await window.storage.set(key, JSON.stringify(value), false);
-  } catch {
-    /* silencieux : le grimoire continue de fonctionner en mémoire */
-  }
-}
-
-/* ------------------------------------------------------------------ */
 /*  PARTAGE, IMPORT / EXPORT, IMPRESSION                               */
 /* ------------------------------------------------------------------ */
 
