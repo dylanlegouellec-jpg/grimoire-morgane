@@ -1435,21 +1435,20 @@ export default function GrimoireDeMorgane() {
   useEffect(() => { if (ready) saveKey("grimoire:shoppingList", shoppingList); }, [shoppingList, ready]);
 
  const saveRecipe = async (recipe) => {
-  try {
-    // 1. Enregistrement dans Supabase
-    await saveNewRecipe(recipe);
-    
-    // 2. Mise à jour de l'état local pour rafraîchir l'interface instantanément
-    setRecipes((prev) => 
-      prev.some((r) => r.id === recipe.id) 
-        ? prev.map((r) => (r.id === recipe.id ? recipe : r)) 
-        : [recipe, ...prev]
-    );
-  } catch (error) {
-    console.error("Erreur lors de l'enregistrement sur Supabase :", error);
-    alert("Erreur lors de l'enregistrement de la recette.");
-  }
-};
+    try {
+      // 1. Enregistrement dans Supabase
+      await saveNewRecipe(recipe);
+
+      // 2. Recharger la vraie liste depuis Supabase pour avoir les bons ID et tout synchroniser
+      const updatedRecipes = await fetchRecipes();
+      setRecipes(updatedRecipes);
+
+      alert("Recette enregistrée avec succès !");
+    } catch (error) {
+      console.error("Erreur lors de l'enregistrement sur Supabase :", error);
+      alert("Erreur lors de l'enregistrement de la recette.");
+    }
+  };
   
 const toggleFavorite = async (id) => {
     const recipeToUpdate = recipes.find(r => r.id === id);
