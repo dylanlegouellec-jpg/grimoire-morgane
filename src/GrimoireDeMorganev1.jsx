@@ -222,6 +222,15 @@ async function loadKey(key, fallback) {
     return fallback;
   }
 }
+
+async function saveKey(key, value) {
+  try {
+    await window.storage.set(key, JSON.stringify(value), false);
+  } catch {
+    /* silencieux : le grimoire continue de fonctionner en mémoire */
+  }
+}
+
 const handleSaveRecipe = async (recipeData) => {
   try {
     await saveNewRecipe(recipeData);
