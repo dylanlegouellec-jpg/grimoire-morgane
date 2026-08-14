@@ -1088,7 +1088,7 @@ function RecipeForm({ onClose, onSave, initialRecipe }) {
 function RecipesView({ recipes, filter, search, favoritesOnly, onToggleFavorite, onAddRequest, onOpen }) {
   const q = search.trim().toLowerCase();
   const filtered = recipes.filter((r) => {
-iif (filter !== "tout") {
+if (filter !== "tout") {
       const normalize = (str) => (str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "");
       if (!r.category || normalize(r.category) !== normalize(filter)) return false;
     }
