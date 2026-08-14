@@ -1344,10 +1344,25 @@ const FILTERS = [
 
 export default function GrimoireDeMorgane() {
   const [ready, setReady] = useState(false);
-  const [recipes, setRecipes] = useState([]);
-  const [pantry, setPantry] = useState([]);
+  const [recipes, setRecipes] = useState(() => {
+  try {
+    const saved = localStorage.getItem('grimoire_recipes');
+    return saved ? JSON.parse(saved) : DEFAULT_RECIPES; // Remplace DEFAULT_RECIPES par ton tableau initial s'il a un autre nom
+  } catch (e) { return []; }
+});
+const [pantry, setPantry] = useState(() => {
+  try {
+    const saved = localStorage.getItem('grimoire_pantry');
+    return saved ? JSON.parse(saved) : [];
+  } catch (e) { return []; }
+});
   const [shoppingSelected, setShoppingSelected] = useState([]);
-  const [shoppingList, setShoppingList] = useState([]);
+const [shoppingList, setShoppingList] = useState(() => {
+  try {
+    const saved = localStorage.getItem('grimoire_shopping');
+    return saved ? JSON.parse(saved) : [];
+  } catch (e) { return []; }
+});
 
   const [tab, setTab] = useState("recettes");
   const [filter, setFilter] = useState("tout");
@@ -1606,6 +1621,17 @@ export default function GrimoireDeMorgane() {
     </div>
   );
 }
+useEffect(() => {
+  localStorage.setItem('grimoire_recipes', JSON.stringify(recipes));
+}, [recipes]);
+
+useEffect(() => {
+  localStorage.setItem('grimoire_pantry', JSON.stringify(pantry));
+}, [pantry]);
+
+useEffect(() => {
+  localStorage.setItem('grimoire_shopping', JSON.stringify(shoppingList));
+}, [shoppingList]);
 
 /* ------------------------------------------------------------------ */
 /*  CSS                                                                 */
