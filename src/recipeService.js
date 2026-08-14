@@ -20,13 +20,13 @@ export async function saveNewRecipe(recipeData) {
     .from('recipe')
     .insert([{
       title: recipeData.title,
-      category: recipeData.category || 'Général',
+      category: recipeData.category || 'Salé', // Récupère la catégorie choisie ou met Salé par défaut
       prep_time: recipeData.prep_time || '',
       servings: recipeData.servings || 4,
       carbs_per_serving: recipeData.carbs_per_serving || 0,
       ingredients: recipeData.ingredients,
       steps: recipeData.steps,
-      is_favorite: recipeData.is_favorite || false,
+      is_favorite: recipeData.is_favorite || false, // Enregistre le vrai état du favori
       created_at: new Date().toISOString()
     }]);
 
