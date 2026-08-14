@@ -1407,7 +1407,10 @@ export default function GrimoireDeMorgane() {
 const toggleFavorite = (id) => {
     setRecipes((prev) => {
       const updated = prev.map((r) => (r.id === id ? { ...r, favorite: !r.favorite } : r));
+      
+      // 👇 C'est cette ligne qui force l'écriture visible dans ton panneau Application
       localStorage.setItem("grimoire:recipes", JSON.stringify(updated));
+      
       return updated;
     });
   };
