@@ -1407,14 +1407,20 @@ export default function GrimoireDeMorgane() {
     })();
   }, []);
 
-  useEffect(() => { if (ready) saveKey("grimoire:recipes", recipes); }, [recipes, ready]);
-  useEffect(() => { if (ready) saveKey("grimoire:pantry", pantry); }, [pantry, ready]);
-  useEffect(() => { if (ready) saveKey("grimoire:shoppingSelected", shoppingSelected); }, [shoppingSelected, ready]);
-  useEffect(() => { if (ready) saveKey("grimoire:shoppingList", shoppingList); }, [shoppingList, ready]);
+ useEffect(() => { saveKey("grimoire:recipes", recipes); }, [recipes]);
+useEffect(() => { saveKey("grimoire:pantry", pantry); }, [pantry]);
+useEffect(() => { saveKey("grimoire:shoppingSelected", shoppingSelected); }, [shoppingSelected]);
+useEffect(() => { saveKey("grimoire:shoppingList", shoppingList); }, [shoppingList]);
+  
+ //  L'initialisation lit le LocalStorage AVANT le premier rendu
+const [recipes, setRecipes] = useState(() => {
+  const saved = loadKey("grimoire:recipes", null);
+  return saved && saved.length ? saved : demoRecipes();
+});
 
-  const saveRecipe = (recipe) => {
-    setRecipes((prev) => (prev.some((r) => r.id === recipe.id) ? prev.map((r) => (r.id === recipe.id ? recipe : r)) : [recipe, ...prev]));
-  };
+const [pantry, setPantry] = useState(() => loadKey("grimoire:pantry", []));
+const [shoppingSelected, setShoppingSelected] = useState(() => loadKey("grimoire:shoppingSelected", []));
+const [shoppingList, setShoppingList] = useState(() => loadKey("grimoire:shoppingList", []));
 
   const toggleFavorite = (id) => {
     setRecipes((prev) => prev.map((r) => (r.id === id ? { ...r, favorite: !r.favorite } : r)));
