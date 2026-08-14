@@ -223,13 +223,16 @@ async function loadKey(key, fallback) {
     return fallback;
   }
 }
-async function saveKey(key, value) {
+const handleSaveRecipe = async (recipeData) => {
   try {
-    await window.storage.set(key, JSON.stringify(value), false);
-  } catch {
-    /* silencieux : le grimoire continue de fonctionner en mémoire */
+    await saveNewRecipe(recipeData);
+    alert("Recette enregistrée sur Supabase !");
+    // Optionnel : recharger la liste des recettes depuis Supabase ici
+  } catch (error) {
+    console.error("Erreur :", error);
+    alert("Erreur lors de l'enregistrement.");
   }
-}
+};
 
 /* ------------------------------------------------------------------ */
 /*  PARTAGE, IMPORT / EXPORT, IMPRESSION                               */
