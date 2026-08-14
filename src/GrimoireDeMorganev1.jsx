@@ -26,6 +26,7 @@ import {
 /*  DONNÉES                                                            */
 /* ------------------------------------------------------------------ */
 
+
 const AISLES = [
   { key: "fruits-legumes", label: "Fruits & Légumes", test: /oignon|ail|carotte|tomate|pomme|citron|herbe|persil|basilic|thym|laurier|échalote|poireau|courgette|champignon|salade|pêche|fraise|orange|banane|aubergine|poivron/i },
   { key: "boucherie", label: "Boucherie & Poissonnerie", test: /poulet|boeuf|bœuf|porc|veau|agneau|lardon|jambon|poisson|saumon|crevette|canard/i },
