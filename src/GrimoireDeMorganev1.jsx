@@ -1408,16 +1408,27 @@ export default function GrimoireDeMorgane() {
       }
     })();
   }, []);
-
-  useEffect(() => { if (ready) saveKey("grimoire:recipes", recipes); }, [recipes, ready]);
+  
   useEffect(() => { if (ready) saveKey("grimoire:pantry", pantry); }, [pantry, ready]);
   useEffect(() => { if (ready) saveKey("grimoire:shoppingSelected", shoppingSelected); }, [shoppingSelected, ready]);
   useEffect(() => { if (ready) saveKey("grimoire:shoppingList", shoppingList); }, [shoppingList, ready]);
 
-  const saveRecipe = (recipe) => {
-    setRecipes((prev) => (prev.some((r) => r.id === recipe.id) ? prev.map((r) => (r.id === recipe.id ? recipe : r)) : [recipe, ...prev]));
-  };
-
+ const saveRecipe = async (recipe) => {
+  try {
+    // 1. Enregistrement dans Supabase
+    await saveNewRecipe(recipe);
+    
+    // 2. Mise à jour de l'état local pour rafraîchir l'interface instantanément
+    setRecipes((prev) => 
+      prev.some((r) => r.id === recipe.id) 
+        ? prev.map((r) => (r.id === recipe.id ? recipe : r)) 
+        : [recipe, ...prev]
+    );
+  } catch (error) {
+    console.error("Erreur lors de l'enregistrement sur Supabase :", error);
+    alert("Erreur lors de l'enregistrement de la recette.");
+  }
+};
   const toggleFavorite = (id) => {
     setRecipes((prev) => prev.map((r) => (r.id === id ? { ...r, favorite: !r.favorite } : r)));
   };
