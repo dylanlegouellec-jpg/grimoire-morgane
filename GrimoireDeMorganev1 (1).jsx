@@ -1345,12 +1345,6 @@ const FILTERS = [
 /* ------------------------------------------------------------------ */
 
 export default function GrimoireDeMorgane() {
-  const [ready, setReady] = useState(false);
-  const [recipes, setRecipes] = useState([]);
-  const [pantry, setPantry] = useState([]);
-  const [shoppingSelected, setShoppingSelected] = useState([]);
-  const [shoppingList, setShoppingList] = useState([]);
-
   const [tab, setTab] = useState("recettes");
   const [filter, setFilter] = useState("tout");
   const [search, setSearch] = useState("");
@@ -1379,7 +1373,7 @@ export default function GrimoireDeMorgane() {
     else setTextModal({ title: label, text });
   };
 
- // 1. Déclaration des états (EN PREMIER)
+  // 1. Déclaration des états avec LocalStorage (UNIQUE)
   const [recipes, setRecipes] = useState(() => {
     const saved = loadKey("grimoire:recipes", null);
     return saved && saved.length ? saved : demoRecipes();
@@ -1404,7 +1398,7 @@ export default function GrimoireDeMorgane() {
     }
   }, []);
 
-  // 3. Sauvegardes automatiques (JUSTE APRÈS)
+  // 3. Sauvegardes automatiques
   useEffect(() => { saveKey("grimoire:recipes", recipes); }, [recipes]);
   useEffect(() => { saveKey("grimoire:pantry", pantry); }, [pantry]);
   useEffect(() => { saveKey("grimoire:shoppingSelected", shoppingSelected); }, [shoppingSelected]);
@@ -1413,7 +1407,7 @@ export default function GrimoireDeMorgane() {
   const toggleFavorite = (id) => {
     setRecipes((prev) => prev.map((r) => (r.id === id ? { ...r, favorite: !r.favorite } : r)));
   };
-
+  
   const exportGrimoire = () => {
     try {
       const blob = new Blob([JSON.stringify(recipes, null, 2)], { type: "application/json" });
