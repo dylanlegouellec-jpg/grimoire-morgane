@@ -1449,8 +1449,27 @@ export default function GrimoireDeMorgane() {
   }
 };
   
- const toggleFavorite = (id) => {
-    setRecipes((prev) => prev.map((r) => (r.id === id ? { ...r, is_favorite: !r.is_favorite } : r)));
+const toggleFavorite = async (id) => {
+    // 1. Trouver la recette concernée pour récupérer son nouvel état
+    const recipeToUpdate = recipes.find(r => r.id === id);
+    if (!recipeToUpdate) return;
+
+    const newFavoriteStatus = !recipeToUpdate.is_favorite;
+
+    // 2. Mettre à jour l'état local instantanément pour l'UI
+    setRecipes((prev) => prev.map((r) => (r.id === id ? { ...r, is_favorite: newFavoriteStatus } : r)));
+
+    // 3. Mettre à jour dans Supabase
+    try {
+      const { error } = await supabase
+        .from('recipe')
+        .update({ is_favorite: newFavoriteStatus })
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (err) {
+      console.error("Erreur lors de la mise à jour du favori :", err);
+    }
   };
   
   const exportGrimoire = () => {
