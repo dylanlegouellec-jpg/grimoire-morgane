@@ -1448,10 +1448,11 @@ export default function GrimoireDeMorgane() {
     alert("Erreur lors de l'enregistrement de la recette.");
   }
 };
-  const toggleFavorite = (id) => {
-    setRecipes((prev) => prev.map((r) => (r.id === id ? { ...r, favorite: !r.favorite } : r)));
+  
+ const toggleFavorite = (id) => {
+    setRecipes((prev) => prev.map((r) => (r.id === id ? { ...r, is_favorite: !r.is_favorite } : r)));
   };
-
+  
   const exportGrimoire = () => {
     try {
       const blob = new Blob([JSON.stringify(recipes, null, 2)], { type: "application/json" });
