@@ -239,7 +239,7 @@ function demoRecipes() {
 /*  STOCKAGE PERSISTANT (Compatibilité unifiée)                       */
 /* ------------------------------------------------------------------ */
 
-async function loadKey(key, fallback) {
+function loadKey(key, fallback) {
   try {
     if (typeof window !== "undefined") {
       const local = localStorage.getItem(key);
@@ -251,7 +251,7 @@ async function loadKey(key, fallback) {
   return fallback;
 }
 
-async function saveKey(key, value) {
+function saveKey(key, value) {
   try {
     if (typeof window !== "undefined") {
       localStorage.setItem(key, JSON.stringify(value));
