@@ -1378,23 +1378,33 @@ export default function GrimoireDeMorgane() {
 
   useEffect(() => {
   (async () => {
-    // 1. On récupère les recettes depuis Supabase
-    const supabaseRecipes = await fetchRecipes();
+    try {
+      // 1. On récupère les recettes depuis Supabase
+      const supabaseRecipes = await fetchRecipes();
 
-    // 2. On charge le reste depuis le stockage persistant habituel
-    const [pn, ss, s1] = await Promise.all([
-      loadKey("grimoire:pantry", []),
-      loadKey("grimoire:shoppingSelected", []),
-      loadKey("grimoire:shoppingList", []),
-    ]);
+      // 2. On charge le reste depuis le stockage persistant habituel
+      const [pn, ss, s1] = await Promise.all([
+        loadKey("grimoire:pantry", []),
+        loadKey("grimoire:shoppingSelected", []),
+        loadKey("grimoire:shoppingList", []),
+      ]);
 
-    // 3. On met à jour les états (si Supabase a des recettes, on les prend, sinon démo)
-    setRecipes(supabaseRecipes && supabaseRecipes.length > 0 ? supabaseRecipes : demoRecipes());
-    setPantry(pn || []);
-    setShoppingSelected(ss || []);
-    setShoppingList(s1 || []);
-    setReady(true);
-
+      // 3. On met à jour les états
+      setRecipes(supabaseRecipes && supabaseRecipes.length > 0 ? supabaseRecipes : demoRecipes());
+      setPantry(pn || []);
+      setShoppingSelected(ss || []);
+      setShoppingList(s1 || []);
+    } catch (error) {
+      console.error("Erreur critique au chargement :", error);
+      // En cas de crash Supabase, on charge au moins la démo pour ne pas bloquer l'UI
+      setRecipes(demoRecipes());
+    } finally {
+      // Dans tous les cas, on débloque l'affichage !
+      setReady(true);
+    }
+  })();
+}, []);
+  
       try {
         const params = new URLSearchParams(window.location.search);
         const code = params.get("import");
