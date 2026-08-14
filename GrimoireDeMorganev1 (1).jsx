@@ -1380,19 +1380,27 @@ export default function GrimoireDeMorgane() {
   };
 
   useEffect(() => {
-    (async () => {
-      const [r, pn, ss, sl] = await Promise.all([
-        loadKey("grimoire:recipes", null),
-        loadKey("grimoire:pantry", []),
-        loadKey("grimoire:shoppingSelected", []),
-        loadKey("grimoire:shoppingList", []),
-      ]);
-      setRecipes(r && r.length ? r : demoRecipes());
-      setPantry(pn || []);
-      setShoppingSelected(ss || []);
-      setShoppingList(sl || []);
-      setReady(true);
+  (async () => {
+    const [r, pn, ss, sl] = await Promise.all([
+      loadKey("grimoire:recipes", []), // <-- Met un tableau vide [] au lieu de null
+      loadKey("grimoire:pantry", []),
+      loadKey("grimoire:shoppingSelected", []),
+      loadKey("grimoire:shoppingList", []),
+    ]);
 
+    // Si le LocalStorage contient un tableau avec des recettes, on prend 'r'.
+    // S'il est vide ([]) ou inexistant, on charge 'demoRecipes()'.
+    if (r && Array.isArray(r) && r.length > 0) {
+      setRecipes(r);
+    } else {
+      setRecipes(demoRecipes());
+    }
+
+    setPantry(pn || []);
+    setShoppingSelected(ss || []);
+    setShoppingList(sl || []);
+    setReady(true);
+    
       try {
         const params = new URLSearchParams(window.location.search);
         const code = params.get("import");
