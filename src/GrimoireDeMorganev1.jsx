@@ -729,12 +729,12 @@ function RecipeCard({ recipe, onOpen, onToggleFavorite }) {
             onToggleFavorite(recipe.id);
           }}
         >
-         fill={recipe.is_favorite ? "currentColor" : "none"}
+         <Heart size={16} fill={recipe.is_favorite ? "currentColor" : "none"} />
         </button>
       </div>
       <div className="card-body">
         <div className="card-top-row">
-          <span className={`chip chip-${recipe.type}`}>{recipe.type === "sucre" ? "Sucré" : "Salé"}</span>
+         <span className={`chip chip-${recipe.category ? recipe.category.toLowerCase() : ''}`}>{recipe.category}</span>
           <span className="nutri-badge" style={{ background: NUTRI_COLORS[nutri] }}>{nutri}</span>
         </div>
         <h3>{recipe.title}</h3>
