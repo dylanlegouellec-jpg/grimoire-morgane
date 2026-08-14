@@ -21,8 +21,7 @@ import {
   Square,
   FileText,
 } from "lucide-react";
-import { saveNewRecipe } from './recipeService'; // Assure-toi que le chemin est bon
-
+import { fetchRecipes, saveNewRecipe } from './recipeService';
 /* ------------------------------------------------------------------ */
 /*  DONNÉES                                                            */
 /* ------------------------------------------------------------------ */
@@ -1378,18 +1377,23 @@ export default function GrimoireDeMorgane() {
   };
 
   useEffect(() => {
-    (async () => {
-      const [r, pn, ss, sl] = await Promise.all([
-        loadKey("grimoire:recipes", null),
-        loadKey("grimoire:pantry", []),
-        loadKey("grimoire:shoppingSelected", []),
-        loadKey("grimoire:shoppingList", []),
-      ]);
-      setRecipes(r && r.length ? r : demoRecipes());
-      setPantry(pn || []);
-      setShoppingSelected(ss || []);
-      setShoppingList(sl || []);
-      setReady(true);
+  (async () => {
+    // 1. On récupère les recettes depuis Supabase
+    const supabaseRecipes = await fetchRecipes();
+
+    // 2. On charge le reste depuis le stockage persistant habituel
+    const [pn, ss, s1] = await Promise.all([
+      loadKey("grimoire:pantry", []),
+      loadKey("grimoire:shoppingSelected", []),
+      loadKey("grimoire:shoppingList", []),
+    ]);
+
+    // 3. On met à jour les états (si Supabase a des recettes, on les prend, sinon démo)
+    setRecipes(supabaseRecipes && supabaseRecipes.length > 0 ? supabaseRecipes : demoRecipes());
+    setPantry(pn || []);
+    setShoppingSelected(ss || []);
+    setShoppingList(s1 || []);
+    setReady(true);
 
       try {
         const params = new URLSearchParams(window.location.search);
