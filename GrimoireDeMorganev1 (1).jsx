@@ -1,29 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  BookOpen, Plus, ShoppingBag, Utensils, Search, Heart, 
-  Trash2, Edit3, Share2, Copy, Check, X, Clock, Users, 
-  ChevronRight, Play, RotateCcw, AlertCircle, Upload, Award
-} from 'lucide-react';
-
-export default function GrimoireGourmand() {
-  // --- États Principaux ---
-  const [recipes, setRecipes] = useState(() => {
-    const saved = localStorage.getItem('grimoire_recipes');
-    return saved ? JSON.parse(saved) : [
-      {
-        id: '1',
-        title: 'Pâtes au Saumon Signées',
-        category: 'Plats',
-        prepTime: 15,
-        cookTime: 15,
-        servings: 2,
-        nutriscore: 'A',
-        isFavorite: true,
-        ingredients: [
-          { name: 'Pavés de saumon frais', qty: 2, unit: 'pièces', aisle: 'poissonnerie' },
-          { name: 'Penne ou Tagliatelles', qty: 250, unit: 'g', aisle: 'epicerie' },
-          { name: 'Crème fraîche épaisse 30%', qty: 3, unit: 'c.à.s', aisle: 'frais' },
-          { name: 'Citron jauneimport React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   BookOpen,
   Refrigerator,
@@ -239,7 +214,7 @@ function demoRecipes() {
 /*  STOCKAGE PERSISTANT (Compatibilité unifiée)                       */
 /* ------------------------------------------------------------------ */
 
-function loadKey(key, fallback) {
+async function loadKey(key, fallback) {
   try {
     if (typeof window !== "undefined") {
       const local = localStorage.getItem(key);
@@ -251,7 +226,7 @@ function loadKey(key, fallback) {
   return fallback;
 }
 
-function saveKey(key, value) {
+async function saveKey(key, value) {
   try {
     if (typeof window !== "undefined") {
       localStorage.setItem(key, JSON.stringify(value));
@@ -1404,44 +1379,42 @@ export default function GrimoireDeMorgane() {
     else setTextModal({ title: label, text });
   };
 
-useEffect(() => {
-  const r = loadKey("grimoire:recipes", null);
-  const pn = loadKey("grimoire:pantry", []);
-  const ss = loadKey("grimoire:shoppingSelected", []);
-  const sl = loadKey("grimoire:shoppingList", []);
+  useEffect(() => {
+    (async () => {
+      const [r, pn, ss, sl] = await Promise.all([
+        loadKey("grimoire:recipes", null),
+        loadKey("grimoire:pantry", []),
+        loadKey("grimoire:shoppingSelected", []),
+        loadKey("grimoire:shoppingList", []),
+      ]);
+      setRecipes(r && r.length ? r : demoRecipes());
+      setPantry(pn || []);
+      setShoppingSelected(ss || []);
+      setShoppingList(sl || []);
+      setReady(true);
 
-  setRecipes(r && r.length ? r : demoRecipes());
-  setPantry(pn || []);
-  setShoppingSelected(ss || []);
-  setShoppingList(sl || []);
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get("import");
+        if (code) {
+          const parsed = decodeRecipeCode(code);
+          if (parsed) setPendingImport(parsed);
+          window.history.replaceState({}, "", window.location.pathname);
+        }
+      } catch {
+        /* pas d'URL exploitable */
+      }
+    })();
+  }, []);
 
-  try {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get("import");
-    if (code) {
-      const parsed = decodeRecipeCode(code);
-      if (parsed) setPendingImport(parsed);
-      window.history.replaceState({}, "", window.location.pathname);
-    }
-  } catch {
-    /* pas d'URL exploitable */
-  }
-}, []);
-  
- useEffect(() => { saveKey("grimoire:recipes", recipes); }, [recipes]);
-useEffect(() => { saveKey("grimoire:pantry", pantry); }, [pantry]);
-useEffect(() => { saveKey("grimoire:shoppingSelected", shoppingSelected); }, [shoppingSelected]);
-useEffect(() => { saveKey("grimoire:shoppingList", shoppingList); }, [shoppingList]);
+  useEffect(() => { if (ready) saveKey("grimoire:recipes", recipes); }, [recipes, ready]);
+  useEffect(() => { if (ready) saveKey("grimoire:pantry", pantry); }, [pantry, ready]);
+  useEffect(() => { if (ready) saveKey("grimoire:shoppingSelected", shoppingSelected); }, [shoppingSelected, ready]);
+  useEffect(() => { if (ready) saveKey("grimoire:shoppingList", shoppingList); }, [shoppingList, ready]);
 
   const saveRecipe = (recipe) => {
-  setRecipes((prev) => {
-    const index = prev.findIndex((r) => r.id === recipe.id);
-    if (index === -1) return [recipe, ...prev];
-    const next = [...prev];
-    next[index] = recipe;
-    return next;
-  });
-};
+    setRecipes((prev) => (prev.some((r) => r.id === recipe.id) ? prev.map((r) => (r.id === recipe.id ? recipe : r)) : [recipe, ...prev]));
+  };
 
   const toggleFavorite = (id) => {
     setRecipes((prev) => prev.map((r) => (r.id === id ? { ...r, favorite: !r.favorite } : r)));
@@ -1449,7 +1422,7 @@ useEffect(() => { saveKey("grimoire:shoppingList", shoppingList); }, [shoppingLi
 
   const exportGrimoire = () => {
     try {
-     const blob = new Blob([JSON.stringify({ recipes, pantry, shoppingSelected, shoppingList }, null, 2)], { type: "application/json" });
+      const blob = new Blob([JSON.stringify(recipes, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -1942,511 +1915,4 @@ const CSS = `
 
 .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--gold-light); border: 1px solid var(--gold); padding: 8px 18px; border-radius: 999px; font-family: 'Cinzel', serif; font-size: 0.75rem; z-index: 200; box-shadow: 0 4px 12px rgba(0,0,0,0.25); animation: pop 0.2s ease; }
 @keyframes pop { from { transform: translate(-50%, 10px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
-`; (jus et zestes)', qty: 1, unit: 'pièce', aisle: 'fruits-legumes' },
-          { name: 'Aneth fraîche', qty: 1, unit: 'botte', aisle: 'fruits-legumes' }
-        ],
-        steps: [
-          'Faire cuire les pâtes dans un grand volume d’eau salée selon le temps indiqué.',
-          'Saisir les pavés de saumon dans une poêle chaude 3 min de chaque côté, puis les émietter grossièrement.',
-          'Ajouter la crème, le jus de citron et l’aneth ciselée dans la poêle. Mélanger doucement.',
-          'Incorporer les pâtes égouttées dans la sauce saumonée et servir chaud.'
-        ]
-      }
-    ];
-  });
-
-  const [activeTab, setActiveTab] = useState('recipes'); // 'recipes' | 'shopping' | 'add'
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('Tous');
-  const [selectedRecipe, setSelectedRecipe] = useState(null);
-  const [editingRecipe, setEditingRecipe] = useState(null);
-
-  // --- Mode Cuisine & Chrono ---
-  const [cookingRecipe, setCookingRecipe] = useState(null);
-  const [activeTimer, setActiveTimer] = useState(null);
-  const [timerSecondsLeft, setTimerSecondsLeft] = useState(0);
-
-  // --- Liste de courses interactive ---
-  const [selectedForShopping, setSelectedForShopping] = useState([]);
-  const [shoppingList, setShoppingList] = useState({});
-
-  // --- Toast Notifications ---
-  const [toastMessage, setToastMessage] = useState('');
-
-  // Persistance
-  useEffect(() => {
-    localStorage.setItem('grimoire_recipes', JSON.stringify(recipes));
-  }, [recipes]);
-
-  // Gestion du chronomètre
-  useEffect(() => {
-    let interval = null;
-    if (activeTimer && timerSecondsLeft > 0) {
-      interval = setInterval(() => setTimerSecondsLeft(prev => prev - 1), 1000);
-    } else if (timerSecondsLeft === 0 && activeTimer) {
-      showToast('⌛ Le minuteur est terminé !');
-      setActiveTimer(null);
-    }
-    return () => clearInterval(interval);
-  }, [activeTimer, timerSecondsLeft]);
-
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(''), 3000);
-  };
-
-  // Basculer Favori
-  const toggleFavorite = (id) => {
-    setRecipes(prev => prev.map(r => r.id === id ? { ...r, isFavorite: !r.isFavorite } : r));
-  };
-
-  // Suppression
-  const deleteRecipe = (id) => {
-    if (window.confirm('Supprimer cette recette du Grimoire ?')) {
-      setRecipes(prev => prev.filter(r => r.id !== id));
-      if (selectedRecipe?.id === id) setSelectedRecipe(null);
-      showToast('Recette effacée du Grimoire');
-    }
-  };
-
-  // Génération de la liste de courses
-  const generateShoppingList = () => {
-    const listByAisle = {};
-    selectedForShopping.forEach(recipeId => {
-      const rec = recipes.find(r => r.id === recipeId);
-      if (!rec) return;
-
-      rec.ingredients.forEach(ing => {
-        const aisleKey = ing.aisle || 'autres';
-        if (!listByAisle[aisleKey]) listByAisle[aisleKey] = [];
-        
-        const existing = listByAisle[aisleKey].find(item => item.name.toLowerCase() === ing.name.toLowerCase());
-        if (existing) {
-          existing.qty += ing.qty;
-        } else {
-          listByAisle[aisleKey].push({ ...ing, checked: false });
-        }
-      });
-    });
-    setShoppingList(listByAisle);
-    showToast('Liste de courses générée');
-  };
-
-  const categories = ['Tous', 'Entrées', 'Plats', 'Desserts', 'Boissons', 'Sauces'];
-
-  const filteredRecipes = recipes.filter(r => {
-    const matchesCat = selectedCategory === 'Tous' || r.category === selectedCategory;
-    const matchesSearch = r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.ingredients.some(i => i.name.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesCat && matchesSearch;
-  });
-
-  return (
-    <div className="grimoire-app">
-      {/* --- En-tête --- */}
-      <header className="grimoire-header">
-        <div className="brand">
-          <Utensils className="brand-icon" size={24} />
-          <h1>Grimoire Gourmand</h1>
-        </div>
-      </header>
-
-      {/* --- Contenu Principal --- */}
-      <main className="grimoire-main">
-        {activeTab === 'recipes' && (
-          <div className="tab-recipes">
-            <div className="search-bar">
-              <Search size={18} className="search-icon" />
-              <input 
-                type="text" 
-                placeholder="Chercher un ingrédient, un plat..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-
-            <div className="category-chips">
-              {categories.map(cat => (
-                <button
-                  key={cat}
-                  className={`chip ${selectedCategory === cat ? 'active' : ''}`}
-                  onClick={() => setSelectedCategory(cat)}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-
-            <div className="recipe-grid">
-              {filteredRecipes.map(recipe => (
-                <div key={recipe.id} className="recipe-card" onClick={() => setSelectedRecipe(recipe)}>
-                  <div className="card-header">
-                    <span className="badge-category">{recipe.category}</span>
-                    <button 
-                      className="btn-fav"
-                      onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }}
-                    >
-                      <Heart size={18} fill={recipe.isFavorite ? "var(--wine)" : "none"} color="var(--wine)" />
-                    </button>
-                  </div>
-                  <h3>{recipe.title}</h3>
-                  <div className="card-meta">
-                    <span><Clock size={14} /> {recipe.prepTime + recipe.cookTime} min</span>
-                    <span><Users size={14} /> {recipe.servings} pers.</span>
-                    {recipe.nutriscore && <span className={`nutriscore score-${recipe.nutriscore}`}>{recipe.nutriscore}</span>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* --- Onglet Liste de Courses --- */}
-        {activeTab === 'shopping' && (
-          <div className="tab-shopping">
-            <h2>Générateur de Courses</h2>
-            <p className="subtitle">Sélectionne les recettes à cuisiner cette semaine :</p>
-
-            <div className="recipe-select-list">
-              {recipes.map(r => (
-                <label key={r.id} className="recipe-select-row">
-                  <input 
-                    type="checkbox" 
-                    checked={selectedForShopping.includes(r.id)}
-                    onChange={(e) => {
-                      if (e.target.checked) setSelectedForShopping([...selectedForShopping, r.id]);
-                      else setSelectedForShopping(selectedForShopping.filter(id => id !== r.id));
-                    }}
-                  />
-                  <span>{r.title}</span>
-                </label>
-              ))}
-            </div>
-
-            <button className="btn-seal" onClick={generateShoppingList}>
-              Générer la liste
-            </button>
-
-            {Object.keys(shoppingList).length > 0 && (
-              <div className="shopping-result">
-                {Object.entries(shoppingList).map(([aisle, items]) => (
-                  <div key={aisle} className="aisle-block">
-                    <h4>{aisle}</h4>
-                    <ul className="shopping-list">
-                      {items.map((item, idx) => (
-                        <li key={idx} className={item.checked ? 'checked' : ''}>
-                          <label className="checkbox-row">
-                            <input 
-                              type="checkbox" 
-                              checked={item.checked} 
-                              onChange={() => {
-                                const updated = { ...shoppingList };
-                                updated[aisle][idx].checked = !updated[aisle][idx].checked;
-                                setShoppingList(updated);
-                              }}
-                            />
-                            <span>{item.name}</span>
-                          </label>
-                          <span className="qty">{item.qty} {item.unit}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </main>
-
-      {/* --- Détail Recette (Modale) --- */}
-      {selectedRecipe && (
-        <div className="modal-backdrop" onClick={() => setSelectedRecipe(null)}>
-          <div className="modal grimoire-page" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setSelectedRecipe(null)}><X size={20} /></button>
-            <h2 className="dropcap-title">{selectedRecipe.title}</h2>
-            <div className="flourish">❦</div>
-
-            <div className="card-meta">
-              <span><Clock size={14} /> Prépa : {selectedRecipe.prepTime}m | Cuisson : {selectedRecipe.cookTime}m</span>
-              <span><Users size={14} /> {selectedRecipe.servings} pers.</span>
-            </div>
-
-            <h3>Ingrédients</h3>
-            <ul className="ingredient-list">
-              {selectedRecipe.ingredients.map((ing, i) => (
-                <li key={i}>{ing.qty} {ing.unit} {ing.name}</li>
-              ))}
-            </ul>
-
-            <h3>Préparation</h3>
-            <ol className="steps-list">
-              {selectedRecipe.steps.map((step, i) => (
-                <li key={i}>{step}</li>
-              ))}
-            </ol>
-
-            <div className="modal-actions">
-              <button className="btn-seal" onClick={() => { setCookingRecipe(selectedRecipe); setSelectedRecipe(null); }}>
-                <Play size={16} /> Mode Cuisine
-              </button>
-              <button className="btn-icon-alt" onClick={() => deleteRecipe(selectedRecipe.id)}>
-                <Trash2 size={16} />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* --- Navigation Basse --- */}
-      <nav className="bottom-nav">
-        <button className={`nav-btn ${activeTab === 'recipes' ? 'active' : ''}`} onClick={() => setActiveTab('recipes')}>
-          <BookOpen size={20} />
-          <span>Grimoire</span>
-        </button>
-        <button className={`nav-btn ${activeTab === 'shopping' ? 'active' : ''}`} onClick={() => setActiveTab('shopping')}>
-          <ShoppingBag size={20} />
-          <span>Courses</span>
-        </button>
-      </nav>
-
-      {/* --- Notification Toast --- */}
-      {toastMessage && <div className="toast">{toastMessage}</div>}
-
-      {/* --- CSS Injecté Intégralement --- */}
-      <style>{`
-        :root {
-          --parchment: #fcf8f2;
-          --parchment-deep: #f3ebd9;
-          --ink: #2b2219;
-          --ink-soft: #635345;
-          --wine: #7a2328;
-          --gold: #b3872a;
-          --line: #e3d5c1;
-        }
-
-        body {
-          margin: 0;
-          background-color: var(--parchment-deep);
-          color: var(--ink);
-          font-family: 'EB Garamond', serif;
-        }
-
-        .grimoire-app {
-          max-width: 480px;
-          margin: 0 auto;
-          min-height: 100vh;
-          background-color: var(--parchment);
-          display: flex;
-          flex-direction: column;
-          position: relative;
-          padding-bottom: 70px;
-        }
-
-        .grimoire-header {
-          padding: 16px 20px;
-          border-bottom: 2px solid var(--line);
-          text-align: center;
-        }
-
-        .brand {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 10px;
-          color: var(--wine);
-        }
-
-        .brand h1 {
-          font-family: 'Cinzel', serif;
-          font-size: 1.3rem;
-          margin: 0;
-          letter-spacing: 1px;
-        }
-
-        .grimoire-main {
-          padding: 16px;
-          flex: 1;
-        }
-
-        .search-bar {
-          display: flex;
-          align-items: center;
-          background: rgba(255, 255, 255, 0.6);
-          border: 1px solid var(--line);
-          border-radius: 8px;
-          padding: 8px 12px;
-          margin-bottom: 12px;
-        }
-
-        .search-bar input {
-          border: none;
-          background: transparent;
-          outline: none;
-          margin-left: 8px;
-          width: 100%;
-          font-family: inherit;
-        }
-
-        .category-chips {
-          display: flex;
-          gap: 8px;
-          overflow-x: auto;
-          padding-bottom: 8px;
-          margin-bottom: 16px;
-        }
-
-        .chip {
-          border: 1px solid var(--line);
-          background: transparent;
-          padding: 4px 12px;
-          border-radius: 16px;
-          font-size: 0.85rem;
-          cursor: pointer;
-          white-space: nowrap;
-        }
-
-        .chip.active {
-          background: var(--wine);
-          color: white;
-          border-color: var(--wine);
-        }
-
-        .recipe-grid {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .recipe-card {
-          border: 1px solid var(--line);
-          border-radius: 10px;
-          padding: 14px;
-          background: rgba(255, 255, 255, 0.4);
-          cursor: pointer;
-        }
-
-        .card-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-
-        .badge-category {
-          font-size: 0.75rem;
-          text-transform: uppercase;
-          color: var(--gold);
-          font-family: 'Cinzel', serif;
-        }
-
-        .btn-fav {
-          background: none;
-          border: none;
-          cursor: pointer;
-        }
-
-        .card-meta {
-          display: flex;
-          gap: 12px;
-          font-size: 0.85rem;
-          color: var(--ink-soft);
-          margin-top: 8px;
-        }
-
-        .btn-seal {
-          width: 100%;
-          background: var(--wine);
-          color: white;
-          border: none;
-          padding: 12px;
-          border-radius: 8px;
-          font-family: 'Cinzel', serif;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-        }
-
-        .recipe-select-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
-        .recipe-select-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; }
-        .recipe-select-row span:first-of-type { flex: 1; font-family: 'Cinzel', serif; font-size: 0.85rem; }
-
-        .shopping-result { margin-top: 20px; }
-        .aisle-block { margin-top: 16px; }
-        .aisle-block h4 {
-          font-family: 'Cinzel', serif;
-          font-size: 0.78rem;
-          letter-spacing: 1.5px;
-          text-transform: uppercase;
-          color: var(--gold);
-          border-bottom: 1px dashed rgba(179,135,42,0.4);
-          padding-bottom: 4px;
-          margin-bottom: 8px;
-        }
-        .shopping-list { list-style: none; padding: 0; margin: 0; }
-        .shopping-list li {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 8px 4px; border-bottom: 1px dotted var(--line); font-size: 0.92rem;
-        }
-        .checkbox-row { display: flex; align-items: center; gap: 10px; cursor: pointer; flex: 1; }
-
-        .modal-backdrop {
-          position: fixed; inset: 0; z-index: 100;
-          background: rgba(20, 14, 4, 0.65); backdrop-filter: blur(4px);
-          display: flex; align-items: flex-end; justify-content: center;
-        }
-        @media (min-width: 520px) { .modal-backdrop { align-items: center; } }
-
-        .modal {
-          width: 100%; max-width: 480px; max-height: 88vh; overflow-y: auto;
-          border-radius: 18px 18px 0 0; position: relative; padding: 22px 20px 28px;
-          background: var(--parchment);
-        }
-
-        .modal-close {
-          position: absolute; top: 16px; right: 16px;
-          border: none; background: transparent; cursor: pointer;
-        }
-
-        .dropcap-title {
-          font-family: 'Cinzel', serif;
-          font-size: 1.25rem; margin: 0 0 4px; color: var(--ink);
-        }
-
-        .flourish { text-align: center; color: var(--gold); font-size: 1.2rem; margin: 10px 0; }
-
-        .ingredient-list, .steps-list { padding-left: 20px; margin: 8px 0 16px; font-size: 0.95rem; }
-
-        .modal-actions { display: flex; gap: 10px; margin-top: 16px; }
-        .btn-icon-alt {
-          background: transparent; border: 1px solid var(--line);
-          padding: 10px; border-radius: 8px; cursor: pointer; color: var(--wine);
-        }
-
-        .bottom-nav {
-          position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-          width: 100%; max-width: 480px; height: 64px;
-          background: var(--parchment); border-top: 2px solid var(--line);
-          display: flex; justify-content: space-around; align-items: center;
-          z-index: 50;
-        }
-
-        .nav-btn {
-          background: none; border: none; cursor: pointer;
-          display: flex; flex-direction: column; align-items: center; gap: 3px;
-          color: var(--ink-soft); font-size: 0.65rem;
-        }
-
-        .nav-btn.active { color: var(--wine); font-weight: bold; }
-
-        .toast {
-          position: fixed; bottom: 78px; left: 50%; transform: translateX(-50%);
-          background: var(--ink); color: var(--parchment);
-          padding: 8px 18px; border-radius: 999px; font-size: 0.75rem;
-          z-index: 200;
-        }
-      `}</style>
-    </div>
-  );
-}
+`;
