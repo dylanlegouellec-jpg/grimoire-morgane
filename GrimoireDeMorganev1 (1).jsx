@@ -214,7 +214,7 @@ function demoRecipes() {
 /*  STOCKAGE PERSISTANT (Compatibilité unifiée)                       */
 /* ------------------------------------------------------------------ */
 
-async function loadKey(key, fallback) {
+const saved = loadKey("grimoire:recipes", null);
   try {
     if (typeof window !== "undefined") {
       const local = localStorage.getItem(key);
