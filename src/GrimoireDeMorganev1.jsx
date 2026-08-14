@@ -723,13 +723,13 @@ function RecipeCard({ recipe, onOpen, onToggleFavorite }) {
         <DishArt recipe={recipe} />
         <button
           type="button"
-          className={`fav-btn ${recipe.favorite ? "active" : ""}`}
+         className={&#96;fav-btn ${recipe.is_favorite ? "active" : ""}&#96;}
           onClick={(e) => {
             e.stopPropagation();
             onToggleFavorite(recipe.id);
           }}
         >
-          <Heart size={16} fill={recipe.favorite ? "currentColor" : "none"} />
+         fill={recipe.is_favorite ? "currentColor" : "none"}
         </button>
       </div>
       <div className="card-body">
@@ -1450,8 +1450,14 @@ export default function GrimoireDeMorgane() {
     }
   };
   
- const toggleFavorite = (id) => {
-    setRecipes((prev) => prev.map((r) => (r.id === id ? { ...r, favorite: !r.favorite } : r)));
+const toggleFavorite = async (id) => {
+    setRecipes((prev) => prev.map((r) => (r.id === id ? { ...r, is_favorite: !r.is_favorite } : r)));
+    
+    // Optionnel : si tu veux aussi sauvegarder dans Supabase en même temps
+    const recipe = recipes.find(r => r.id === id);
+    if (recipe) {
+      await supabase.from('recipe').update({ is_favorite: !recipe.is_favorite }).eq('id', id);
+    }
   };
   
   const exportGrimoire = () => {
