@@ -1415,7 +1415,8 @@ export default function GrimoireDeMorgane() {
   setShoppingSelected(ss || []);
   setShoppingList(sl || []);
   setReady(true);
-
+}, []);
+  
       try {
         const params = new URLSearchParams(window.location.search);
         const code = params.get("import");
@@ -1430,14 +1431,20 @@ export default function GrimoireDeMorgane() {
     })();
   }, []);
 
-  useEffect(() => { saveKey("grimoire:recipes", recipes); }, [recipes]);
-useEffect(() => { saveKey("grimoire:pantry", pantry); }, [pantry]);
-useEffect(() => { saveKey("grimoire:shoppingSelected", shoppingSelected); }, [shoppingSelected]);
-useEffect(() => { saveKey("grimoire:shoppingList", shoppingList); }, [shoppingList]);
+ useEffect(() => { if (ready) saveKey("grimoire:recipes", recipes); }, [recipes, ready]);
+useEffect(() => { if (ready) saveKey("grimoire:pantry", pantry); }, [pantry, ready]);
+useEffect(() => { if (ready) saveKey("grimoire:shoppingSelected", shoppingSelected); }, [shoppingSelected, ready]);
+useEffect(() => { if (ready) saveKey("grimoire:shoppingList", shoppingList); }, [shoppingList, ready]);
 
   const saveRecipe = (recipe) => {
-    setRecipes((prev) => (prev.some((r) => r.id === recipe.id) ? prev.map((r) => (r.id === recipe.id ? recipe : r)) : [recipe, ...prev]));
-  };
+  setRecipes((prev) => {
+    const index = prev.findIndex((r) => r.id === recipe.id);
+    if (index === -1) return [recipe, ...prev];
+    const next = [...prev];
+    next[index] = recipe;
+    return next;
+  });
+};
 
   const toggleFavorite = (id) => {
     setRecipes((prev) => prev.map((r) => (r.id === id ? { ...r, favorite: !r.favorite } : r)));
@@ -1445,7 +1452,7 @@ useEffect(() => { saveKey("grimoire:shoppingList", shoppingList); }, [shoppingLi
 
   const exportGrimoire = () => {
     try {
-      const blob = new Blob([JSON.stringify(recipes, null, 2)], { type: "application/json" });
+     const blob = new Blob([JSON.stringify({ recipes, pantry, shoppingSelected, shoppingList }, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
