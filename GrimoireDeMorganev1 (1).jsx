@@ -1404,8 +1404,18 @@ export default function GrimoireDeMorgane() {
   useEffect(() => { saveKey("grimoire:shoppingSelected", shoppingSelected); }, [shoppingSelected]);
   useEffect(() => { saveKey("grimoire:shoppingList", shoppingList); }, [shoppingList]);
   
-  const toggleFavorite = (id) => {
-    setRecipes((prev) => prev.map((r) => (r.id === id ? { ...r, favorite: !r.favorite } : r)));
+const toggleFavorite = (id) => {
+    setRecipes((prev) => {
+      const updated = prev.map((r) => (r.id === id ? { ...r, favorite: !r.favorite } : r));
+      localStorage.setItem("grimoire:recipes", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  // Utilise cette fonction PARTOUT où tu modifies tes recettes (ajout, modification, suppression) :
+  const updateAndSaveRecipes = (newRecipes) => {
+    setRecipes(newRecipes);
+    localStorage.setItem("grimoire:recipes", JSON.stringify(newRecipes));
   };
   
   const exportGrimoire = () => {
