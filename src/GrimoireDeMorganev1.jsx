@@ -21,6 +21,7 @@ import {
   Square,
   FileText,
 } from "lucide-react";
+import { saveNewRecipe } from './recipeService'; // Assure-toi que le chemin est bon
 
 /* ------------------------------------------------------------------ */
 /*  DONNÉES                                                            */
