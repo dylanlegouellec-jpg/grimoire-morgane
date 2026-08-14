@@ -1377,6 +1377,18 @@ const [shoppingList, setShoppingList] = useState(() => {
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
 
+  useEffect(() => {
+  localStorage.setItem('grimoire_recipes', JSON.stringify(recipes));
+}, [recipes]);
+
+useEffect(() => {
+  localStorage.setItem('grimoire_pantry', JSON.stringify(pantry));
+}, [pantry]);
+
+useEffect(() => {
+  localStorage.setItem('grimoire_shopping', JSON.stringify(shoppingList));
+}, [shoppingList]);
+  
   const touchStart = useRef(null);
   const secretHeader = useSecretTrigger(() => setShowSecretSettings(true));
 
@@ -1621,17 +1633,7 @@ const [shoppingList, setShoppingList] = useState(() => {
     </div>
   );
 }
-useEffect(() => {
-  localStorage.setItem('grimoire_recipes', JSON.stringify(recipes));
-}, [recipes]);
 
-useEffect(() => {
-  localStorage.setItem('grimoire_pantry', JSON.stringify(pantry));
-}, [pantry]);
-
-useEffect(() => {
-  localStorage.setItem('grimoire_shopping', JSON.stringify(shoppingList));
-}, [shoppingList]);
 
 /* ------------------------------------------------------------------ */
 /*  CSS                                                                 */
