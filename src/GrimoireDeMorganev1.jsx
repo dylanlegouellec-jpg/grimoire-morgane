@@ -305,7 +305,7 @@ function buildPrintHTML(recipe, servings, ingredients) {
 /*  LocalStorage Superbase                 */
 /* ------------------------------------------------------------------ */
 
-import { saveNewRecipe } from './src/recipeService';
+import { saveNewRecipe } from './recipeService.js';
 
 // ... dans ta fonction de soumission de recette :
 const handleSave = async (recipe) => {
