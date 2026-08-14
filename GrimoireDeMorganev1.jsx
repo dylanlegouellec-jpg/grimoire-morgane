@@ -1343,11 +1343,11 @@ const FILTERS = [
 /* ------------------------------------------------------------------ */
 
 export default function GrimoireDeMorgane() {
-  const [ready, setReady] = useState(false);
+const [ready, setReady] = useState(true);
   const [recipes, setRecipes] = useState(() => {
   try {
     const saved = localStorage.getItem('grimoire_recipes');
-    return saved ? JSON.parse(saved) : DEFAULT_RECIPES; // Remplace DEFAULT_RECIPES par ton tableau initial s'il a un autre nom
+   return saved ? JSON.parse(saved) : (typeof INITIAL_RECIPES !== 'undefined' ? INITIAL_RECIPES : []);
   } catch (e) { return []; }
 });
 const [pantry, setPantry] = useState(() => {
