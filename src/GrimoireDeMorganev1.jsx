@@ -1,3 +1,4 @@
+import { supabase } from './supabase';
 import React, { useState, useEffect, useRef } from "react";
 import {
   BookOpen,
