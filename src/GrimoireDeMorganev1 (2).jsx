@@ -217,8 +217,8 @@ function demoRecipes() {
 // ⚠️ À compléter avec ton propre projet Supabase.
 // Tant que ces valeurs sont vides, l'app fonctionne en mémoire avec les
 // recettes de démonstration, sans planter.
-  const SUPABASE_URL = "https://mdvzdbbbueekrbzghetd.supabase.co"; // ex: "https://xxxxxxxx.supabase.co"
-const SUPABASE_ANON_KEY = "sb_publishable_0gw7r9y0kbMEWhitsUcNqA_cwhTKNFh"; // ta clé "anon public"
+  const SUPABASE_URL = "https://mdvzdbbbueekrbzghetd.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kdnpkYmJidWVla3JiemdoZXRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY2ODA2ODcsImV4cCI6MjEwMjI1NjY4N30.nv1eLh9PViCPUk0OZ5herFMJyIcZuUgyJgETQz6IMis"; // ta clé "anon public"
 
 const SUPABASE_READY = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
