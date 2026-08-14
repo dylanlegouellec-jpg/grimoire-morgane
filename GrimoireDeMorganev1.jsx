@@ -216,26 +216,23 @@ function demoRecipes() {
 
 async function loadKey(key, fallback) {
   try {
-    if (typeof window !== "undefined" && window.storage && typeof window.storage.get === "function") {
-      const res = await window.storage.get(key, false);
-      return res ? JSON.parse(res.value) : fallback;
+    if (typeof window !== "undefined") {
+      const local = localStorage.getItem(key);
+      return local ? JSON.parse(local) : fallback;
     }
-    const local = localStorage.getItem(key);
-    return local ? JSON.parse(local) : fallback;
-  } catch {
-    return fallback;
+  } catch (e) {
+    console.error("Erreur lecture LocalStorage", e);
   }
+  return fallback;
 }
 
 async function saveKey(key, value) {
   try {
-    if (typeof window !== "undefined" && window.storage && typeof window.storage.set === "function") {
-      await window.storage.set(key, JSON.stringify(value), false);
-      return;
+    if (typeof window !== "undefined") {
+      localStorage.setItem(key, JSON.stringify(value));
     }
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    /* fallback silencieux en mémoire */
+  } catch (e) {
+    console.error("Erreur écriture LocalStorage", e);
   }
 }
 
