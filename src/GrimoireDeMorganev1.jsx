@@ -1405,18 +1405,18 @@ export default function GrimoireDeMorgane() {
   })();
 }, []);
   
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const code = params.get("import");
-        if (code) {
-          const parsed = decodeRecipeCode(code);
-          if (parsed) setPendingImport(parsed);
-          window.history.replaceState({}, "", window.location.pathname);
-        }
-      } catch {
-        /* pas d'URL exploitable, tant pis */
+ useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("import");
+      if (code) {
+        const parsed = decodeRecipeCode(code);
+        if (parsed) setPendingImport(parsed);
+        window.history.replaceState({}, "", window.location.pathname);
       }
-    })();
+    } catch {
+      /* pas d'URL exploitable, tant pis */
+    }
   }, []);
   
   useEffect(() => { if (ready) saveKey("grimoire:pantry", pantry); }, [pantry, ready]);
