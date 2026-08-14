@@ -1452,16 +1452,15 @@ export default function GrimoireDeMorgane() {
 };
   
 const toggleFavorite = async (id) => {
-    // 1. Trouver la recette concernée pour récupérer son nouvel état
     const recipeToUpdate = recipes.find(r => r.id === id);
     if (!recipeToUpdate) return;
 
     const newFavoriteStatus = !recipeToUpdate.is_favorite;
 
-    // 2. Mettre à jour l'état local instantanément pour l'UI
+    // Mise à jour instantanée de l'interface
     setRecipes((prev) => prev.map((r) => (r.id === id ? { ...r, is_favorite: newFavoriteStatus } : r)));
 
-    // 3. Mettre à jour dans Supabase
+    // Mise à jour dans Supabase
     try {
       const { error } = await supabase
         .from('recipe')
