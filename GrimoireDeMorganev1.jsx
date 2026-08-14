@@ -214,21 +214,25 @@ function demoRecipes() {
 /*  STOCKAGE PERSISTANT                                                */
 /* ------------------------------------------------------------------ */
 
-async function loadKey(key, fallback) {
-  try {
-    const res = await window.storage.get(key, false);
-    return res ? JSON.parse(res.value) : fallback;
-  } catch {
-    return fallback;
+// Remplace window.storage par le localStorage standard
+const storage = {
+  get: async (key) => {
+    try {
+      const value = localStorage.getItem(key);
+      return value ? JSON.parse(value) : null;
+    } catch (e) {
+      console.error("Erreur lecture storage", e);
+      return null;
+    }
+  },
+  set: async (key, value) => {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) {
+      console.error("Erreur écriture storage", e);
+    }
   }
-}
-async function saveKey(key, value) {
-  try {
-    await window.storage.set(key, JSON.stringify(value), false);
-  } catch {
-    /* silencieux : le grimoire continue de fonctionner en mémoire */
-  }
-}
+};
 
 /* ------------------------------------------------------------------ */
 /*  PARTAGE, IMPORT / EXPORT, IMPRESSION                               */
