@@ -1088,7 +1088,7 @@ function RecipeForm({ onClose, onSave, initialRecipe }) {
 function RecipesView({ recipes, filter, search, favoritesOnly, onToggleFavorite, onAddRequest, onOpen }) {
   const q = search.trim().toLowerCase();
   const filtered = recipes.filter((r) => {
-  if (filter !== "tout" && (!r.category || r.category.toLowerCase() !== filter.toLowerCase())) return false;
+if (filter !== "tout" && (!r.category || r.category.toLowerCase() !== filter.toLowerCase())) return false;
     if (favoritesOnly && !r.is_favorite) return false;
     if (q) {
       const inTitle = r.title.toLowerCase().includes(q);
@@ -1450,28 +1450,8 @@ export default function GrimoireDeMorgane() {
     }
   };
   
-const toggleFavorite = async (id) => {
-    const recipeToUpdate = recipes.find(r => r.id === id);
-    if (!recipeToUpdate) return;
-
-    const newFavoriteStatus = !recipeToUpdate.is_favorite;
-
-    // 1. Mise à jour instantanée de l'interface locale
-    setRecipes((prev) => 
-      prev.map((r) => (r.id === id ? { ...r, is_favorite: newFavoriteStatus } : r))
-    );
-
-    // 2. Mise à jour de la base de données Supabase
-    try {
-      const { error } = await supabase
-        .from('recipe')
-        .update({ is_favorite: newFavoriteStatus })
-        .eq('id', id);
-
-      if (error) throw error;
-    } catch (err) {
-      console.error("Erreur lors de la mise à jour du favori :", err);
-    }
+ const toggleFavorite = (id) => {
+    setRecipes((prev) => prev.map((r) => (r.id === id ? { ...r, favorite: !r.favorite } : r)));
   };
   
   const exportGrimoire = () => {
