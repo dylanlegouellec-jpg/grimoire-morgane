@@ -220,7 +220,7 @@ function demoRecipes() {
 const SUPABASE_URL = "https://mdvzdbbbueekrbzghetd.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kdnpkYmJidWVla3JiemdoZXRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY2ODA2ODcsImV4cCI6MjEwMjI1NjY4N30.nv1eLh9PViCPUk0OZ5herFMJyIcZuUgyJgETQz6IMis";
 
-const SUPABASE_READY = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+const SUPABASE_READY = true;
 
 /*
   Schéma SQL attendu (à exécuter dans l'éditeur SQL de Supabase) :
