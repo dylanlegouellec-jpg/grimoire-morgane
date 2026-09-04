@@ -605,15 +605,20 @@ html, body {
 }
 /* Étendue jusqu'aux bords de .modal via des marges négatives qui annulent
    son padding, puis un padding propre est réappliqué par-dessus pour le
-   contenu du pied de page lui-même. Le padding bas réserve la zone sûre
-   iOS (encoche/indicateur d'accueil) — la barre de nav de l'appli n'a PAS
-   besoin d'être comptée en plus ici, contrairement aux autres correctifs
-   de ce type : ce pied de page est un enfant flex de la feuille modale
-   elle-même (déjà au-dessus de .bottom-nav dans l'empilement), pas un
-   élément qui pourrait glisser derrière. */
+   contenu du pied de page lui-même.
+   Correctif : le padding bas ne réservait auparavant QUE la zone sûre iOS
+   (encoche/indicateur d'accueil, ~16px), sur l'hypothèse qu'un enfant flex
+   de la feuille modale (déjà au-dessus de .bottom-nav dans l'empilement,
+   z-index 55) ne pouvait pas se retrouver visuellement sous elle. En
+   pratique, sur PWA iOS installée, le bouton restait bord à bord avec la
+   barre de nav — trop peu de marge de respiration pour distinguer les
+   deux, quelle que soit la pile z-index. z-index explicite + padding bas
+   généreux (même famille de correctif que .shopping-result plus bas dans
+   ce fichier) pour que le bouton reste toujours nettement au-dessus. */
 .recipe-picker-footer {
   flex-shrink: 0;
-  margin: 8px -20px -30px; padding: 12px 20px calc(env(safe-area-inset-bottom, 16px) + 16px);
+  z-index: 90;
+  margin: 8px -20px -30px; padding: 12px 20px calc(env(safe-area-inset-bottom, 16px) + 80px);
   background: var(--parchment); box-shadow: 0 -6px 14px rgba(0,0,0,0.12);
   display: flex; justify-content: center;
 }
