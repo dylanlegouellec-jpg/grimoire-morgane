@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <!-- Le manifest et l'enregistrement du service worker sont injectés
+         automatiquement par vite-plugin-pwa (voir vite.config.js) — plus
+         besoin de <link rel="manifest"> manuel ni de manifest.json à la
+         racine, qui a été retiré pour éviter d'avoir deux manifestes
+         divergents. -->
+    <title>Le Grimoire de Morgane</title>
+    <style>
+      html, body {
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        overscroll-behavior-y: none;
+        min-height: 100dvh;
+      }
+    </style>
+    <link rel="apple-touch-icon" href="/Icon.jpeg">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">     <meta name="theme-color" content="#f5f0e1">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
