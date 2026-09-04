@@ -83,13 +83,20 @@ export default function RecipePickerModal({ recipes, onGenerate, onClose }) {
           )}
         </div>
 
-        {selected.length > 0 && (
-          <div className="recipe-picker-footer">
-            <Seal tone="gold" onClick={handleGenerate}>
-              <ShoppingBasket size={16} /> Générer la liste ({selected.length} recette{selected.length > 1 ? "s" : ""})
-            </Seal>
-          </div>
-        )}
+        {/* Pied de page TOUJOURS rendu (plus conditionné à selected.length > 0) :
+            le bouton restait auparavant totalement absent du DOM tant qu'aucune
+            recette n'était cochée, ce qui pouvait se lire comme "le bouton a
+            disparu". Il est désormais toujours visible, seulement désactivé
+            (voir .seal:disabled dans styles.css.js) avec un texte qui explique
+            quoi faire plutôt que de s'effacer. */}
+        <div className="recipe-picker-footer">
+          <Seal tone="gold" onClick={handleGenerate} disabled={selected.length === 0}>
+            <ShoppingBasket size={16} />
+            {selected.length === 0
+              ? "Sélectionne au moins 1 recette"
+              : `Générer la liste (${selected.length} recette${selected.length > 1 ? "s" : ""})`}
+          </Seal>
+        </div>
       </div>
     </div>
   );
