@@ -59,7 +59,7 @@ export default function AddMealModal({ recipes, initialDate, onAdd, onClose }) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal grimoire-page" onClick={(e) => e.stopPropagation()}>
+      <div className="modal grimoire-page planning-step-modal" onClick={(e) => e.stopPropagation()}>
         {!isFirstStep ? (
           <button className="modal-back" onClick={goBack}>
             <ChevronLeft size={20} /> {backLabels[step]}

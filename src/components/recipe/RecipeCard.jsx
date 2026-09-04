@@ -3,6 +3,8 @@ import { Clock, Heart, Users } from "lucide-react";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
 import { categoryLabel, categoryClass } from "../../utils/helpers";
 import { triggerHaptic, triggerHapticFeedback } from "../../utils/haptics";
+import { useTranslation } from "../../contexts/LanguageContext";
+import { translateRecipeText } from "../../utils/recipeTranslation";
 import DishArt from "../art/DishArt";
 import RecipeOptionsModal from "../common/RecipeOptionsModal";
 
@@ -31,6 +33,7 @@ function RecipeCard({
   // Le repli local ne sert que pour les recettes qui n'ont pas encore ce
   // champ (démo, recettes créées avant l'ajout de la colonne).
   const nutri = recipe.nutriscoreGrade || estimateNutriscoreLocal(recipe.ingredients, recipe.category);
+  const { language, dict } = useTranslation();
   const pressTimer = useRef(null);
   const longPressFired = useRef(false);
   const pressStartPos = useRef(null);
@@ -107,12 +110,12 @@ function RecipeCard({
         </div>
         <div className="card-body">
           <div className="card-top-row">
-            <span className={`chip ${categoryClass(recipe)}`}>{categoryLabel(recipe)}</span>
+            <span className={`chip ${categoryClass(recipe)}`}>{dict.labels[categoryLabel(recipe)] || categoryLabel(recipe)}</span>
             {showNutriscore && (
               <span className="nutri-badge" style={{ background: NUTRI_COLORS[nutri] }}>{nutri}</span>
             )}
           </div>
-          <h3>{recipe.title}</h3>
+          <h3>{translateRecipeText(recipe.title, language)}</h3>
           <div className="card-meta">
             <span><Clock size={13} /> {recipe.time} min</span>
             <span><Users size={13} /> {recipe.servings}</span>

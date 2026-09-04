@@ -1,8 +1,9 @@
 import { useState, useRef } from "react";
-import { Wand2, X } from "lucide-react";
+import { ChevronDown, Sparkles, Wand2, X } from "lucide-react";
 import { nextId, extractCodeFromInput, decodeRecipeCode, triggerHaptic, formatDurationMinutes } from "../../utils/helpers";
 import { normalizeIngredientList } from "../../utils/ingredients";
 import { fetchNutriscoreGrade } from "../../utils/nutriscoreClient";
+import { estimateNutritionOnline } from "../../utils/nutritionClient";
 import { formatPressDuration } from "../common/pressDuration";
 import { resolveIllustrationKey } from "../art/illustrations";
 import useSecretTrigger from "../../hooks/useSecretTrigger";
@@ -39,7 +40,18 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
   const [category, setCategory] = useState(initialRecipe ? initialRecipe.category : "Salé");
   const [time, setTime] = useState(initialRecipe ? initialRecipe.time : 30);
   const [servings, setServings] = useState(initialRecipe ? initialRecipe.servings : 4);
+  const [calories, setCalories] = useState(initialRecipe && initialRecipe.calories ? initialRecipe.calories : "");
+  const [protein, setProtein] = useState(initialRecipe && initialRecipe.protein ? initialRecipe.protein : "");
   const [carbs, setCarbs] = useState(initialRecipe && initialRecipe.carbs ? initialRecipe.carbs : "");
+  const [fat, setFat] = useState(initialRecipe && initialRecipe.fat ? initialRecipe.fat : "");
+  // Repliée par défaut, sauf si la recette a déjà au moins une valeur
+  // nutritionnelle renseignée (édition) — pas de raison de la cacher dans
+  // ce cas, l'utilisateur voudra probablement la voir/corriger d'emblée.
+  const [showNutrition, setShowNutrition] = useState(
+    Boolean(initialRecipe && (initialRecipe.calories || initialRecipe.protein || initialRecipe.carbs || initialRecipe.fat))
+  );
+  const [estimatingNutrition, setEstimatingNutrition] = useState(false);
+  const [nutritionError, setNutritionError] = useState("");
   const [notes, setNotes] = useState(initialRecipe && initialRecipe.notes ? initialRecipe.notes : "");
   const rowIdRef = useRef(0);
   const newRowId = () => `ing-${rowIdRef.current++}`;
@@ -136,13 +148,12 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
   const hasSteps = stepRows.some((r) => !r.isSection && r.text.trim().length > 0);
   const canSubmit = hasTitle && hasIngredients && hasSteps;
 
-  const submit = async (e) => {
-    e.preventDefault();
-    if (!canSubmit || saving) {
-      if (!canSubmit) setFormError("Il manque le nom, les ingrédients ou les étapes de la recette.");
-      return;
-    }
-    const ingredients = normalizeIngredientList(
+  // Partagé entre submit() et le bouton "Estimer la nutrition" : les deux
+  // ont besoin de la même liste d'ingrédients normalisée à partir des
+  // rangées du formulaire, l'un pour enregistrer la recette, l'autre pour
+  // l'envoyer à /api/nutrition-estimate.
+  const buildIngredientsFromRows = () =>
+    normalizeIngredientList(
       ingredientRows
         .filter((r) => (r.isSection ? r.title.trim() : r.name.trim()))
         .map((r) =>
@@ -151,10 +162,42 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
             : { qty: parseFloat(String(r.qty).replace(",", ".")) || 0, unit: r.unit, name: r.name.trim() }
         )
     );
+
+  const handleEstimateNutrition = async () => {
+    if (estimatingNutrition) return;
+    triggerHaptic(15);
+    setEstimatingNutrition(true);
+    setNutritionError("");
+    try {
+      const result = await estimateNutritionOnline(buildIngredientsFromRows(), Number(servings) || 4);
+      if (!result) {
+        setNutritionError("Estimation impossible — pas assez d'ingrédients reconnus. Tu peux saisir les valeurs à la main.");
+        return;
+      }
+      setCalories(result.calories);
+      setProtein(result.protein);
+      setCarbs(result.carbs);
+      setFat(result.fat);
+    } finally {
+      setEstimatingNutrition(false);
+    }
+  };
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!canSubmit || saving) {
+      if (!canSubmit) setFormError("Il manque le nom, les ingrédients ou les étapes de la recette.");
+      return;
+    }
+    const ingredients = buildIngredientsFromRows();
     const steps = stepRows
       .filter((r) => (r.isSection ? r.title.trim() : r.text.trim()))
       .map((r) => (r.isSection ? { isSection: true, title: r.title.trim() } : r.text.trim()));
-    const carbsValue = carbs !== "" && !Number.isNaN(Number(carbs)) ? Number(carbs) : null;
+    const toNumberOrNull = (v) => (v !== "" && !Number.isNaN(Number(v)) ? Number(v) : null);
+    const carbsValue = toNumberOrNull(carbs);
+    const caloriesValue = toNumberOrNull(calories);
+    const proteinValue = toNumberOrNull(protein);
+    const fatValue = toNumberOrNull(fat);
     const titleChanged = isEdit && initialRecipe.title !== title.trim();
     const illustrationKey =
       isEdit && initialRecipe.illustrationKey && !titleChanged
@@ -175,6 +218,9 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
       time: Number(time) || 30,
       servings: Number(servings) || 4,
       carbs: carbsValue,
+      calories: caloriesValue,
+      protein: proteinValue,
+      fat: fatValue,
       notes: notes.trim() || null,
       illustrationKey,
       favorite: isEdit ? !!initialRecipe.favorite : false,
@@ -262,10 +308,47 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
             </button>
           </label>
         </div>
-        <label className="field field-discreet">
-          <span>Glucides (g par portion) — facultatif</span>
-          <input type="number" min="0" value={carbs} onChange={(e) => setCarbs(e.target.value)} placeholder="Ex. 30" />
-        </label>
+        <button
+          type="button"
+          className="nutrition-toggle"
+          onClick={() => { triggerHaptic(10); setShowNutrition((v) => !v); }}
+        >
+          <span>Valeurs nutritionnelles (par portion)</span>
+          <ChevronDown size={16} className={`nutrition-chevron ${showNutrition ? "open" : ""}`} />
+        </button>
+        {showNutrition && (
+          <div className="nutrition-fields">
+            <button
+              type="button"
+              className="link-btn nutrition-estimate-btn"
+              onClick={handleEstimateNutrition}
+              disabled={estimatingNutrition}
+            >
+              <Sparkles size={15} /> {estimatingNutrition ? "Estimation en cours…" : "Estimer la nutrition"}
+            </button>
+            {nutritionError && <p className="hint" style={{ fontStyle: "normal" }}>{nutritionError}</p>}
+            <div className="field-row">
+              <label className="field field-discreet">
+                <span>Calories (kcal)</span>
+                <input type="number" min="0" value={calories} onChange={(e) => setCalories(e.target.value)} placeholder="Ex. 320" />
+              </label>
+              <label className="field field-discreet">
+                <span>Protéines (g)</span>
+                <input type="number" min="0" value={protein} onChange={(e) => setProtein(e.target.value)} placeholder="Ex. 12" />
+              </label>
+            </div>
+            <div className="field-row">
+              <label className="field field-discreet">
+                <span>Glucides (g)</span>
+                <input type="number" min="0" value={carbs} onChange={(e) => setCarbs(e.target.value)} placeholder="Ex. 30" />
+              </label>
+              <label className="field field-discreet">
+                <span>Lipides (g)</span>
+                <input type="number" min="0" value={fat} onChange={(e) => setFat(e.target.value)} placeholder="Ex. 9" />
+              </label>
+            </div>
+          </div>
+        )}
 
         <label className="field">
           <span>Ingrédients</span>

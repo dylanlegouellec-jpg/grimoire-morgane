@@ -12,6 +12,7 @@ import {
 } from "../../utils/helpers";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
 import { generateRecipeCardPng, shareOrDownloadPng } from "../../utils/recipeCardCanvas";
+import { useTranslation } from "../../contexts/LanguageContext";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
 import Switch from "./Switch";
@@ -62,6 +63,8 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
 
   const nutriGrade = recipe.nutriscoreGrade || estimateNutriscoreLocal(ingredients, recipe.category);
   const nutriColor = NUTRI_COLORS[nutriGrade] || "#b3872a";
+  const { dict } = useTranslation();
+  const categoryText = dict.labels[categoryLabel(recipe)] || categoryLabel(recipe);
 
   const doCopyCode = () => {
     const code = encodeRecipeCode(recipe);
@@ -278,7 +281,7 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
           )}
           <div className="print-badges">
             <span className={`print-chip ${categoryLabel(recipe) === "Sucré" ? "chip-sucre" : "chip-sale"}`}>
-              {categoryLabel(recipe)}
+              {categoryText}
             </span>
             {includeNutriscore && (
               <span className="print-nutri-circle" style={{ background: nutriColor }}>{nutriGrade}</span>

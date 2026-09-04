@@ -2,6 +2,8 @@ import { useState, useRef } from "react";
 import { ChefHat, Clock, Minus, Plus, Share2, Users, X } from "lucide-react";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
 import { categoryLabel, categoryClass, groupSteps, triggerHaptic } from "../../utils/helpers";
+import { useTranslation } from "../../contexts/LanguageContext";
+import { translateRecipeText } from "../../utils/recipeTranslation";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import DishArt from "../art/DishArt";
 import Flourish from "../common/Flourish";
@@ -24,6 +26,7 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
   // Même principe que RecipeCard : valeur stockée, calculée une seule
   // fois côté serveur à la création/édition — aucun appel réseau ici.
   const nutri = recipe?.nutriscoreGrade || estimateNutriscoreLocal(rawIngredients, recipe?.category);
+  const { language, dict } = useTranslation();
 
   // Fige le <body> (technique position:fixed, fiable sur iOS Safari —
   // overflow:hidden seul ne suffit pas) tant que la fiche recette est
@@ -143,10 +146,10 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
               <div className="detail-hero-fade" />
             </div>
             <div className="card-top-row" style={{ marginTop: 4 }}>
-              <span className={`chip ${categoryClass(recipe)}`}>{categoryLabel(recipe)}</span>
+              <span className={`chip ${categoryClass(recipe)}`}>{dict.labels[categoryLabel(recipe)] || categoryLabel(recipe)}</span>
               <span className="nutri-badge" style={{ background: NUTRI_COLORS[nutri] }}>{nutri}</span>
             </div>
-            <h2 className="dropcap-title">{recipe.title}</h2>
+            <h2 className="dropcap-title">{translateRecipeText(recipe.title, language)}</h2>
             <div className="card-meta" style={{ marginBottom: 10 }}>
               <span><Clock size={13} /> {recipe.time || recipe.prep_time || 0} min</span>
               {recipe.carbs ? (
@@ -177,14 +180,14 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
             <ul className="ingredient-list">
               {scaledIngredients.map((ing, i) => {
                 if (typeof ing === "string") {
-                  return <li key={i}>{ing}</li>;
+                  return <li key={i}>{translateRecipeText(ing, language)}</li>;
                 }
                 if (ing?.isSection) {
-                  return <li key={i} className="ingredient-section-title">{ing.title}</li>;
+                  return <li key={i} className="ingredient-section-title">{translateRecipeText(ing.title, language)}</li>;
                 }
                 return (
                   <li key={i}>
-                    {ing.qty ? `${ing.qty} ` : ""}{ing.unit || ""} {ing.name || ing.title || ""}
+                    {ing.qty ? `${ing.qty} ` : ""}{ing.unit || ""} {translateRecipeText(ing.name || ing.title || "", language)}
                   </li>
                 );
               })}
@@ -192,10 +195,10 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
             <h4>Préparation</h4>
             {groupSteps(safeSteps).map((group, gi) => (
               <div key={gi} className="steps-group">
-                {group.title && <h5 className="steps-group-title">{group.title}</h5>}
+                {group.title && <h5 className="steps-group-title">{translateRecipeText(group.title, language)}</h5>}
                 <ol className="steps-list">
                   {group.steps.map((s, si) => (
-                    <li key={si}>{typeof s === "string" ? s : s.text || s.title}</li>
+                    <li key={si}>{translateRecipeText(typeof s === "string" ? s : s.text || s.title, language)}</li>
                   ))}
                 </ol>
               </div>
@@ -203,7 +206,7 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
             {recipe.notes && (
               <>
                 <h4>Remarques &amp; astuces</h4>
-                <p className="recipe-notes">{recipe.notes}</p>
+                <p className="recipe-notes">{translateRecipeText(recipe.notes, language)}</p>
               </>
             )}
           </div>

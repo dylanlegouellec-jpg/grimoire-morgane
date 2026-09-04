@@ -11,16 +11,44 @@ function sanitizeTitle(title) {
     .trim();
 }
 
+// Certains noms de plats français, pris au pied de la lettre par
+// Pollinations, produisent un rendu trompeur ou franchement raté ("pains
+// au lait" donnait une boule blanche difforme, sans aucun rapport avec de
+// la boulangerie). Pour ces cas connus, on remplace le nom du plat par une
+// description anglaise détaillée et sans ambiguïté qui guide correctement
+// le modèle, plutôt que de laisser le titre brut porter tout le poids du
+// prompt. Testés du plus spécifique au plus général.
+const DISH_DESCRIPTION_OVERRIDES = [
+  { test: /pains?\s+au\s+lait/i, description: 'golden French milk bread rolls, soft brioche buns with shiny egg wash crust, baking sheet' },
+  { test: /b[uû]che/i, description: 'French Yule log cake, chocolate roll cake' },
+  { test: /cr[eê]pes?/i, description: 'thin French crepes stack with golden edges' },
+];
+
+function resolveDishDescription(title) {
+  const override = DISH_DESCRIPTION_OVERRIDES.find((o) => o.test.test(title));
+  return override ? override.description : title;
+}
+
+// "powdered sugar dust" dénature certains desserts qui n'en portent
+// jamais dans la réalité (une brioche ou des pains au lait tout juste
+// sortis du four, par exemple) — on ne l'ajoute qu'aux desserts qui n'ont
+// pas ce genre de croûte dorée nue.
+const BREAD_LIKE_SWEET = /pains?\s+au\s+lait|brioche|viennoiserie|croissant/i;
+
 // Habillage stylistique commun à toutes les photos — vocabulaire de
 // photographie culinaire professionnelle plutôt que le simple titre brut,
 // pour des résultats bien plus qualitatifs et cohérents entre eux.
 function buildStyledPrompt(title, category) {
+  const dishDescription = resolveDishDescription(title);
+
   const flavor = category === 'Sucré'
-    ? 'pastry shop style, powdered sugar dust, warm cozy lighting'
+    ? (BREAD_LIKE_SWEET.test(title)
+        ? 'warm cozy lighting'
+        : 'pastry shop style, powdered sugar dust, warm cozy lighting')
     : 'steam rising, fresh green herbs, mouthwatering sauce, dark moody lighting';
 
   return [
-    `professional editorial food photography of ${title}`,
+    `professional editorial food photography of ${dishDescription}`,
     'gourmet plating',
     'shallow depth of field',
     '85mm lens',

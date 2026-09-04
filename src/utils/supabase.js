@@ -29,7 +29,7 @@ const PING_TIMEOUT_MS = 4000;
 /*  nettoyage de app_state) à chaque démarrage de l'app.                */
 /* ------------------------------------------------------------------ */
 export const RECIPE_COLUMNS =
-  "id,title,category,time,servings,carbs,notes,illustration_key,is_favorite,ingredients,steps,image_url,image_source,nutriscore_grade,created_at";
+  "id,title,category,time,servings,carbs,calories,protein,fat,notes,illustration_key,is_favorite,ingredients,steps,image_url,image_source,nutriscore_grade,created_at";
 export const SHOPPING_LIST_COLUMNS = "id,name,items,created_at";
 export const APP_STATE_COLUMNS = "household_id,pantry,basics,meal_plan,updated_at";
 
@@ -279,6 +279,9 @@ export function mapRowToRecipe(row) {
     time: row.time,
     servings: row.servings,
     carbs: row.carbs,
+    calories: row.calories,
+    protein: row.protein,
+    fat: row.fat,
     notes: row.notes || null,
     illustrationKey: row.illustration_key || null,
     favorite: !!row.is_favorite,
@@ -302,6 +305,9 @@ export function mapRecipeToRow(recipe, householdId) {
     time: recipe.time,
     servings: recipe.servings,
     carbs: recipe.carbs,
+    calories: recipe.calories,
+    protein: recipe.protein,
+    fat: recipe.fat,
     notes: recipe.notes || null,
     illustration_key: recipe.illustrationKey || null,
     is_favorite: !!recipe.favorite,

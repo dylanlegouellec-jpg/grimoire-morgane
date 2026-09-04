@@ -607,7 +607,12 @@ html, body {
 /* --- Modales / page de grimoire --- */
 .modal-backdrop {
   position: fixed; inset: 0; background: rgba(20,14,4,0.55);
-  display: flex; align-items: flex-end; justify-content: center; z-index: 50;
+  display: flex; align-items: flex-end; justify-content: center;
+  /* Volontairement au-dessus du FAB "+" (voir .fab, z-index: 50) : les
+     deux étaient à égalité avant ce correctif, un pur hasard d'ordre DOM
+     décidait alors lequel des deux gagnait le dessus — le bouton flottant
+     repassait parfois visuellement PAR-DESSUS une modale ouverte. */
+  z-index: 55;
   padding: 0;
   touch-action: none; overscroll-behavior: contain;
 }
@@ -649,6 +654,18 @@ html, body {
   max-height: 80vh;
   overflow-y: auto;
   padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 70px);
+}
+
+/* --- Assistant "Ajouter un repas" (Planification) — même défaut que
+   .recipe-options-modal ci-dessus : sur l'étape "Quel repas ?" (4 lignes
+   pleine largeur), le bas de la feuille se retrouvait caché sous
+   .bottom-nav. Même remède : hauteur plafonnée avec défilement interne
+   garanti, plus un padding bas qui réserve la hauteur de la nav basse EN
+   PLUS de la zone sûre iOS. --- */
+.planning-step-modal {
+  max-height: 80vh;
+  overflow-y: auto;
+  padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 70px);
 }
 .recipe-options-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .recipe-option-row {
@@ -765,6 +782,26 @@ html, body {
 }
 .wheel-trigger-btn:active { background: var(--surface); }
 .field-discreet input { font-size: 0.9rem; padding: 7px 9px; }
+
+/* --- Section "Valeurs nutritionnelles" (formulaire recette) — pliable,
+   même principe visuel que les autres rangées repliables de l'app
+   (ex. .bought-toggle) : un bouton pleine largeur avec chevron qui pivote,
+   le contenu ne se monte que si ouvert. --- */
+.nutrition-toggle {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; padding: 10px 12px; margin-bottom: 10px;
+  background: var(--surface-strong); border: 1px solid var(--line); border-radius: 8px;
+  font-family: 'Cinzel', serif; font-size: 0.78rem; letter-spacing: 0.5px; text-transform: uppercase;
+  color: var(--ink-soft); cursor: pointer;
+}
+.nutrition-chevron { transition: transform 0.2s ease; flex-shrink: 0; }
+.nutrition-chevron.open { transform: rotate(180deg); }
+.nutrition-fields { margin-bottom: 10px; }
+.nutrition-estimate-btn {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 12px;
+  color: var(--gold); font-family: 'EB Garamond', serif; font-size: 0.92rem;
+}
+.nutrition-estimate-btn:disabled { opacity: 0.6; cursor: default; }
 
 /* --- Ingrédients structurés (formulaire) --- */
 .ingredient-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 6px; }

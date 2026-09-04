@@ -1,0 +1,240 @@
+/* ------------------------------------------------------------------ */
+/*  POST /api/nutrition-estimate                                        */
+/*  Body : { ingredients: [{name, qty, unit} | {isSection, title}],     */
+/*           servings: number }                                        */
+/*  Réponse : { calories, protein, carbs, fat } — arrondis, PAR PORTION */
+/*                                                                        */
+/*  Même principe que api/nutriscore.js (jamais interrogé depuis le       */
+/*  navigateur — CORS/429 garantis sinon) : on somme le profil            */
+/*  nutritionnel de chaque ingrédient (pondéré par son poids estimé en     */
+/*  grammes), puis on divise le total par le nombre de portions. Fichier   */
+/*  volontairement autonome (mêmes helpers OFF que nutriscore.js,          */
+/*  dupliqués plutôt qu'importés) — chaque fonction Vercel est empaquetée  */
+/*  indépendamment, pas de dépendance croisée entre fichiers api/*.js.     */
+/* ------------------------------------------------------------------ */
+
+const OFF_SEARCH_URL = process.env.OFF_PROXY_URL || "https://world.openfoodfacts.org/cgi/search.pl";
+const FETCH_TIMEOUT_MS = 2500;
+const STOPWORDS = new Set(["de", "du", "des", "la", "le", "les", "un", "une", "et", "au", "aux", "en", "à"]);
+
+const CIRCUIT_FAILURE_THRESHOLD = 3;
+const CIRCUIT_COOLDOWN_MS = 2 * 60 * 1000;
+let consecutiveFailures = 0;
+let circuitOpenUntil = 0;
+const memoryCache = new Map(); // nom normalisé -> profil nutritionnel | null
+
+function isCircuitOpen() {
+  return Date.now() < circuitOpenUntil;
+}
+function recordFetchSuccess() {
+  consecutiveFailures = 0;
+  circuitOpenUntil = 0;
+}
+function recordFetchFailure() {
+  consecutiveFailures += 1;
+  if (consecutiveFailures >= CIRCUIT_FAILURE_THRESHOLD) {
+    circuitOpenUntil = Date.now() + CIRCUIT_COOLDOWN_MS;
+  }
+}
+
+function normalize(str) {
+  return (str || "")
+    .toString()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .trim();
+}
+
+async function fetchWithTimeout(url, ms) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function significantTokens(name) {
+  return normalize(name)
+    .split(/[^a-z0-9]+/i)
+    .filter((t) => t.length > 2 && !STOPWORDS.has(t));
+}
+function isRelevantMatch(ingredientName, productName) {
+  const tokens = significantTokens(ingredientName);
+  if (!tokens.length) return false;
+  const prodNorm = normalize(productName || "");
+  if (!prodNorm) return false;
+  return tokens.some((t) => prodNorm.includes(t));
+}
+
+// Contrairement à nutriscore.js (qui n'a besoin que de sucres/graisses
+// saturées/énergie/sodium pour le barème officiel), on récupère ici les 4
+// macros affichées dans le formulaire : calories, protéines, glucides,
+// lipides — tous "pour 100g" côté Open Food Facts.
+function extractProfile(nutriments) {
+  if (!nutriments) return null;
+  const energy = Number(nutriments["energy-kcal_100g"]);
+  const protein = Number(nutriments["proteins_100g"]);
+  const carbs = Number(nutriments["carbohydrates_100g"]);
+  const fat = Number(nutriments["fat_100g"]);
+  if (![energy, protein, carbs, fat].every((v) => Number.isFinite(v) && v >= 0)) return null;
+  return { energy, protein, carbs, fat };
+}
+
+async function lookupIngredientOnline(name) {
+  const key = normalize(name);
+  if (!key) return null;
+  if (memoryCache.has(key)) return memoryCache.get(key);
+  if (isCircuitOpen()) return null;
+
+  let res;
+  try {
+    const params = new URLSearchParams({
+      search_terms: name,
+      search_simple: "1",
+      action: "process",
+      json: "1",
+      page_size: "8",
+      fields: "product_name,nutriments",
+    });
+    res = await fetchWithTimeout(`${OFF_SEARCH_URL}?${params.toString()}`, FETCH_TIMEOUT_MS);
+  } catch {
+    recordFetchFailure();
+    return null;
+  }
+
+  try {
+    if (!res || !res.ok) throw new Error(`réponse HTTP invalide (${res ? res.status : "?"})`);
+    const data = await res.json();
+    const products = Array.isArray(data && data.products) ? data.products : [];
+
+    let profile = null;
+    for (const product of products) {
+      if (!isRelevantMatch(name, product.product_name)) continue;
+      const candidate = extractProfile(product.nutriments);
+      if (candidate) {
+        profile = candidate;
+        break;
+      }
+    }
+    recordFetchSuccess();
+    memoryCache.set(key, profile);
+    return profile;
+  } catch {
+    return null;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  POIDS ESTIMÉ (g) — même heuristique que nutriscore.js/nutriscore.js  */
+/*  côté client, pour convertir qté + unité en grammes approximatifs.    */
+/* ------------------------------------------------------------------ */
+const PIECE_WEIGHTS = [
+  { test: /poulet(?!.*(cuisse|blanc|escalope|filet))/i, grams: 1200 },
+  { test: /p[aâ]te (bris[ée]e|feuillet[ée]e|sabl[ée]e)/i, grams: 230 },
+  { test: /oeuf|œuf/i, grams: 50 },
+  { test: /oignon/i, grams: 100 },
+  { test: /échalote|echalote/i, grams: 25 },
+  { test: /tomate/i, grams: 120 },
+  { test: /citron vert|lime/i, grams: 60 },
+  { test: /citron/i, grams: 100 },
+  { test: /pomme de terre|patate/i, grams: 150 },
+  { test: /pomme(?!\s*de\s*terre)/i, grams: 150 },
+  { test: /carotte/i, grams: 80 },
+  { test: /courgette/i, grams: 200 },
+  { test: /poivron/i, grams: 150 },
+  { test: /banane/i, grams: 120 },
+  { test: /poireau/i, grams: 150 },
+  { test: /avocat/i, grams: 170 },
+];
+const DEFAULT_PIECE_GRAMS = 60;
+function estimatePieceWeight(name) {
+  const found = PIECE_WEIGHTS.find((p) => p.test.test(name));
+  return found ? found.grams : DEFAULT_PIECE_GRAMS;
+}
+function estimateGrams(ing) {
+  const qty = Number(ing.qty) || 0;
+  if (qty <= 0) return 0;
+  const u = normalize(ing.unit || "");
+  if (!u) return qty * estimatePieceWeight(ing.name);
+  if (/^kgs?$/.test(u)) return qty * 1000;
+  if (/^g$|^grammes?$/.test(u)) return qty;
+  if (/^l$|^litres?$/.test(u)) return qty * 1000;
+  if (/^cls?$/.test(u)) return qty * 10;
+  if (/^mls?$/.test(u)) return qty;
+  if (/pince/.test(u)) return qty * 1;
+  if (/soupe/.test(u)) return qty * 15;
+  if (/cafe/.test(u)) return qty * 5;
+  if (/botte/.test(u)) return qty * 30;
+  if (/gousse/.test(u)) return qty * 5;
+  return qty * estimatePieceWeight(ing.name);
+}
+
+const ONLINE_COVERAGE_THRESHOLD = 0.3;
+
+// Retourne les totaux PAR PORTION, ou `null` si trop peu d'ingrédients ont
+// pu être identifiés en ligne pour donner un résultat crédible (mieux vaut
+// ne rien pré-remplir que d'afficher un chiffre fantaisiste).
+async function estimateNutrition(ingredients, servings) {
+  const items = (ingredients || []).filter((ing) => ing && !ing.isSection && ing.name);
+  if (!items.length) return null;
+
+  const grams = items.map(estimateGrams);
+  const totalGrams = grams.reduce((a, b) => a + b, 0);
+  const profiles = await Promise.all(items.map((ing) => lookupIngredientOnline(ing.name)));
+
+  let coveredGrams = 0;
+  let energy = 0, protein = 0, carbs = 0, fat = 0;
+
+  items.forEach((ing, i) => {
+    const profile = profiles[i];
+    const w = grams[i];
+    if (!profile || w <= 0) return;
+    coveredGrams += w;
+    energy += (profile.energy / 100) * w;
+    protein += (profile.protein / 100) * w;
+    carbs += (profile.carbs / 100) * w;
+    fat += (profile.fat / 100) * w;
+  });
+
+  const coverage = totalGrams > 0 ? coveredGrams / totalGrams : 0;
+  if (coverage < ONLINE_COVERAGE_THRESHOLD) return null;
+
+  const portions = Math.max(1, Number(servings) || 1);
+  return {
+    calories: Math.round(energy / portions),
+    protein: Math.round((protein / portions) * 10) / 10,
+    carbs: Math.round((carbs / portions) * 10) / 10,
+    fat: Math.round((fat / portions) * 10) / 10,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/*  HANDLER                                                             */
+/* ------------------------------------------------------------------ */
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Méthode non autorisée" });
+  }
+
+  const { ingredients, servings } = req.body || {};
+  if (!Array.isArray(ingredients)) {
+    return res.status(400).json({ error: "`ingredients` doit être un tableau" });
+  }
+  if (ingredients.length > 100) {
+    return res.status(400).json({ error: "Trop d'ingrédients" });
+  }
+
+  try {
+    const result = await estimateNutrition(ingredients, servings);
+    if (!result) {
+      return res.status(200).json({ error: "Pas assez d'ingrédients reconnus pour estimer la nutrition." });
+    }
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Erreur d'estimation nutritionnelle :", error);
+    return res.status(500).json({ error: "Estimation nutritionnelle impossible pour le moment." });
+  }
+}
