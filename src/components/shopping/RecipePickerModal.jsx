@@ -39,11 +39,10 @@ export default function RecipePickerModal({ recipes, onGenerate, onClose }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal grimoire-page recipe-picker-modal" onClick={(e) => e.stopPropagation()}>
-        {/* En-tête / corps scrollable / pied de page = trois enfants flex
-            DISTINCTS (voir .recipe-picker-modal dans styles.css.js) — le
-            corps est la SEULE zone qui défile, le pied de page ne peut donc
-            plus jamais se retrouver superposé aux dernières recettes,
-            quelle que soit sa propre hauteur. */}
+        {/* En-tête fixe / corps scrollable (voir .recipe-picker-modal dans
+            styles.css.js) — le corps est la SEULE zone qui défile ; le
+            bouton "Générer la liste" est son dernier enfant, en sticky
+            flottant (voir plus bas), pas un pied de page séparé. */}
         <div className="recipe-picker-header">
           <button className="modal-close" onClick={onClose}><X size={20} /></button>
           <h2 className="dropcap-title">Générer à partir de recettes</h2>
@@ -81,21 +80,23 @@ export default function RecipePickerModal({ recipes, onGenerate, onClose }) {
               ))}
             </div>
           )}
-        </div>
 
-        {/* Pied de page TOUJOURS rendu (plus conditionné à selected.length > 0) :
-            le bouton restait auparavant totalement absent du DOM tant qu'aucune
-            recette n'était cochée, ce qui pouvait se lire comme "le bouton a
-            disparu". Il est désormais toujours visible, seulement désactivé
-            (voir .seal:disabled dans styles.css.js) avec un texte qui explique
-            quoi faire plutôt que de s'effacer. */}
-        <div className="recipe-picker-footer">
-          <Seal tone="gold" onClick={handleGenerate} disabled={selected.length === 0}>
-            <ShoppingBasket size={16} />
-            {selected.length === 0
-              ? "Sélectionne au moins 1 recette"
-              : `Générer la liste (${selected.length} recette${selected.length > 1 ? "s" : ""})`}
-          </Seal>
+          {/* Bouton flottant, pas de bandeau : rendu à l'INTÉRIEUR du corps
+              défilant (pas comme pied de page séparé) et "position: sticky"
+              (voir .recipe-picker-floating-footer dans styles.css.js) pour
+              rester ancré en bas de la zone visible pendant le défilement,
+              sans fond ni bordure propres — seul le sceau lui-même est
+              visible et cliquable (pointer-events "none" sur le conteneur,
+              "auto" sur le bouton) pour ne jamais bloquer le défilement ni
+              masquer les dernières recettes derrière un bandeau opaque.
+              Complètement absent du DOM tant qu'aucune recette n'est cochée. */}
+          {selected.length > 0 && (
+            <div className="recipe-picker-floating-footer">
+              <Seal tone="gold" onClick={handleGenerate}>
+                <ShoppingBasket size={16} /> Générer la liste ({selected.length} recette{selected.length > 1 ? "s" : ""})
+              </Seal>
+            </div>
+          )}
         </div>
       </div>
     </div>

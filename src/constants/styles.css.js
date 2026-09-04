@@ -572,24 +572,16 @@ html, body {
 .shopping-actions { display: flex; gap: 18px; margin-bottom: 10px; }
 .recipe-picker-filters { padding: 0 0 8px; }
 .recipe-select-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
-/* --- "Générer à partir de recettes" (RecipePickerModal.jsx) — refonte en
-   VRAI en-tête/corps/pied de page (flex column), plutôt qu'un bouton
-   "position: sticky" flottant au-dessus d'une liste avec un padding
-   calculé pour deviner sa hauteur (fragile : un mauvais calcul laissait
-   le bouton chevaucher les dernières recettes). Avec cette structure,
-   .recipe-picker-body est la SEULE zone qui défile ; .recipe-picker-footer
-   est un enfant flex normal, jamais superposé au corps — aucune recette
-   ne peut donc plus jamais se retrouver sous le bouton. */
+/* --- "Générer à partir de recettes" (RecipePickerModal.jsx) — en-tête fixe
+   + corps défilant (flex column). .recipe-picker-body est la SEULE zone
+   qui défile. */
 /* Sélecteur composé (.modal.recipe-picker-modal, pas juste
    .recipe-picker-modal) : .modal/.grimoire-page (plus bas dans ce fichier)
    redéfinit aussi max-height/overflow avec la MÊME spécificité — sans le
    composé, c'est l'ORDRE dans la feuille de style qui aurait tranché, et
    .modal apparaissant après ce bloc aurait gagné, annulant purement et
-   simplement overflow:hidden ici. Résultat observé : le conteneur externe
-   retrouvait overflow-y:auto en plus du défilement interne de
-   .recipe-picker-body, un double-scroll qui pouvait faire disparaître le
-   bouton "Générer la liste" hors de la zone visible. Un sélecteur composé
-   a une spécificité plus élevée et gagne toujours, quel que soit l'ordre. */
+   simplement overflow:hidden ici. Un sélecteur composé a une spécificité
+   plus élevée et gagne toujours, quel que soit l'ordre. */
 .modal.recipe-picker-modal {
   display: flex;
   flex-direction: column;
@@ -602,25 +594,34 @@ html, body {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   min-height: 0; /* indispensable pour qu'un enfant flex accepte de rétrécir et défiler plutôt que de déborder */
+  position: relative; /* contexte de positionnement pour le bouton flottant sticky ci-dessous */
 }
-/* Étendue jusqu'aux bords de .modal via des marges négatives qui annulent
-   son padding, puis un padding propre est réappliqué par-dessus pour le
-   contenu du pied de page lui-même.
-   Correctif : le padding bas ne réservait auparavant QUE la zone sûre iOS
-   (encoche/indicateur d'accueil, ~16px), sur l'hypothèse qu'un enfant flex
-   de la feuille modale (déjà au-dessus de .bottom-nav dans l'empilement,
-   z-index 55) ne pouvait pas se retrouver visuellement sous elle. En
-   pratique, sur PWA iOS installée, le bouton restait bord à bord avec la
-   barre de nav — trop peu de marge de respiration pour distinguer les
-   deux, quelle que soit la pile z-index. z-index explicite + padding bas
-   généreux (même famille de correctif que .shopping-result plus bas dans
-   ce fichier) pour que le bouton reste toujours nettement au-dessus. */
-.recipe-picker-footer {
-  flex-shrink: 0;
-  z-index: 90;
-  margin: 8px -20px -30px; padding: 12px 20px calc(env(safe-area-inset-bottom, 16px) + 80px);
-  background: var(--parchment); box-shadow: 0 -6px 14px rgba(0,0,0,0.12);
-  display: flex; justify-content: center;
+/* Bouton "Générer la liste" : plus un pied de page séparé avec son propre
+   bandeau (fond parchemin + ombre) — rendu comme DERNIER enfant de
+   .recipe-picker-body lui-même, "position: sticky" pour rester ancré en
+   bas de la zone visible pendant le défilement de la liste, sans aucun
+   fond ni bordure : seul le sceau doré ressort, porté par sa propre ombre
+   (voir .recipe-picker-floating-footer .seal). "pointer-events: none" sur
+   le conteneur (transparent, il n'occupe visuellement rien) et "auto" sur
+   le sceau lui-même : le doigt peut toujours faire défiler/toucher une
+   carte de recette juste derrière le bouton, seul le bouton capte le clic
+   à l'endroit précis où il est dessiné. Absent du DOM tant qu'aucune
+   recette n'est cochée (voir RecipePickerModal.jsx). */
+.recipe-picker-floating-footer {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: flex;
+  justify-content: center;
+  padding: 16px 20px calc(env(safe-area-inset-bottom, 16px) + 16px);
+  background: transparent;
+  pointer-events: none;
+}
+.recipe-picker-floating-footer .seal {
+  pointer-events: auto;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.4);
 }
 .recipe-select-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; }
 .recipe-select-row span:nth-child(2) { flex: 1; }
