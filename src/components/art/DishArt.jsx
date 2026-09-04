@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { ILLUSTRATIONS, resolveIllustrationKey } from "./illustrations";
 
 let dishArtCounter = 0;
@@ -8,7 +8,37 @@ export default function DishArt({ recipe }) {
   if (idRef.current === null) idRef.current = `dish-${dishArtCounter++}`;
   const artUid = idRef.current;
 
-  const hasImage = Boolean(recipe && recipe.imageUrl);
+  const rawUrl = recipe && recipe.imageUrl;
+
+  // Une image cassée (Pollinations en retard, upload Supabase Storage
+  // interrompu, réseau capricieux...) ne doit jamais laisser l'icône [?]
+  // du navigateur affichée indéfiniment sur une carte de recette. On
+  // retente une fois avec un paramètre anti-cache (un aller-retour raté
+  // n'est pas forcément définitif), puis on retombe sur l'illustration
+  // vectorielle du Grimoire déjà prévue pour les recettes sans photo —
+  // c'est déjà le "placeholder élégant aux couleurs du Grimoire", pas
+  // besoin d'en construire un second.
+  const [imgSrc, setImgSrc] = useState(rawUrl);
+  const [imgFailed, setImgFailed] = useState(false);
+  const retriedRef = useRef(false);
+  const lastUrlRef = useRef(rawUrl);
+  if (lastUrlRef.current !== rawUrl) {
+    lastUrlRef.current = rawUrl;
+    setImgSrc(rawUrl);
+    setImgFailed(false);
+    retriedRef.current = false;
+  }
+  const handleImgError = () => {
+    if (!retriedRef.current) {
+      retriedRef.current = true;
+      const sep = rawUrl.includes("?") ? "&" : "?";
+      setImgSrc(`${rawUrl}${sep}retry=${Date.now()}`);
+    } else {
+      setImgFailed(true);
+    }
+  };
+
+  const hasImage = Boolean(rawUrl) && !imgFailed;
 
   if (hasImage) {
     // Photo personnelle ou illustration IA : rendu net, sans masque ni
@@ -40,13 +70,14 @@ export default function DishArt({ recipe }) {
         onContextMenu={(e) => e.preventDefault()}
       >
         <img
-          src={recipe.imageUrl}
+          src={imgSrc}
           alt={recipe.title || "Illustration de la recette"}
           className="illus-photo"
           draggable="false"
           loading="lazy"
           decoding="async"
           crossOrigin="anonymous"
+          onError={handleImgError}
         />
         <div className="illus-photo-guard" aria-hidden="true" />
       </div>
