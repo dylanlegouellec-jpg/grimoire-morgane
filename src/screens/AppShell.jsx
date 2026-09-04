@@ -156,7 +156,15 @@ export default function AppShell({
         >
           {headerAvatarUrl ? (
             <span className="app-header-avatar-wrap">
-              <img src={headerAvatarUrl} alt="" className="app-header-avatar" loading="lazy" decoding="async" />
+              <img
+                src={headerAvatarUrl}
+                alt=""
+                className="app-header-avatar"
+                loading="lazy"
+                decoding="async"
+                draggable="false"
+                onContextMenu={(e) => e.preventDefault()}
+              />
               <span
                 className={`connection-status-dot app-header-status-dot connection-status-${connectionStatus || "checking"}`}
                 aria-hidden="true"

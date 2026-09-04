@@ -83,6 +83,80 @@ function extractProfile(nutriments) {
   return { energy, protein, carbs, fat };
 }
 
+/* ------------------------------------------------------------------ */
+/*  TABLE D'URGENCE — basiques de cuisine/pâtisserie                    */
+/*                                                                        */
+/*  Open Food Facts est une base collaborative mondiale : sa recherche    */
+/*  texte renvoie souvent, pour un mot aussi générique que "farine" ou     */
+/*  "sucre", des produits de marque sans rapport plutôt que la valeur      */
+/*  générique attendue — le match échoue alors pour des ingrédients pourtant */
+/*  triviaux. Cette table (valeurs pour 100g, sources nutritionnelles       */
+/*  usuelles) est vérifiée EN PREMIER, avant tout appel réseau : rapide,    */
+/*  gratuite, et fiable pour les basiques les plus courants d'une recette   */
+/*  française. Triée du plus long au plus court pour qu'une entrée précise  */
+/*  ("sucre glace") ne soit jamais masquée par une plus générique           */
+/*  ("sucre") testée avant elle.                                            */
+/* ------------------------------------------------------------------ */
+const LOCAL_NUTRITION_TABLE = [
+  ["sucre glace", { energy: 389, protein: 0, carbs: 100, fat: 0 }],
+  ["sucre roux", { energy: 380, protein: 0, carbs: 98, fat: 0 }],
+  ["sucre vanille", { energy: 387, protein: 0, carbs: 100, fat: 0 }],
+  ["sucre", { energy: 387, protein: 0, carbs: 100, fat: 0 }],
+  ["farine", { energy: 364, protein: 10, carbs: 76, fat: 1 }],
+  ["oeuf", { energy: 155, protein: 13, carbs: 1, fat: 11 }],
+  ["beurre", { energy: 717, protein: 1, carbs: 0, fat: 81 }],
+  ["nutella", { energy: 539, protein: 6, carbs: 57, fat: 30 }],
+  ["pate a tartiner", { energy: 539, protein: 6, carbs: 57, fat: 30 }],
+  ["lait concentre", { energy: 135, protein: 3.2, carbs: 10, fat: 8.6 }],
+  ["lait", { energy: 42, protein: 3.4, carbs: 5, fat: 1 }],
+  ["creme fraiche", { energy: 292, protein: 2.2, carbs: 3, fat: 30 }],
+  ["creme liquide", { energy: 292, protein: 2.2, carbs: 3, fat: 30 }],
+  ["creme fleurette", { energy: 292, protein: 2.2, carbs: 3, fat: 30 }],
+  ["levure chimique", { energy: 53, protein: 0, carbs: 38, fat: 0 }],
+  ["levure boulangere", { energy: 105, protein: 8, carbs: 33, fat: 2 }],
+  ["levure", { energy: 105, protein: 8, carbs: 33, fat: 2 }],
+  ["chocolat noir", { energy: 546, protein: 5, carbs: 46, fat: 31 }],
+  ["chocolat au lait", { energy: 535, protein: 7, carbs: 59, fat: 30 }],
+  ["chocolat blanc", { energy: 539, protein: 6, carbs: 59, fat: 30 }],
+  ["chocolat", { energy: 546, protein: 5, carbs: 46, fat: 31 }],
+  ["miel", { energy: 304, protein: 0.3, carbs: 82, fat: 0 }],
+  ["vanille", { energy: 288, protein: 0.1, carbs: 13, fat: 0.1 }],
+  ["sel", { energy: 0, protein: 0, carbs: 0, fat: 0 }],
+  ["poivre", { energy: 251, protein: 10, carbs: 64, fat: 3.3 }],
+  ["huile d'olive", { energy: 884, protein: 0, carbs: 0, fat: 100 }],
+  ["huile", { energy: 884, protein: 0, carbs: 0, fat: 100 }],
+  ["fromage rape", { energy: 393, protein: 26, carbs: 1, fat: 32 }],
+  ["creme patissiere", { energy: 165, protein: 4, carbs: 22, fat: 6 }],
+  ["pate feuilletee", { energy: 378, protein: 6, carbs: 34, fat: 24 }],
+  ["pate brisee", { energy: 449, protein: 6, carbs: 44, fat: 27 }],
+  ["riz", { energy: 130, protein: 2.7, carbs: 28, fat: 0.3 }],
+  ["pates", { energy: 158, protein: 5.8, carbs: 31, fat: 0.9 }],
+  ["pomme de terre", { energy: 77, protein: 2, carbs: 17, fat: 0.1 }],
+];
+// Fold "œ" -> "oe" pour cette table spécifiquement (indépendant du
+// normalize() partagé plus bas, utilisé pour d'autres correspondances où
+// ce repli n'est pas forcément souhaitable) : "œuf" et "oeuf" doivent
+// tous deux atteindre l'entrée "oeuf" ci-dessus.
+function normalizeForLocalTable(name) {
+  return normalize(name).replace(/œ/g, "oe").replace(/æ/g, "ae");
+}
+function escapeRegExpLocal(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+// Correspondance par mot/expression entière (avec un simple "s" de
+// pluriel toléré) plutôt que par sous-chaîne brute : "farine" doit
+// matcher "farine" et "farines", mais jamais, par exemple, un ingrédient
+// qui contiendrait la chaîne par hasard au milieu d'un autre mot.
+function lookupLocalNutrition(rawName) {
+  const key = normalizeForLocalTable(rawName);
+  if (!key) return null;
+  for (const [entryKey, profile] of LOCAL_NUTRITION_TABLE) {
+    const re = new RegExp(`(?:^|\\s)${escapeRegExpLocal(entryKey)}s?(?:$|\\s)`, "u");
+    if (re.test(` ${key} `)) return profile;
+  }
+  return null;
+}
+
 async function lookupIngredientOnline(name) {
   const key = normalize(name);
   if (!key) return null;
@@ -183,7 +257,16 @@ async function estimateNutrition(ingredients, servings) {
 
   const grams = items.map(estimateGrams);
   const totalGrams = grams.reduce((a, b) => a + b, 0);
-  const profiles = await Promise.all(items.map((ing) => lookupIngredientOnline(ing.name)));
+  // La table locale est vérifiée D'ABORD (instantanée, gratuite, fiable
+  // pour les basiques) — Open Food Facts n'est interrogé que pour les
+  // ingrédients qu'elle ne connaît pas.
+  const profiles = await Promise.all(
+    items.map((ing) => {
+      const local = lookupLocalNutrition(ing.name);
+      if (local) return local;
+      return lookupIngredientOnline(ing.name);
+    })
+  );
 
   let coveredGrams = 0;
   let energy = 0, protein = 0, carbs = 0, fat = 0;

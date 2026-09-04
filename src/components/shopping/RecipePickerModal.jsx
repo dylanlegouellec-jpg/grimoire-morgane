@@ -38,7 +38,7 @@ export default function RecipePickerModal({ recipes, onGenerate, onClose }) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal grimoire-page" onClick={(e) => e.stopPropagation()}>
+      <div className="modal grimoire-page recipe-picker-modal" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}><X size={20} /></button>
         <h2 className="dropcap-title">Générer à partir de recettes</h2>
         <Flourish />

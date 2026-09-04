@@ -149,6 +149,17 @@ html, body {
 .app-header-avatar {
   width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;
   border: 1.5px solid rgba(179,135,42,0.45);
+  /* Bloque le menu iOS natif (Copier / Enregistrer l'image) sur appui
+     long — même traitement que .illus-photo dans DishArt.jsx. pointer-events:
+     none fait "passer" le doigt à travers l'<img> jusqu'au <button> parent
+     qui l'englobe déjà entièrement : pas besoin ici du calque de garde
+     séparé de DishArt.jsx (cette image n'a pas besoin de laisser défiler
+     la page par-dessus, contrairement à une photo de recette en pleine
+     carte). */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: none;
 }
 /* Pastille de statut réseau miniature, propre à ce contexte (l'avatar de
    36px de l'en-tête, bien plus petit que celui de la carte de profil des
@@ -721,6 +732,18 @@ html, body {
    garanti, plus un padding bas qui réserve la hauteur de la nav basse EN
    PLUS de la zone sûre iOS. --- */
 .planning-step-modal {
+  max-height: 80vh;
+  overflow-y: auto;
+  padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 70px);
+}
+
+/* --- "Générer à partir de recettes" (RecipePickerModal.jsx) — même
+   défaut, une fois de plus : le max-height: 88vh générique de .modal ne
+   réserve pas précisément la hauteur de .bottom-nav, donc le tout dernier
+   article de la liste pouvait rester caché dessous tant qu'aucune recette
+   n'était encore cochée (avant l'apparition de la barre sticky, qui elle
+   gère déjà sa propre marge — voir .recipe-picker-sticky-bar). --- */
+.recipe-picker-modal {
   max-height: 80vh;
   overflow-y: auto;
   padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 70px);
