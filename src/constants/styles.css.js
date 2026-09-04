@@ -779,6 +779,37 @@ html, body {
   display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--ink-soft);
   background: var(--surface-strong); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px;
 }
+/* Modale de gestion des foyers : bien plus longue depuis l'ajout des
+   sections rejoindre/inviter/demandes en attente — même correctif que
+   .recipe-picker-modal/.planning-step-modal (voir plus haut) pour que le
+   dernier élément (le formulaire "Ajouter un membre") ne reste jamais
+   caché sous .bottom-nav. */
+.household-manager-modal {
+  max-height: 80vh;
+  overflow-y: auto;
+  padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 70px);
+}
+.household-admin-badge {
+  flex-shrink: 0; font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.5px; text-transform: uppercase;
+  color: var(--gold); background: rgba(179,135,42,0.15); border: 1px solid rgba(179,135,42,0.4);
+  border-radius: 999px; padding: 2px 8px;
+}
+.household-pending-row { gap: 10px; }
+.household-pending-action {
+  flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line);
+  background: var(--surface); display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.household-pending-action.approve { color: var(--forest); border-color: rgba(62,122,62,0.4); }
+.household-pending-action.reject { color: var(--wine); border-color: rgba(124,50,50,0.35); }
+.household-pending-action:disabled { opacity: 0.5; cursor: default; }
+/* --- Partage d'invitation (lien + QR) --- */
+.household-invite-panel {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  margin-top: 10px; padding: 14px; border: 1px dashed rgba(179,135,42,0.4); border-radius: 12px;
+  background: var(--surface-soft);
+}
+.household-invite-panel .household-add-row { width: 100%; }
+.household-invite-qr { border-radius: 8px; background: #fff; padding: 6px; border: 1px solid var(--line); }
 
 /* --- Profil (prénom/nom/surnom + avatar) --- */
 .profile-editor-row { display: flex; gap: 10px; align-items: center; }
@@ -1358,6 +1389,14 @@ html, body {
     padding-right: 6px;
   }
   .detail-scroll-hint { display: none; } /* propre au geste de swipe vertical, inutile ici */
+
+  /* .bottom-nav n'est plus position:fixed ici (voir plus haut : devenue
+     une colonne statique dans la sidebar de gauche) — la marge de secours
+     ajoutée à .shopping-result pour la nav fixe du mobile (voir plus haut,
+     ~90px) n'a alors plus lieu d'être : elle ne faisait que creuser un
+     grand vide en bas de la liste de courses, donnant l'impression que le
+     contenu "manquait"/chevauchait la mise en page à côté. */
+  .shopping-result { padding-bottom: 0; }
 }
 
 /* Grille de recettes encore plus large sur tablette/desktop en paysage */

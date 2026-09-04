@@ -5,8 +5,12 @@ import GrimoireDeMorgane from './GrimoireDeMorgane.jsx'
 // import './index.css'
 
 import { registerSW } from 'virtual:pwa-register'
+import { initAudioOnFirstTouch } from './utils/audioUtils'
 
 registerSW({ immediate: true })
+// Débloque l'AudioContext au tout premier geste utilisateur et branche le
+// clic sonore global — voir utils/audioUtils.js.
+initAudioOnFirstTouch()
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
 import { triggerHaptic, triggerHapticFeedback } from "../../utils/haptics";
-import { playClickSound } from "../../utils/audioUtils";
+// Le clic sonore est désormais joué par l'écouteur global délégué (voir
+// utils/audioUtils.js, initAudioOnFirstTouch) — plus besoin de l'appeler
+// ici, ça doublerait le son.
 
 export default function NavButton({ tabKey, label, Icon, active, onSelect, onLongPress, pressDuration = 750 }) {
   const timer = useRef(null);
@@ -25,7 +27,6 @@ export default function NavButton({ tabKey, label, Icon, active, onSelect, onLon
   const handleClick = () => {
     if (fired.current) { fired.current = false; return; }
     triggerHaptic(10);
-    playClickSound();
     onSelect();
   };
   return (

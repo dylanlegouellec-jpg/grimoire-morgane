@@ -65,10 +65,12 @@ function playTone(frequency, { duration = 0.09, startTime = 0, peakVolume = 0.05
 /*  API PUBLIQUE                                                        */
 /* ------------------------------------------------------------------ */
 
-// Clic très doux et court — navigation basse, boutons d'action principaux.
+// Clic court, nettement audible (pas juste un souffle) — navigation basse,
+// boutons d'action, et désormais tout élément cliquable de l'app (voir
+// initAudioOnFirstTouch ci-dessous).
 export function playClickSound() {
   if (!getStoredSoundEffects()) return;
-  playTone(660, { duration: 0.07, peakVolume: 0.04 });
+  playTone(720, { duration: 0.08, peakVolume: 0.14 });
 }
 
 // Double note ascendante (440Hz -> 880Hz) — validation d'une recette ou
@@ -77,4 +79,44 @@ export function playSuccessSound() {
   if (!getStoredSoundEffects()) return;
   playTone(440, { duration: 0.1, peakVolume: 0.06 });
   playTone(880, { duration: 0.14, startTime: 0.09, peakVolume: 0.06 });
+}
+
+/* ------------------------------------------------------------------ */
+/*  DÉBLOCAGE AUDIO + CLIC GLOBAL                                       */
+/*                                                                        */
+/*  Sur mobile (iOS en particulier), un AudioContext reste "suspended"     */
+/*  — donc muet — tant qu'il n'a pas été créé/repris DANS le contexte       */
+/*  d'un vrai geste utilisateur. getAudioContext() ci-dessus s'en charge    */
+/*  à chaque appel, mais le tout premier son d'une session (souvent le      */
+/*  premier clic, avant même qu'un composant n'ait eu l'occasion d'appeler  */
+/*  playClickSound()) peut arriver trop tôt — d'où ce déblocage explicite   */
+/*  au tout premier pointerdown/click de l'app, une fois pour toutes.       */
+/*                                                                          */
+/*  Le clic global lui-même utilise la délégation d'événements (un seul     */
+/*  listener sur `document`, phase de capture) plutôt qu'un écouteur par     */
+/*  élément : fonctionne pour tout bouton/lien/case à cocher présent OU      */
+/*  ajouté plus tard (React re-rend en permanence), sans avoir à modifier    */
+/*  chaque composant un par un — remplace donc les appels ponctuels à        */
+/*  playClickSound() qui existaient auparavant dans Seal.jsx/NavButton.jsx.  */
+/* ------------------------------------------------------------------ */
+const CLICKABLE_SELECTOR = 'button, a, input[type="checkbox"], .clickable';
+let audioInitialized = false;
+
+export function initAudioOnFirstTouch() {
+  if (typeof document === "undefined" || audioInitialized) return;
+  audioInitialized = true;
+
+  const unlock = () => { getAudioContext(); };
+  document.addEventListener("pointerdown", unlock, { once: true, passive: true });
+  document.addEventListener("click", unlock, { once: true });
+
+  document.addEventListener(
+    "click",
+    (e) => {
+      const target = e.target && e.target.closest ? e.target.closest(CLICKABLE_SELECTOR) : null;
+      if (!target || target.disabled) return;
+      playClickSound();
+    },
+    true // phase de capture : indépendant d'un éventuel stopPropagation() posé plus bas dans l'arbre
+  );
 }

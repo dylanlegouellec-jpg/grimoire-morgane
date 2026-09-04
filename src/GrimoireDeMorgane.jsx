@@ -59,6 +59,10 @@ export default function GrimoireDeMorgane() {
     createHousehold,
     renameHousehold,
     deleteHousehold,
+    requestJoinHousehold,
+    getPendingHouseholdRequests,
+    approveHouseholdMember,
+    rejectHouseholdMember,
     loading: authLoading,
     signInWithGoogle,
     signOut,
@@ -243,6 +247,8 @@ export default function GrimoireDeMorgane() {
         connectionStatus={connectionStatus}
         pendingImport={sync.pendingImport}
         setPendingImport={sync.setPendingImport}
+        pendingHouseholdJoin={sync.pendingHouseholdJoin}
+        setPendingHouseholdJoin={sync.setPendingHouseholdJoin}
         theme={theme}
         setTheme={setTheme}
         pressDuration={pressDuration}
@@ -260,6 +266,10 @@ export default function GrimoireDeMorgane() {
         onCreateHousehold={createHousehold}
         onRenameHousehold={renameHousehold}
         onDeleteHousehold={deleteHousehold}
+        onRequestJoinHousehold={requestJoinHousehold}
+        onGetPendingHouseholdRequests={getPendingHouseholdRequests}
+        onApproveHouseholdMember={approveHouseholdMember}
+        onRejectHouseholdMember={rejectHouseholdMember}
         signOut={signOut}
         toast={toast}
         showToast={showToast}

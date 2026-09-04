@@ -7,7 +7,7 @@ import { triggerHaptic, nextId, copyText } from "../utils/helpers";
 import { getCachedProfile, getProfile } from "../utils/profile";
 import { useTranslation } from "../contexts/LanguageContext";
 
-import { NavButton, TextShareModal, ImportConfirmModal, DeleteConfirmModal, TextTemplateImportModal, SecretSettingsModal, ListsManagerModal } from "../components/common";
+import { NavButton, TextShareModal, ImportConfirmModal, JoinHouseholdConfirmModal, DeleteConfirmModal, TextTemplateImportModal, SecretSettingsModal, ListsManagerModal } from "../components/common";
 import { RecipesView, RecipeForm, RecipeDetail, CookMode } from "../components/recipe";
 import { FridgeView } from "../components/fridge";
 import { ShoppingView } from "../components/shopping";
@@ -28,6 +28,8 @@ export default function AppShell({
   connectionStatus,
   pendingImport,
   setPendingImport,
+  pendingHouseholdJoin,
+  setPendingHouseholdJoin,
   theme,
   setTheme,
   pressDuration,
@@ -45,6 +47,10 @@ export default function AppShell({
   onCreateHousehold,
   onRenameHousehold,
   onDeleteHousehold,
+  onRequestJoinHousehold,
+  onGetPendingHouseholdRequests,
+  onApproveHouseholdMember,
+  onRejectHouseholdMember,
   signOut,
   toast,
   showToast,
@@ -337,6 +343,14 @@ export default function AppShell({
           onCancel={() => setPendingImport(null)}
         />
       )}
+      {pendingHouseholdJoin && (
+        <JoinHouseholdConfirmModal
+          householdId={pendingHouseholdJoin}
+          onRequestJoin={onRequestJoinHousehold}
+          onClose={() => setPendingHouseholdJoin(null)}
+          showToast={showToast}
+        />
+      )}
       {deleteTarget && (
         <DeleteConfirmModal
           recipe={deleteTarget}
@@ -378,6 +392,10 @@ export default function AppShell({
           onCreateHousehold={onCreateHousehold}
           onRenameHousehold={onRenameHousehold}
           onDeleteHousehold={onDeleteHousehold}
+          onRequestJoinHousehold={onRequestJoinHousehold}
+          onGetPendingHouseholdRequests={onGetPendingHouseholdRequests}
+          onApproveHouseholdMember={onApproveHouseholdMember}
+          onRejectHouseholdMember={onRejectHouseholdMember}
           showToast={showToast}
           onSignOut={signOut}
         />

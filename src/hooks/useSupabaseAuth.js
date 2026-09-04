@@ -7,6 +7,10 @@ import {
   createHousehold as createHouseholdApi,
   renameHousehold as renameHouseholdApi,
   deleteHousehold as deleteHouseholdApi,
+  requestJoinHousehold as requestJoinHouseholdApi,
+  getPendingHouseholdRequests,
+  approveHouseholdMember as approveHouseholdMemberApi,
+  rejectHouseholdMember as rejectHouseholdMemberApi,
 } from "../utils/auth";
 import { loadLocalCache } from "../utils/localCache";
 import { getCachedHouseholds, setCachedHouseholds } from "../utils/householdCache";
@@ -149,6 +153,23 @@ export default function useSupabaseAuth() {
     if (manualChoiceRef.current === id) manualChoiceRef.current = null;
   }, [resolveHouseholds]);
 
+  // Dépose une demande d'adhésion — ne touche ni `households` ni
+  // `householdId` : tant qu'un admin n'a pas validé (statut "pending"),
+  // ce foyer ne doit apparaître nulle part dans la liste ni devenir
+  // sélectionnable (voir la refonte SQL, get_household_members ne
+  // renvoie que les membres "approved").
+  const requestJoinHousehold = useCallback(async (id) => {
+    await requestJoinHouseholdApi(id);
+  }, []);
+
+  const approveHouseholdMember = useCallback(async (householdId, userId) => {
+    await approveHouseholdMemberApi(householdId, userId);
+  }, []);
+
+  const rejectHouseholdMember = useCallback(async (householdId, userId) => {
+    await rejectHouseholdMemberApi(householdId, userId);
+  }, []);
+
   return {
     session,
     user: session ? session.user : null,
@@ -159,6 +180,10 @@ export default function useSupabaseAuth() {
     createHousehold,
     renameHousehold,
     deleteHousehold,
+    requestJoinHousehold,
+    getPendingHouseholdRequests,
+    approveHouseholdMember,
+    rejectHouseholdMember,
     refreshHouseholds: resolveHouseholds,
     loading,
     signInWithGoogle,

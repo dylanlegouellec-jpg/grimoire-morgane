@@ -140,3 +140,65 @@ export async function addUserToHousehold(email, householdId) {
   );
   if (error) throw error;
 }
+
+/* ------------------------------------------------------------------ */
+/*  DEMANDES D'ADHÉSION — foyer "pending" avant validation par un admin  */
+/*  (voir la refonte SQL : household_members.role/status, fonctions      */
+/*  RPC request_join_household / get_pending_requests /                  */
+/*  approve_household_member / reject_household_member).                 */
+/* ------------------------------------------------------------------ */
+
+// Dépose une demande d'adhésion à un foyer (statut "pending" — ne donne
+// PAS accès aux données du foyer tant qu'un admin n'a pas validé, voir
+// approveHouseholdMember ci-dessous).
+export async function requestJoinHousehold(householdId) {
+  const client = getSupabaseClient();
+  if (!client) throw new Error("Supabase non configuré");
+  const { error } = await withTimeout(
+    client.rpc("request_join_household", { p_household_id: householdId }),
+    RPC_TIMEOUT_MS,
+    "Délai dépassé lors de la demande d'adhésion."
+  );
+  if (error) throw error;
+}
+
+// Demandes en attente pour un foyer donné — réservé aux admins (la RPC
+// vérifie elle-même le rôle de l'appelant et refuse sinon).
+export async function getPendingHouseholdRequests(householdId) {
+  const client = getSupabaseClient();
+  if (!client || !householdId) return [];
+  try {
+    const { data, error } = await withTimeout(
+      client.rpc("get_pending_requests", { p_household_id: householdId }),
+      RPC_TIMEOUT_MS,
+      "Délai dépassé lors du chargement des demandes."
+    );
+    if (error) throw error;
+    return Array.isArray(data) ? data : [];
+  } catch (err) {
+    console.error("Impossible de récupérer les demandes en attente :", err);
+    return [];
+  }
+}
+
+export async function approveHouseholdMember(householdId, userId) {
+  const client = getSupabaseClient();
+  if (!client) throw new Error("Supabase non configuré");
+  const { error } = await withTimeout(
+    client.rpc("approve_household_member", { p_household_id: householdId, p_user_id: userId }),
+    RPC_TIMEOUT_MS,
+    "Délai dépassé lors de la validation du membre."
+  );
+  if (error) throw error;
+}
+
+export async function rejectHouseholdMember(householdId, userId) {
+  const client = getSupabaseClient();
+  if (!client) throw new Error("Supabase non configuré");
+  const { error } = await withTimeout(
+    client.rpc("reject_household_member", { p_household_id: householdId, p_user_id: userId }),
+    RPC_TIMEOUT_MS,
+    "Délai dépassé lors du refus du membre."
+  );
+  if (error) throw error;
+}

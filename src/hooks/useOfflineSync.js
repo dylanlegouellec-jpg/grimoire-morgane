@@ -47,6 +47,10 @@ export default function useOfflineSync({
   const [ready, setReady] = useState(false);
   const [offlineQueueSize, setOfflineQueueSize] = useState(() => getOfflineQueueSize());
   const [pendingImport, setPendingImport] = useState(null);
+  // uuid du foyer à rejoindre (lien/QR d'invitation, ?join_household=...) —
+  // en attente de confirmation utilisateur, voir l'effet ci-dessous et
+  // JoinHouseholdConfirmModal.jsx.
+  const [pendingHouseholdJoin, setPendingHouseholdJoin] = useState(null);
 
   // Chargement initial : cache local en priorité (offline-first), puis
   // rafraîchissement Supabase en tâche de fond dès que la session/le
@@ -106,14 +110,25 @@ export default function useOfflineSync({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, householdId]);
 
-  // Import par lien (?import=...), indépendant de l'authentification.
+  // Import par lien (?import=...) et invitation de foyer
+  // (?join_household=...), tous deux indépendants de l'authentification —
+  // la demande d'adhésion réelle (voir requestJoinHousehold côté
+  // useSupabaseAuth) attend elle une session active, mais on capture
+  // l'intention dès l'arrivée sur l'URL, avant même que la connexion ne
+  // soit résolue.
   useEffect(() => {
     try {
       const params = new URLSearchParams(window.location.search);
       const code = params.get("import");
+      const joinHouseholdId = params.get("join_household");
       if (code) {
         const parsed = decodeRecipeCode(code);
         if (parsed) setPendingImport(parsed);
+      }
+      if (joinHouseholdId) {
+        setPendingHouseholdJoin(joinHouseholdId);
+      }
+      if (code || joinHouseholdId) {
         window.history.replaceState({}, "", window.location.pathname);
       }
     } catch {
@@ -224,5 +239,5 @@ export default function useOfflineSync({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, householdId]);
 
-  return { ready, offlineQueueSize, pendingImport, setPendingImport };
+  return { ready, offlineQueueSize, pendingImport, setPendingImport, pendingHouseholdJoin, setPendingHouseholdJoin };
 }

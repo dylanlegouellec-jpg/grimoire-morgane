@@ -165,6 +165,38 @@ export function buildImportLink(code) {
     return code;
   }
 }
+// Lien d'invitation à un foyer — voir ?join_household=... (useOfflineSync.js,
+// JoinHouseholdConfirmModal.jsx) et son pendant QR code
+// (HouseholdManagerModal.jsx, buildQrCodeUrl ci-dessous).
+export function buildHouseholdInviteLink(householdId) {
+  try {
+    return `${window.location.origin}${window.location.pathname}?join_household=${householdId}`;
+  } catch {
+    return householdId;
+  }
+}
+// Extrait un uuid de foyer depuis soit un lien complet
+// (?join_household=<id>), soit un id brut collé directement — même
+// tolérance que extractCodeFromInput ci-dessous pour les codes de recette.
+export function extractHouseholdIdFromInput(raw) {
+  const trimmed = (raw || "").trim();
+  try {
+    const url = new URL(trimmed);
+    const fromUrl = url.searchParams.get("join_household");
+    if (fromUrl) return fromUrl;
+  } catch {
+    /* pas une URL, on considère que c'est l'id brut */
+  }
+  return trimmed;
+}
+// Image QR (service public gratuit, sans clé — même logique que
+// Pollinations pour les illustrations : aucune bibliothèque de génération
+// QR n'est installée dans ce projet et npm install n'est pas disponible
+// dans cet environnement). L'URL du lien d'invitation transite donc par ce
+// service tiers pour être transformée en image.
+export function buildQrCodeUrl(data, size = 200) {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(data)}`;
+}
 export function extractCodeFromInput(raw) {
   const trimmed = (raw || "").trim();
   try {

@@ -47,6 +47,10 @@ export default function SecretSettingsModal({
   onCreateHousehold,
   onRenameHousehold,
   onDeleteHousehold,
+  onRequestJoinHousehold,
+  onGetPendingHouseholdRequests,
+  onApproveHouseholdMember,
+  onRejectHouseholdMember,
   showToast,
   onSignOut,
 }) {
@@ -85,7 +89,14 @@ export default function SecretSettingsModal({
   // au sous-panneau précédent.
   const closeAll = () => { setActivePanel(null); onClose(); };
 
+  // Un seul arrière-plan modal visible à la fois : l'écran principal des
+  // Réglages se MASQUE (plutôt que de rester dessous) dès qu'un
+  // sous-panneau est actif — sans quoi ce dernier s'ouvrait en s'empilant
+  // par-dessus l'écran principal, formant deux cartes modales visibles à
+  // la fois plutôt qu'une vraie navigation par couches (push/pop).
   return (
+    <>
+    {!activePanel && (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal grimoire-page ios-settings-modal" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}><X size={20} /></button>
@@ -175,6 +186,9 @@ export default function SecretSettingsModal({
             </div>
           </>
         )}
+      </div>
+    </div>
+    )}
 
         {activePanel === "appearance" && (
           <AppearanceSettingsModal
@@ -206,6 +220,7 @@ export default function SecretSettingsModal({
         )}
         {activePanel === "household" && (
           <HouseholdManagerModal
+            user={user}
             householdId={householdId}
             households={households}
             pressDuration={pressDuration}
@@ -213,6 +228,10 @@ export default function SecretSettingsModal({
             onCreateHousehold={onCreateHousehold}
             onRenameHousehold={onRenameHousehold}
             onDeleteHousehold={onDeleteHousehold}
+            onRequestJoinHousehold={onRequestJoinHousehold}
+            onGetPendingHouseholdRequests={onGetPendingHouseholdRequests}
+            onApproveHouseholdMember={onApproveHouseholdMember}
+            onRejectHouseholdMember={onRejectHouseholdMember}
             showToast={showToast}
             onClose={() => setActivePanel(null)}
           />
@@ -227,7 +246,6 @@ export default function SecretSettingsModal({
             showToast={showToast}
           />
         )}
-      </div>
-    </div>
+    </>
   );
 }

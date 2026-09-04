@@ -3,6 +3,7 @@ export { default as Seal } from "./Seal";
 export { default as NavButton } from "./NavButton";
 export { default as TextShareModal } from "./TextShareModal";
 export { default as ImportConfirmModal } from "./ImportConfirmModal";
+export { default as JoinHouseholdConfirmModal } from "./JoinHouseholdConfirmModal";
 export { default as DeleteConfirmModal } from "./DeleteConfirmModal";
 export { default as QuantitySheet } from "./QuantitySheet";
 export { default as WheelPickerModal } from "./WheelPickerModal";
