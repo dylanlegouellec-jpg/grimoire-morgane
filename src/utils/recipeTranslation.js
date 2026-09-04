@@ -43,8 +43,9 @@ const CULINARY_FR_EN = [
   ["croque madame", "croque madame"],
   ["mousse au chocolat", "chocolate mousse"],
   ["île flottante", "floating island"],
-  ["crème brûlée", "crème brûlée"],
-  ["crème caramel", "crème caramel"],
+  ["crèmes brûlées", "Crème Brûlée"],
+  ["crème brûlée", "Crème Brûlée"],
+  ["crème caramel", "Crème Caramel"],
   ["crème pâtissière", "pastry cream"],
   ["crème diplomate", "diplomat cream"],
   ["crème anglaise", "custard sauce"],
@@ -104,6 +105,15 @@ const CULINARY_FR_EN = [
   ["lait", "milk"],
   ["crème fraîche", "crème fraîche"],
   ["crème liquide", "heavy cream"],
+  ["crème fleurette", "heavy cream"],
+  ["jaunes d'œufs", "egg yolks"],
+  ["jaunes d'oeufs", "egg yolks"],
+  ["jaune d'œuf", "egg yolk"],
+  ["jaune d'oeuf", "egg yolk"],
+  ["blancs d'œufs", "egg whites"],
+  ["blancs d'oeufs", "egg whites"],
+  ["blanc d'œuf", "egg white"],
+  ["blanc d'oeuf", "egg white"],
   ["levure boulangère", "baker's yeast"],
   ["levure chimique", "baking powder"],
   ["levure", "yeast"],
@@ -146,6 +156,7 @@ const CULINARY_FR_EN = [
   ["pomme", "apple"],
 
   // Tournures qui traînent parfois dans le texte libre
+  ["façon", "style"],
   ["au four", "in the oven"],
   ["à feu doux", "over low heat"],
   ["à feu moyen", "over medium heat"],
@@ -183,6 +194,36 @@ function matchCase(replacement, original) {
   return replacement;
 }
 
+// Tournure très courante dans les titres de recettes familiales ("Crêpes
+// de maman", "Tarte de mamie") — un simple remplacement mot à mot la
+// traduirait dans le mauvais ordre ("Crepes of mom" au lieu de "Mom's
+// Crepes"). Repéré et réordonné à part, AVANT le remplacement du
+// dictionnaire ci-dessus (qui traduira ensuite "Crêpes" normalement).
+const POSSESSIVE_NAMES = {
+  maman: "Mom's",
+  papa: "Dad's",
+  mamie: "Grandma's",
+  "mémé": "Grandma's",
+  meme: "Grandma's",
+  "grand-mère": "Grandma's",
+  "grand-maman": "Grandma's",
+  papi: "Grandpa's",
+  "pépé": "Grandpa's",
+  pepe: "Grandpa's",
+  "grand-père": "Grandpa's",
+  "grand-papa": "Grandpa's",
+};
+const POSSESSIVE_RE = new RegExp(
+  `^(.*?)\\s+de\\s+(${Object.keys(POSSESSIVE_NAMES).sort((a, b) => b.length - a.length).join("|")})\\s*$`,
+  "i"
+);
+function applyPossessiveRewrite(text) {
+  const m = text.match(POSSESSIVE_RE);
+  if (!m || !m[1].trim()) return text;
+  const possessive = POSSESSIVE_NAMES[m[2].toLowerCase()];
+  return `${possessive} ${m[1].trim()}`;
+}
+
 /* ------------------------------------------------------------------ */
 /*  API PUBLIQUE                                                        */
 /* ------------------------------------------------------------------ */
@@ -194,7 +235,7 @@ function matchCase(replacement, original) {
 // quel, sans aucun coût de calcul.
 export function translateRecipeText(text, language) {
   if (language !== "en" || !text) return text;
-  let result = String(text);
+  let result = applyPossessiveRewrite(String(text));
   for (const [fr, en] of SORTED_ENTRIES) {
     result = result.replace(buildEntryRegex(fr), (match) => matchCase(en, match));
   }

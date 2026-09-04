@@ -36,6 +36,16 @@ export const CSS = `
   --grouped-bg: #d9c193;
   --grouped-card-bg: var(--parchment);
   --forest: #3E7A3E;
+  /* Boutons d'action principaux (.seal — "Lancer la préparation", "Partager
+     la recette", "Sceller la recette"...) : ambre mat chic, texte clair
+     lisible dessus. Distinct de --gold/--gold-light (utilisés ailleurs pour
+     du texte/liserés sur fond clair) — voir l'override sombre ci-dessous
+     pour le contraste inverse recherché sur fond noir. */
+  --seal-bg: linear-gradient(180deg, #d99a4a, #b87333);
+  --seal-bg-hover: #a8651f;
+  --seal-border: rgba(180,115,40,0.35);
+  --seal-text: #fff7ec;
+  --seal-shadow: #8a651c;
 }
 
 /* --- Thème Sombre — même esprit grimoire/parchemin, en veille de nuit --- */
@@ -63,6 +73,14 @@ export const CSS = `
   --grouped-bg: #0e0c0a;
   --grouped-card-bg: var(--parchment-deep);
   --forest: #4f9e52;
+  /* Sur fond noir, un remplissage ambre plein serait criard — on inverse la
+     logique : fond bronze/chocolat profond, contour et texte dorés bien
+     définis, pour un bouton qui reste lisible et élégant plutôt qu'agressif. */
+  --seal-bg: linear-gradient(180deg, #332516, #2b1f13);
+  --seal-bg-hover: #3d2c19;
+  --seal-border: rgba(217,180,92,0.6);
+  --seal-text: #f7e2bc;
+  --seal-shadow: #140d07;
 }
 
 html[data-theme="dark"] { color-scheme: dark; }
@@ -117,14 +135,36 @@ html, body {
    statut de connexion, comme sur la carte de profil des Réglages),
    sinon une icône d'engrenage. --- */
 .app-header-settings-btn {
-  position: absolute; top: 18px; right: 16px; z-index: 2;
-  width: 38px; height: 38px; padding: 0;
+  position: absolute; top: 22px; right: 16px; z-index: 2;
+  width: 36px; height: 36px; padding: 0;
   display: flex; align-items: center; justify-content: center;
   background: var(--surface-strong); border: 1px solid var(--line); border-radius: 50%;
   color: var(--ink-soft); cursor: pointer;
 }
+/* Avec une photo de profil, le cadre du bouton lui-même s'efface — le
+   halo doré porté par la photo (ci-dessous) suffit comme cadre, un double
+   anneau (bouton + photo) aurait l'air non fini. */
+.app-header-settings-btn.has-avatar { background: none; border: none; }
 .app-header-avatar-wrap { position: relative; width: 100%; height: 100%; }
-.app-header-avatar { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+.app-header-avatar {
+  width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;
+  border: 1.5px solid rgba(179,135,42,0.45);
+}
+/* Pastille de statut réseau miniature, propre à ce contexte (l'avatar de
+   36px de l'en-tête, bien plus petit que celui de la carte de profil des
+   Réglages) — combinée à .connection-status-dot pour la couleur (voir
+   plus bas), juste la taille/le liseré changent ici. */
+/* Sélecteur composé (deux classes) plutôt que simple : la taille par défaut
+   de .connection-status-dot est définie plus bas dans ce fichier, APRÈS ce
+   bloc — sans les deux classes combinées ici, cette règle-ci perdrait la
+   bataille de cascade (même spécificité, mais déclarée avant) et la pastille
+   du header resterait à la taille de celle de la carte de profil (16px). */
+.connection-status-dot.app-header-status-dot {
+  width: 8px; height: 8px;
+  bottom: 0; right: 0;
+  border-width: 1.5px;
+  border-color: var(--page-bg);
+}
 .app-header h1 {
   font-family: 'Cinzel Decorative', 'Cinzel', serif;
   font-size: 1.55rem;
@@ -361,19 +401,21 @@ html, body {
 .seal {
   font-family: 'Cinzel', serif;
   font-size: 0.75rem;
+  font-weight: 600;
   letter-spacing: 1px;
   text-transform: uppercase;
   display: inline-flex; align-items: center; gap: 8px;
   padding: 11px 20px;
   border-radius: 999px;
-  border: 1px solid var(--gold);
-  background: linear-gradient(180deg, var(--gold-light), var(--gold));
-  color: #2a1c07;
+  border: 1px solid var(--seal-border);
+  background: var(--seal-bg);
+  color: var(--seal-text);
   cursor: pointer;
-  box-shadow: 0 3px 0 #8a651c, 0 6px 12px rgba(0,0,0,0.15);
-  transition: transform 0.08s ease;
+  box-shadow: 0 3px 0 var(--seal-shadow), 0 6px 12px rgba(0,0,0,0.15);
+  transition: transform 0.08s ease, background 0.15s ease;
 }
-.seal:active { transform: translateY(2px); box-shadow: 0 1px 0 #8a651c; }
+.seal:hover:not(:disabled) { background: var(--seal-bg-hover); }
+.seal:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--seal-shadow); }
 .seal:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .fab {

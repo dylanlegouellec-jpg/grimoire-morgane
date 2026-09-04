@@ -150,7 +150,7 @@ export default function AppShell({
       <header className="app-header">
         <button
           type="button"
-          className="app-header-settings-btn"
+          className={`app-header-settings-btn ${headerAvatarUrl ? "has-avatar" : ""}`}
           onClick={() => { triggerHaptic(15); setShowSecretSettings(true); }}
           aria-label={t("settings.title")}
         >
@@ -158,7 +158,7 @@ export default function AppShell({
             <span className="app-header-avatar-wrap">
               <img src={headerAvatarUrl} alt="" className="app-header-avatar" loading="lazy" decoding="async" />
               <span
-                className={`connection-status-dot connection-status-${connectionStatus || "checking"}`}
+                className={`connection-status-dot app-header-status-dot connection-status-${connectionStatus || "checking"}`}
                 aria-hidden="true"
               />
             </span>

@@ -163,6 +163,18 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
         )
     );
 
+  // Un clavier numérique iOS/Android tape naturellement une virgule pour
+  // les décimales (locale française). Avec <input type="number">, un "12,5"
+  // ne parse PAS comme nombre valide selon la spec HTML (point seul admis) —
+  // le navigateur vide alors silencieusement e.target.value ET marque le
+  // champ invalide (badInput), d'où l'erreur "Entrez une valeur valide" au
+  // moment de sceller la recette, sans que la virgule n'ait jamais atteint
+  // le JS pour être corrigée. D'où le passage en <input type="text"
+  // inputMode="decimal"> ci-dessous (clavier numérique conservé sur
+  // mobile, mais AUCUN filtrage natif du caractère) : la virgule arrive
+  // bien jusqu'ici, où on la convertit nous-mêmes.
+  const onDecimalChange = (setter) => (e) => setter(e.target.value.replace(",", "."));
+
   const handleEstimateNutrition = async () => {
     if (estimatingNutrition) return;
     triggerHaptic(15);
@@ -330,21 +342,21 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
             <div className="field-row">
               <label className="field field-discreet">
                 <span>Calories (kcal)</span>
-                <input type="number" min="0" value={calories} onChange={(e) => setCalories(e.target.value)} placeholder="Ex. 320" />
+                <input type="text" inputMode="decimal" value={calories} onChange={onDecimalChange(setCalories)} placeholder="Ex. 320" />
               </label>
               <label className="field field-discreet">
                 <span>Protéines (g)</span>
-                <input type="number" min="0" value={protein} onChange={(e) => setProtein(e.target.value)} placeholder="Ex. 12" />
+                <input type="text" inputMode="decimal" value={protein} onChange={onDecimalChange(setProtein)} placeholder="Ex. 12" />
               </label>
             </div>
             <div className="field-row">
               <label className="field field-discreet">
                 <span>Glucides (g)</span>
-                <input type="number" min="0" value={carbs} onChange={(e) => setCarbs(e.target.value)} placeholder="Ex. 30" />
+                <input type="text" inputMode="decimal" value={carbs} onChange={onDecimalChange(setCarbs)} placeholder="Ex. 30" />
               </label>
               <label className="field field-discreet">
                 <span>Lipides (g)</span>
-                <input type="number" min="0" value={fat} onChange={(e) => setFat(e.target.value)} placeholder="Ex. 9" />
+                <input type="text" inputMode="decimal" value={fat} onChange={onDecimalChange(setFat)} placeholder="Ex. 9" />
               </label>
             </div>
           </div>

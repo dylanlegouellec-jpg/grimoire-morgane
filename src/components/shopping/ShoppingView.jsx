@@ -3,6 +3,7 @@ import { ChevronDown, Plus, ShoppingBasket } from "lucide-react";
 import { aisleIcon, copyText } from "../../utils/helpers";
 import { triggerHaptic } from "../../utils/haptics";
 import { useTranslation } from "../../contexts/LanguageContext";
+import { translateRecipeText } from "../../utils/recipeTranslation";
 import Seal from "../common/Seal";
 import QuantitySheet from "../common/QuantitySheet";
 import RecipePickerModal from "./RecipePickerModal";
@@ -34,7 +35,7 @@ export default function ShoppingView({
   showToast,
   pressDuration,
 }) {
-  const { t, dict } = useTranslation();
+  const { t, dict, language } = useTranslation();
   const [manualInput, setManualInput] = useState("");
   const [wheelItem, setWheelItem] = useState(null);
   const [showRecipePicker, setShowRecipePicker] = useState(false);
@@ -63,12 +64,12 @@ export default function ShoppingView({
     const lines = [`🛒 ${activeList ? activeList.name : t("shopping.defaultListName")} — Le Grimoire de Morgane`, ""];
     Object.entries(grouped).forEach(([aisle, list]) => {
       lines.push(`${dict.labels[aisle] || aisle} :`);
-      list.forEach((it) => lines.push(`- ${Math.round(it.qty * 100) / 100}${it.unit ? ` ${it.unit}` : ""} ${it.name}`));
+      list.forEach((it) => lines.push(`- ${Math.round(it.qty * 100) / 100}${it.unit ? ` ${it.unit}` : ""} ${translateRecipeText(it.name, language)}`));
       lines.push("");
     });
     if (bought.length) {
       lines.push(t("shopping.alreadyBought"));
-      bought.forEach((it) => lines.push(`- ${it.name}`));
+      bought.forEach((it) => lines.push(`- ${translateRecipeText(it.name, language)}`));
     }
     return lines.join("\n").trim();
   };

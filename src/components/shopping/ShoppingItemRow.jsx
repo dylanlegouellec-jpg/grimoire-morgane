@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
 import { Check, Minus, Plus, Trash2 } from "lucide-react";
 import { triggerHaptic } from "../../utils/haptics";
+import { useTranslation } from "../../contexts/LanguageContext";
+import { translateRecipeText } from "../../utils/recipeTranslation";
 
 /* ------------------------------------------------------------------ */
 /*  LIGNE D'ARTICLE — tap pour cocher, appui long pour la molette de     */
@@ -15,6 +17,7 @@ const AXIS_LOCK_THRESHOLD_PX = 8;
 const SWIPE_COMMIT_PX = 72;
 
 export default function ShoppingItemRow({ item, checked, onToggle, onAdjust, onDelete, onOpenWheel, pressDuration }) {
+  const { language } = useTranslation();
   const timer = useRef(null);
   const fired = useRef(false);
   const startPos = useRef(null);
@@ -87,7 +90,7 @@ export default function ShoppingItemRow({ item, checked, onToggle, onAdjust, onD
         >
           <span className="checkbox-row" onClick={handleClick}>
             <span className="checkbox">{checked && <Check size={11} />}</span>
-            <span>{item.qty > 0 ? `${Math.round(item.qty * 100) / 100}${item.unit ? ` ${item.unit}` : ""} — ` : ""}{item.name}</span>
+            <span>{item.qty > 0 ? `${Math.round(item.qty * 100) / 100}${item.unit ? ` ${item.unit}` : ""} — ` : ""}{translateRecipeText(item.name, language)}</span>
           </span>
           {!checked && onAdjust && (
             <span className="qty-stepper">
