@@ -1451,6 +1451,14 @@ html, body {
   box-shadow: 0 1px 3px var(--card-shadow);
 }
 .ios-group-padded { padding: 10px; }
+/* Deux ".ios-group" collés sans ".ios-group-title" entre eux (ex. le
+   bloc "Effets sonores" de AccessibilitySettingsModal, qui suit
+   directement la carte "Taille de texte" sans titre de section propre)
+   n'avaient sinon aucun espace vertical entre eux : c'est normalement
+   la marge du titre de section (margin: 22px 6px 8px, voir
+   .ios-group-title ci-dessus) qui sépare les cartes, donc une carte
+   sans titre restait visuellement soudée à celle du dessus. */
+.ios-group + .ios-group { margin-top: 22px; }
 
 .ios-row {
   display: flex; align-items: center; gap: 12px; width: 100%;
