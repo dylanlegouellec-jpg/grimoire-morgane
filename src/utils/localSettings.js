@@ -111,3 +111,28 @@ export function storeLanguage(lang) {
     /* rien à faire si le stockage échoue */
   }
 }
+
+/* --- Effets sonores (clic / validation — voir utils/audioUtils.js) -----
+   Contrairement aux autres réglages ci-dessus, purement local : jamais
+   synchronisé dans `profiles`, l'utilisateur n'a pas demandé qu'il suive
+   le compte d'un appareil à l'autre, juste qu'il soit mémorisé ici. */
+const SOUND_EFFECTS_KEY = "sound_effects_enabled";
+
+export function getStoredSoundEffects() {
+  try {
+    const v = localStorage.getItem(SOUND_EFFECTS_KEY);
+    if (v === "0") return false;
+    if (v === "1") return true;
+  } catch {
+    /* repli ci-dessous */
+  }
+  return true; // activés par défaut
+}
+
+export function storeSoundEffects(value) {
+  try {
+    localStorage.setItem(SOUND_EFFECTS_KEY, value ? "1" : "0");
+  } catch {
+    /* rien à faire si le stockage échoue */
+  }
+}

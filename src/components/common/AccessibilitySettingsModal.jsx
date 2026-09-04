@@ -1,8 +1,12 @@
+import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import { useTranslation } from "../../contexts/LanguageContext";
+import { getStoredSoundEffects, storeSoundEffects } from "../../utils/localSettings";
+import { playClickSound } from "../../utils/audioUtils";
 import Flourish from "./Flourish";
 import SegmentedControl from "./SegmentedControl";
+import Switch from "./Switch";
 import { PRESS_DURATION_OPTIONS } from "./pressDuration";
 import { TEXT_SIZE_OPTIONS } from "./textSize";
 
@@ -27,6 +31,17 @@ export default function AccessibilitySettingsModal({
 }) {
   useBodyScrollLock(true);
   const { t } = useTranslation();
+  // Purement local (voir localSettings.js) : pas synchronisé dans
+  // `profiles`, donc géré ici directement plutôt que remonté jusqu'à
+  // GrimoireDeMorgane.jsx comme le thème/l'appui long/la taille de texte —
+  // rien d'autre dans l'app n'a besoin de réagir à ce changement, playClickSound()
+  // relit lui-même la préférence à chaque appel (voir utils/audioUtils.js).
+  const [soundEffects, setSoundEffectsState] = useState(() => getStoredSoundEffects());
+  const setSoundEffects = (value) => {
+    storeSoundEffects(value);
+    setSoundEffectsState(value);
+    if (value) playClickSound();
+  };
 
   return (
     <div className="modal-backdrop" onClick={onBack}>
@@ -56,6 +71,16 @@ export default function AccessibilitySettingsModal({
             onChange={onSetTextSize}
             ariaLabel={t("settings.textSizeTitle")}
           />
+        </div>
+
+        <div className="ios-group">
+          <div className="settings-row">
+            <div className="settings-row-label">
+              <span className="settings-row-title">{t("settings.soundEffects")}</span>
+              <span className="settings-row-sub">{t("settings.soundEffectsHint")}</span>
+            </div>
+            <Switch checked={soundEffects} onChange={setSoundEffects} label={t("settings.soundEffects")} />
+          </div>
         </div>
       </div>
     </div>

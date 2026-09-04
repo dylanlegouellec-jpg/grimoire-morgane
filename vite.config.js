@@ -70,10 +70,22 @@ export default defineConfig({
           {
             // Images de recettes hébergées dans Supabase Storage : une
             // fois vue, une image reste disponible hors-ligne.
+            //
+            // Nom de cache en "-v2" : DishArt.jsx ne posait pas
+            // crossOrigin="anonymous" sur son <img> avant ce correctif,
+            // donc les entrées "-v1" pouvaient contenir des réponses
+            // OPAQUES (requêtes no-cors) — un cache opaque est ensuite
+            // resservi tel quel à toute requête ultérieure, y compris les
+            // fetch() CORS de l'export carte (recipeCardCanvas.js), le
+            // rendant illisible pour le canvas quelle que soit la méthode
+            // employée côté export. Changer le nom force les navigateurs
+            // déjà installés à repartir d'un cache propre plutôt que de
+            // rester coincés indéfiniment sur les anciennes entrées
+            // opaques (jusqu'à 30 jours sinon, la durée de vie du cache).
             urlPattern: ({ url }) => url.hostname.endsWith(".supabase.co") && url.pathname.includes("/storage/"),
             handler: "CacheFirst",
             options: {
-              cacheName: "supabase-storage-images",
+              cacheName: "supabase-storage-images-v2",
               expiration: { maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 },
               cacheableResponse: { statuses: [0, 200] },
             },
@@ -86,11 +98,12 @@ export default defineConfig({
             // cache plutôt que le réseau est toujours correct, jamais
             // périmé. CacheFirst, comme les images Supabase Storage
             // ci-dessus, pour qu'une recette illustrée reste consultable
-            // sans réseau.
+            // sans réseau. Même renommage "-v2" et pour la même raison
+            // (voir le commentaire détaillé juste au-dessus).
             urlPattern: ({ url }) => url.hostname === "image.pollinations.ai",
             handler: "CacheFirst",
             options: {
-              cacheName: "pollinations-images",
+              cacheName: "pollinations-images-v2",
               expiration: { maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 },
               cacheableResponse: { statuses: [0, 200] },
             },

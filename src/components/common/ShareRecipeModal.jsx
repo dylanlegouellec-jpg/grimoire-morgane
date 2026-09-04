@@ -278,7 +278,7 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
         <div className="print-page">
           {includePhoto && hasPhoto && (
             <div className="print-photo-wrap">
-              <img className="print-photo" src={recipe.imageUrl} alt="" />
+              <img className="print-photo" src={recipe.imageUrl} alt="" crossOrigin="anonymous" />
             </div>
           )}
           <div className="print-badges">

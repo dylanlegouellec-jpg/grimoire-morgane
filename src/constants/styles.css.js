@@ -598,7 +598,14 @@ html, body {
   font-family: 'EB Garamond', serif; font-size: 1rem; color: var(--ink);
 }
 .recipe-select-row-title { flex: 1; }
-.shopping-result { margin-top: 20px; }
+/* .app-content (voir plus haut) n'a qu'un padding bas de 16px, bien moins
+   que la hauteur de .bottom-nav (~70px) — la liste de courses est celle
+   qui déborde le plus souvent en bas (beaucoup d'articles + rayons), donc
+   le dernier article d'un rayon (ou de "Articles achetés" déplié) pouvait
+   rester caché derrière la nav basse. Même formule que les autres
+   correctifs de ce type (voir .recipe-options-modal, .planning-step-modal,
+   .recipe-picker-modal). */
+.shopping-result { margin-top: 20px; padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 90px); }
 .parchment-recap {
   text-align: center; font-family: 'Cinzel', serif; font-size: 0.72rem; letter-spacing: 1px; text-transform: uppercase;
   color: var(--ink-soft); background: rgba(179,135,42,0.1); border: 1px solid rgba(179,135,42,0.3);

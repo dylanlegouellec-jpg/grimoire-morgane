@@ -20,6 +20,20 @@ export default function DishArt({ recipe }) {
     // onContextMenu, ET on place un <div> transparent par-dessus l'image
     // (pointer-events actif sur ce calque, désactivé sur l'<img> elle-même)
     // pour que le doigt touche toujours le calque, jamais l'image.
+    //
+    // crossOrigin="anonymous" : sans lui, cet <img> (affiché à CHAQUE vue
+    // d'une recette illustrée, donc bien plus souvent qu'un export) fait
+    // une requête "no-cors" — le service worker (voir la règle
+    // "pollinations-images"/"supabase-storage-images" dans vite.config.js)
+    // met alors en cache une réponse OPAQUE pour cette URL. Un cache
+    // opaque est ensuite systématiquement resservi, MÊME à une requête
+    // CORS ultérieure (ex. le fetch() de recipeCardCanvas.js pour l'export
+    // carte) — rendant l'image illisible pour le canvas à chaque fois,
+    // quelle que soit la méthode de chargement utilisée côté export.
+    // Pollinations.ai et le bucket Supabase Storage envoient tous deux
+    // Access-Control-Allow-Origin: * (vérifié), donc ce mode CORS ne change
+    // rien à l'affichage — il garantit juste que la réponse mise en cache
+    // reste exploitable partout, y compris par le canvas.
     return (
       <div
         className="illus illus-art illus-photo-frame"
@@ -32,6 +46,7 @@ export default function DishArt({ recipe }) {
           draggable="false"
           loading="lazy"
           decoding="async"
+          crossOrigin="anonymous"
         />
         <div className="illus-photo-guard" aria-hidden="true" />
       </div>

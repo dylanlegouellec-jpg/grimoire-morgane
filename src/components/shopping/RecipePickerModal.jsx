@@ -63,7 +63,18 @@ export default function RecipePickerModal({ recipes, onGenerate, onClose }) {
         {filtered.length === 0 ? (
           <p className="hint">Aucune recette dans cette catégorie.</p>
         ) : (
-          <div className="recipe-select-list" style={selected.length > 0 ? { paddingBottom: 150 } : undefined}>
+          // La réserve en bas de liste doit rester >= la hauteur réelle de
+          // .recipe-picker-sticky-bar (voir plus bas), sans quoi le bouton
+          // "Générer la liste" recouvre les dernières recettes en la
+          // survolant plutôt qu'en poussant le contenu au-dessus de lui —
+          // exactement comme la barre elle-même, on ajoute donc le MÊME
+          // terme env(safe-area-inset-bottom) plutôt qu'un pixel fixe, qui
+          // sous-estimait la hauteur réelle sur tout iPhone à encoche
+          // (safe-area-inset-bottom non nul).
+          <div
+            className="recipe-select-list"
+            style={selected.length > 0 ? { paddingBottom: "calc(env(safe-area-inset-bottom, 16px) + 150px)" } : undefined}
+          >
             {filtered.map((r) => (
               <label className="recipe-select-row card" key={r.id}>
                 <input type="checkbox" checked={selected.includes(r.id)} onChange={() => toggleRecipe(r.id)} />

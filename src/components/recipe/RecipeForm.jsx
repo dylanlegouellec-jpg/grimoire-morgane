@@ -4,6 +4,7 @@ import { nextId, extractCodeFromInput, decodeRecipeCode, triggerHaptic, formatDu
 import { normalizeIngredientList } from "../../utils/ingredients";
 import { fetchNutriscoreGrade } from "../../utils/nutriscoreClient";
 import { estimateNutritionOnline } from "../../utils/nutritionClient";
+import { playSuccessSound } from "../../utils/audioUtils";
 import { formatPressDuration } from "../common/pressDuration";
 import { resolveIllustrationKey } from "../art/illustrations";
 import useSecretTrigger from "../../hooks/useSecretTrigger";
@@ -242,6 +243,7 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
       imageUrl: isEdit ? initialRecipe.imageUrl || null : null,
       imageSource: isEdit ? initialRecipe.imageSource || null : null,
     });
+    playSuccessSound();
     setSaving(false);
     onClose();
   };
