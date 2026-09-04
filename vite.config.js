@@ -78,6 +78,23 @@ export default defineConfig({
               cacheableResponse: { statuses: [0, 200] },
             },
           },
+          {
+            // Illustrations générées par Pollinations.ai (voir
+            // api/generate-illustration.js) : chaque URL encode le prompt
+            // complet, donc une même URL = toujours la même image — une
+            // fois affichée une première fois, la resservir depuis le
+            // cache plutôt que le réseau est toujours correct, jamais
+            // périmé. CacheFirst, comme les images Supabase Storage
+            // ci-dessus, pour qu'une recette illustrée reste consultable
+            // sans réseau.
+            urlPattern: ({ url }) => url.hostname === "image.pollinations.ai",
+            handler: "CacheFirst",
+            options: {
+              cacheName: "pollinations-images",
+              expiration: { maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
         ],
       },
     }),

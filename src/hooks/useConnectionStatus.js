@@ -20,8 +20,23 @@ import { pingSupabase } from "../utils/supabase";
 /* ------------------------------------------------------------------ */
 const PING_INTERVAL_MS = 30000;
 
+// État initial de la pastille, calculé avant même le premier ping : si le
+// navigateur rapporte déjà navigator.onLine === false au lancement (mode
+// avion, Wi-Fi coupé avant même d'ouvrir l'app), aucune raison d'attendre
+// un ping qui échouera de toute façon pour passer au rouge — le badge
+// partait sinon sur "checking" (orange) pendant tout le délai du ping,
+// donnant l'impression d'une app qui "ne sait pas" qu'elle est hors ligne.
+// navigator.onLine ne sert qu'à ce point de départ : une fois monté, le
+// vrai ping Supabase reprend la main (voir le commentaire de fichier
+// ci-dessus sur les faux positifs de navigator.onLine côté "en ligne").
+function initialStatus() {
+  if (!SUPABASE_READY) return "online";
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return "offline";
+  return "checking";
+}
+
 export default function useConnectionStatus() {
-  const [status, setStatus] = useState(() => (SUPABASE_READY ? "checking" : "online"));
+  const [status, setStatus] = useState(initialStatus);
   const inFlightRef = useRef(false);
 
   useEffect(() => {
@@ -30,6 +45,15 @@ export default function useConnectionStatus() {
 
     const check = async () => {
       if (inFlightRef.current) return;
+      // Pas la peine de tenter un ping (ni de flasher "checking" en
+      // attendant) si l'interface réseau elle-même a disparu — voir
+      // initialStatus() ci-dessus, même logique appliquée ici pour que le
+      // check() lancé au montage n'écrase pas immédiatement l'état initial
+      // "offline" par un "checking" transitoire.
+      if (typeof navigator !== "undefined" && navigator.onLine === false) {
+        setStatus("offline");
+        return;
+      }
       inFlightRef.current = true;
       setStatus((prev) => (prev === "online" ? prev : "checking"));
       const ok = await pingSupabase();

@@ -15,6 +15,19 @@
 /* ------------------------------------------------------------------ */
 
 const CULINARY_FR_EN = [
+  // Recettes précises de la base (titres exacts, entrées prioritaires —
+  // triées avant tout par longueur ci-dessous, donc pas besoin de les
+  // ordonner à la main ici).
+  ["danettes à la vanilla", "Vanilla Danettes"],
+  ["danettes au chocolate", "Chocolate Danettes"],
+  ["empanada à la viande", "Meat Empanada"],
+  ["far breton de grand mamie monique", "Monique's Breton Far"],
+  ["gâteau au chocolate et à la courgette", "Chocolate & Zucchini Cake"],
+  ["moelleux au chocolate", "Chocolate Lava Cake"],
+  ["marbré au chocolate", "Chocolate Marble Cake"],
+  ["sablé breton", "Breton Shortbread"],
+  ["samoussas au beef", "Beef Samosas"],
+
   // Plats et desserts composés (du plus spécifique au plus général)
   ["tarte aux pommes", "apple tart"],
   ["tarte aux fraises", "strawberry tart"],

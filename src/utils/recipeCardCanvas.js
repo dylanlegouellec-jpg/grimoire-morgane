@@ -69,7 +69,35 @@ async function ensureFonts() {
   }
 }
 
-function loadImage(url) {
+// Charge une image cross-origin de façon "safe" pour le canvas.
+//
+// Vérifié : Pollinations.ai et le bucket Supabase Storage de ce projet
+// envoient tous deux `Access-Control-Allow-Origin: *`, donc la méthode
+// directe ci-dessous (crossOrigin="anonymous") suffit déjà dans l'immense
+// majorité des cas. On tente quand même D'ABORD un fetch() + URL blob:
+// locale : un objet ainsi créé n'est JAMAIS considéré "cross-origin" par
+// le canvas, quels que soient les en-têtes CORS de la réponse d'origine
+// (elle a déjà été récupérée avec succès pour qu'on en arrive là) — un
+// filet de sécurité pour tout hébergeur d'image qui n'enverrait pas ces
+// en-têtes, sans coût perceptible quand ils sont déjà présents.
+async function loadImageViaBlob(url) {
+  try {
+    const res = await fetch(url, { mode: "cors" });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    return await new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = objectUrl;
+    });
+  } catch {
+    return null;
+  }
+}
+
+function loadImageDirect(url) {
   return new Promise((resolve) => {
     try {
       const img = new Image();
@@ -81,6 +109,12 @@ function loadImage(url) {
       resolve(null);
     }
   });
+}
+
+async function loadImage(url) {
+  const viaBlob = await loadImageViaBlob(url);
+  if (viaBlob) return viaBlob;
+  return loadImageDirect(url);
 }
 
 function wrapText(ctx, text, maxWidth) {
