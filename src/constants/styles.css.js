@@ -572,17 +572,38 @@ html, body {
 .shopping-actions { display: flex; gap: 18px; margin-bottom: 10px; }
 .recipe-picker-filters { padding: 0 0 8px; }
 .recipe-select-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
-/* Barre d'action collée en bas de la feuille (voir RecipePickerModal.jsx) —
-   étendue jusqu'aux bords de .modal via des marges négatives qui annulent
+/* --- "Générer à partir de recettes" (RecipePickerModal.jsx) — refonte en
+   VRAI en-tête/corps/pied de page (flex column), plutôt qu'un bouton
+   "position: sticky" flottant au-dessus d'une liste avec un padding
+   calculé pour deviner sa hauteur (fragile : un mauvais calcul laissait
+   le bouton chevaucher les dernières recettes). Avec cette structure,
+   .recipe-picker-body est la SEULE zone qui défile ; .recipe-picker-footer
+   est un enfant flex normal, jamais superposé au corps — aucune recette
+   ne peut donc plus jamais se retrouver sous le bouton. */
+.recipe-picker-modal {
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;
+  overflow: hidden;
+}
+.recipe-picker-header { flex-shrink: 0; }
+.recipe-picker-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  min-height: 0; /* indispensable pour qu'un enfant flex accepte de rétrécir et défiler plutôt que de déborder */
+}
+/* Étendue jusqu'aux bords de .modal via des marges négatives qui annulent
    son padding, puis un padding propre est réappliqué par-dessus pour le
-   contenu de la barre elle-même. Le padding bas réserve toute la hauteur
-   de la nav basse de l'appli (~75px) EN PLUS de la zone sûre iOS — même
-   correctif que .recipe-options-modal (voir plus haut) : un simple
-   env(safe-area-inset-bottom) protège de l'encoche du système, pas de la
-   barre de navigation propre à l'appli, posée par-dessus. */
-.recipe-picker-sticky-bar {
-  position: sticky; bottom: 0; left: 0; right: 0;
-  margin: 8px -20px -30px; padding: 12px 20px calc(env(safe-area-inset-bottom, 16px) + 75px);
+   contenu du pied de page lui-même. Le padding bas réserve la zone sûre
+   iOS (encoche/indicateur d'accueil) — la barre de nav de l'appli n'a PAS
+   besoin d'être comptée en plus ici, contrairement aux autres correctifs
+   de ce type : ce pied de page est un enfant flex de la feuille modale
+   elle-même (déjà au-dessus de .bottom-nav dans l'empilement), pas un
+   élément qui pourrait glisser derrière. */
+.recipe-picker-footer {
+  flex-shrink: 0;
+  margin: 8px -20px -30px; padding: 12px 20px calc(env(safe-area-inset-bottom, 16px) + 16px);
   background: var(--parchment); box-shadow: 0 -6px 14px rgba(0,0,0,0.12);
   display: flex; justify-content: center;
 }
@@ -605,7 +626,7 @@ html, body {
    rester caché derrière la nav basse. Même formule que les autres
    correctifs de ce type (voir .recipe-options-modal, .planning-step-modal,
    .recipe-picker-modal). */
-.shopping-result { margin-top: 20px; padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 90px); }
+.shopping-result { margin-top: 20px; padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 110px); }
 .parchment-recap {
   text-align: center; font-family: 'Cinzel', serif; font-size: 0.72rem; letter-spacing: 1px; text-transform: uppercase;
   color: var(--ink-soft); background: rgba(179,135,42,0.1); border: 1px solid rgba(179,135,42,0.3);
@@ -744,17 +765,6 @@ html, body {
   padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 70px);
 }
 
-/* --- "Générer à partir de recettes" (RecipePickerModal.jsx) — même
-   défaut, une fois de plus : le max-height: 88vh générique de .modal ne
-   réserve pas précisément la hauteur de .bottom-nav, donc le tout dernier
-   article de la liste pouvait rester caché dessous tant qu'aucune recette
-   n'était encore cochée (avant l'apparition de la barre sticky, qui elle
-   gère déjà sa propre marge — voir .recipe-picker-sticky-bar). --- */
-.recipe-picker-modal {
-  max-height: 80vh;
-  overflow-y: auto;
-  padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 70px);
-}
 .recipe-options-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .recipe-option-row {
   display: flex; align-items: center; gap: 12px;
@@ -792,6 +802,11 @@ html, body {
 .household-admin-badge {
   flex-shrink: 0; font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.5px; text-transform: uppercase;
   color: var(--gold); background: rgba(179,135,42,0.15); border: 1px solid rgba(179,135,42,0.4);
+  border-radius: 999px; padding: 2px 8px;
+}
+.household-member-badge {
+  flex-shrink: 0; font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.5px; text-transform: uppercase;
+  color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line);
   border-radius: 999px; padding: 2px 8px;
 }
 .household-pending-row { gap: 10px; }

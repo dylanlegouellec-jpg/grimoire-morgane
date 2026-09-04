@@ -9,6 +9,7 @@ import useLongPress from "../../hooks/useLongPress";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
 import HouseholdOptionsModal from "./HouseholdOptionsModal";
+import HouseholdMemberOptionsModal from "./HouseholdMemberOptionsModal";
 
 // Appui court = bascule vers ce foyer. Appui long = ouvre les options
 // (renommer / supprimer) — voir hooks/useLongPress.js.
@@ -28,6 +29,35 @@ function HouseholdRow({ household, active, pressDuration, onSelect, onOpenOption
       <Home size={16} />
       <span className="theme-pill-label">{household.name}</span>
     </button>
+  );
+}
+
+// Appui long = ouvre les options de ce membre (changer son rôle / le
+// retirer) — réservé aux admins (voir `canManage`, passé par le parent en
+// fonction de son propre rôle). Extrait en composant séparé plutôt
+// qu'inline dans un .map() : useLongPress est un hook, il ne peut pas
+// être appelé un nombre de fois variable dans une boucle.
+function MemberRow({ member, canManage, pressDuration, onOpenOptions, t }) {
+  const { handlers, wasLongPress, pressState } = useLongPress(
+    () => canManage && onOpenOptions(member),
+    pressDuration
+  );
+  return (
+    <li
+      className={`household-member-row press-anim press-${pressState}`}
+      {...(canManage ? handlers : {})}
+      onClick={() => { if (canManage && wasLongPress()) return; }}
+    >
+      {member.avatar_url ? (
+        <img src={member.avatar_url} alt="" className="avatar-img avatar-img-small" loading="lazy" decoding="async" />
+      ) : (
+        <Users size={14} />
+      )}
+      <span style={{ flex: 1 }}>{member.display_name || member.email}</span>
+      <span className={member.role === "admin" ? "household-admin-badge" : "household-member-badge"}>
+        {member.role === "admin" ? t("household.adminBadge") : t("household.memberBadge")}
+      </span>
+    </li>
   );
 }
 
@@ -146,6 +176,16 @@ export default function HouseholdManagerModal({
 
   const isAdmin = Boolean(user && members.some((m) => m.user_id === user.id && m.role === "admin"));
 
+  const refreshMembers = () => {
+    getHouseholdMembers(householdId).then((list) => {
+      if (list.length) { setMembers(list); setCachedMembers(householdId, list); }
+    });
+  };
+
+  // Options d'un membre (changer son rôle / le retirer) — ouvert par appui
+  // long, admins uniquement (voir MemberRow ci-dessus).
+  const [memberOptionsTarget, setMemberOptionsTarget] = useState(null);
+
   /* --- Demandes d'adhésion en attente (admin du foyer actif seulement) --- */
   const [pendingRequests, setPendingRequests] = useState([]);
   const [pendingLoading, setPendingLoading] = useState(false);
@@ -172,9 +212,7 @@ export default function HouseholdManagerModal({
       // Le nouveau membre approuvé doit apparaître dans la liste — un
       // rafraîchissement complet est plus sûr qu'un patch local (on ne
       // connaît pas son display_name/avatar sans rappeler l'API).
-      getHouseholdMembers(householdId).then((list) => {
-        if (list.length) { setMembers(list); setCachedMembers(householdId, list); }
-      });
+      refreshMembers();
     } catch (err) {
       console.error(err);
       showToast && showToast(t("household.requestActionFailedToast"));
@@ -362,22 +400,21 @@ export default function HouseholdManagerModal({
           {activeHousehold ? t("household.membersOf", { name: activeHousehold.name }) : t("household.membersGeneric")}
         </h4>
         <p className="hint" style={{ fontStyle: "normal", marginBottom: 10 }}>
-          {t("household.addMemberHint")}
+          {isAdmin ? t("household.addMemberHint") + " " + t("household.memberLongPressHint") : t("household.addMemberHint")}
         </p>
         {membersLoading && members.length === 0 ? (
           <p className="hint" style={{ fontStyle: "normal" }}>{t("household.loadingMembers")}</p>
         ) : members.length > 0 ? (
           <ul className="household-members-list">
             {members.map((m) => (
-              <li key={m.user_id} className="household-member-row">
-                {m.avatar_url ? (
-                  <img src={m.avatar_url} alt="" className="avatar-img avatar-img-small" loading="lazy" decoding="async" />
-                ) : (
-                  <Users size={14} />
-                )}
-                <span style={{ flex: 1 }}>{m.display_name || m.email}</span>
-                {m.role === "admin" && <span className="household-admin-badge">{t("household.adminBadge")}</span>}
-              </li>
+              <MemberRow
+                key={m.user_id}
+                member={m}
+                canManage={isAdmin}
+                pressDuration={pressDuration}
+                onOpenOptions={setMemberOptionsTarget}
+                t={t}
+              />
             ))}
           </ul>
         ) : (
@@ -409,6 +446,15 @@ export default function HouseholdManagerModal({
             onRename={onRenameHousehold}
             onDelete={onDeleteHousehold}
             onClose={() => setOptionsTarget(null)}
+          />
+        )}
+
+        {memberOptionsTarget && (
+          <HouseholdMemberOptionsModal
+            member={memberOptionsTarget}
+            householdId={householdId}
+            onChanged={refreshMembers}
+            onClose={() => setMemberOptionsTarget(null)}
           />
         )}
       </div>

@@ -202,3 +202,31 @@ export async function rejectHouseholdMember(householdId, userId) {
   );
   if (error) throw error;
 }
+
+/* ------------------------------------------------------------------ */
+/*  GESTION DES RÔLES — réservé aux admins (les RPC vérifient elles-      */
+/*  mêmes le rôle de l'appelant, ET empêchent de rétrograder/retirer le    */
+/*  dernier admin d'un foyer, voir la refonte SQL).                        */
+/* ------------------------------------------------------------------ */
+
+export async function changeHouseholdMemberRole(householdId, userId, newRole) {
+  const client = getSupabaseClient();
+  if (!client) throw new Error("Supabase non configuré");
+  const { error } = await withTimeout(
+    client.rpc("change_household_member_role", { p_household_id: householdId, p_user_id: userId, p_new_role: newRole }),
+    RPC_TIMEOUT_MS,
+    "Délai dépassé lors du changement de rôle."
+  );
+  if (error) throw error;
+}
+
+export async function removeHouseholdMember(householdId, userId) {
+  const client = getSupabaseClient();
+  if (!client) throw new Error("Supabase non configuré");
+  const { error } = await withTimeout(
+    client.rpc("remove_household_member", { p_household_id: householdId, p_user_id: userId }),
+    RPC_TIMEOUT_MS,
+    "Délai dépassé lors du retrait du membre."
+  );
+  if (error) throw error;
+}
