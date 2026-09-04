@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronRight, Home, LogOut, Palette, Pencil, Save, SlidersHorizontal, UserCircle2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Home, LogOut, Palette, Pencil, Save, SlidersHorizontal, UserCircle2, X } from "lucide-react";
 import { triggerHaptic } from "../../utils/helpers";
 import { getCachedProfile, getProfile } from "../../utils/profile";
 import { useTranslation } from "../../contexts/LanguageContext";
@@ -16,13 +16,21 @@ import HouseholdManagerModal from "./HouseholdManagerModal";
 /* ------------------------------------------------------------------ */
 /*  RÉGLAGES SECRETS DU GRIMOIRE — liste groupée façon iOS (HIG)         */
 /*                                                                        */
-/*  Écran principal : carte de profil, puis des rangées de navigation     */
-/*  groupées en cartes arrondies (voir styles.css.js, section "RÉGLAGES") */
-/*  — chacune ouvre un sous-panneau en couche au-dessus (même principe    */
-/*  d'empilement que HouseholdManagerModal, déjà présent dans l'app), un   */
-/*  bouton "< Réglages" en haut à gauche ramenant à cet écran plutôt       */
-/*  qu'un simple X de fermeture — pour donner la sensation d'une            */
-/*  navigation par couches (push/pop) propre aux réglages iOS.            */
+/*  UNE SEULE coquille modale (.modal-backdrop + .modal) pour tout le      */
+/*  module : la navigation entre l'écran principal et chaque sous-vue       */
+/*  (Apparence, Accessibilité, Sauvegarde, Foyer) se fait via l'état         */
+/*  interne `activeView` — jamais en montant un second composant qui         */
+/*  rendrait SA PROPRE .modal-backdrop par-dessus celle-ci. Avant ce          */
+/*  correctif, chaque sous-panneau était un composant "modale" à part          */
+/*  entière (son propre fond, sa propre bordure, sa propre animation            */
+/*  slideUp) : même rendu un seul à la fois (jamais empilés), le DÉMONTAGE       */
+/*  de l'écran principal puis le MONTAGE du sous-panneau créait un vrai          */
+/*  changement de conteneur DOM — visible comme un "saut"/une discontinuité       */
+/*  à l'écran, perçu à tort comme une double modale. Les composants              */
+/*  AppearanceSettingsModal/AccessibilitySettingsModal/DataBackupModal/           */
+/*  HouseholdManagerModal ne rendent donc plus qu'un CONTENU (titre + corps),      */
+/*  jamais leur propre fond/bordure/bouton de retour — ceux-ci sont gérés          */
+/*  ICI, une seule fois, quel que soit l'écran affiché.                            */
 /* ------------------------------------------------------------------ */
 export default function SecretSettingsModal({
   onClose,
@@ -56,15 +64,17 @@ export default function SecretSettingsModal({
   onSignOut,
 }) {
   const { t } = useTranslation();
-  // null | "appearance" | "accessibility" | "data" | "household"
-  const [activePanel, setActivePanel] = useState(null);
+  // 'main' | 'appearance' | 'accessibility' | 'backup' | 'household'
+  const [activeView, setActiveView] = useState("main");
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   // Cache-first (voir utils/profile.js) : la carte de profil s'affiche
   // instantanément avec la dernière valeur connue, même hors ligne, puis
   // se rafraîchit dès que le réseau répond.
   const [profile, setProfile] = useState(() => getCachedProfile());
 
-  // Fige le <body> tant que ce menu est ouvert (même hook que RecipeDetail.jsx).
+  // Fige le <body> tant que ce menu est ouvert — UNE SEULE fois ici,
+  // quelle que soit la vue active (les sous-vues ne l'appellent plus
+  // elles-mêmes, voir le commentaire de fichier ci-dessus).
   useBodyScrollLock(true);
 
   useEffect(() => {
@@ -85,113 +95,113 @@ export default function SecretSettingsModal({
     || (user && user.email)
     || "";
 
+  const goToMain = () => { triggerHaptic(10); setActiveView("main"); };
   // Referme tout l'empilement des Réglages — utilisé après une action
   // "terminale" (import réussi, déconnexion) plutôt que le simple retour
-  // au sous-panneau précédent.
-  const closeAll = () => { setActivePanel(null); onClose(); };
+  // à l'écran principal.
+  const closeAll = () => { setActiveView("main"); onClose(); };
 
-  // Un seul arrière-plan modal visible à la fois : l'écran principal des
-  // Réglages se MASQUE (plutôt que de rester dessous) dès qu'un
-  // sous-panneau est actif — sans quoi ce dernier s'ouvrait en s'empilant
-  // par-dessus l'écran principal, formant deux cartes modales visibles à
-  // la fois plutôt qu'une vraie navigation par couches (push/pop).
   return (
-    <>
-    {!activePanel && (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal grimoire-page ios-settings-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}><X size={20} /></button>
-        <h2 className="dropcap-title">{t("settings.title")}</h2>
-        <Flourish />
-
-        {user && (
-          <div className="profile-card">
-            <div className="profile-card-avatar-wrap">
-              <button
-                type="button"
-                className="profile-card-avatar"
-                onClick={openProfileEditor}
-                title={t("settings.editProfile")}
-                {...profileLongPress.handlers}
-              >
-                {avatarUrl ? <img src={avatarUrl} alt="" loading="lazy" decoding="async" /> : <UserCircle2 size={44} />}
-              </button>
-              <span
-                className={`connection-status-dot connection-status-${connectionStatus || "checking"}`}
-                title={
-                  connectionStatus === "offline"
-                    ? t("settings.statusOffline")
-                    : connectionStatus === "checking"
-                      ? t("settings.statusChecking")
-                      : t("settings.statusOnline")
-                }
-                aria-hidden="true"
-              />
-            </div>
-            <button type="button" className="profile-card-name" onClick={openProfileEditor} {...profileLongPress.handlers}>
-              {displayName}
-            </button>
-            {user.email && <p className="profile-card-email">{user.email}</p>}
-            <div className="profile-card-edit-btn">
-              <Seal tone="gold" onClick={() => setShowProfileEditor(true)}>
-                <Pencil size={15} /> {t("settings.editProfile")}
-              </Seal>
-            </div>
-          </div>
+        {activeView === "main" ? (
+          <button className="modal-close" onClick={onClose}><X size={20} /></button>
+        ) : (
+          <button className="modal-back" onClick={goToMain}><ChevronLeft size={20} /> {t("settings.back")}</button>
         )}
 
-        <p className="ios-group-title">{t("settings.settingsSection")}</p>
-        <div className="ios-group">
-          <button type="button" className="ios-row" onClick={() => { triggerHaptic(15); setActivePanel("appearance"); }}>
-            <span className="ios-row-icon" style={{ background: "var(--plum)" }}><Palette size={16} /></span>
-            <span className="ios-row-title">{t("settings.appearanceLanguage")}</span>
-            <ChevronRight size={18} className="ios-chevron" />
-          </button>
-          <button type="button" className="ios-row" onClick={() => { triggerHaptic(15); setActivePanel("accessibility"); }}>
-            <span className="ios-row-icon" style={{ background: "var(--wine)" }}><SlidersHorizontal size={16} /></span>
-            <span className="ios-row-title">{t("settings.accessibility")}</span>
-            <ChevronRight size={18} className="ios-chevron" />
-          </button>
-        </div>
-
-        <p className="ios-group-title">{t("settings.dataHousehold")}</p>
-        <div className="ios-group">
-          <button type="button" className="ios-row" onClick={() => { triggerHaptic(15); setActivePanel("data"); }}>
-            <span className="ios-row-icon" style={{ background: "var(--forest)" }}><Save size={16} /></span>
-            <span className="ios-row-title">{t("settings.backup")}</span>
-            <ChevronRight size={18} className="ios-chevron" />
-          </button>
-          {user && (
-            <button type="button" className="ios-row" onClick={() => { triggerHaptic(15); setActivePanel("household"); }}>
-              <span className="ios-row-icon" style={{ background: "var(--gold)" }}><Home size={16} /></span>
-              <span className="ios-row-title">{t("settings.household")}</span>
-              <ChevronRight size={18} className="ios-chevron" />
-            </button>
-          )}
-        </div>
-
-        {user && (
+        {activeView === "main" && (
           <>
-            <p className="ios-group-title">{t("settings.account")}</p>
-            <p className="hint" style={{ fontStyle: "normal", margin: "0 6px 8px" }}>
-              {t("settings.connectedAs", { email: user.email })}
-            </p>
+            <h2 className="dropcap-title">{t("settings.title")}</h2>
+            <Flourish />
+
+            {user && (
+              <div className="profile-card">
+                <div className="profile-card-avatar-wrap">
+                  <button
+                    type="button"
+                    className="profile-card-avatar"
+                    onClick={openProfileEditor}
+                    title={t("settings.editProfile")}
+                    {...profileLongPress.handlers}
+                  >
+                    {avatarUrl ? <img src={avatarUrl} alt="" loading="lazy" decoding="async" /> : <UserCircle2 size={44} />}
+                  </button>
+                  <span
+                    className={`connection-status-dot connection-status-${connectionStatus || "checking"}`}
+                    title={
+                      connectionStatus === "offline"
+                        ? t("settings.statusOffline")
+                        : connectionStatus === "checking"
+                          ? t("settings.statusChecking")
+                          : t("settings.statusOnline")
+                    }
+                    aria-hidden="true"
+                  />
+                </div>
+                <button type="button" className="profile-card-name" onClick={openProfileEditor} {...profileLongPress.handlers}>
+                  {displayName}
+                </button>
+                {user.email && <p className="profile-card-email">{user.email}</p>}
+                <div className="profile-card-edit-btn">
+                  <Seal tone="gold" onClick={() => setShowProfileEditor(true)}>
+                    <Pencil size={15} /> {t("settings.editProfile")}
+                  </Seal>
+                </div>
+              </div>
+            )}
+
+            <p className="ios-group-title">{t("settings.settingsSection")}</p>
             <div className="ios-group">
-              <button
-                type="button"
-                className="ios-row ios-row-danger"
-                onClick={() => { triggerHaptic(15); onSignOut(); onClose(); }}
-              >
-                <LogOut size={16} /> {t("settings.signOut")}
+              <button type="button" className="ios-row" onClick={() => { triggerHaptic(15); setActiveView("appearance"); }}>
+                <span className="ios-row-icon" style={{ background: "var(--plum)" }}><Palette size={16} /></span>
+                <span className="ios-row-title">{t("settings.appearanceLanguage")}</span>
+                <ChevronRight size={18} className="ios-chevron" />
+              </button>
+              <button type="button" className="ios-row" onClick={() => { triggerHaptic(15); setActiveView("accessibility"); }}>
+                <span className="ios-row-icon" style={{ background: "var(--wine)" }}><SlidersHorizontal size={16} /></span>
+                <span className="ios-row-title">{t("settings.accessibility")}</span>
+                <ChevronRight size={18} className="ios-chevron" />
               </button>
             </div>
+
+            <p className="ios-group-title">{t("settings.dataHousehold")}</p>
+            <div className="ios-group">
+              <button type="button" className="ios-row" onClick={() => { triggerHaptic(15); setActiveView("backup"); }}>
+                <span className="ios-row-icon" style={{ background: "var(--forest)" }}><Save size={16} /></span>
+                <span className="ios-row-title">{t("settings.backup")}</span>
+                <ChevronRight size={18} className="ios-chevron" />
+              </button>
+              {user && (
+                <button type="button" className="ios-row" onClick={() => { triggerHaptic(15); setActiveView("household"); }}>
+                  <span className="ios-row-icon" style={{ background: "var(--gold)" }}><Home size={16} /></span>
+                  <span className="ios-row-title">{t("settings.household")}</span>
+                  <ChevronRight size={18} className="ios-chevron" />
+                </button>
+              )}
+            </div>
+
+            {user && (
+              <>
+                <p className="ios-group-title">{t("settings.account")}</p>
+                <p className="hint" style={{ fontStyle: "normal", margin: "0 6px 8px" }}>
+                  {t("settings.connectedAs", { email: user.email })}
+                </p>
+                <div className="ios-group">
+                  <button
+                    type="button"
+                    className="ios-row ios-row-danger"
+                    onClick={() => { triggerHaptic(15); onSignOut(); onClose(); }}
+                  >
+                    <LogOut size={16} /> {t("settings.signOut")}
+                  </button>
+                </div>
+              </>
+            )}
           </>
         )}
-      </div>
-    </div>
-    )}
 
-        {activePanel === "appearance" && (
+        {activeView === "appearance" && (
           <AppearanceSettingsModal
             theme={theme}
             onSetTheme={onSetTheme}
@@ -199,27 +209,24 @@ export default function SecretSettingsModal({
             onSetLanguage={onSetLanguage}
             showNutriscore={showNutriscore}
             onSetShowNutriscore={onSetShowNutriscore}
-            onBack={() => setActivePanel(null)}
           />
         )}
-        {activePanel === "accessibility" && (
+        {activeView === "accessibility" && (
           <AccessibilitySettingsModal
             pressDuration={pressDuration}
             onSetPressDuration={onSetPressDuration}
             textSize={textSize}
             onSetTextSize={onSetTextSize}
-            onBack={() => setActivePanel(null)}
           />
         )}
-        {activePanel === "data" && (
+        {activeView === "backup" && (
           <DataBackupModal
             onExport={onExport}
             onImportFile={(e) => { onImportFile(e); closeAll(); }}
             onImportTextRecipe={() => { onImportTextRecipe(); closeAll(); }}
-            onBack={() => setActivePanel(null)}
           />
         )}
-        {activePanel === "household" && (
+        {activeView === "household" && (
           <HouseholdManagerModal
             user={user}
             householdId={householdId}
@@ -235,7 +242,6 @@ export default function SecretSettingsModal({
             onRejectHouseholdMember={onRejectHouseholdMember}
             onRefreshHouseholds={onRefreshHouseholds}
             showToast={showToast}
-            onClose={() => setActivePanel(null)}
           />
         )}
 
@@ -248,6 +254,7 @@ export default function SecretSettingsModal({
             showToast={showToast}
           />
         )}
-    </>
+      </div>
+    </div>
   );
 }

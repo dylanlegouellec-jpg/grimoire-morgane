@@ -4,7 +4,6 @@ import { getHouseholdMembers, addUserToHousehold, leaveHousehold } from "../../u
 import { getCachedMembers, setCachedMembers } from "../../utils/householdCache";
 import { triggerHaptic, buildHouseholdInviteLink, extractHouseholdIdFromInput, buildQrCodeUrl, copyText } from "../../utils/helpers";
 import { useTranslation } from "../../contexts/LanguageContext";
-import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useLongPress from "../../hooks/useLongPress";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
@@ -88,9 +87,7 @@ export default function HouseholdManagerModal({
   onRejectHouseholdMember,
   onRefreshHouseholds,
   showToast,
-  onClose,
 }) {
-  useBodyScrollLock(true);
   const { t } = useTranslation();
 
   const [optionsTarget, setOptionsTarget] = useState(null);
@@ -271,10 +268,8 @@ export default function HouseholdManagerModal({
   const activeHousehold = (households || []).find((h) => h.id === householdId) || null;
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal grimoire-page household-manager-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}><X size={20} /></button>
-        <h2 className="dropcap-title">{t("household.title")}</h2>
+    <>
+        <h2 className="dropcap-title" style={{ marginTop: 34 }}>{t("household.title")}</h2>
         <Flourish />
         <p className="hint" style={{ fontStyle: "normal" }}>
           {t("household.hint")}
@@ -476,7 +471,6 @@ export default function HouseholdManagerModal({
             />
           )
         )}
-      </div>
-    </div>
+    </>
   );
 }
