@@ -571,7 +571,7 @@ html, body {
 .recipe-picker-trigger { margin-bottom: 16px; }
 .shopping-actions { display: flex; gap: 18px; margin-bottom: 10px; }
 .recipe-picker-filters { padding: 0 0 8px; }
-.recipe-select-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+.recipe-select-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 34px; }
 /* --- "Générer à partir de recettes" (RecipePickerModal.jsx) — en-tête fixe
    + corps défilant (flex column). .recipe-picker-body est la SEULE zone
    qui défile. */
@@ -615,10 +615,9 @@ html, body {
   z-index: 30;
   display: flex;
   justify-content: center;
-  /* +28px (au lieu de +16px) au-dessus de la zone sûre iOS : à +16px le
-     bouton restait quasi soudé au bord bas de la modale, trop proche de
-     .bottom-nav en dessous pour bien s'en distinguer visuellement. */
-  padding: 16px 20px calc(env(safe-area-inset-bottom, 16px) + 28px);
+  /* +48px (au lieu de +28px, +16px à l'origine) au-dessus de la zone sûre
+     iOS : encore trop proche de .bottom-nav en dessous à +28px. */
+  padding: 16px 20px calc(env(safe-area-inset-bottom, 16px) + 48px);
   background: transparent;
   pointer-events: none;
 }
