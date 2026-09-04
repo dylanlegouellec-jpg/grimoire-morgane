@@ -104,11 +104,27 @@ html, body {
 * { box-sizing: border-box; }
 
 .app-header {
+  position: relative;
   text-align: center;
   padding: 28px 20px 16px;
   border-bottom: 2px solid var(--line);
   background: linear-gradient(180deg, var(--header-glow), transparent);
 }
+/* --- Bouton de réglages de l'en-tête — remplace l'ancien déclencheur
+   "triple-clic sur le titre" (invisible, jamais découvert par un
+   utilisateur sans qu'on le lui dise) par une vraie porte d'entrée
+   visible : la photo de profil si elle existe (avec la pastille de
+   statut de connexion, comme sur la carte de profil des Réglages),
+   sinon une icône d'engrenage. --- */
+.app-header-settings-btn {
+  position: absolute; top: 18px; right: 16px; z-index: 2;
+  width: 38px; height: 38px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface-strong); border: 1px solid var(--line); border-radius: 50%;
+  color: var(--ink-soft); cursor: pointer;
+}
+.app-header-avatar-wrap { position: relative; width: 100%; height: 100%; }
+.app-header-avatar { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
 .app-header h1 {
   font-family: 'Cinzel Decorative', 'Cinzel', serif;
   font-size: 1.55rem;

@@ -19,20 +19,22 @@ import Switch from "./Switch";
 
 // Construit un texte brut (pour navigator.share, qui n'accepte pas de HTML
 // mis en forme) reprenant la structure de la fiche : titre, ingrédients
-// groupés par section, étapes numérotées, remarques.
-function buildShareText(recipe, servings, ingredients, includeNotes) {
-  const lines = [recipe.title, "", "Ingrédients :"];
+// groupés par section, étapes numérotées, remarques. `t` est passé en
+// paramètre plutôt qu'obtenu via useTranslation() : cette fonction n'est
+// pas un composant, elle ne peut pas appeler de hook elle-même.
+function buildShareText(t, recipe, servings, ingredients, includeNotes) {
+  const lines = [recipe.title, "", t("share.shareTextIngredients")];
   groupIngredients(ingredients).forEach((g) => {
     if (g.title) lines.push(`— ${g.title} —`);
     g.items.forEach((it) => lines.push(`• ${[it.qty, it.unit].filter(Boolean).join(" ")} ${it.name}`.trim()));
   });
-  lines.push("", "Préparation :");
+  lines.push("", t("share.shareTextPreparation"));
   groupSteps(recipe.steps).forEach((g) => {
     if (g.title) lines.push(`— ${g.title} —`);
     g.steps.forEach((s, i) => lines.push(`${i + 1}. ${s}`));
   });
-  if (includeNotes && recipe.notes) lines.push("", "Remarques :", recipe.notes);
-  lines.push("", "— Le Grimoire de Morgane 📜");
+  if (includeNotes && recipe.notes) lines.push("", t("share.shareTextNotes"), recipe.notes);
+  lines.push("", t("share.shareTextSignature"));
   return lines.join("\n");
 }
 
@@ -63,13 +65,13 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
 
   const nutriGrade = recipe.nutriscoreGrade || estimateNutriscoreLocal(ingredients, recipe.category);
   const nutriColor = NUTRI_COLORS[nutriGrade] || "#b3872a";
-  const { dict } = useTranslation();
+  const { t, dict } = useTranslation();
   const categoryText = dict.labels[categoryLabel(recipe)] || categoryLabel(recipe);
 
   const doCopyCode = () => {
     const code = encodeRecipeCode(recipe);
-    if (!code) { showToast("Impossible de générer le code."); return; }
-    shareText(buildImportLink(code), "Lien de la recette");
+    if (!code) { showToast(t("share.codeErrorToast")); return; }
+    shareText(buildImportLink(code), t("share.recipeLink"));
   };
 
   const doDownloadFile = () => {
@@ -83,9 +85,9 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      showToast("Recette téléchargée !");
+      showToast(t("share.recipeDownloadedToast"));
     } catch {
-      showToast("Téléchargement impossible sur cet appareil.");
+      showToast(t("share.downloadImpossibleToast"));
     }
   };
 
@@ -105,9 +107,9 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      showToast("Fiche téléchargée !");
+      showToast(t("share.sheetDownloadedToast"));
     } catch {
-      showToast("Téléchargement impossible sur cet appareil.");
+      showToast(t("share.downloadImpossibleToast"));
     }
   };
 
@@ -133,7 +135,7 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
         try {
           await navigator.share({
             title: recipe.title,
-            text: buildShareText(recipe, servings, ingredients, includeNotes),
+            text: buildShareText(t, recipe, servings, ingredients, includeNotes),
           });
           return;
         } catch (err) {
@@ -167,17 +169,17 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
         theme: currentTheme(),
       });
       if (!blob) {
-        showToast("Impossible de générer l'image.");
+        showToast(t("share.imageErrorToast"));
         return;
       }
       if (includePhoto && hasPhoto && !photoIncluded) {
-        showToast("Photo non incluse (image protégée) — carte générée sans elle.");
+        showToast(t("share.photoExcludedToast"));
       }
       const result = await shareOrDownloadPng(blob, `${slugify(recipe.title)}.png`, recipe.title);
-      if (result === "downloaded") showToast("Carte téléchargée !");
-      else if (!result) showToast("Impossible de générer l'image.");
+      if (result === "downloaded") showToast(t("share.cardDownloadedToast"));
+      else if (!result) showToast(t("share.imageErrorToast"));
     } catch {
-      showToast("Impossible de générer l'image.");
+      showToast(t("share.imageErrorToast"));
     } finally {
       setBusy(null);
     }
@@ -187,7 +189,7 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
     triggerHaptic(15);
     setBusy("text");
     try {
-      const text = buildShareText(recipe, servings, ingredients, includeNotes);
+      const text = buildShareText(t, recipe, servings, ingredients, includeNotes);
       if (navigator.share) {
         try {
           await navigator.share({ title: recipe.title, text });
@@ -197,7 +199,7 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
           // toute autre erreur : on bascule sur la copie presse-papiers ci-dessous
         }
       }
-      shareText(text, "Texte de la recette");
+      shareText(text, t("share.plainTextLabel"));
     } finally {
       setBusy(null);
     }
@@ -217,55 +219,55 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
       >
         <div className="modal grimoire-page" onClick={(e) => e.stopPropagation()}>
           <button className="modal-close" onClick={onClose}><X size={20} /></button>
-          <h2 className="dropcap-title">Partager « {recipe.title} »</h2>
+          <h2 className="dropcap-title">{t("share.title", { title: recipe.title })}</h2>
           <Flourish />
 
-          <h4>Options d'export</h4>
+          <h4>{t("share.exportOptions")}</h4>
           <div className="ios-group">
             {hasPhoto && (
               <div className="settings-row">
                 <div className="settings-row-label">
-                  <span className="settings-row-title">Photo de la recette</span>
+                  <span className="settings-row-title">{t("share.recipePhoto")}</span>
                 </div>
-                <Switch checked={includePhoto} onChange={setIncludePhoto} label="Inclure la photo de la recette" />
+                <Switch checked={includePhoto} onChange={setIncludePhoto} label={t("share.includePhoto")} />
               </div>
             )}
             <div className="settings-row">
               <div className="settings-row-label">
-                <span className="settings-row-title">Nutri-Score</span>
+                <span className="settings-row-title">{t("share.nutriscore")}</span>
               </div>
-              <Switch checked={includeNutriscore} onChange={setIncludeNutriscore} label="Inclure le Nutri-Score" />
+              <Switch checked={includeNutriscore} onChange={setIncludeNutriscore} label={t("share.includeNutriscore")} />
             </div>
             {hasNotes && (
               <div className="settings-row">
                 <div className="settings-row-label">
-                  <span className="settings-row-title">Notes &amp; astuces</span>
+                  <span className="settings-row-title">{t("share.notesTips")}</span>
                 </div>
-                <Switch checked={includeNotes} onChange={setIncludeNotes} label="Inclure les notes personnelles" />
+                <Switch checked={includeNotes} onChange={setIncludeNotes} label={t("share.includeNotes")} />
               </div>
             )}
           </div>
 
-          <h4 style={{ marginTop: 22 }}>Livre de Cuisine</h4>
+          <h4 style={{ marginTop: 22 }}>{t("share.cookbook")}</h4>
           <div className="cookbook-export-grid">
             <button type="button" className="cookbook-export-tile" onClick={doExportPng} disabled={busy !== null}>
               <ImageIcon size={22} />
-              <span>{busy === "png" ? "Génération…" : "Carte Image"}</span>
+              <span>{busy === "png" ? t("share.generating") : t("share.imageCard")}</span>
             </button>
             <button type="button" className="cookbook-export-tile" onClick={doExportPDF} disabled={busy !== null}>
               <FileText size={22} />
-              <span>Fiche PDF</span>
+              <span>{t("share.pdfSheet")}</span>
             </button>
             <button type="button" className="cookbook-export-tile" onClick={doExportText} disabled={busy !== null}>
               <AlignLeft size={22} />
-              <span>Texte Épuré</span>
+              <span>{t("share.plainText")}</span>
             </button>
           </div>
 
-          <h4 style={{ marginTop: 22 }}>Transférer vers un autre Grimoire</h4>
+          <h4 style={{ marginTop: 22 }}>{t("share.transferGrimoire")}</h4>
           <div className="share-option-row">
-            <Seal tone="gold" onClick={doCopyCode}><Copy size={16} /> Copier le code</Seal>
-            <Seal tone="gold" onClick={doDownloadFile}><Download size={16} /> Télécharger le fichier</Seal>
+            <Seal tone="gold" onClick={doCopyCode}><Copy size={16} /> {t("share.copyCode")}</Seal>
+            <Seal tone="gold" onClick={doDownloadFile}><Download size={16} /> {t("share.downloadFile")}</Seal>
           </div>
         </div>
       </div>
@@ -288,17 +290,17 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
             )}
           </div>
           <h1>{recipe.title}</h1>
-          <p className="print-type">Le Grimoire de Morgane</p>
+          <p className="print-type">{t("share.printSignature")}</p>
           <div className="print-meta">
-            <span>⏱ {recipe.time} min</span>
-            <span>👥 {servings} pers.</span>
-            {recipe.carbs ? <span>{Math.round(recipe.carbs * servings)} g glucides (total)</span> : null}
+            <span>⏱ {recipe.time} {t("share.minutesShort")}</span>
+            <span>👥 {servings} {t("share.servingsShort")}</span>
+            {recipe.carbs ? <span>{Math.round(recipe.carbs * servings)} {t("share.carbsTotalSuffix")}</span> : null}
           </div>
           <div className="print-flourish">❦</div>
 
           <div className="print-columns">
             <div>
-              <h2>Ingrédients</h2>
+              <h2>{t("share.printIngredients")}</h2>
               {groupIngredients(ingredients).map((g, i) => (
                 <div key={i}>
                   {g.title && <h3 className="print-sub">{g.title}</h3>}
@@ -311,7 +313,7 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
               ))}
             </div>
             <div>
-              <h2>Préparation</h2>
+              <h2>{t("share.printPreparation")}</h2>
               {groupSteps(recipe.steps).map((g, i) => (
                 <div key={i}>
                   {g.title && <h3 className="print-sub">{g.title}</h3>}
@@ -325,11 +327,11 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
 
           {includeNotes && recipe.notes && (
             <>
-              <h2>Remarques &amp; astuces</h2>
+              <h2>{t("share.printNotesTitle")}</h2>
               <p className="print-notes">{recipe.notes}</p>
             </>
           )}
-          <div className="print-footer">Le Grimoire de Morgane 📜</div>
+          <div className="print-footer">{t("share.printFooter")}</div>
         </div>
       </div>
     </>

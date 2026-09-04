@@ -1,10 +1,10 @@
-import { useRef, useState } from "react";
-import { Heart, Search } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Heart, Search, Settings } from "lucide-react";
 
 import { FILTERS, TABS } from "../constants";
 import { CSS } from "../constants/styles.css";
 import { triggerHaptic, nextId, copyText } from "../utils/helpers";
-import useSecretTrigger from "../hooks/useSecretTrigger";
+import { getCachedProfile, getProfile } from "../utils/profile";
 import { useTranslation } from "../contexts/LanguageContext";
 
 import { NavButton, TextShareModal, ImportConfirmModal, DeleteConfirmModal, TextTemplateImportModal, SecretSettingsModal, ListsManagerModal } from "../components/common";
@@ -85,7 +85,21 @@ export default function AppShell({
 
   const touchStart = useRef(null);
   const axisLock = useRef(null);
-  const secretHeader = useSecretTrigger(() => setShowSecretSettings(true));
+
+  // Photo de profil affichée dans le bouton de réglages de l'en-tête —
+  // cache-first (voir utils/profile.js) : s'affiche instantanément avec la
+  // dernière valeur connue, même hors ligne, puis se rafraîchit dès que le
+  // réseau répond. Remplace l'ancien déclencheur "triple-clic sur le
+  // titre" : le titre n'ouvre plus rien, ce bouton est l'unique porte
+  // d'entrée vers les réglages.
+  const [headerProfile, setHeaderProfile] = useState(() => getCachedProfile());
+  useEffect(() => {
+    if (!user) return undefined;
+    let cancelled = false;
+    getProfile(user.id).then((p) => { if (!cancelled && p) setHeaderProfile(p); });
+    return () => { cancelled = true; };
+  }, [user]);
+  const headerAvatarUrl = headerProfile && headerProfile.avatar_url;
 
   const shareText = async (text, label) => {
     const ok = await copyText(text);
@@ -134,7 +148,25 @@ export default function AppShell({
       <style>{CSS}</style>
 
       <header className="app-header">
-        <h1 {...secretHeader}>Le Grimoire de Morgane</h1>
+        <button
+          type="button"
+          className="app-header-settings-btn"
+          onClick={() => { triggerHaptic(15); setShowSecretSettings(true); }}
+          aria-label={t("settings.title")}
+        >
+          {headerAvatarUrl ? (
+            <span className="app-header-avatar-wrap">
+              <img src={headerAvatarUrl} alt="" className="app-header-avatar" loading="lazy" decoding="async" />
+              <span
+                className={`connection-status-dot connection-status-${connectionStatus || "checking"}`}
+                aria-hidden="true"
+              />
+            </span>
+          ) : (
+            <Settings size={20} />
+          )}
+        </button>
+        <h1>Le Grimoire de Morgane</h1>
         <p className="subtitle">{t("app.subtitle")}</p>
         {connectionStatus === "offline" && (
           <p className="offline-banner">{t("app.offline")}</p>

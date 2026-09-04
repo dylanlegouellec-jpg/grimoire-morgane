@@ -3,6 +3,7 @@ import { Home, Plus, UserPlus, Users, X } from "lucide-react";
 import { getHouseholdMembers, addUserToHousehold } from "../../utils/auth";
 import { getCachedMembers, setCachedMembers } from "../../utils/householdCache";
 import { triggerHaptic } from "../../utils/helpers";
+import { useTranslation } from "../../contexts/LanguageContext";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useLongPress from "../../hooks/useLongPress";
 import Flourish from "./Flourish";
@@ -45,6 +46,7 @@ export default function HouseholdManagerModal({
   onClose,
 }) {
   useBodyScrollLock(true);
+  const { t } = useTranslation();
 
   const [optionsTarget, setOptionsTarget] = useState(null);
 
@@ -59,12 +61,12 @@ export default function HouseholdManagerModal({
     setCreating(true);
     try {
       await onCreateHousehold(trimmed);
-      showToast && showToast(`Foyer "${trimmed}" créé !`);
+      showToast && showToast(t("household.createdToast", { name: trimmed }));
       setNewHouseholdName("");
       setShowCreateForm(false);
     } catch (err) {
       console.error(err);
-      showToast && showToast("Échec de la création du foyer.");
+      showToast && showToast(t("household.createFailedToast"));
     } finally {
       setCreating(false);
     }
@@ -105,7 +107,7 @@ export default function HouseholdManagerModal({
     setAddStatus(null);
     try {
       await addUserToHousehold(trimmed, householdId);
-      setAddStatus({ type: "ok", message: `${trimmed} a été ajouté(e) au foyer !` });
+      setAddStatus({ type: "ok", message: t("household.addedToast", { email: trimmed }) });
       setEmail("");
       const fresh = await getHouseholdMembers(householdId);
       if (fresh.length) {
@@ -113,7 +115,7 @@ export default function HouseholdManagerModal({
         setCachedMembers(householdId, fresh);
       }
     } catch (err) {
-      setAddStatus({ type: "error", message: (err && err.message) || "Échec de l'ajout." });
+      setAddStatus({ type: "error", message: (err && err.message) || t("household.addFailedToast") });
     } finally {
       setAddBusy(false);
     }
@@ -125,10 +127,10 @@ export default function HouseholdManagerModal({
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal grimoire-page" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}><X size={20} /></button>
-        <h2 className="dropcap-title">Gestion des foyers</h2>
+        <h2 className="dropcap-title">{t("household.title")}</h2>
         <Flourish />
         <p className="hint" style={{ fontStyle: "normal" }}>
-          Appuie sur un foyer pour y basculer. Maintiens l'appui pour le renommer ou le supprimer.
+          {t("household.hint")}
         </p>
 
         <div className="theme-options" style={{ marginTop: 12 }}>
@@ -152,29 +154,29 @@ export default function HouseholdManagerModal({
                 value={newHouseholdName}
                 onChange={(e) => setNewHouseholdName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleCreateHousehold()}
-                placeholder="Nom du nouveau foyer"
+                placeholder={t("household.newHouseholdPlaceholder")}
                 className="household-email-input"
                 autoFocus
               />
               <button type="button" className="seal seal-gold" onClick={handleCreateHousehold} disabled={creating || !newHouseholdName.trim()}>
-                <Plus size={16} /> {creating ? "…" : "Créer"}
+                <Plus size={16} /> {creating ? t("household.creating") : t("household.create")}
               </button>
             </div>
           ) : (
             <Seal tone="gold" onClick={() => { triggerHaptic(15); setShowCreateForm(true); }}>
-              <Plus size={16} /> Créer un foyer
+              <Plus size={16} /> {t("household.createHousehold")}
             </Seal>
           )}
         </div>
 
         <h4 style={{ marginTop: 24 }}>
-          Membres {activeHousehold ? `de « ${activeHousehold.name} »` : "du foyer"}
+          {activeHousehold ? t("household.membersOf", { name: activeHousehold.name }) : t("household.membersGeneric")}
         </h4>
         <p className="hint" style={{ fontStyle: "normal", marginBottom: 10 }}>
-          Ajoute quelqu'un par son e-mail Google — il doit s'être déjà connecté une fois à l'application.
+          {t("household.addMemberHint")}
         </p>
         {membersLoading && members.length === 0 ? (
-          <p className="hint" style={{ fontStyle: "normal" }}>Chargement des membres…</p>
+          <p className="hint" style={{ fontStyle: "normal" }}>{t("household.loadingMembers")}</p>
         ) : members.length > 0 ? (
           <ul className="household-members-list">
             {members.map((m) => (
@@ -189,7 +191,7 @@ export default function HouseholdManagerModal({
             ))}
           </ul>
         ) : (
-          <p className="hint" style={{ fontStyle: "normal" }}>Aucun membre trouvé.</p>
+          <p className="hint" style={{ fontStyle: "normal" }}>{t("household.noMembers")}</p>
         )}
         <div className="household-add-row">
           <input
@@ -197,11 +199,11 @@ export default function HouseholdManagerModal({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAddMember()}
-            placeholder="email@gmail.com"
+            placeholder={t("household.emailPlaceholder")}
             className="household-email-input"
           />
           <button type="button" className="seal seal-gold" onClick={handleAddMember} disabled={addBusy || !email.trim()}>
-            <UserPlus size={16} /> {addBusy ? "…" : "Ajouter"}
+            <UserPlus size={16} /> {addBusy ? t("household.adding") : t("household.add")}
           </button>
         </div>
         {addStatus && (
