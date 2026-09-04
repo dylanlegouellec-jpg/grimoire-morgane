@@ -63,6 +63,7 @@ export default function GrimoireDeMorgane() {
     getPendingHouseholdRequests,
     approveHouseholdMember,
     rejectHouseholdMember,
+    refreshHouseholds,
     loading: authLoading,
     signInWithGoogle,
     signOut,
@@ -270,6 +271,7 @@ export default function GrimoireDeMorgane() {
         onGetPendingHouseholdRequests={getPendingHouseholdRequests}
         onApproveHouseholdMember={approveHouseholdMember}
         onRejectHouseholdMember={rejectHouseholdMember}
+        onRefreshHouseholds={refreshHouseholds}
         signOut={signOut}
         toast={toast}
         showToast={showToast}

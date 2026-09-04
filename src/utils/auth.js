@@ -230,3 +230,20 @@ export async function removeHouseholdMember(householdId, userId) {
   );
   if (error) throw error;
 }
+
+// Quitter un foyer soi-même — distinct de removeHouseholdMember (réservé
+// aux admins retirant un AUTRE membre) : accessible à n'importe quel
+// membre pour lui-même. La RPC bloque le départ si l'appelant est le seul
+// admin ET qu'il reste d'autres membres (voir le message d'erreur
+// renvoyé), mais autorise de quitter son tout dernier foyer (ce qui le
+// supprime alors, voir la fonction SQL leave_household).
+export async function leaveHousehold(householdId) {
+  const client = getSupabaseClient();
+  if (!client) throw new Error("Supabase non configuré");
+  const { error } = await withTimeout(
+    client.rpc("leave_household", { p_household_id: householdId }),
+    RPC_TIMEOUT_MS,
+    "Délai dépassé lors de la sortie du foyer."
+  );
+  if (error) throw error;
+}

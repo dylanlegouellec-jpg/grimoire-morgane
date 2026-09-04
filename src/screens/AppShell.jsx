@@ -51,6 +51,7 @@ export default function AppShell({
   onGetPendingHouseholdRequests,
   onApproveHouseholdMember,
   onRejectHouseholdMember,
+  onRefreshHouseholds,
   signOut,
   toast,
   showToast,
@@ -396,6 +397,7 @@ export default function AppShell({
           onGetPendingHouseholdRequests={onGetPendingHouseholdRequests}
           onApproveHouseholdMember={onApproveHouseholdMember}
           onRejectHouseholdMember={onRejectHouseholdMember}
+          onRefreshHouseholds={onRefreshHouseholds}
           showToast={showToast}
           onSignOut={signOut}
         />

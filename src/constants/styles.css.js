@@ -580,7 +580,17 @@ html, body {
    .recipe-picker-body est la SEULE zone qui défile ; .recipe-picker-footer
    est un enfant flex normal, jamais superposé au corps — aucune recette
    ne peut donc plus jamais se retrouver sous le bouton. */
-.recipe-picker-modal {
+/* Sélecteur composé (.modal.recipe-picker-modal, pas juste
+   .recipe-picker-modal) : .modal/.grimoire-page (plus bas dans ce fichier)
+   redéfinit aussi max-height/overflow avec la MÊME spécificité — sans le
+   composé, c'est l'ORDRE dans la feuille de style qui aurait tranché, et
+   .modal apparaissant après ce bloc aurait gagné, annulant purement et
+   simplement overflow:hidden ici. Résultat observé : le conteneur externe
+   retrouvait overflow-y:auto en plus du défilement interne de
+   .recipe-picker-body, un double-scroll qui pouvait faire disparaître le
+   bouton "Générer la liste" hors de la zone visible. Un sélecteur composé
+   a une spécificité plus élevée et gagne toujours, quel que soit l'ordre. */
+.modal.recipe-picker-modal {
   display: flex;
   flex-direction: column;
   max-height: 80vh;
@@ -746,7 +756,7 @@ html, body {
    indicateur d'accueil) — un simple env(safe-area-inset-bottom) seul ne
    suffisait pas : il protège de l'encoche du système, pas de la barre de
    navigation propre à l'appli, posée par-dessus. --- */
-.recipe-options-modal {
+.modal.recipe-options-modal {
   z-index: 60;
   max-height: 80vh;
   overflow-y: auto;
@@ -759,7 +769,7 @@ html, body {
    .bottom-nav. Même remède : hauteur plafonnée avec défilement interne
    garanti, plus un padding bas qui réserve la hauteur de la nav basse EN
    PLUS de la zone sûre iOS. --- */
-.planning-step-modal {
+.modal.planning-step-modal {
   max-height: 80vh;
   overflow-y: auto;
   padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 70px);
@@ -794,7 +804,7 @@ html, body {
    .recipe-picker-modal/.planning-step-modal (voir plus haut) pour que le
    dernier élément (le formulaire "Ajouter un membre") ne reste jamais
    caché sous .bottom-nav. */
-.household-manager-modal {
+.modal.household-manager-modal {
   max-height: 80vh;
   overflow-y: auto;
   padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 70px);

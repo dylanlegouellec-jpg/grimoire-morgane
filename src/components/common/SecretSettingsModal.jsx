@@ -51,6 +51,7 @@ export default function SecretSettingsModal({
   onGetPendingHouseholdRequests,
   onApproveHouseholdMember,
   onRejectHouseholdMember,
+  onRefreshHouseholds,
   showToast,
   onSignOut,
 }) {
@@ -232,6 +233,7 @@ export default function SecretSettingsModal({
             onGetPendingHouseholdRequests={onGetPendingHouseholdRequests}
             onApproveHouseholdMember={onApproveHouseholdMember}
             onRejectHouseholdMember={onRejectHouseholdMember}
+            onRefreshHouseholds={onRefreshHouseholds}
             showToast={showToast}
             onClose={() => setActivePanel(null)}
           />

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Check, Copy, Home, Plus, Share2, UserPlus, Users, X } from "lucide-react";
-import { getHouseholdMembers, addUserToHousehold } from "../../utils/auth";
+import { getHouseholdMembers, addUserToHousehold, leaveHousehold } from "../../utils/auth";
 import { getCachedMembers, setCachedMembers } from "../../utils/householdCache";
 import { triggerHaptic, buildHouseholdInviteLink, extractHouseholdIdFromInput, buildQrCodeUrl, copyText } from "../../utils/helpers";
 import { useTranslation } from "../../contexts/LanguageContext";
@@ -10,6 +10,7 @@ import Flourish from "./Flourish";
 import Seal from "./Seal";
 import HouseholdOptionsModal from "./HouseholdOptionsModal";
 import HouseholdMemberOptionsModal from "./HouseholdMemberOptionsModal";
+import LeaveHouseholdConfirmModal from "./LeaveHouseholdConfirmModal";
 
 // Appui court = bascule vers ce foyer. Appui long = ouvre les options
 // (renommer / supprimer) — voir hooks/useLongPress.js.
@@ -85,6 +86,7 @@ export default function HouseholdManagerModal({
   onGetPendingHouseholdRequests,
   onApproveHouseholdMember,
   onRejectHouseholdMember,
+  onRefreshHouseholds,
   showToast,
   onClose,
 }) {
@@ -182,9 +184,18 @@ export default function HouseholdManagerModal({
     });
   };
 
-  // Options d'un membre (changer son rôle / le retirer) — ouvert par appui
-  // long, admins uniquement (voir MemberRow ci-dessus).
+  // Options d'un membre — ouvert par appui long. Sur SA PROPRE ligne :
+  // "Quitter le foyer" (accessible à tout membre). Sur la ligne d'un
+  // AUTRE membre : changer son rôle / le retirer (admins uniquement) —
+  // voir MemberRow ci-dessus, qui n'autorise l'appui long que dans l'un
+  // ou l'autre de ces deux cas.
   const [memberOptionsTarget, setMemberOptionsTarget] = useState(null);
+  const isSelfTarget = Boolean(memberOptionsTarget && user && memberOptionsTarget.user_id === user.id);
+
+  const handleLeaveHousehold = async () => {
+    await leaveHousehold(householdId);
+    onRefreshHouseholds && onRefreshHouseholds();
+  };
 
   /* --- Demandes d'adhésion en attente (admin du foyer actif seulement) --- */
   const [pendingRequests, setPendingRequests] = useState([]);
@@ -410,7 +421,7 @@ export default function HouseholdManagerModal({
               <MemberRow
                 key={m.user_id}
                 member={m}
-                canManage={isAdmin}
+                canManage={isAdmin || (user && m.user_id === user.id)}
                 pressDuration={pressDuration}
                 onOpenOptions={setMemberOptionsTarget}
                 t={t}
@@ -450,12 +461,20 @@ export default function HouseholdManagerModal({
         )}
 
         {memberOptionsTarget && (
-          <HouseholdMemberOptionsModal
-            member={memberOptionsTarget}
-            householdId={householdId}
-            onChanged={refreshMembers}
-            onClose={() => setMemberOptionsTarget(null)}
-          />
+          isSelfTarget ? (
+            <LeaveHouseholdConfirmModal
+              householdName={activeHousehold ? activeHousehold.name : ""}
+              onConfirm={handleLeaveHousehold}
+              onClose={() => setMemberOptionsTarget(null)}
+            />
+          ) : (
+            <HouseholdMemberOptionsModal
+              member={memberOptionsTarget}
+              householdId={householdId}
+              onChanged={refreshMembers}
+              onClose={() => setMemberOptionsTarget(null)}
+            />
+          )
         )}
       </div>
     </div>

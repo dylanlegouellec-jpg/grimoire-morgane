@@ -15,6 +15,7 @@ export { default as RecipeOptionsModal } from "./RecipeOptionsModal";
 export { default as HouseholdManagerModal } from "./HouseholdManagerModal";
 export { default as HouseholdOptionsModal } from "./HouseholdOptionsModal";
 export { default as HouseholdMemberOptionsModal } from "./HouseholdMemberOptionsModal";
+export { default as LeaveHouseholdConfirmModal } from "./LeaveHouseholdConfirmModal";
 export { default as ProfileEditor } from "./ProfileEditor";
 export { default as Switch } from "./Switch";
 export { default as SegmentedControl } from "./SegmentedControl";
