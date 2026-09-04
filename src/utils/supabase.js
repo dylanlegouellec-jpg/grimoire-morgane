@@ -15,12 +15,14 @@ import { getSupabaseClient } from "./supabaseClient";
 // minute entière (comportement par défaut de fetch(), sans timeout).
 const REQUEST_TIMEOUT_MS = 6000;
 
-// Budget plus strict spécifiquement pour le health-check de connectivité
-// (pingSupabase ci-dessous) : ce n'est pas une vraie opération de données,
-// juste un test de joignabilité pour la pastille de statut — pas besoin
-// de tolérer un réseau lent aussi longtemps qu'une vraie requête, et un
-// budget plus court fait basculer la pastille au rouge plus vite.
-const PING_TIMEOUT_MS = 4000;
+// Budget pour le health-check de connectivité (pingSupabase ci-dessous).
+// 4s à l'origine : trop court sur un vrai réseau mobile (4G/5G avec
+// latence variable, notamment Android) — un ping qui prend simplement
+// 4-6s pour répondre (réseau lent, pas coupé) se faisait classer "hors
+// ligne" à tort, déclenchant le bandeau alors que la connexion
+// fonctionnait. 8s laisse une vraie marge à un réseau lent mais fonctionnel
+// sans pour autant tolérer une coupure réelle pendant une minute entière.
+const PING_TIMEOUT_MS = 8000;
 
 /* ------------------------------------------------------------------ */
 /*  SÉLECTION DE COLONNES                                              */

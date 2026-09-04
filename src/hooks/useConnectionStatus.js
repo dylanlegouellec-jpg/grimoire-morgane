@@ -5,12 +5,21 @@ import { pingSupabase } from "../utils/supabase";
 /* ------------------------------------------------------------------ */
 /*  STATUT DE CONNEXION RÉEL — "online" | "offline" | "checking"        */
 /*                                                                        */
-/*  Ne se fie jamais à navigator.onLine seul (faux positifs connus, voir  */
-/*  utils/supabase.js) : un vrai ping Supabase (lecture d'une seule ligne) */
-/*  fait foi. Pingué au montage, à intervalle régulier, à chaque retour    */
-/*  de l'onglet au premier plan, et à chaque événement "online" du         */
-/*  navigateur (lui-même juste un déclencheur pour revérifier, jamais une  */
-/*  vérité en soi).                                                        */
+/*  Ne se fie jamais à navigator.onLine seul (faux positifs connus,       */
+/*  particulièrement sur Android : certaines combinaisons OS/opérateur/    */
+/*  économie de données le rapportent à `false` alors que le réseau        */
+/*  fonctionne très bien) : un vrai ping Supabase (lecture d'une seule      */
+/*  ligne) fait foi. Pingué au montage, à intervalle régulier, à chaque      */
+/*  retour de l'onglet au premier plan, et à chaque événement                */
+/*  "online"/"offline" du navigateur (eux-mêmes de simples déclencheurs      */
+/*  pour revérifier, jamais une vérité en soi — voir handleOffline           */
+/*  plus bas, qui ne bascule plus directement au rouge).                     */
+/*                                                                          */
+/*  Un SEUL ping raté ne suffit plus à afficher "hors ligne" : sur un        */
+/*  réseau mobile réel, un timeout isolé est courant sans que la             */
+/*  connexion soit réellement coupée. Un premier échec programme un          */
+/*  second essai de confirmation (RETRY_DELAY_MS) avant de conclure —         */
+/*  seuls deux échecs consécutifs font passer la pastille au rouge.           */
 /*                                                                          */
 /*  "checking" (orange) est réservé aux moments réellement transitoires —  */
 /*  tout premier ping, ou tentative de reconnexion après une coupure —     */
@@ -19,25 +28,22 @@ import { pingSupabase } from "../utils/supabase";
 /*  rien.                                                                  */
 /* ------------------------------------------------------------------ */
 const PING_INTERVAL_MS = 30000;
+const RETRY_DELAY_MS = 4000;
 
-// État initial de la pastille, calculé avant même le premier ping : si le
-// navigateur rapporte déjà navigator.onLine === false au lancement (mode
-// avion, Wi-Fi coupé avant même d'ouvrir l'app), aucune raison d'attendre
-// un ping qui échouera de toute façon pour passer au rouge — le badge
-// partait sinon sur "checking" (orange) pendant tout le délai du ping,
-// donnant l'impression d'une app qui "ne sait pas" qu'elle est hors ligne.
-// navigator.onLine ne sert qu'à ce point de départ : une fois monté, le
-// vrai ping Supabase reprend la main (voir le commentaire de fichier
-// ci-dessus sur les faux positifs de navigator.onLine côté "en ligne").
 function initialStatus() {
-  if (!SUPABASE_READY) return "online";
-  if (typeof navigator !== "undefined" && navigator.onLine === false) return "offline";
-  return "checking";
+  // Toujours vérifié par un vrai ping avant de conclure quoi que ce soit —
+  // même le tout premier rendu ne se fie plus à navigator.onLine (faux
+  // positifs Android, voir le commentaire de fichier ci-dessus) : "checking"
+  // se résorbera en un aller-retour, quasi instantané si le réseau va bien.
+  return SUPABASE_READY ? "checking" : "online";
 }
 
 export default function useConnectionStatus() {
   const [status, setStatus] = useState(initialStatus);
   const inFlightRef = useRef(false);
+  const failureStreakRef = useRef(0);
+  const retryTimeoutRef = useRef(null);
+  const checkRef = useRef(() => {});
 
   useEffect(() => {
     if (!SUPABASE_READY) return undefined;
@@ -45,21 +51,29 @@ export default function useConnectionStatus() {
 
     const check = async () => {
       if (inFlightRef.current) return;
-      // Pas la peine de tenter un ping (ni de flasher "checking" en
-      // attendant) si l'interface réseau elle-même a disparu — voir
-      // initialStatus() ci-dessus, même logique appliquée ici pour que le
-      // check() lancé au montage n'écrase pas immédiatement l'état initial
-      // "offline" par un "checking" transitoire.
-      if (typeof navigator !== "undefined" && navigator.onLine === false) {
-        setStatus("offline");
-        return;
-      }
       inFlightRef.current = true;
       setStatus((prev) => (prev === "online" ? prev : "checking"));
       const ok = await pingSupabase();
       inFlightRef.current = false;
-      if (!cancelled) setStatus(ok ? "online" : "offline");
+      if (cancelled) return;
+
+      if (ok) {
+        failureStreakRef.current = 0;
+        setStatus("online");
+        return;
+      }
+
+      failureStreakRef.current += 1;
+      if (failureStreakRef.current === 1) {
+        // Premier échec : peut n'être qu'un aléa réseau isolé (fréquent en
+        // 4G/5G) — on retente une fois avant d'afficher le bandeau, plutôt
+        // que de le déclencher pour un unique timeout.
+        retryTimeoutRef.current = setTimeout(() => { if (!cancelled) check(); }, RETRY_DELAY_MS);
+        return;
+      }
+      setStatus("offline");
     };
+    checkRef.current = check;
 
     check();
     const interval = setInterval(check, PING_INTERVAL_MS);
@@ -68,14 +82,13 @@ export default function useConnectionStatus() {
     // garantit encore que Supabase soit réellement joignable, donc on
     // relance un vrai ping plutôt que de repasser au vert directement.
     const handleOnline = () => check();
-    // "offline", à l'inverse, EST une vérité en soi : le navigateur ne
-    // rapporte cet événement que quand l'interface réseau elle-même a
-    // disparu (Wi-Fi coupé, mode avion...) — impossible d'être joignable
-    // sans elle. On bascule donc la pastille au rouge INSTANTANÉMENT,
-    // sans attendre le prochain ping programmé (jusqu'à PING_INTERVAL_MS
-    // de retard sinon, ce qui donnait l'impression d'une pastille "restée
-    // verte" pendant la coupure).
-    const handleOffline = () => { if (!cancelled) setStatus("offline"); };
+    // "offline" ne bascule plus directement au rouge : navigator.onLine
+    // n'est pas fiable (voir le commentaire de fichier) — même cet
+    // événement n'est qu'un déclencheur pour revérifier par un vrai ping.
+    // Une vraie coupure réseau fait de toute façon échouer ce ping quasi
+    // instantanément (pas de round-trip à attendre), donc la détection
+    // reste tout aussi rapide pour une coupure réelle.
+    const handleOffline = () => check();
     const handleVisibility = () => { if (document.visibilityState === "visible") check(); };
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
@@ -84,11 +97,22 @@ export default function useConnectionStatus() {
     return () => {
       cancelled = true;
       clearInterval(interval);
+      if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
+      checkRef.current = () => {};
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, []);
 
-  return status;
+  // Revérification manuelle immédiate (voir le bouton "Réessayer" du
+  // bandeau hors-ligne dans AppShell.jsx) — repart d'un compteur d'échecs
+  // à zéro plutôt que d'attendre un éventuel second essai déjà programmé.
+  const recheck = () => {
+    if (retryTimeoutRef.current) { clearTimeout(retryTimeoutRef.current); retryTimeoutRef.current = null; }
+    failureStreakRef.current = 0;
+    checkRef.current();
+  };
+
+  return { status, recheck };
 }

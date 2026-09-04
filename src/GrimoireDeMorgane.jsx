@@ -144,8 +144,10 @@ export default function GrimoireDeMorgane() {
 
   // Statut de connexion RÉEL (ping Supabase, pas juste navigator.onLine —
   // voir hooks/useConnectionStatus.js) : alimente la bannière "Hors ligne"
-  // et la pastille de statut sur l'avatar du profil.
-  const connectionStatus = useConnectionStatus();
+  // et la pastille de statut sur l'avatar du profil. `recheckConnection`
+  // permet au bouton "Réessayer" du bandeau de forcer une revérification
+  // immédiate plutôt que d'attendre le prochain ping programmé.
+  const { status: connectionStatus, recheck: recheckConnection } = useConnectionStatus();
 
   // Applique le thème sur <html data-theme="..."> avant la peinture du
   // navigateur (useLayoutEffect) pour limiter le flash de la mauvaise
@@ -246,6 +248,7 @@ export default function GrimoireDeMorgane() {
         shoppingApi={shoppingApi}
         offlineQueueSize={sync.offlineQueueSize}
         connectionStatus={connectionStatus}
+        onRetryConnection={recheckConnection}
         pendingImport={sync.pendingImport}
         setPendingImport={sync.setPendingImport}
         pendingHouseholdJoin={sync.pendingHouseholdJoin}

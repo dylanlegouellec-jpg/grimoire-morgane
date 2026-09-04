@@ -26,6 +26,7 @@ export default function AppShell({
   shoppingApi,
   offlineQueueSize,
   connectionStatus,
+  onRetryConnection,
   pendingImport,
   setPendingImport,
   pendingHouseholdJoin,
@@ -184,7 +185,14 @@ export default function AppShell({
         <h1>Le Grimoire de Morgane</h1>
         <p className="subtitle">{t("app.subtitle")}</p>
         {connectionStatus === "offline" && (
-          <p className="offline-banner">{t("app.offline")}</p>
+          <p className="offline-banner">
+            {t("app.offline")}
+            {onRetryConnection && (
+              <button type="button" className="offline-banner-retry" onClick={() => { triggerHaptic(10); onRetryConnection(); }}>
+                {t("app.offlineRetry")}
+              </button>
+            )}
+          </p>
         )}
         {offlineQueueSize > 0 && (
           <p className="offline-queue-badge">

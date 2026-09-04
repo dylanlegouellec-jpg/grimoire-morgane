@@ -201,11 +201,19 @@ html, body {
    Supabase, voir hooks/useConnectionStatus.js), jamais par navigator.onLine
    seul : elle disparaît dès que le ping suivant réussit. */
 .offline-banner {
-  margin: 8px auto 0; max-width: 300px; padding: 5px 12px;
+  margin: 8px auto 0; max-width: 340px; padding: 5px 8px 5px 12px;
   font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.5px; text-transform: uppercase;
   color: #ff3b30; background: rgba(255,59,48,0.12);
   border: 1px solid rgba(255,59,48,0.4); border-radius: 999px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
 }
+.offline-banner-retry {
+  flex-shrink: 0; border: 1px solid rgba(255,59,48,0.5); border-radius: 999px;
+  background: rgba(255,59,48,0.18); color: #ff3b30;
+  font-family: 'Cinzel', serif; font-size: 0.58rem; letter-spacing: 0.5px; text-transform: uppercase;
+  padding: 3px 9px; cursor: pointer;
+}
+.offline-banner-retry:active { background: rgba(255,59,48,0.3); }
 
 .search-bar {
   display: flex; align-items: center; gap: 8px;

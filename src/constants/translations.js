@@ -37,6 +37,7 @@ export const translations = {
     app: {
       subtitle: "LIVRE DE MORGANE · SALÉ & SUCRÉ",
       offline: "Hors ligne — Supabase injoignable pour le moment.",
+      offlineRetry: "Réessayer",
       syncPending: "{count} modification{plural} en attente de synchronisation",
       favorites: "Favoris",
       favoritesTitle: "Afficher uniquement les favoris",
@@ -288,6 +289,7 @@ export const translations = {
     app: {
       subtitle: "BOOK OF MORGANE · SAVORY & SWEET",
       offline: "Offline — Supabase unreachable for now.",
+      offlineRetry: "Retry",
       syncPending: "{count} change{plural} pending sync",
       favorites: "Favorites",
       favoritesTitle: "Show favorites only",
