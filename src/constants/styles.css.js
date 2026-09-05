@@ -108,7 +108,15 @@ html, body {
   padding-top: env(safe-area-inset-top);
   padding-bottom: 84px;
   box-shadow: 0 0 40px var(--card-shadow);
+  /* overflow-y explicite : sans lui, la spec CSS force le calcul de
+     overflow-y à "auto" dès qu'un axe (ici overflow-x) n'est pas
+     "visible" — .grimoire-app devenait ainsi implicitement son propre
+     conteneur de défilement potentiel, sans que ce soit écrit nulle part
+     ni voulu (la page entière est censée défiler via le document, pas via
+     ce conteneur). Le rendre explicite élimine toute ambiguïté entre
+     moteurs de rendu plutôt que de compter sur ce calcul implicite. */
   overflow-x: hidden;
+  overflow-y: visible;
 }
 
 .loading-screen {
