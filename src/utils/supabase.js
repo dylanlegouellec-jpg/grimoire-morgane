@@ -73,8 +73,16 @@ export async function pingSupabase() {
       PING_TIMEOUT_MS
     );
     reachable = true;
-  } catch {
+  } catch (err) {
     reachable = false;
+    // Journalisé (jamais montré à l'utilisateur) pour pouvoir distinguer,
+    // depuis la console DevTools, une VRAIE coupure réseau (TypeError:
+    // Failed to fetch / NetworkError, y compris un rejet CORS — qui prend
+    // exactement la même forme côté JS qu'une coupure) d'un autre souci —
+    // c'est la seule façon de savoir laquelle des deux se produit
+    // réellement sans accès aux outils réseau du navigateur de
+    // l'utilisateur.
+    console.warn("[pingSupabase] Ping Supabase en échec :", err);
   }
   lastKnownReachable = reachable;
   return reachable;
