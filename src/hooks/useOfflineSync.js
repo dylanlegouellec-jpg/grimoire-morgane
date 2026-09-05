@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DEFAULT_BASICS, SUPABASE_READY, demoRecipes } from "../constants";
 import { decodeRecipeCode } from "../utils/helpers";
 import {
@@ -52,6 +52,23 @@ export default function useOfflineSync({
   // JoinHouseholdConfirmModal.jsx.
   const [pendingHouseholdJoin, setPendingHouseholdJoin] = useState(null);
 
+  // Boucle d'écho app_state ↔ Realtime (voir les 2 useEffect plus bas +
+  // le canal Realtime) : une sauvegarde locale de `pantry`/`basics`/
+  // `mealPlan` déclenche un PATCH, qui déclenche un événement Realtime
+  // "postgres_changes" sur app_state POUR CE MÊME client (Realtime ne
+  // distingue pas "changé par moi" de "changé par un autre appareil"),
+  // qui appelle setPantry/... avec une NOUVELLE référence de tableau
+  // (JSON fraîchement désérialisé) même quand le contenu est strictement
+  // identique — React voit alors `pantry` "changer" et le useEffect de
+  // sauvegarde repart, qui redéclenche l'écho Realtime, indéfiniment.
+  // Ces refs retiennent le dernier contenu (sérialisé) connu du serveur,
+  // mis à jour à la fois après une sauvegarde locale ET après réception
+  // Realtime, pour que l'effet de sauvegarde puisse distinguer une VRAIE
+  // modification locale d'un simple écho et ignorer ce dernier.
+  const lastSyncedPantryRef = useRef(undefined);
+  const lastSyncedBasicsRef = useRef(undefined);
+  const lastSyncedMealPlanRef = useRef(undefined);
+
   // Chargement initial : cache local en priorité (offline-first), puis
   // rafraîchissement Supabase en tâche de fond dès que la session/le
   // foyer sont connus.
@@ -89,9 +106,18 @@ export default function useOfflineSync({
           fetchTable("shopping_lists", `select=${SHOPPING_LIST_COLUMNS}&household_id=eq.${householdId}&order=created_at.asc`),
         ]);
         setRecipes((rows || []).map(mapRowToRecipe));
-        setPantry((state && state.pantry) || []);
-        setBasics((state && state.basics) || DEFAULT_BASICS);
-        setMealPlan((state && state.meal_plan) || []);
+        const loadedPantry = (state && state.pantry) || [];
+        const loadedBasics = (state && state.basics) || DEFAULT_BASICS;
+        const loadedMealPlan = (state && state.meal_plan) || [];
+        setPantry(loadedPantry);
+        setBasics(loadedBasics);
+        setMealPlan(loadedMealPlan);
+        // Ce qu'on vient de charger EST déjà l'état du serveur — inutile
+        // que l'effet de sauvegarde le renvoie une première fois pour
+        // rien dès que `ready` passe à true juste en dessous.
+        lastSyncedPantryRef.current = JSON.stringify(loadedPantry);
+        lastSyncedBasicsRef.current = JSON.stringify(loadedBasics);
+        lastSyncedMealPlanRef.current = JSON.stringify(loadedMealPlan);
         const mappedLists = (listRows || []).map(mapRowToShoppingList);
         setShoppingLists(mappedLists);
         setActiveListId(mappedLists.length ? mappedLists[mappedLists.length - 1].id : null);
@@ -157,9 +183,27 @@ export default function useOfflineSync({
   // jamais synchronisé (voir utils/localSettings.js). Le plan de repas suit
   // le même principe que pantry/basics : une donnée de foyer simple, sans
   // avoir besoin d'une table dédiée ni de sa propre file hors-ligne.
-  useEffect(() => { if (ready && SUPABASE_READY && householdId) saveAppState(householdId, { pantry }); }, [pantry, ready, householdId]);
-  useEffect(() => { if (ready && SUPABASE_READY && householdId) saveAppState(householdId, { basics }); }, [basics, ready, householdId]);
-  useEffect(() => { if (ready && SUPABASE_READY && householdId) saveAppState(householdId, { meal_plan: mealPlan }); }, [mealPlan, ready, householdId]);
+  useEffect(() => {
+    if (!ready || !SUPABASE_READY || !householdId) return;
+    const serialized = JSON.stringify(pantry);
+    if (serialized === lastSyncedPantryRef.current) return; // écho Realtime d'une sauvegarde qu'on vient de faire, pas une vraie modification
+    lastSyncedPantryRef.current = serialized;
+    saveAppState(householdId, { pantry });
+  }, [pantry, ready, householdId]);
+  useEffect(() => {
+    if (!ready || !SUPABASE_READY || !householdId) return;
+    const serialized = JSON.stringify(basics);
+    if (serialized === lastSyncedBasicsRef.current) return;
+    lastSyncedBasicsRef.current = serialized;
+    saveAppState(householdId, { basics });
+  }, [basics, ready, householdId]);
+  useEffect(() => {
+    if (!ready || !SUPABASE_READY || !householdId) return;
+    const serialized = JSON.stringify(mealPlan);
+    if (serialized === lastSyncedMealPlanRef.current) return;
+    lastSyncedMealPlanRef.current = serialized;
+    saveAppState(householdId, { meal_plan: mealPlan });
+  }, [mealPlan, ready, householdId]);
 
   // Retour du réseau : rejoue la file d'attente hors-ligne, puis
   // rafraîchit depuis Supabase.
@@ -227,9 +271,24 @@ export default function useOfflineSync({
       .on("postgres_changes", { event: "*", schema: "public", table: "app_state", filter: householdFilter }, (payload) => {
         if (payload.eventType === "DELETE") return;
         const row = payload.new;
-        if (Array.isArray(row.pantry)) setPantry(row.pantry);
-        if (Array.isArray(row.basics)) setBasics(row.basics);
-        if (Array.isArray(row.meal_plan)) setMealPlan(row.meal_plan);
+        // La ref est mise à jour AVANT setX : quand l'effet de sauvegarde
+        // ci-dessus se redéclenchera (nouvelle référence de tableau), il
+        // trouvera déjà la bonne valeur sérialisée et n'enverra pas de
+        // PATCH en retour pour ce qui vient tout juste d'arriver du
+        // serveur — voir le commentaire détaillé plus haut sur la boucle
+        // d'écho.
+        if (Array.isArray(row.pantry)) {
+          lastSyncedPantryRef.current = JSON.stringify(row.pantry);
+          setPantry(row.pantry);
+        }
+        if (Array.isArray(row.basics)) {
+          lastSyncedBasicsRef.current = JSON.stringify(row.basics);
+          setBasics(row.basics);
+        }
+        if (Array.isArray(row.meal_plan)) {
+          lastSyncedMealPlanRef.current = JSON.stringify(row.meal_plan);
+          setMealPlan(row.meal_plan);
+        }
       })
       .subscribe();
 
