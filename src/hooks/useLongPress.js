@@ -20,13 +20,31 @@ import { triggerHapticFeedback } from "../utils/haptics";
 /* ------------------------------------------------------------------ */
 const MOVE_CANCEL_THRESHOLD_PX = 5;
 
+// Un swipe de défilement commence lui aussi par un touchstart : déclencher
+// pressState="pressing" (donc .press-pressing { transform: scale(0.95) })
+// de façon synchrone dès cet instant appliquait une transition CSS active
+// sur l'élément touché pile pendant les ~160ms où un doigt qui fait
+// défiler bouge le plus — de quoi perturber l'arbitrage scroll-vs-appui du
+// navigateur sur Android Chrome, même sans aucun preventDefault() (voir
+// RecipeCard.jsx, où ce même bug a été diagnostiqué puis corrigé pour la
+// grille de recettes avant d'être remonté ici, source commune à tous les
+// consommateurs de ce hook). Retarder l'apparition du retour visuel de
+// quelques dizaines de ms suffit : un balayage rapide dépasse le seuil
+// d'annulation de `move` bien avant ce délai et ne la voit donc jamais.
+const PRESS_VISUAL_DELAY_MS = 100;
+
 export default function useLongPress(onLongPress, pressDuration = 750) {
   const timer = useRef(null);
+  const visualTimer = useRef(null);
   const fired = useRef(false);
   const startPos = useRef(null);
   const [pressState, setPressState] = useState("idle");
 
   const cancel = () => {
+    if (visualTimer.current) {
+      clearTimeout(visualTimer.current);
+      visualTimer.current = null;
+    }
     if (timer.current) {
       clearTimeout(timer.current);
       timer.current = null;
@@ -40,7 +58,7 @@ export default function useLongPress(onLongPress, pressDuration = 750) {
     startPos.current = e && e.touches && e.touches[0]
       ? { x: e.touches[0].clientX, y: e.touches[0].clientY }
       : null;
-    setPressState("pressing");
+    visualTimer.current = setTimeout(() => setPressState("pressing"), PRESS_VISUAL_DELAY_MS);
     timer.current = setTimeout(() => {
       fired.current = true;
       setPressState("fired");
