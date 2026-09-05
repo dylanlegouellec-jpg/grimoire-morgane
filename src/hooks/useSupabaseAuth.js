@@ -4,6 +4,7 @@ import {
   signInWithGoogle,
   signOutUser,
   getMyHouseholds,
+  getHouseholdMembers,
   createHousehold as createHouseholdApi,
   renameHousehold as renameHouseholdApi,
   deleteHousehold as deleteHouseholdApi,
@@ -13,7 +14,7 @@ import {
   rejectHouseholdMember as rejectHouseholdMemberApi,
 } from "../utils/auth";
 import { loadLocalCache } from "../utils/localCache";
-import { getCachedHouseholds, setCachedHouseholds } from "../utils/householdCache";
+import { getCachedHouseholds, setCachedHouseholds, setCachedMembers } from "../utils/householdCache";
 
 function getStoredActiveHouseholdId() {
   // Écrit en continu par useOfflineSync (à chaque sauvegarde du cache
@@ -65,12 +66,25 @@ export default function useSupabaseAuth() {
       // sélecteur de foyers et leurs noms restent utilisables dans les
       // Réglages même hors-ligne, plutôt que vides/génériques.
       setCachedHouseholds(list);
+      let resolvedHouseholdId = null;
       setHouseholdIdState((current) => {
         const preferred = manualChoiceRef.current || current;
         const stillValid = preferred && list.some((h) => h.id === preferred);
-        if (stillValid) return preferred;
-        return list.length ? list[0].id : null;
+        resolvedHouseholdId = stillValid ? preferred : (list.length ? list[0].id : null);
+        return resolvedHouseholdId;
       });
+      // Préchauffe aussi le cache des MEMBRES (rôle inclus) dès le
+      // démarrage de l'app, pas seulement à l'ouverture du modal "Foyer" —
+      // si le rôle admin vient de changer côté serveur, il est déjà à jour
+      // au moment où l'utilisateur ouvre l'écran, sans même le bref délai
+      // du premier fetch à l'ouverture. Best-effort (jamais attendu, ne
+      // bloque jamais la résolution des foyers elle-même) : HouseholdManagerModal
+      // refait de toute façon son propre fetch à chaque ouverture.
+      if (resolvedHouseholdId) {
+        getHouseholdMembers(resolvedHouseholdId).then((members) => {
+          if (members.length) setCachedMembers(resolvedHouseholdId, members);
+        });
+      }
     } catch (err) {
       console.error("Résolution des foyers impossible :", err);
       // On ne touche ni `households` ni `householdId` : on garde la

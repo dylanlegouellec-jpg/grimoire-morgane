@@ -53,17 +53,26 @@ function isOffline() {
 // coûteuse qu'un ping. Contrairement à supabaseRequest(), ne court-circuite
 // JAMAIS sur navigator.onLine — c'est justement lui qui doit vérifier si
 // ce signal est fiable ou non en ce moment, pas s'y fier aveuglément.
+//
+// Correctif : "joignable" ne veut PAS dire "a répondu 2xx". Un token de
+// session expiré (401) ou une policy RLS qui refuse (403) prouve au
+// contraire que la requête EST bien arrivée jusqu'à Supabase — le réseau
+// fonctionne, c'est un problème d'autorisation, pas de connectivité. En ne
+// retenant que `res.ok`, un token périmé faisait passer la pastille au
+// rouge "hors ligne" alors que la connexion était parfaitement valide.
+// Seul un fetch qui échoue/expire (DNS, coupure réseau réelle) doit
+// compter comme injoignable.
 export async function pingSupabase() {
   if (!SUPABASE_READY) return false;
   let reachable = false;
   try {
     const token = await getAuthToken();
-    const res = await fetchWithTimeout(
+    await fetchWithTimeout(
       `${SUPABASE_URL}/rest/v1/recipes?select=id&limit=1`,
       { method: "GET", headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` } },
       PING_TIMEOUT_MS
     );
-    reachable = res.ok;
+    reachable = true;
   } catch {
     reachable = false;
   }
