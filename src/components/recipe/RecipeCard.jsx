@@ -35,6 +35,7 @@ function RecipeCard({
   const nutri = recipe.nutriscoreGrade || estimateNutriscoreLocal(recipe.ingredients, recipe.category);
   const { language, dict } = useTranslation();
   const pressTimer = useRef(null);
+  const pressVisualTimer = useRef(null);
   const longPressFired = useRef(false);
   const pressStartPos = useRef(null);
   const cardRef = useRef(null);
@@ -44,12 +45,26 @@ function RecipeCard({
   // le doigt reste appuyé, léger rebond au moment où le menu s'ouvre.
   const [pressState, setPressState] = useState("idle");
 
+  // Un balayage de défilement commence lui aussi par un touchstart — le
+  // déclencher de façon synchrone (comme avant) applique immédiatement
+  // .press-pressing { transform: scale(0.95) }, une transition CSS active
+  // sur la carte pile pendant les ~160ms où un doigt qui fait défiler bouge
+  // le plus. Sur Android Chrome, une mutation de transform en plein milieu
+  // de l'arbitrage scroll-vs-appui du navigateur pouvait faire perdre le
+  // geste de défilement, MÊME sans aucun preventDefault() nulle part
+  // (confirmé : aucun listener ici n'en appelle). En retardant l'apparition
+  // du retour visuel de quelques dizaines de ms, un balayage rapide (dont
+  // le touchmove dépasse le seuil d'annulation bien avant ce délai, voir
+  // handleTouchMove) ne déclenche jamais la transform — seul un doigt
+  // immobile, donc un vrai appui, la voit apparaître.
+  const PRESS_VISUAL_DELAY_MS = 100;
+
   const startPress = (e) => {
     longPressFired.current = false;
     pressStartPos.current = e && e.touches && e.touches[0]
       ? { x: e.touches[0].clientX, y: e.touches[0].clientY }
       : null;
-    setPressState("pressing");
+    pressVisualTimer.current = setTimeout(() => setPressState("pressing"), PRESS_VISUAL_DELAY_MS);
     pressTimer.current = setTimeout(() => {
       longPressFired.current = true;
       setPressState("fired");
@@ -58,6 +73,10 @@ function RecipeCard({
     }, pressDuration);
   };
   const cancelPress = () => {
+    if (pressVisualTimer.current) {
+      clearTimeout(pressVisualTimer.current);
+      pressVisualTimer.current = null;
+    }
     if (pressTimer.current) {
       clearTimeout(pressTimer.current);
       pressTimer.current = null;
