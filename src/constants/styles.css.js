@@ -308,12 +308,15 @@ html, body {
   /* Le fondu d'enfoncement/rebond vient de .press-anim (voir plus bas),
      toujours appliqué avec cette classe — pas besoin d'une deuxième
      transition ici, elle serait de toute façon masquée par la sienne. */
-  /* Les cartes hors écran ne sont ni mises en page ni peintes ni gardées
-     en mémoire de rendu (mémoire vidéo/GPU incluse) tant qu'elles ne sont
-     pas sur le point d'apparaître — la taille estimée ci-dessous évite un
-     saut de mise en page quand une carte entre dans la zone visible. */
-  content-visibility: auto;
-  contain-intrinsic-size: 220px 255px;
+  /* content-visibility: auto (+ contain-intrinsic-size) RETIRÉ : gardait
+     les cartes hors écran hors mise en page/peinture jusqu'à leur entrée
+     dans la zone visible (optimisation mémoire), mais impliquait aussi un
+     confinement de layout/style/paint sur chaque carte — suspect probable
+     du défilement tactile bloqué constaté sur Android Chrome (touch-action
+     seul n'a pas suffi à le résoudre). À réévaluer si le besoin de
+     performance revient, mais avec une valeur plus prudente (ex. "auto"
+     uniquement sur mobile, ou un intersection observer manuel) plutôt que
+     de la réappliquer telle quelle. */
 }
 /* --- Retour tactile d'appui long (enfoncement puis rebond) -----------
    Piloté en JS par un état "idle" | "pressing" | "fired" (voir
