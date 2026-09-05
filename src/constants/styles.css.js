@@ -778,6 +778,21 @@ html, body {
   overscroll-behavior: contain;
   touch-action: pan-y;
 }
+/* Poignée de tirage — un ::before sur .modal (jamais .grimoire-page, qui
+   n'est pas une feuille du bas mais le conteneur racine de l'appli) : une
+   seule règle CSS l'ajoute automatiquement à TOUTE feuille modale de
+   l'appli (Réglages/Foyer, RecipePickerModal, RecipeOptionsModal,
+   confirmations...) sans avoir à toucher le JSX de chacune. top:8px, sous
+   les 14px de .modal-close/.modal-back : aucun chevauchement. Purement
+   visuel (aria-hidden implicite, un ::before n'est jamais focusable) —
+   ne remplace pas le geste "tirer pour fermer" (voir useSwipeToDismiss),
+   qui reste indépendant de la présence de cette barre. */
+.modal::before {
+  content: "";
+  position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+  width: 40px; height: 4px; border-radius: 999px; background: var(--drag-handle);
+  z-index: 4;
+}
 .form-clean { max-width: 100%; overflow-x: hidden; }
 @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 .modal-close {

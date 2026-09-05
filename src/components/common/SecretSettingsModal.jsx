@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Home, LogOut, Palette, Pencil, Save, SlidersHorizontal, UserCircle2, X } from "lucide-react";
+import { ChevronRight, Home, LogOut, Palette, Pencil, Save, SlidersHorizontal, UserCircle2, X } from "lucide-react";
 import { triggerHaptic } from "../../utils/helpers";
 import { getCachedProfile, getProfile } from "../../utils/profile";
 import { useTranslation } from "../../contexts/LanguageContext";
@@ -105,10 +105,11 @@ export default function SecretSettingsModal({
     || (user && user.email)
     || "";
 
-  const goToMain = () => { triggerHaptic(10); setActiveView("main"); };
-  // Referme tout l'empilement des Réglages — utilisé après une action
-  // "terminale" (import réussi, déconnexion) plutôt que le simple retour
-  // à l'écran principal.
+  // Referme tout l'empilement des Réglages, quel que soit l'écran affiché —
+  // plus de retour intermédiaire à la liste principale : fermer une
+  // sous-vue (Foyer, Apparence...) ramène directement à la grille de
+  // recettes, comme fermer l'écran principal lui-même. Utilisé aussi après
+  // une action "terminale" (import réussi, déconnexion).
   const closeAll = () => { setActiveView("main"); onClose(); };
 
   return (
@@ -120,11 +121,10 @@ export default function SecretSettingsModal({
         style={swipe.style}
         {...swipe.handlers}
       >
-        {activeView === "main" ? (
-          <button className="modal-close" onClick={onClose}><X size={20} /></button>
-        ) : (
-          <button className="modal-back" onClick={goToMain}><ChevronLeft size={20} /> {t("settings.back")}</button>
-        )}
+        {/* Un seul bouton, une seule action, quel que soit l'écran affiché :
+            fermer TOUT l'empilement des Réglages (voir closeAll) — plus de
+            bouton "retour" intermédiaire vers la liste principale. */}
+        <button className="modal-close" onClick={closeAll}><X size={20} /></button>
 
         {activeView === "main" && (
           <>
