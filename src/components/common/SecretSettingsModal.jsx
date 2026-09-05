@@ -78,14 +78,26 @@ export default function SecretSettingsModal({
   // elles-mêmes, voir le commentaire de fichier ci-dessus).
   useBodyScrollLock(true);
 
+  // Retour à l'écran principal des Réglages depuis une sous-vue — définie
+  // ici (avant le hook de swipe juste en dessous) pour que le geste de
+  // tirage puisse s'en servir lui aussi.
+  const goToMain = () => { triggerHaptic(10); setActiveView("main"); };
+
   // "Tirer pour fermer" : le panneau lui-même EST le conteneur défilant
   // (.modal a overflow-y: auto, voir styles.css.js) — c'est donc lui à la
-  // fois la référence de scroll et la cible du translateY. Désactivé
+  // fois la référence de scroll et la cible du translateY. La cible du
+  // geste dépend de l'écran affiché, comme le bouton d'en-tête juste à
+  // côté : depuis une sous-vue, on ne fait que revenir à la liste
+  // principale des Réglages (pas de saut direct vers la grille de
+  // recettes) ; depuis l'écran principal, il ferme vraiment. Désactivé
   // pendant que ProfileEditor (une autre feuille) est ouvert par-dessus :
   // il est rendu comme descendant DOM de ce panneau (voir plus bas), un
   // tirage à l'intérieur de ProfileEditor remonterait sinon jusqu'ici.
   const modalPanelRef = useRef(null);
-  const swipe = useSwipeToDismiss(onClose, { scrollRef: modalPanelRef, disabled: showProfileEditor });
+  const swipe = useSwipeToDismiss(activeView === "main" ? onClose : goToMain, {
+    scrollRef: modalPanelRef,
+    disabled: showProfileEditor,
+  });
 
   useEffect(() => {
     if (!user) return undefined;
@@ -105,12 +117,6 @@ export default function SecretSettingsModal({
     || (user && user.email)
     || "";
 
-  // Retour à l'écran principal des Réglages depuis une sous-vue — testé en
-  // conditions réelles : fermer TOUT l'empilement (voir closeAll ci-dessous)
-  // depuis une sous-vue comme "Apparence & Langue" était trop radical,
-  // l'utilisateur s'attend à retomber sur la liste des Réglages, pas sur la
-  // grille de recettes.
-  const goToMain = () => { triggerHaptic(10); setActiveView("main"); };
   // Referme tout l'empilement des Réglages — réservé aux actions
   // "terminales" (import réussi, déconnexion) plutôt qu'au simple retour
   // à l'écran principal.
