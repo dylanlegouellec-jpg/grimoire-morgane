@@ -7,7 +7,7 @@ import { triggerHaptic, nextId, copyText } from "../utils/helpers";
 import { getCachedProfile, getProfile } from "../utils/profile";
 import { useTranslation } from "../contexts/LanguageContext";
 
-import { NavButton, TextShareModal, ImportConfirmModal, JoinHouseholdConfirmModal, DeleteConfirmModal, TextTemplateImportModal, SecretSettingsModal, ListsManagerModal } from "../components/common";
+import { NavButton, TextShareModal, ImportConfirmModal, JoinHouseholdConfirmModal, DeleteConfirmModal, TextTemplateImportModal, RecipeLinkImportModal, SecretSettingsModal, ListsManagerModal } from "../components/common";
 import { RecipesView, RecipeForm, RecipeDetail, CookMode } from "../components/recipe";
 import { FridgeView } from "../components/fridge";
 import { ShoppingView } from "../components/shopping";
@@ -88,6 +88,7 @@ export default function AppShell({
   const [textModal, setTextModal] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [showTemplateImport, setShowTemplateImport] = useState(false);
+  const [showLinkImport, setShowLinkImport] = useState(false);
   const [showSecretSettings, setShowSecretSettings] = useState(false);
   const [showListsManager, setShowListsManager] = useState(false);
 
@@ -377,6 +378,12 @@ export default function AppShell({
           onImport={(parsed) => importRecipe(parsed, t("app.sheetImported"))}
         />
       )}
+      {showLinkImport && (
+        <RecipeLinkImportModal
+          onClose={() => setShowLinkImport(false)}
+          onImport={(parsed) => importRecipe(parsed, "Recette extraite et importée !")}
+        />
+      )}
       {showSecretSettings && (
         <SecretSettingsModal
           onClose={() => setShowSecretSettings(false)}
@@ -384,6 +391,7 @@ export default function AppShell({
           onExport={exportGrimoire}
           onImportFile={handleImportFile}
           onImportTextRecipe={() => setShowTemplateImport(true)}
+          onImportLink={() => setShowLinkImport(true)}
           pressDuration={pressDuration}
           onSetPressDuration={setPressDuration}
           theme={theme}

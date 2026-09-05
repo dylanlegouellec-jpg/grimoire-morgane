@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Download, FileText, Upload, Wand2 } from "lucide-react";
+import { Download, FileText, Link2, Upload, Wand2 } from "lucide-react";
 import { useTranslation } from "../../contexts/LanguageContext";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
@@ -12,7 +12,7 @@ import Seal from "./Seal";
 /*  déjà enveloppés par l'appelant) — c'est le parent qui gère cette             */
 /*  fermeture globale, cette vue se contente d'appeler les callbacks reçus.      */
 /* ------------------------------------------------------------------ */
-export default function DataBackupModal({ onExport, onImportFile, onImportTextRecipe }) {
+export default function DataBackupModal({ onExport, onImportFile, onImportTextRecipe, onImportLink }) {
   const { t } = useTranslation();
   const fileRef = useRef(null);
   const [showImportChoice, setShowImportChoice] = useState(false);
@@ -38,6 +38,9 @@ export default function DataBackupModal({ onExport, onImportFile, onImportTextRe
           </Seal>
           <Seal tone="gold" onClick={onImportTextRecipe}>
             <Wand2 size={16} /> {t("settings.importTextSheet")}
+          </Seal>
+          <Seal tone="gold" onClick={onImportLink}>
+            <Link2 size={16} /> {t("settings.importFromLink")}
           </Seal>
         </div>
       )}

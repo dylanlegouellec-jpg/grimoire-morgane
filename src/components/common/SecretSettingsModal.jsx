@@ -39,6 +39,7 @@ export default function SecretSettingsModal({
   onExport,
   onImportFile,
   onImportTextRecipe,
+  onImportLink,
   pressDuration,
   onSetPressDuration,
   theme,
@@ -251,6 +252,7 @@ export default function SecretSettingsModal({
             onExport={onExport}
             onImportFile={(e) => { onImportFile(e); closeAll(); }}
             onImportTextRecipe={() => { onImportTextRecipe(); closeAll(); }}
+            onImportLink={() => { onImportLink(); closeAll(); }}
           />
         )}
         {activeView === "household" && (

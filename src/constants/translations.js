@@ -144,6 +144,7 @@ export const translations = {
       importGrimoire: "Importer un grimoire",
       importJsonFile: "Fichier JSON complet",
       importTextSheet: "Fiche texte individuelle",
+      importFromLink: "Depuis un lien (Instagram/TikTok)",
     },
     household: {
       title: "Gestion des foyers",
@@ -396,6 +397,7 @@ export const translations = {
       importGrimoire: "Import a grimoire",
       importJsonFile: "Full JSON file",
       importTextSheet: "Individual text sheet",
+      importFromLink: "From a link (Instagram/TikTok)",
     },
     household: {
       title: "Manage households",

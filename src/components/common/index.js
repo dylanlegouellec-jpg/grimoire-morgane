@@ -22,6 +22,7 @@ export { default as SegmentedControl } from "./SegmentedControl";
 export { default as AppearanceSettingsModal } from "./AppearanceSettingsModal";
 export { default as AccessibilitySettingsModal } from "./AccessibilitySettingsModal";
 export { default as DataBackupModal } from "./DataBackupModal";
+export { default as RecipeLinkImportModal } from "./RecipeLinkImportModal";
 export { PRESS_DURATION_OPTIONS, formatPressDuration } from "./pressDuration";
 export { TEXT_SIZE_OPTIONS } from "./textSize";
 export { LANGUAGE_OPTIONS } from "./language";
