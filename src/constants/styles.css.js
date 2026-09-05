@@ -228,7 +228,13 @@ html, body {
 
 .filter-bar {
   display: flex; gap: 8px; padding: 14px 16px 4px; overflow-x: auto;
+  /* iOS Safari masque déjà les barres de défilement au repos ; Android
+     Chrome, lui, affiche un rail gris permanent pour tout overflow:auto
+     sans cette règle — visible comme un liseré indésirable sous les puces
+     de filtre. Même correctif déjà appliqué à .portion-wheel plus bas. */
+  scrollbar-width: none;
 }
+.filter-bar::-webkit-scrollbar { display: none; }
 .filter-pill {
   font-family: 'Cinzel', serif;
   font-size: 0.7rem;
@@ -288,6 +294,17 @@ html, body {
 }
 .recipe-card {
   overflow: hidden; cursor: pointer;
+  /* Explicite plutôt qu'implicite : cette carte porte 3 écouteurs tactiles
+     (onTouchStart/onTouchMove/onTouchEnd, voir RecipeCard.jsx, pour
+     l'appui long) sans qu'aucun n'appelle jamais preventDefault() — le
+     défilement vertical natif ne devrait donc jamais être bloqué. Sur
+     Android Chrome, laisser touch-action à sa valeur implicite ("auto")
+     sur un élément qui porte autant d'écouteurs tactiles s'est montré
+     moins fiable dans la pratique qu'une valeur explicite : pan-y déclare
+     sans ambiguïté que seul le défilement vertical doit être laissé au
+     navigateur, ce qui correspond exactement à ce que la grille doit
+     permettre. */
+  touch-action: pan-y;
   /* Le fondu d'enfoncement/rebond vient de .press-anim (voir plus bas),
      toujours appliqué avec cette classe — pas besoin d'une deuxième
      transition ici, elle serait de toute façon masquée par la sienne. */
