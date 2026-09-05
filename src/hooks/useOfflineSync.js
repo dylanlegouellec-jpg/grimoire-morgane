@@ -69,6 +69,17 @@ export default function useOfflineSync({
   const lastSyncedBasicsRef = useRef(undefined);
   const lastSyncedMealPlanRef = useRef(undefined);
 
+  // Second filet de sécurité (indépendant du mécanisme d'écho ci-dessus) :
+  // un vrai debounce sur l'envoi réseau lui-même. Quelle qu'en soit la
+  // cause exacte, aucun PATCH vers app_state ne peut plus partir moins de
+  // SAVE_DEBOUNCE_MS après le précédent pour une même tranche d'état — une
+  // rafale de changements (légitime ou non) se résout en UN seul envoi,
+  // celui de la toute dernière valeur, une fois la rafale terminée.
+  const SAVE_DEBOUNCE_MS = 400;
+  const pantrySaveTimerRef = useRef(null);
+  const basicsSaveTimerRef = useRef(null);
+  const mealPlanSaveTimerRef = useRef(null);
+
   // Chargement initial : cache local en priorité (offline-first), puis
   // rafraîchissement Supabase en tâche de fond dès que la session/le
   // foyer sont connus.
@@ -184,25 +195,37 @@ export default function useOfflineSync({
   // le même principe que pantry/basics : une donnée de foyer simple, sans
   // avoir besoin d'une table dédiée ni de sa propre file hors-ligne.
   useEffect(() => {
-    if (!ready || !SUPABASE_READY || !householdId) return;
+    if (!ready || !SUPABASE_READY || !householdId) return undefined;
     const serialized = JSON.stringify(pantry);
-    if (serialized === lastSyncedPantryRef.current) return; // écho Realtime d'une sauvegarde qu'on vient de faire, pas une vraie modification
-    lastSyncedPantryRef.current = serialized;
-    saveAppState(householdId, { pantry });
+    if (serialized === lastSyncedPantryRef.current) return undefined; // écho Realtime d'une sauvegarde qu'on vient de faire, pas une vraie modification
+    if (pantrySaveTimerRef.current) clearTimeout(pantrySaveTimerRef.current);
+    pantrySaveTimerRef.current = setTimeout(() => {
+      lastSyncedPantryRef.current = serialized;
+      saveAppState(householdId, { pantry });
+    }, SAVE_DEBOUNCE_MS);
+    return () => clearTimeout(pantrySaveTimerRef.current);
   }, [pantry, ready, householdId]);
   useEffect(() => {
-    if (!ready || !SUPABASE_READY || !householdId) return;
+    if (!ready || !SUPABASE_READY || !householdId) return undefined;
     const serialized = JSON.stringify(basics);
-    if (serialized === lastSyncedBasicsRef.current) return;
-    lastSyncedBasicsRef.current = serialized;
-    saveAppState(householdId, { basics });
+    if (serialized === lastSyncedBasicsRef.current) return undefined;
+    if (basicsSaveTimerRef.current) clearTimeout(basicsSaveTimerRef.current);
+    basicsSaveTimerRef.current = setTimeout(() => {
+      lastSyncedBasicsRef.current = serialized;
+      saveAppState(householdId, { basics });
+    }, SAVE_DEBOUNCE_MS);
+    return () => clearTimeout(basicsSaveTimerRef.current);
   }, [basics, ready, householdId]);
   useEffect(() => {
-    if (!ready || !SUPABASE_READY || !householdId) return;
+    if (!ready || !SUPABASE_READY || !householdId) return undefined;
     const serialized = JSON.stringify(mealPlan);
-    if (serialized === lastSyncedMealPlanRef.current) return;
-    lastSyncedMealPlanRef.current = serialized;
-    saveAppState(householdId, { meal_plan: mealPlan });
+    if (serialized === lastSyncedMealPlanRef.current) return undefined;
+    if (mealPlanSaveTimerRef.current) clearTimeout(mealPlanSaveTimerRef.current);
+    mealPlanSaveTimerRef.current = setTimeout(() => {
+      lastSyncedMealPlanRef.current = serialized;
+      saveAppState(householdId, { meal_plan: mealPlan });
+    }, SAVE_DEBOUNCE_MS);
+    return () => clearTimeout(mealPlanSaveTimerRef.current);
   }, [mealPlan, ready, householdId]);
 
   // Retour du réseau : rejoue la file d'attente hors-ligne, puis
