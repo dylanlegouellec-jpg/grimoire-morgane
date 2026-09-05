@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Home, LogOut, Palette, Pencil, Save, SlidersHorizontal, UserCircle2, X } from "lucide-react";
 import { triggerHaptic } from "../../utils/helpers";
 import { getCachedProfile, getProfile } from "../../utils/profile";
 import { useTranslation } from "../../contexts/LanguageContext";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useLongPress from "../../hooks/useLongPress";
+import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
 import ProfileEditor from "./ProfileEditor";
@@ -77,6 +78,15 @@ export default function SecretSettingsModal({
   // elles-mêmes, voir le commentaire de fichier ci-dessus).
   useBodyScrollLock(true);
 
+  // "Tirer pour fermer" : le panneau lui-même EST le conteneur défilant
+  // (.modal a overflow-y: auto, voir styles.css.js) — c'est donc lui à la
+  // fois la référence de scroll et la cible du translateY. Désactivé
+  // pendant que ProfileEditor (une autre feuille) est ouvert par-dessus :
+  // il est rendu comme descendant DOM de ce panneau (voir plus bas), un
+  // tirage à l'intérieur de ProfileEditor remonterait sinon jusqu'ici.
+  const modalPanelRef = useRef(null);
+  const swipe = useSwipeToDismiss(onClose, { scrollRef: modalPanelRef, disabled: showProfileEditor });
+
   useEffect(() => {
     if (!user) return undefined;
     let cancelled = false;
@@ -103,7 +113,13 @@ export default function SecretSettingsModal({
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal grimoire-page ios-settings-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={modalPanelRef}
+        className="modal grimoire-page ios-settings-modal"
+        onClick={(e) => e.stopPropagation()}
+        style={swipe.style}
+        {...swipe.handlers}
+      >
         {activeView === "main" ? (
           <button className="modal-close" onClick={onClose}><X size={20} /></button>
         ) : (
