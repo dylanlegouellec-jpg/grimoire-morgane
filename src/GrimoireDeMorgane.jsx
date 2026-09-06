@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
-import { DEFAULT_BASICS, SUPABASE_READY } from "./constants";
+import { DEFAULT_BASICS, SUPABASE_READY, demoRecipes } from "./constants";
 import { loadLocalCache } from "./utils/localCache";
 import { getStoredTheme, storeTheme, applyTheme, watchSystemTheme } from "./utils/theme";
 import {
@@ -30,6 +30,22 @@ import LoginScreen from "./screens/LoginScreen";
 import AppShell from "./screens/AppShell";
 import { LanguageProvider } from "./contexts/LanguageContext";
 
+// Reproduit le déséquilibre réel signalé en mode invité (4 recettes Salé /
+// 20 Sucré) pour rejouer fidèlement le bug de bascule de filtre — la
+// fonction demoRecipes() seule (3 Salé / 3 Sucré, partagée avec le repli
+// hors-ligne normal quand Supabase est injoignable) est trop équilibrée
+// pour reproduire un filtre qui révèle très peu de cartes face à un autre
+// qui en révèle beaucoup.
+function buildGuestDemoRecipes() {
+  const base = demoRecipes();
+  const sale = base.filter((r) => r.category === "Salé");
+  const sucre = base.filter((r) => r.category === "Sucré");
+  const clone = (r, n) => ({ ...r, id: `${r.id}-g${n}`, title: `${r.title} ${n}` });
+  const extraSale = Array.from({ length: Math.max(0, 4 - sale.length) }, (_, i) => clone(sale[i % sale.length], i + 1));
+  const extraSucre = Array.from({ length: Math.max(0, 20 - sucre.length) }, (_, i) => clone(sucre[i % sucre.length], i + 1));
+  return [...sale, ...extraSale, ...sucre, ...extraSucre];
+}
+
 /* ------------------------------------------------------------------ */
 /*  APPLICATION PRINCIPALE                                             */
 /*                                                                      */
@@ -47,8 +63,32 @@ export default function GrimoireDeMorgane() {
   if (localCacheRef.current === null) localCacheRef.current = loadLocalCache() || {};
   const localCache = localCacheRef.current;
 
+  // Accès de test TEMPORAIRE (?atelier=1) : contourne l'écran de connexion
+  // Google pour ouvrir directement l'app avec des recettes de démo, sans
+  // jamais toucher au vrai compte/foyer Supabase de l'utilisateur (aucune
+  // session authentifiée n'existe dans ce mode — toute tentative
+  // d'écriture réseau serait de toute façon rejetée par les policies RLS,
+  // qui exigent une session valide). Sert uniquement à déboguer des bugs
+  // d'affichage/animation sans avoir besoin des identifiants réels de
+  // l'utilisateur — à retirer une fois le débogage terminé.
+  const isGuestModeRef = useRef(null);
+  if (isGuestModeRef.current === null) {
+    isGuestModeRef.current =
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("atelier") === "1";
+  }
+  const isGuestMode = isGuestModeRef.current;
+
   const [theme, setThemeState] = useState(() => getStoredTheme()); // "light" | "dark" | "system"
   const { toast, showToast } = useToast();
+  const guestToastShownRef = useRef(false);
+  useEffect(() => {
+    if (isGuestMode && !guestToastShownRef.current) {
+      guestToastShownRef.current = true;
+      showToast("Mode invité — recettes de démonstration, rien n'est sauvegardé.");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const {
     user,
@@ -103,7 +143,9 @@ export default function GrimoireDeMorgane() {
 
   const recipesApi = useRecipes({
     householdId,
-    initialRecipes: Array.isArray(localCache.recipes) ? localCache.recipes : [],
+    initialRecipes: Array.isArray(localCache.recipes) && localCache.recipes.length
+      ? localCache.recipes
+      : (isGuestMode ? buildGuestDemoRecipes() : []),
     showToast,
   });
   const shoppingApi = useShoppingLists({
@@ -225,18 +267,24 @@ export default function GrimoireDeMorgane() {
     return <LoadingScreen message="Ouverture du grimoire…" />;
   }
 
-  if (SUPABASE_READY && !hasLocalData) {
-    if (authLoading) return <LoadingScreen message="Vérification de la session…" />;
-    if (!user) return <LoginScreen signInWithGoogle={signInWithGoogle} showToast={showToast} toast={toast} />;
-    if (householdLoading && !householdId) return <LoadingScreen message="Ouverture de ton foyer…" />;
-  } else if (SUPABASE_READY && hasLocalData && !authLoading && !user) {
-    // Vérification en ligne aboutie (pas juste "encore en cours") et
-    // réellement concluante : pas de session. On protège quand même le
-    // grimoire plutôt que de l'ouvrir avec un cache d'un compte dont la
-    // session a expiré ou a été révoquée — mais seulement une fois la
-    // vérification terminée, jamais pendant qu'elle est encore en attente
-    // du réseau (c'est tout l'intérêt du hasLocalData ci-dessus).
-    return <LoginScreen signInWithGoogle={signInWithGoogle} showToast={showToast} toast={toast} />;
+  // Le mode invité (?atelier=1, voir plus haut) contourne complètement
+  // cette porte : jamais d'écran de connexion, toujours l'app directement,
+  // sur les recettes de démo — aucun impact sur le parcours normal des
+  // vrais utilisateurs ci-dessous.
+  if (!isGuestMode) {
+    if (SUPABASE_READY && !hasLocalData) {
+      if (authLoading) return <LoadingScreen message="Vérification de la session…" />;
+      if (!user) return <LoginScreen signInWithGoogle={signInWithGoogle} showToast={showToast} toast={toast} />;
+      if (householdLoading && !householdId) return <LoadingScreen message="Ouverture de ton foyer…" />;
+    } else if (SUPABASE_READY && hasLocalData && !authLoading && !user) {
+      // Vérification en ligne aboutie (pas juste "encore en cours") et
+      // réellement concluante : pas de session. On protège quand même le
+      // grimoire plutôt que de l'ouvrir avec un cache d'un compte dont la
+      // session a expiré ou a été révoquée — mais seulement une fois la
+      // vérification terminée, jamais pendant qu'elle est encore en attente
+      // du réseau (c'est tout l'intérêt du hasLocalData ci-dessus).
+      return <LoginScreen signInWithGoogle={signInWithGoogle} showToast={showToast} toast={toast} />;
+    }
   }
 
   return (

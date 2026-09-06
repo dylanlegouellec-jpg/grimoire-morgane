@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useLayoutEffect, useMemo, useRef } from "react";
 import { Plus } from "lucide-react";
 import { normalize, triggerHaptic } from "../../utils/helpers";
 import { useTranslation } from "../../contexts/LanguageContext";
@@ -60,6 +60,28 @@ export default function RecipesView({
   }, [sorted, filter, favoritesOnly, q]);
 
   const hasVisible = visibleIds.size > 0;
+
+  // Remonte en haut de page à chaque changement de filtre catégorie/favoris
+  // (pas à la recherche texte, ni au tout premier montage). Toutes les
+  // recettes restent montées en permanence désormais (voir visibleIds
+  // ci-dessus) : passer d'un filtre qui en affiche beaucoup (ex. "Sucré",
+  // 20 recettes chez certains utilisateurs) à un filtre qui n'en affiche
+  // que quelques-unes (ex. "Salé", 4 recettes) réduit brutalement la
+  // hauteur de la page. Sans remise à zéro, le défilement restait à sa
+  // position précédente — potentiellement bien plus bas que la nouvelle
+  // hauteur totale de la page, donc au-delà des quelques cartes restantes :
+  // rien de visible à l'écran (et le navigateur doit recaler la position de
+  // défilement à la volée), ce qui pouvait ressembler à un bug d'animation
+  // ou à un petit temps de latence alors que les cartes étaient en réalité
+  // déjà là, juste hors de vue.
+  const mountedRef = useRef(false);
+  useLayoutEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
+    window.scrollTo(0, 0);
+  }, [filter, favoritesOnly]);
 
   return (
     <div className="view">
