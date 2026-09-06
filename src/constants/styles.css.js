@@ -326,6 +326,21 @@ html, body {
      uniquement sur mobile, ou un intersection observer manuel) plutôt que
      de la réappliquer telle quelle. */
 }
+/* Rétrécissement INSTANTANÉ au contact du doigt, via :active plutôt que
+   via l'état JS "pressing" (voir .press-pressing plus bas, volontairement
+   retardé de 100ms pour ne jamais interférer avec le défilement — voir
+   RecipeCard.jsx/useLongPress.js). Un :active est posé par le moteur de
+   rendu du navigateur lui-même au moment du toucher, PAS par un rendu React
+   déclenché en plein milieu de l'arbitrage scroll-vs-appui : il ne peut
+   donc pas reproduire le blocage de scroll déjà corrigé. Seule
+   contrepartie connue (documentée ici volontairement) : sur un balayage de
+   défilement qui démarre pile sur une carte, un très bref flash de
+   rétrécissement peut apparaître avant que le navigateur ne confirme le
+   scroll et ne retire :active — un compromis accepté pour avoir un retour
+   tactile instantané, plutôt que le délai actuel avant tout effet visible. */
+.recipe-card:active {
+  transform: scale(0.95);
+}
 /* --- Retour tactile d'appui long (enfoncement puis rebond) -----------
    Piloté en JS par un état "idle" | "pressing" | "fired" (voir
    hooks/useLongPress.js, RecipeCard.jsx, NavButton.jsx) plutôt que par le
