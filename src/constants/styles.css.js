@@ -329,15 +329,17 @@ html, body {
   /* Le fondu d'enfoncement/rebond vient de .press-anim (voir plus bas),
      toujours appliqué avec cette classe — pas besoin d'une deuxième
      transition ici, elle serait de toute façon masquée par la sienne. */
-  /* content-visibility: auto (+ contain-intrinsic-size) RETIRÉ : gardait
-     les cartes hors écran hors mise en page/peinture jusqu'à leur entrée
-     dans la zone visible (optimisation mémoire), mais impliquait aussi un
-     confinement de layout/style/paint sur chaque carte — suspect probable
-     du défilement tactile bloqué constaté sur Android Chrome (touch-action
-     seul n'a pas suffi à le résoudre). À réévaluer si le besoin de
-     performance revient, mais avec une valeur plus prudente (ex. "auto"
-     uniquement sur mobile, ou un intersection observer manuel) plutôt que
-     de la réappliquer telle quelle. */
+  /* content-visibility: auto (+ contain-intrinsic-size) — garde les cartes
+     hors écran hors mise en page/peinture jusqu'à leur entrée dans la zone
+     visible (mémoire GPU/rendu économisée sur une grande grille). Retiré
+     puis réappliqué ici cette même session : soupçonné un temps de bloquer
+     le défilement tactile sur Android Chrome, mais la cause réelle s'est
+     révélée être touch-action: manipulation sur html/body dans index.html
+     (voir ce fichier — corrigé). Cette règle n'était pas en cause. La
+     valeur de contain-intrinsic-size approxime la taille réelle d'une
+     carte pour éviter un saut de mise en page à l'entrée dans le viewport. */
+  content-visibility: auto;
+  contain-intrinsic-size: 220px 255px;
 }
 /* Rétrécissement INSTANTANÉ au contact du doigt, via :active plutôt que
    via l'état JS "pressing" (voir .press-pressing plus bas, volontairement

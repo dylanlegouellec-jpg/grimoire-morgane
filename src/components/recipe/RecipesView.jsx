@@ -41,12 +41,22 @@ export default function RecipesView({
       .sort((a, b) => a.title.localeCompare(b.title, "fr"));
   }, [recipes, filter, favoritesOnly, q]);
 
+  // Pas de `key` dynamique sur .recipes-grid (ex-key={filter-favoritesOnly},
+  // retiré) : ça forçait React à démonter/remonter TOUTES les cartes à
+  // chaque changement de filtre, même celles qui restaient visibles dans
+  // les deux cas — chaque image redécodée, chaque .card-enter (animation
+  // d'entrée décalée) rejouée pour rien. Chaque <RecipeCard> a déjà son
+  // propre key={r.id} : React réconcilie donc par id, garde en place (sans
+  // remonter, donc sans rejouer l'animation) les cartes qui restent dans la
+  // liste filtrée, et ne monte réellement QUE celles qui viennent
+  // d'apparaître — c'est sur celles-là, et seulement celles-là, que
+  // .card-enter se déclenche naturellement.
   return (
     <div className="view">
       {filtered.length === 0 ? (
         <p className="hint" style={{ textAlign: "center", marginTop: 30 }}>{t("recipes.noMatch")}</p>
       ) : (
-        <div className="recipes-grid" key={`${filter}-${favoritesOnly}`}>
+        <div className="recipes-grid">
           {filtered.map((r, i) => (
             <RecipeCard
               key={r.id}
