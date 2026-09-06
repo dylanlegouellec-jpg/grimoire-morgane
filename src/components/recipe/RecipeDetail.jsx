@@ -10,7 +10,7 @@ import Flourish from "../common/Flourish";
 import Seal from "../common/Seal";
 import ShareRecipeModal from "../common/ShareRecipeModal";
 
-export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareText, showToast }) {
+export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareText, showToast, showNutriscore = true }) {
   // Sécurisation du nombre de portions initiales
   const baseServings = Number(recipe?.servings) || 1;
   const [servings, setServings] = useState(() => baseServings);
@@ -147,7 +147,9 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
             </div>
             <div className="card-top-row" style={{ marginTop: 4 }}>
               <span className={`chip ${categoryClass(recipe)}`}>{dict.labels[categoryLabel(recipe)] || categoryLabel(recipe)}</span>
-              <span className="nutri-badge" style={{ background: NUTRI_COLORS[nutri] }}>{nutri}</span>
+              {showNutriscore && (
+                <span className="nutri-badge" style={{ background: NUTRI_COLORS[nutri] }}>{nutri}</span>
+              )}
             </div>
             <h2 className="dropcap-title">{translateRecipeText(recipe.title, language)}</h2>
             <div className="card-meta" style={{ marginBottom: 10 }}>

@@ -329,6 +329,7 @@ export default function AppShell({
           onEdit={(r) => setFormTarget(r)}
           shareText={shareText}
           showToast={showToast}
+          showNutriscore={showNutriscore}
         />
       )}
       {/* Rendu APRÈS RecipeDetail (pas avant) : pour une édition, les deux
