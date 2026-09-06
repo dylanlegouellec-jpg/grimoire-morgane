@@ -38,6 +38,25 @@ export const RECIPE_CARDS_CSS = `
   from { opacity: 0; transform: translateY(14px) scale(0.97); }
   to { opacity: 1; transform: none; }
 }
+/* Clone visuellement identique de .card-enter/cardEnter, sous un autre nom
+   — voir RecipeCard.jsx : pour rejouer l'entrée d'une carte qui redevient
+   visible après un changement de filtre SANS la démonter (son <img> ne
+   doit jamais recharger), il fallait relancer l'animation "à la main".
+   Retirer puis remettre la MÊME classe forçait un recalcul de style
+   synchrone par carte pour que le navigateur veuille bien la relancer —
+   avec beaucoup de cartes révélées d'un coup (ex. le filtre "Salé" s'il
+   contient plus de recettes que "Sucré"), ça enchaînait autant de
+   recalculs complets de la page ("thrashing"), assez pour ralentir le
+   changement de filtre et faire perdre des frames à l'animation elle-même.
+   Alterner entre .card-enter et .card-enter-alt à chaque réapparition,
+   c'est un simple changement de valeur CSS (le nom de classe change
+   réellement) : le navigateur redémarre l'animation de lui-même, sans
+   qu'aucun recalcul de mise en page forcé ne soit nécessaire. */
+.card-enter-alt { animation: cardEnterAlt 0.42s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+@keyframes cardEnterAlt {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
 .recipe-card {
   overflow: hidden; cursor: pointer;
   /* Explicite plutôt qu'implicite : cette carte porte 3 écouteurs tactiles

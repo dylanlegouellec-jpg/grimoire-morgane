@@ -1,4 +1,4 @@
-import { memo, useLayoutEffect, useRef, useState } from "react";
+import { memo, useState } from "react";
 import { Clock, Heart, Users } from "lucide-react";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
 import { categoryLabel, categoryClass } from "../../utils/helpers";
@@ -8,39 +8,6 @@ import { translateRecipeText } from "../../utils/recipeTranslation";
 import useLongPress from "../../hooks/useLongPress";
 import DishArt from "../art/DishArt";
 import RecipeOptionsModal from "../common/RecipeOptionsModal";
-
-// Partagé par TOUTES les instances de RecipeCard (module-level, pas un
-// state React) : quand un changement de filtre révèle beaucoup de cartes
-// d'un coup (ex. "Salé", s'il contient davantage de recettes que "Sucré"),
-// chaque carte forçait auparavant SON PROPRE recalcul de style synchrone
-// (retirer la classe, lire offsetWidth, la remettre) — lecture-après-
-// écriture répétée N fois, entrecoupée des écritures des cartes voisines,
-// qui invalide le cache de mise en page à chaque carte et force autant de
-// recalculs complets de la page que de cartes révélées ("thrashing" de
-// layout). C'est le mini bug de latence observé précisément sur le filtre
-// le plus fourni : plus il y a de cartes qui réapparaissent ensemble, plus
-// le coût était élevé, au point de perturber l'animation elle-même (frames
-// perdues, la carte semble ne pas s'animer du tout, comme constaté sur
-// "Salé"). scheduleCardEnterRestart regroupe les retraits de classe de
-// TOUTES les cartes concernées, ne force qu'UN SEUL recalcul pour le lot
-// entier, puis remet la classe partout — dans un microtask, donc toujours
-// avant la moindre peinture de la frame (aucun flash).
-let pendingCardEnterRestarts = [];
-let cardEnterRestartScheduled = false;
-function scheduleCardEnterRestart(el) {
-  if (!el) return;
-  el.classList.remove("card-enter");
-  pendingCardEnterRestarts.push(el);
-  if (cardEnterRestartScheduled) return;
-  cardEnterRestartScheduled = true;
-  queueMicrotask(() => {
-    void document.documentElement.offsetHeight; // un seul recalcul forcé pour tout le lot
-    const els = pendingCardEnterRestarts;
-    pendingCardEnterRestarts = [];
-    cardEnterRestartScheduled = false;
-    els.forEach((node) => node.classList.add("card-enter"));
-  });
-}
 
 function RecipeCard({
   recipe,
@@ -79,35 +46,50 @@ function RecipeCard({
     onOpen(recipe);
   };
 
-  // Relance le fondu/zoom d'entrée (.card-enter) UNIQUEMENT sur une carte
-  // qui redevient visible après avoir été masquée par un changement de
-  // filtre (Tout/Salé/Sucré/Favoris) — jamais sur celles déjà affichées qui
-  // le restent ("ne rejouer l'animation que sur les éléments concernés").
-  // La carte n'est toujours pas démontée/remontée pour ça (voir `hidden` ->
-  // display:none plus bas) : son <img> ne bouge jamais. Voir
-  // scheduleCardEnterRestart plus haut pour pourquoi ce recalcul est
-  // regroupé pour toutes les cartes concernées plutôt que fait carte par
-  // carte.
-  const cardRef = useRef(null);
-  const prevHiddenRef = useRef(hidden);
-  useLayoutEffect(() => {
-    const wasHidden = prevHiddenRef.current;
-    prevHiddenRef.current = hidden;
-    if (wasHidden && !hidden) {
-      scheduleCardEnterRestart(cardRef.current);
+  // Relance le fondu/zoom d'entrée UNIQUEMENT sur une carte qui redevient
+  // visible après avoir été masquée par un changement de filtre (Tout/
+  // Salé/Sucré/Favoris) — jamais sur celles déjà affichées qui le restent
+  // ("ne rejouer l'animation que sur les éléments concernés"). La carte
+  // n'est toujours pas démontée/remontée pour ça (voir `hidden` ->
+  // display:none plus bas) : son <img> ne bouge jamais.
+  //
+  // Tentative précédente (retirer puis remettre la classe .card-enter, y
+  // compris regroupée en un seul recalcul de style pour tout le lot) :
+  // encore trop lente en pratique sur un filtre qui révèle beaucoup de
+  // cartes d'un coup (ex. Sucré -> Salé) — un recalcul de mise en page
+  // forcé, même unique, reste coûteux si la page contient beaucoup
+  // d'éléments (TOUTES les recettes sont montées en permanence désormais,
+  // pas seulement celles du filtre actif). On alterne maintenant entre
+  // deux classes strictement identiques visuellement (.card-enter /
+  // .card-enter-alt, voir recipeCards.css.js) à chaque réapparition : le
+  // nom de classe change réellement d'une frame à l'autre, ce qui suffit
+  // au navigateur pour démarrer une nouvelle instance d'animation SANS
+  // qu'aucune lecture de mise en page forcée ne soit nécessaire — donc
+  // aucun coût qui grandit avec le nombre de cartes révélées ensemble.
+  //
+  // La bascule elle-même se fait pendant le rendu (pas dans un effet) :
+  // c'est le mécanisme React recommandé pour "réagir" à un changement de
+  // prop sans un aller-retour de rendu supplémentaire (qui laisserait
+  // passer une frame sans animation avant de la corriger).
+  const [enterVariant, setEnterVariant] = useState(0);
+  const [prevHidden, setPrevHidden] = useState(hidden);
+  if (hidden !== prevHidden) {
+    setPrevHidden(hidden);
+    if (prevHidden && !hidden) {
+      setEnterVariant((v) => (v === 0 ? 1 : 0));
     }
-  }, [hidden]);
+  }
+  const enterClass = enterVariant === 0 ? "card-enter" : "card-enter-alt";
 
   return (
     <>
       <div
-        ref={cardRef}
-        className={`card recipe-card card-enter press-anim press-${cardLongPress.pressState}`}
+        className={`card recipe-card ${enterClass} press-anim press-${cardLongPress.pressState}`}
         // display: none (pas un retrait du DOM) quand la carte ne correspond
         // plus au filtre actif — voir RecipesView.jsx : elle reste montée,
         // son <img> déjà chargée n'est jamais redémontée/redécodée. Le
-        // fondu/zoom d'entrée, lui, est relancé à la main plus haut
-        // (voir useLayoutEffect) à chaque réapparition.
+        // fondu/zoom d'entrée, lui, est relancé plus haut (voir enterClass)
+        // à chaque réapparition.
         style={hidden ? { display: "none" } : { animationDelay: `${enterDelay}ms` }}
         onClick={handleClick}
         {...cardLongPress.handlers}
