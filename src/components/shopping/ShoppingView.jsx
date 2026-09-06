@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronDown, Plus, ShoppingBasket } from "lucide-react";
 import { aisleIcon, copyText } from "../../utils/helpers";
 import { triggerHaptic } from "../../utils/haptics";
@@ -50,15 +50,24 @@ export default function ShoppingView({
     setManualInput("");
   };
 
-  const unchecked = items.filter((i) => !i.checked);
-  const bought = [...items.filter((i) => i.checked)].sort((a, b) => a.name.localeCompare(b.name, "fr"));
-  const grouped = unchecked.reduce((acc, item) => {
-    acc[item.aisle] = acc[item.aisle] || [];
-    acc[item.aisle].push(item);
-    return acc;
-  }, {});
-  Object.values(grouped).forEach((list) => list.sort((a, b) => a.name.localeCompare(b.name, "fr")));
-  const aisleCount = Object.keys(grouped).length;
+  // Recalculé seulement quand `items` change réellement (référence stable
+  // tant que la liste active ne change pas, voir activeList dans
+  // AppShell.jsx) — pas à chaque frappe dans le champ "Ajouter un article"
+  // ni à chaque re-render déclenché ailleurs dans la vue (ouverture d'une
+  // roue de quantité, dépliage de la section "achetés"...). Avant, ce
+  // filtrage/regroupement/tri (deux .sort() avec localeCompare inclus)
+  // tournait sur toute la liste à chaque rendu, quelle qu'en soit la cause.
+  const { bought, grouped, aisleCount } = useMemo(() => {
+    const unchecked = items.filter((i) => !i.checked);
+    const bought = [...items.filter((i) => i.checked)].sort((a, b) => a.name.localeCompare(b.name, "fr"));
+    const grouped = unchecked.reduce((acc, item) => {
+      acc[item.aisle] = acc[item.aisle] || [];
+      acc[item.aisle].push(item);
+      return acc;
+    }, {});
+    Object.values(grouped).forEach((list) => list.sort((a, b) => a.name.localeCompare(b.name, "fr")));
+    return { unchecked, bought, grouped, aisleCount: Object.keys(grouped).length };
+  }, [items]);
 
   const buildListText = () => {
     const lines = [`🛒 ${activeList ? activeList.name : t("shopping.defaultListName")} — Le Grimoire de Morgane`, ""];

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Check, ChevronDown, Plus } from "lucide-react";
 import { ingredientKey } from "../../utils/helpers";
 import { triggerHaptic } from "../../utils/haptics";
@@ -25,16 +25,23 @@ export default function FridgeView({ recipes, pantry, setPantry, basics, search,
   const [showAllRecipes, setShowAllRecipes] = useState(false);
   const [showBasics, setShowBasics] = useState(true);
 
-  const basicKeys = basics.map((b) => ingredientKey(normalizeIngredientLabel(b)));
-  const baseOptions = collectPantryOptions(recipes).filter((opt) => !basicKeys.includes(opt.key));
-  const extraFromPantry = pantry
-    .filter((key) => !baseOptions.some((o) => o.key === key) && !basicKeys.includes(key))
-    .map((key) => ({ key, label: key.charAt(0).toUpperCase() + key.slice(1), category: "epicerie" }));
-  const options = [...baseOptions, ...extraFromPantry];
+  const basicKeys = useMemo(() => basics.map((b) => ingredientKey(normalizeIngredientLabel(b))), [basics]);
+  // Le calcul le plus coûteux de cette vue : collectPantryOptions parcourt
+  // TOUS les ingrédients de TOUTES les recettes. Ne recalculé que quand
+  // recettes/frigo/basiques changent réellement — jamais à chaque frappe
+  // dans la recherche (voir filteredOptions juste en dessous, qui lui se
+  // contente de filtrer cette liste déjà construite).
+  const options = useMemo(() => {
+    const baseOptions = collectPantryOptions(recipes).filter((opt) => !basicKeys.includes(opt.key));
+    const extraFromPantry = pantry
+      .filter((key) => !baseOptions.some((o) => o.key === key) && !basicKeys.includes(key))
+      .map((key) => ({ key, label: key.charAt(0).toUpperCase() + key.slice(1), category: "epicerie" }));
+    return [...baseOptions, ...extraFromPantry];
+  }, [recipes, pantry, basicKeys]);
   const filteredOptions = q ? options.filter((opt) => opt.label.toLowerCase().includes(q)) : options;
 
-  const pantrySet = new Set(pantry);
-  const ownedSet = new Set([...pantry, ...basicKeys]);
+  const pantrySet = useMemo(() => new Set(pantry), [pantry]);
+  const ownedSet = useMemo(() => new Set([...pantry, ...basicKeys]), [pantry, basicKeys]);
   const totalOwned = pantry.length + basics.length;
 
   const toggle = (key) => {
@@ -62,12 +69,18 @@ export default function FridgeView({ recipes, pantry, setPantry, basics, search,
   const grouped = FRIDGE_CATEGORIES.reduce((acc, cat) => { acc[cat.key] = []; return acc; }, {});
   filteredOptions.forEach((opt) => { (grouped[opt.category] || grouped.epicerie).push(opt); });
 
-  const sortedBasics = [...basics].sort((a, b) => a.localeCompare(b, "fr"));
+  const sortedBasics = useMemo(() => [...basics].sort((a, b) => a.localeCompare(b, "fr")), [basics]);
   const filteredBasics = q ? sortedBasics.filter((name) => name.toLowerCase().includes(q)) : sortedBasics;
 
-  const ranked = recipes
-    .map((r) => ({ recipe: r, missing: missingIngredients(r, ownedSet) }))
-    .sort((a, b) => a.missing.length - b.missing.length || a.recipe.title.localeCompare(b.recipe.title, "fr"));
+  // Deuxième calcul coûteux de la vue : missingIngredients tourne une fois
+  // par recette. Recalculé seulement quand recettes/possédés changent —
+  // jamais à chaque frappe ni à chaque bascule de "Afficher aussi..." (voir
+  // visibleRanked, qui lui ne fait QUE filtrer ce classement déjà calculé).
+  const ranked = useMemo(() => {
+    return recipes
+      .map((r) => ({ recipe: r, missing: missingIngredients(r, ownedSet) }))
+      .sort((a, b) => a.missing.length - b.missing.length || a.recipe.title.localeCompare(b.recipe.title, "fr"));
+  }, [recipes, ownedSet]);
   const visibleRanked = showAllRecipes ? ranked : ranked.filter(({ missing }) => missing.length <= MAX_MISSING_SHOWN);
   const hiddenCount = ranked.length - visibleRanked.length;
 

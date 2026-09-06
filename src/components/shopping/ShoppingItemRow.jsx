@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { memo, useRef, useState } from "react";
 import { Check, Minus, Plus, Trash2 } from "lucide-react";
 import { triggerHaptic } from "../../utils/haptics";
 import { useTranslation } from "../../contexts/LanguageContext";
@@ -16,7 +16,7 @@ import { translateRecipeText } from "../../utils/recipeTranslation";
 const AXIS_LOCK_THRESHOLD_PX = 8;
 const SWIPE_COMMIT_PX = 72;
 
-export default function ShoppingItemRow({ item, checked, onToggle, onAdjust, onDelete, onOpenWheel, pressDuration }) {
+function ShoppingItemRow({ item, checked, onToggle, onAdjust, onDelete, onOpenWheel, pressDuration }) {
   const { language } = useTranslation();
   const timer = useRef(null);
   const fired = useRef(false);
@@ -103,3 +103,11 @@ export default function ShoppingItemRow({ item, checked, onToggle, onAdjust, onD
     </li>
   );
 }
+
+// Callbacks stables côté ShoppingView (useCallback dans useShoppingLists.js,
+// ou des setState directs) et mise à jour immutable qui préserve la
+// référence des articles NON modifiés (voir useShoppingLists.js, .map avec
+// repli `: it`) — memo() peut donc réellement sauter le re-rendu d'un
+// article quand un autre article de la liste change, plutôt que de
+// re-rendre toute la liste à chaque frappe dans "Ajouter un article".
+export default memo(ShoppingItemRow);
