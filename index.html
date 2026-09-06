@@ -10,11 +10,29 @@
          divergents. -->
     <title>Le Grimoire de Morgane</title>
     <style>
+      /* touch-action ne "cascade" pas comme les autres propriétés CSS : la
+         valeur EFFECTIVE pour un élément touché est l'INTERSECTION de sa
+         propre valeur ET de celle de TOUS ses ancêtres jusqu'à <html>. Avoir
+         "manipulation" ici (sur les deux ancêtres racine de toute la page)
+         forçait donc la gestion du défilement sur le thread principal au
+         lieu du thread de composition rapide — visible dans l'onglet
+         Rendering de Chrome ("Scrolling performance issues" / "main thread
+         scroll repaint"), et responsable du défilement bloqué/saccadé
+         constaté sur Chrome desktop et Android (jamais sur iOS Safari, qui
+         implémente cette intersection différemment). Son seul rôle réel —
+         bloquer le double-tap pour zoomer — est de toute façon déjà assuré
+         par "user-scalable=no" dans la balise viewport ci-dessus, ce qui la
+         rendait entièrement redondante. Retirée : chaque élément gère
+         désormais son propre touch-action (voir .recipe-card notamment)
+         sans restriction globale imposée par la racine.
+         overscroll-behavior-y aligné sur "contain" (pas "none") pour rester
+         cohérent avec tous les autres conteneurs défilants de l'app (voir
+         styles.css.js) — bloque le rebond natif sans rien désactiver de plus
+         agressif que le reste de l'app. */
       html, body {
-        touch-action: manipulation;
         user-select: none;
         -webkit-user-select: none;
-        overscroll-behavior-y: none;
+        overscroll-behavior-y: contain;
         min-height: 100dvh;
       }
     </style>
