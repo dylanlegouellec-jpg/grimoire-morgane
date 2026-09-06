@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useLayoutEffect, useRef, useState } from "react";
 import { Clock, Heart, Users } from "lucide-react";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
 import { categoryLabel, categoryClass } from "../../utils/helpers";
@@ -46,19 +46,43 @@ function RecipeCard({
     onOpen(recipe);
   };
 
+  // Relance le fondu/zoom d'entrée (.card-enter) UNIQUEMENT sur une carte
+  // qui redevient visible après avoir été masquée par un changement de
+  // filtre (Tout/Salé/Sucré/Favoris) — jamais sur celles déjà affichées qui
+  // le restent ("ne rejouer l'animation que sur les éléments concernés").
+  // La carte n'est toujours pas démontée/remontée pour ça (voir `hidden` ->
+  // display:none plus bas) : son <img> ne bouge jamais. Un simple passage
+  // display:none -> visible ne relance PAS l'animation CSS de façon fiable
+  // dans la pratique (constaté sur appareil réel) ; la manière garantie de
+  // la relancer sans toucher au DOM des enfants est de retirer la classe,
+  // forcer un recalcul de style (lecture d'offsetWidth), puis la remettre.
+  // useLayoutEffect (avant peinture, pas après un useEffect classique) pour
+  // que ce cycle retrait/remise se fasse avant que le navigateur n'ait la
+  // moindre chance de peindre la carte dans son état final le temps d'un
+  // instant, ce qui produirait un flash disgracieux.
+  const cardRef = useRef(null);
+  const prevHiddenRef = useRef(hidden);
+  useLayoutEffect(() => {
+    const wasHidden = prevHiddenRef.current;
+    prevHiddenRef.current = hidden;
+    if (wasHidden && !hidden && cardRef.current) {
+      const el = cardRef.current;
+      el.classList.remove("card-enter");
+      void el.offsetWidth;
+      el.classList.add("card-enter");
+    }
+  }, [hidden]);
+
   return (
     <>
       <div
+        ref={cardRef}
         className={`card recipe-card card-enter press-anim press-${cardLongPress.pressState}`}
         // display: none (pas un retrait du DOM) quand la carte ne correspond
         // plus au filtre actif — voir RecipesView.jsx : elle reste montée,
-        // son <img> déjà chargée n'est jamais redémontée/redécodée. Seule
-        // l'image est donc épargnée par le changement de filtre : le petit
-        // fondu/zoom d'entrée (.card-enter), lui, rejoue à chaque
-        // réapparition — un display:none->visible relance une animation CSS
-        // déjà présente sur l'élément — et c'est volontaire, demandé
-        // explicitement (l'effet "en saccadé" est apprécié, seul le
-        // rechargement d'image gênait).
+        // son <img> déjà chargée n'est jamais redémontée/redécodée. Le
+        // fondu/zoom d'entrée, lui, est relancé à la main plus haut
+        // (voir useLayoutEffect) à chaque réapparition.
         style={hidden ? { display: "none" } : { animationDelay: `${enterDelay}ms` }}
         onClick={handleClick}
         {...cardLongPress.handlers}
