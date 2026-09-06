@@ -320,24 +320,32 @@ export default function AppShell({
         ))}
       </nav>
 
-      {formTarget && (
-        <RecipeForm
-          onClose={() => setFormTarget(null)}
-          onSave={saveRecipe}
-          onDelete={deleteRecipe}
-          initialRecipe={formTarget === "new" ? null : formTarget}
-          pressDuration={pressDuration}
-        />
-      )}
       {openRecipe && (
         <RecipeDetail
           key={openRecipe.id}
           recipe={recipes.find((r) => r.id === openRecipe.id) || openRecipe}
           onClose={() => setOpenRecipe(null)}
           onCook={(r) => setCookingRecipe(r)}
-          onEdit={(r) => { setOpenRecipe(null); setFormTarget(r); }}
+          onEdit={(r) => setFormTarget(r)}
           shareText={shareText}
           showToast={showToast}
+        />
+      )}
+      {/* Rendu APRÈS RecipeDetail (pas avant) : pour une édition, les deux
+          restent montés en même temps (voir onEdit ci-dessus, qui ne referme
+          plus la fiche recette) — l'ordre du DOM tranche les égalités de
+          z-index (voir .modal-backdrop) et le formulaire doit donc venir en
+          second pour s'afficher PAR-DESSUS la fiche, pas dessous. Fermer le
+          formulaire (sauvegarde ou annulation) ne fait alors que révéler à
+          nouveau la fiche recette déjà ouverte en dessous, à jour, plutôt
+          que de retomber sur la grille. */}
+      {formTarget && (
+        <RecipeForm
+          onClose={() => setFormTarget(null)}
+          onSave={saveRecipe}
+          onDelete={(id) => { deleteRecipe(id); setOpenRecipe(null); }}
+          initialRecipe={formTarget === "new" ? null : formTarget}
+          pressDuration={pressDuration}
         />
       )}
       {cookingRecipe && (
