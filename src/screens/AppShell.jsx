@@ -6,9 +6,11 @@ import { CSS } from "../constants/styles.css";
 import { triggerHaptic, nextId, copyText } from "../utils/helpers";
 import { getCachedProfile, getProfile } from "../utils/profile";
 import { useTranslation } from "../contexts/LanguageContext";
+import { isGuestMode, debugMark } from "../utils/guestDebug";
 
 import { NavButton } from "../components/common";
 import { RecipesView, RecipeForm, RecipeDetail, CookMode } from "../components/recipe";
+import GuestDebugOverlay from "../components/common/GuestDebugOverlay";
 
 // Chargés à la demande (React.lazy), importés directement depuis leur
 // fichier — jamais depuis le barrel components/*/index.js, qui est déjà
@@ -245,7 +247,7 @@ export default function AppShell({
               <button
                 key={f.key}
                 className={`filter-pill ${filter === f.key ? "active" : ""}`}
-                onClick={() => { triggerHaptic(10); setFilter(f.key); }}
+                onClick={() => { triggerHaptic(10); debugMark(`clic filtre: ${f.key}`); setFilter(f.key); }}
               >
                 {t(`filters.${f.key}`)}
               </button>
@@ -489,6 +491,7 @@ export default function AppShell({
         </Suspense>
       )}
       {toast && <div className="toast">{toast}</div>}
+      {isGuestMode() && <GuestDebugOverlay />}
     </div>
   );
 }

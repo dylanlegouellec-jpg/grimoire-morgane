@@ -2,6 +2,7 @@ import { useLayoutEffect, useMemo, useRef } from "react";
 import { Plus } from "lucide-react";
 import { normalize, triggerHaptic } from "../../utils/helpers";
 import { useTranslation } from "../../contexts/LanguageContext";
+import { isGuestMode, debugLog } from "../../utils/guestDebug";
 import RecipeCard from "./RecipeCard";
 
 export default function RecipesView({
@@ -76,11 +77,15 @@ export default function RecipesView({
   // déjà là, juste hors de vue.
   const mountedRef = useRef(false);
   useLayoutEffect(() => {
+    if (isGuestMode()) {
+      debugLog(`RecipesView render: filter=${filter} favoris=${favoritesOnly} visibles=${visibleIds.size}/${sorted.length} docHeight=${document.documentElement.scrollHeight} scrollY=${window.scrollY}`);
+    }
     if (!mountedRef.current) {
       mountedRef.current = true;
       return;
     }
     window.scrollTo(0, 0);
+    if (isGuestMode()) debugLog(`scrollTo(0,0) exécuté, nouvelle docHeight=${document.documentElement.scrollHeight}`);
   }, [filter, favoritesOnly]);
 
   return (

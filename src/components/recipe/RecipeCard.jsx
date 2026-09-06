@@ -8,6 +8,7 @@ import { translateRecipeText } from "../../utils/recipeTranslation";
 import useLongPress from "../../hooks/useLongPress";
 import DishArt from "../art/DishArt";
 import RecipeOptionsModal from "../common/RecipeOptionsModal";
+import { isGuestMode, debugLog } from "../../utils/guestDebug";
 
 function RecipeCard({
   recipe,
@@ -77,6 +78,9 @@ function RecipeCard({
     setPrevHidden(hidden);
     if (prevHidden && !hidden) {
       setEnterVariant((v) => (v === 0 ? 1 : 0));
+      if (isGuestMode()) debugLog(`[${recipe.title}] hidden->visible, bascule variante`);
+    } else if (isGuestMode()) {
+      debugLog(`[${recipe.title}] hidden: ${prevHidden}->${hidden}`);
     }
   }
   const enterClass = enterVariant === 0 ? "card-enter" : "card-enter-alt";
@@ -92,6 +96,8 @@ function RecipeCard({
         // à chaque réapparition.
         style={hidden ? { display: "none" } : { animationDelay: `${enterDelay}ms` }}
         onClick={handleClick}
+        onAnimationStart={isGuestMode() ? (e) => debugLog(`[${recipe.title}] animationstart ${e.animationName}`) : undefined}
+        onAnimationEnd={isGuestMode() ? (e) => debugLog(`[${recipe.title}] animationend ${e.animationName}`) : undefined}
         {...cardLongPress.handlers}
       >
         <div className="illus-wrap">
