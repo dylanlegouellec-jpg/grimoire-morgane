@@ -381,7 +381,7 @@ export default function AppShell({
       {showLinkImport && (
         <RecipeLinkImportModal
           onClose={() => setShowLinkImport(false)}
-          onImport={(parsed) => importRecipe(parsed, "Recette extraite et importée !")}
+          onCreateRecipe={() => setFormTarget("new")}
         />
       )}
       {showSecretSettings && (

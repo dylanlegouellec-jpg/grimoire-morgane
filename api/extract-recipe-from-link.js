@@ -1,30 +1,28 @@
 /* ------------------------------------------------------------------ */
 /*  POST /api/extract-recipe-from-link                                  */
 /*  Body : { url }                                                       */
-/*  Réponse : { recipe: { title, category, time, servings, ingredients,   */
-/*              steps, notes }, sourceImage, sourceCaption }               */
+/*  Réponse : { caption, sourceImage }                                    */
 /*                                                                          */
-/*  Deux étapes, chacune capable d'échouer indépendamment :                 */
-/*  1) Récupérer la légende publique du post :                               */
-/*     - TikTok : via son API oEmbed publique et gratuite (voir                */
-/*       fetchCaptionViaTikTokOEmbed) — fiable, aucun blocage rencontré.         */
-/*     - Instagram : via les balises Open Graph de la page HTML (voir            */
-/*       fetchCaptionViaScraping), faute de mieux — Instagram n'a plus            */
-/*       d'oEmbed public utilisable sans jeton d'app Meta, et bloque              */
-/*       agressivement les requêtes non authentifiées/sans JS depuis               */
-/*       plusieurs années. Un échec y est fréquent et attendu, pas un bug.          */
-/*     Dans les deux cas, en cas d'échec, l'utilisateur est invité à coller           */
-/*     la légende à la main via l'import texte déjà existant (voir                    */
-/*     TextTemplateImportModal.jsx).                                                   */
-/*  2) Faire lire cette légende par un modèle de langage (OpenAI) pour            */
-/*     en extraire une recette structurée. Nécessite la variable                    */
-/*     d'environnement OPENAI_API_KEY (Vercel > Settings > Environment               */
-/*     Variables) — jamais exposée au navigateur, utilisée uniquement ici.            */
+/*  Récupère juste la légende publique d'un post Instagram/TikTok — AUCUNE  */
+/*  IA ici (pas de clé OpenAI à payer, sur demande explicite) : la légende    */
+/*  brute est renvoyée telle quelle, à l'utilisateur de la recopier dans       */
+/*  une recette (voir RecipeLinkImportModal.jsx, bouton "Créer une nouvelle     */
+/*  recette" pré-rempli avec le texte copié dans le presse-papiers).             */
+/*                                                                                  */
+/*  - TikTok : via son API oEmbed publique et gratuite (voir                        */
+/*    fetchCaptionViaTikTokOEmbed) — testée manuellement (curl) le 2026-09-06         */
+/*    sur un post public : JSON propre, légende complète, aucun blocage.               */
+/*  - Instagram : via les balises Open Graph de la page HTML (voir                      */
+/*    fetchCaptionViaScraping), faute de mieux — Instagram n'a plus d'oEmbed              */
+/*    public utilisable sans jeton d'app Meta depuis plusieurs années, et                  */
+/*    bloque agressivement les requêtes non authentifiées/sans JS. Un échec                 */
+/*    y est fréquent et attendu (testé le même jour : mur de connexion, aucune                */
+/*    balise og:description), pas un bug — l'utilisateur est alors invité à                    */
+/*    coller la légende à la main via l'import texte déjà existant (voir                        */
+/*    TextTemplateImportModal.jsx).                                                              */
 /* ------------------------------------------------------------------ */
 
 const FETCH_TIMEOUT_MS = 8000;
-const OPENAI_TIMEOUT_MS = 25000;
-const OPENAI_MODEL = "gpt-4o-mini";
 
 const ALLOWED_HOSTS = [/(^|\.)instagram\.com$/i, /(^|\.)tiktok\.com$/i, /(^|\.)vm\.tiktok\.com$/i];
 
@@ -69,14 +67,6 @@ function extractMeta(html, property) {
   return "";
 }
 
-// TikTok expose une vraie API publique gratuite et sans clé pour ça —
-// testée manuellement (curl) le 2026-09-06 sur un post public : renvoie du
-// JSON propre avec la légende complète (`title`, hashtags inclus) et une
-// vignette, sans aucun blocage. Bien plus fiable qu'un scraping de balises
-// Open Graph, qu'on garde uniquement pour Instagram (qui n'a plus d'oEmbed
-// public utilisable sans jeton d'app Meta depuis plusieurs années — testé
-// le même jour : la page d'un post renvoie un simple mur de connexion,
-// sans aucune balise og:description, quel que soit le User-Agent envoyé).
 async function fetchCaptionViaTikTokOEmbed(url) {
   const res = await fetchWithTimeout(
     `https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`,
@@ -124,56 +114,6 @@ async function fetchCaption(url) {
   return isTikTokUrl(url) ? fetchCaptionViaTikTokOEmbed(url) : fetchCaptionViaScraping(url);
 }
 
-const SYSTEM_PROMPT = `Tu extrais une recette de cuisine à partir de la légende d'un post Instagram ou TikTok (qui peut être dans n'importe quelle langue — traduis toujours le résultat en français).
-
-Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour, au format exact :
-{
-  "title": string,
-  "category": "Salé" ou "Sucré",
-  "time": nombre (durée totale en minutes, prépa + cuisson ; estime raisonnablement si non précisé),
-  "servings": nombre (nombre de parts, 4 par défaut si non précisé),
-  "ingredients": [{ "qty": nombre, "unit": string (ex: "g", "ml", "pièce", ou "" si sans unité), "name": string }],
-  "steps": [string, ...],
-  "notes": string ou null
-}
-
-Si le texte ne décrit pas une vraie recette de cuisine (légende sans rapport, publicité, etc.), réponds avec exactement { "error": "no_recipe_found" }.`;
-
-async function extractRecipeWithAI(caption) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("OPENAI_API_KEY manquante côté serveur (Vercel > Environment Variables).");
-
-  const res = await fetchWithTimeout(
-    "https://api.openai.com/v1/chat/completions",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: OPENAI_MODEL,
-        response_format: { type: "json_object" },
-        temperature: 0.2,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: caption },
-        ],
-      }),
-    },
-    OPENAI_TIMEOUT_MS
-  );
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`OpenAI ${res.status} : ${text.slice(0, 200)}`);
-  }
-  const data = await res.json();
-  const content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-  if (!content) throw new Error("Réponse OpenAI vide");
-  try {
-    return JSON.parse(content);
-  } catch {
-    throw new Error("Réponse OpenAI illisible (JSON invalide)");
-  }
-}
-
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Méthode non autorisée" });
@@ -184,29 +124,16 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Lien Instagram ou TikTok invalide." });
   }
 
-  let caption;
-  let sourceImage = null;
   try {
     const meta = await fetchCaption(url);
-    caption = [meta.title, meta.description].filter(Boolean).join("\n\n").trim();
-    sourceImage = meta.image || null;
+    const caption = [meta.title, meta.description].filter(Boolean).join("\n\n").trim();
     if (!caption) throw new Error("Aucune légende trouvée dans la page.");
+    return res.status(200).json({ caption, sourceImage: meta.image || null });
   } catch (err) {
     console.error("Récupération du post impossible :", err);
     return res.status(422).json({
       error:
         "Impossible de lire ce post automatiquement (compte privé, contenu chargé en JavaScript, ou blocage de la plateforme — fréquent sur Instagram). Colle plutôt la légende à la main via \"Importer ma fiche texte\" dans Sauvegarde & Importation.",
     });
-  }
-
-  try {
-    const recipe = await extractRecipeWithAI(caption);
-    if (recipe && recipe.error === "no_recipe_found") {
-      return res.status(422).json({ error: "Ce post ne semble pas contenir de recette de cuisine." });
-    }
-    return res.status(200).json({ recipe, sourceImage, sourceCaption: caption });
-  } catch (err) {
-    console.error("Extraction IA impossible :", err);
-    return res.status(500).json({ error: "L'extraction par IA a échoué. Réessaie, ou importe la légende manuellement." });
   }
 }

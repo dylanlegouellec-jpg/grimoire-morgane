@@ -1,17 +1,13 @@
 /* ------------------------------------------------------------------ */
-/*  IMPORT DE RECETTE DEPUIS UN LIEN (Instagram/TikTok) — appel serveur  */
+/*  RÉCUPÉRATION DE LÉGENDE DEPUIS UN LIEN (Instagram/TikTok)            */
 /*  Relaie vers /api/extract-recipe-from-link (voir ce fichier pour le    */
-/*  détail des limites : lecture Instagram peu fiable, clé OPENAI_API_KEY */
-/*  requise côté Vercel). Contrairement à fetchNutriscoreGrade, il n'y a    */
-/*  PAS de repli local possible ici (extraire une recette d'un texte libre  */
-/*  demande un vrai LLM) — un échec doit donc remonter clairement à          */
-/*  l'utilisateur plutôt que d'être avalé silencieusement.                    */
+/*  détail : lecture Instagram peu fiable, aucune IA — sur demande          */
+/*  explicite, pas de clé OpenAI payante). Renvoie la légende BRUTE, à       */
+/*  recopier soi-même dans une recette (voir RecipeLinkImportModal.jsx).      */
 /* ------------------------------------------------------------------ */
 
 const ENDPOINT = "/api/extract-recipe-from-link";
-// Le scraping de la page ET l'appel au LLM se font l'un après l'autre côté
-// serveur : plus long qu'un simple aller-retour API, d'où un budget généreux.
-const TIMEOUT_MS = 35000;
+const TIMEOUT_MS = 12000;
 
 async function fetchWithTimeout(url, options, ms) {
   const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
@@ -23,7 +19,7 @@ async function fetchWithTimeout(url, options, ms) {
   }
 }
 
-export async function extractRecipeFromLink(url) {
+export async function fetchCaptionFromLink(url) {
   let res;
   try {
     res = await fetchWithTimeout(
@@ -38,8 +34,8 @@ export async function extractRecipeFromLink(url) {
   if (!res.ok) {
     throw new Error((data && data.error) || `Erreur serveur (${res.status})`);
   }
-  if (!data || !data.recipe) {
+  if (!data || !data.caption) {
     throw new Error("Réponse invalide du serveur.");
   }
-  return data.recipe;
+  return data;
 }

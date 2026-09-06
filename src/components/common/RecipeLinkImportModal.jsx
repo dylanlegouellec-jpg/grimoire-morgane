@@ -1,55 +1,55 @@
 import { useState } from "react";
-import { Check, RotateCcw, Wand2, X } from "lucide-react";
-import { extractRecipeFromLink } from "../../utils/recipeLinkImportClient";
+import { Check, Copy, PenLine, Search, X } from "lucide-react";
+import { fetchCaptionFromLink } from "../../utils/recipeLinkImportClient";
+import { copyText } from "../../utils/helpers";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
 
 /* ------------------------------------------------------------------ */
 /*  IMPORTER UNE RECETTE DEPUIS UN LIEN (Instagram/TikTok)              */
-/*  Colle un lien → extraction IA côté serveur (voir                     */
-/*  utils/recipeLinkImportClient.js) → aperçu pour validation → au         */
-/*  clic sur "Enregistrer", `onImport` réutilise exactement le même         */
-/*  chemin que l'import texte existant (voir importRecipe dans               */
-/*  hooks/useRecipes.js) : mêmes valeurs par défaut, même normalisation       */
-/*  des ingrédients, rien à dupliquer ici.                                     */
+/*  Aucune IA ici (pas de clé OpenAI à payer, sur demande explicite) :    */
+/*  on récupère juste la légende publique du post (voir                    */
+/*  utils/recipeLinkImportClient.js) et on l'affiche telle quelle — à        */
+/*  l'utilisateur de la recopier lui-même dans les bons champs. Le bouton      */
+/*  "Créer une nouvelle recette" copie le texte dans le presse-papiers puis     */
+/*  ouvre directement le formulaire de création (voir onCreateRecipe, câblé      */
+/*  par AppShell sur le même mécanisme que le "+" habituel) pour coller.          */
 /* ------------------------------------------------------------------ */
-export default function RecipeLinkImportModal({ onClose, onImport }) {
+export default function RecipeLinkImportModal({ onClose, onCreateRecipe }) {
   useBodyScrollLock(true);
   const [url, setUrl] = useState("");
-  const [status, setStatus] = useState("idle"); // idle | loading | preview | error
+  const [status, setStatus] = useState("idle"); // idle | loading | done | error
   const [error, setError] = useState("");
-  const [extracted, setExtracted] = useState(null);
+  const [caption, setCaption] = useState("");
+  const [copied, setCopied] = useState(false);
 
-  const handleExtract = async () => {
+  const handleFetch = async () => {
     const trimmed = url.trim();
     if (!trimmed) return;
     setStatus("loading");
     setError("");
+    setCopied(false);
     try {
-      const recipe = await extractRecipeFromLink(trimmed);
-      setExtracted(recipe);
-      setStatus("preview");
+      const data = await fetchCaptionFromLink(trimmed);
+      setCaption(data.caption);
+      setStatus("done");
     } catch (err) {
-      setError((err && err.message) || "Extraction impossible.");
+      setError((err && err.message) || "Récupération impossible.");
       setStatus("error");
     }
   };
 
-  const handleConfirm = () => {
-    if (!extracted) return;
-    onImport(extracted);
+  const handleCopy = async () => {
+    const ok = await copyText(caption);
+    setCopied(ok);
+  };
+
+  const handleCreateRecipe = async () => {
+    await copyText(caption);
+    onCreateRecipe();
     onClose();
   };
-
-  const reset = () => {
-    setStatus("idle");
-    setExtracted(null);
-    setError("");
-  };
-
-  const ingredientsList = Array.isArray(extracted && extracted.ingredients) ? extracted.ingredients : [];
-  const stepsList = Array.isArray(extracted && extracted.steps) ? extracted.steps : [];
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -58,13 +58,13 @@ export default function RecipeLinkImportModal({ onClose, onImport }) {
         <h2 className="dropcap-title">Importer depuis un lien</h2>
         <Flourish />
 
-        {status !== "preview" && (
+        {status !== "done" && (
           <>
             <p className="hint" style={{ fontStyle: "normal" }}>
-              Colle un lien Instagram (Reel/Post) ou TikTok public — l'IA tente d'en extraire la recette à partir
-              de sa légende. Fonctionne mieux avec TikTok : Instagram bloque souvent la lecture automatique de ses
-              posts, même publics — si l'extraction échoue, utilise plutôt "Importer ma fiche texte" en collant
-              la légende toi-même.
+              Colle un lien Instagram (Reel/Post) ou TikTok public — on récupère sa légende pour toi, à recopier
+              ensuite dans les champs de la recette (pas d'extraction automatique en ingrédients/étapes ici).
+              Fonctionne mieux avec TikTok : Instagram bloque souvent la lecture automatique de ses posts, même
+              publics — si ça échoue, ouvre le post toi-même et copie sa légende à la main.
             </p>
             <input
               type="url"
@@ -77,44 +77,33 @@ export default function RecipeLinkImportModal({ onClose, onImport }) {
             />
             {status === "error" && <p className="import-error">{error}</p>}
             <div style={{ marginTop: 14 }}>
-              <Seal tone="gold" onClick={handleExtract} disabled={status === "loading" || !url.trim()}>
-                <Wand2 size={16} /> {status === "loading" ? "Extraction en cours…" : "Extraire la recette"}
+              <Seal tone="gold" onClick={handleFetch} disabled={status === "loading" || !url.trim()}>
+                <Search size={16} /> {status === "loading" ? "Récupération en cours…" : "Récupérer la légende"}
               </Seal>
             </div>
           </>
         )}
 
-        {status === "preview" && extracted && (
+        {status === "done" && (
           <>
             <p className="hint" style={{ fontStyle: "normal" }}>
-              Vérifie que tout est correct avant d'enregistrer — tu pourras encore tout modifier ensuite depuis la
-              fiche recette.
+              Voici la légende du post. Copie-la et colle les bons morceaux dans le titre, les ingrédients et les
+              étapes de ta nouvelle recette.
             </p>
-            <div className="ios-group ios-group-padded" style={{ marginBottom: 14 }}>
-              <p style={{ margin: "0 0 6px", fontFamily: "'Cinzel', serif" }}>{extracted.title || "(titre manquant)"}</p>
-              <p className="hint" style={{ fontStyle: "normal", margin: 0 }}>
-                {extracted.category || "Salé"} · {extracted.time || "?"} min · {extracted.servings || "?"} parts
-              </p>
-            </div>
-            <h4>Ingrédients</h4>
-            <ul className="household-members-list">
-              {ingredientsList.map((ing, i) => (
-                <li key={i} className="household-member-row" style={{ cursor: "default" }}>
-                  <span style={{ flex: 1 }}>
-                    {ing && ing.isSection ? ing.title : `${ing.qty || ""} ${ing.unit || ""} ${ing.name || ""}`.trim()}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <h4>Préparation</h4>
-            <ol style={{ paddingLeft: 20 }}>
-              {stepsList.map((s, i) => (
-                <li key={i} style={{ marginBottom: 6 }}>{s && s.isSection ? <strong>{s.title}</strong> : s}</li>
-              ))}
-            </ol>
+            <textarea
+              readOnly
+              rows={10}
+              className="template-textarea"
+              value={caption}
+              onClick={(e) => e.target.select()}
+            />
             <div className="cookmode-nav" style={{ marginTop: 14 }}>
-              <Seal tone="gold" onClick={handleConfirm}><Check size={16} /> Enregistrer la recette</Seal>
-              <button type="button" className="link-btn" onClick={reset}><RotateCcw size={14} /> Recommencer</button>
+              <Seal tone="gold" onClick={handleCopy}>
+                {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? "Copié !" : "Copier le texte"}
+              </Seal>
+              <Seal tone="gold" onClick={handleCreateRecipe}>
+                <PenLine size={16} /> Créer une nouvelle recette
+              </Seal>
             </div>
           </>
         )}
