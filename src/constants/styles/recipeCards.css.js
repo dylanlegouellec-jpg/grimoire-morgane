@@ -73,17 +73,27 @@ export const RECIPE_CARDS_CSS = `
   /* Le fondu d'enfoncement/rebond vient de .press-anim (voir plus bas),
      toujours appliqué avec cette classe — pas besoin d'une deuxième
      transition ici, elle serait de toute façon masquée par la sienne. */
-  /* content-visibility: auto (+ contain-intrinsic-size) — garde les cartes
-     hors écran hors mise en page/peinture jusqu'à leur entrée dans la zone
-     visible (mémoire GPU/rendu économisée sur une grande grille). Retiré
-     puis réappliqué ici cette même session : soupçonné un temps de bloquer
-     le défilement tactile sur Android Chrome, mais la cause réelle s'est
-     révélée être touch-action: manipulation sur html/body dans index.html
-     (voir ce fichier — corrigé). Cette règle n'était pas en cause. La
-     valeur de contain-intrinsic-size approxime la taille réelle d'une
-     carte pour éviter un saut de mise en page à l'entrée dans le viewport. */
-  content-visibility: auto;
-  contain-intrinsic-size: 220px 255px;
+  /* PAS de content-visibility: auto ici (retiré une seconde fois, cette
+     fois définitivement) — troisième épisode de cette propriété cette
+     session, cette fois avec une cause confirmée par mesure directe (pas
+     une suspicion) : depuis que les cartes restent montées en permanence
+     et rejouent leur animation d'entrée via un changement de classe au
+     lieu d'un démontage/remontage (voir RecipeCard.jsx, card-enter /
+     card-enter-alt), une carte qui repasse de display:none à visible
+     porte encore content-visibility: auto au moment exact où la nouvelle
+     animation démarre — Chromium peut alors ne jamais la faire progresser
+     tant qu'il n'a pas confirmé la "pertinence" de l'élément pour
+     l'utilisateur (vérifié : la classe change bien, l'animation démarre
+     bien dans le moteur, mais elle restait figée à sa toute première
+     image). Sans lien avec le bug de défilement tactile déjà corrigé
+     ailleurs (touch-action dans index.html) : deux causes différentes,
+     qui concernaient toutes les deux cette même propriété à des moments
+     différents de la session. Le gain de rendu qu'elle apportait (sauter
+     la mise en page/peinture des cartes hors écran) ne vaut pas une
+     animation d'entrée cassée — le nombre de recettes d'un grimoire
+     personnel reste de toute façon modeste.
+     Ne pas la rétablir sans revoir aussi le mécanisme de relance de
+     l'animation dans RecipeCard.jsx. */
 }
 /* Rétrécissement INSTANTANÉ au contact du doigt, via :active plutôt que
    via l'état JS "pressing" (voir .press-pressing plus bas, volontairement
