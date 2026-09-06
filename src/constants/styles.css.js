@@ -295,7 +295,20 @@ html, body {
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
 }
-.card-enter { animation: cardEnter 0.42s cubic-bezier(0.22, 1, 0.36, 1) both; }
+/* "backwards" et non "both" : "both" retenait le "transform: none" du
+   dernier keyframe indéfiniment après la fin de l'animation (une
+   animation CSS garde la main sur la propriété qu'elle anime tant qu'elle
+   reste "en vigueur" — y compris son état figé post-animation en mode
+   forwards/both — quelle que soit la spécificité d'une autre règle). Ça
+   empêchait silencieusement TOUT autre transform sur .recipe-card de
+   jamais s'appliquer une fois l'entrée jouée : ni :active (voir plus haut),
+   ni l'ancien .press-pressing avant lui — seul .press-fired s'en sortait
+   car il redéfinit sa propre "animation", remplaçant entièrement celle de
+   .card-enter plutôt que d'entrer en concurrence avec elle. "backwards"
+   seul garde l'utilité recherchée (éviter un flash à taille normale
+   pendant le délai décalé de chaque carte, voir animationDelay) SANS
+   garder la main sur transform après la fin des 0.42s. */
+.card-enter { animation: cardEnter 0.42s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
 @keyframes cardEnter {
   from { opacity: 0; transform: translateY(14px) scale(0.97); }
   to { opacity: 1; transform: none; }
