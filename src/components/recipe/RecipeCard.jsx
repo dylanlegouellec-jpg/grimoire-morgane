@@ -9,6 +9,39 @@ import useLongPress from "../../hooks/useLongPress";
 import DishArt from "../art/DishArt";
 import RecipeOptionsModal from "../common/RecipeOptionsModal";
 
+// Partagé par TOUTES les instances de RecipeCard (module-level, pas un
+// state React) : quand un changement de filtre révèle beaucoup de cartes
+// d'un coup (ex. "Salé", s'il contient davantage de recettes que "Sucré"),
+// chaque carte forçait auparavant SON PROPRE recalcul de style synchrone
+// (retirer la classe, lire offsetWidth, la remettre) — lecture-après-
+// écriture répétée N fois, entrecoupée des écritures des cartes voisines,
+// qui invalide le cache de mise en page à chaque carte et force autant de
+// recalculs complets de la page que de cartes révélées ("thrashing" de
+// layout). C'est le mini bug de latence observé précisément sur le filtre
+// le plus fourni : plus il y a de cartes qui réapparaissent ensemble, plus
+// le coût était élevé, au point de perturber l'animation elle-même (frames
+// perdues, la carte semble ne pas s'animer du tout, comme constaté sur
+// "Salé"). scheduleCardEnterRestart regroupe les retraits de classe de
+// TOUTES les cartes concernées, ne force qu'UN SEUL recalcul pour le lot
+// entier, puis remet la classe partout — dans un microtask, donc toujours
+// avant la moindre peinture de la frame (aucun flash).
+let pendingCardEnterRestarts = [];
+let cardEnterRestartScheduled = false;
+function scheduleCardEnterRestart(el) {
+  if (!el) return;
+  el.classList.remove("card-enter");
+  pendingCardEnterRestarts.push(el);
+  if (cardEnterRestartScheduled) return;
+  cardEnterRestartScheduled = true;
+  queueMicrotask(() => {
+    void document.documentElement.offsetHeight; // un seul recalcul forcé pour tout le lot
+    const els = pendingCardEnterRestarts;
+    pendingCardEnterRestarts = [];
+    cardEnterRestartScheduled = false;
+    els.forEach((node) => node.classList.add("card-enter"));
+  });
+}
+
 function RecipeCard({
   recipe,
   hidden = false,
@@ -51,25 +84,17 @@ function RecipeCard({
   // filtre (Tout/Salé/Sucré/Favoris) — jamais sur celles déjà affichées qui
   // le restent ("ne rejouer l'animation que sur les éléments concernés").
   // La carte n'est toujours pas démontée/remontée pour ça (voir `hidden` ->
-  // display:none plus bas) : son <img> ne bouge jamais. Un simple passage
-  // display:none -> visible ne relance PAS l'animation CSS de façon fiable
-  // dans la pratique (constaté sur appareil réel) ; la manière garantie de
-  // la relancer sans toucher au DOM des enfants est de retirer la classe,
-  // forcer un recalcul de style (lecture d'offsetWidth), puis la remettre.
-  // useLayoutEffect (avant peinture, pas après un useEffect classique) pour
-  // que ce cycle retrait/remise se fasse avant que le navigateur n'ait la
-  // moindre chance de peindre la carte dans son état final le temps d'un
-  // instant, ce qui produirait un flash disgracieux.
+  // display:none plus bas) : son <img> ne bouge jamais. Voir
+  // scheduleCardEnterRestart plus haut pour pourquoi ce recalcul est
+  // regroupé pour toutes les cartes concernées plutôt que fait carte par
+  // carte.
   const cardRef = useRef(null);
   const prevHiddenRef = useRef(hidden);
   useLayoutEffect(() => {
     const wasHidden = prevHiddenRef.current;
     prevHiddenRef.current = hidden;
-    if (wasHidden && !hidden && cardRef.current) {
-      const el = cardRef.current;
-      el.classList.remove("card-enter");
-      void el.offsetWidth;
-      el.classList.add("card-enter");
+    if (wasHidden && !hidden) {
+      scheduleCardEnterRestart(cardRef.current);
     }
   }, [hidden]);
 
