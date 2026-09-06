@@ -30,16 +30,6 @@ function RecipeCard({
   const nutri = recipe.nutriscoreGrade || estimateNutriscoreLocal(recipe.ingredients, recipe.category);
   const { language, dict } = useTranslation();
   const [showOptions, setShowOptions] = useState(false);
-  // Ne rejoue jamais .card-enter une fois l'entrée déjà jouée une première
-  // fois : la carte reste montée en permanence désormais (voir `hidden`
-  // ci-dessus/RecipesView.jsx), masquée puis réaffichée via display: none
-  // au lieu d'être démontée — sans ce drapeau, changer `display` de "none"
-  // à sa valeur normale relance l'animation CSS depuis le début à CHAQUE
-  // retour dans un filtre qui la montre (une animation liée à une classe
-  // toujours présente redémarre quand l'élément regénère sa boîte de
-  // rendu), donnant un petit "pop" agaçant à répétition plutôt qu'un
-  // réaffichage instantané.
-  const [entered, setEntered] = useState(false);
 
   // Même appui long, au geste près, que celui des membres du foyer, de la
   // navigation, etc. — voir hooks/useLongPress.js. Cette carte portait
@@ -59,15 +49,18 @@ function RecipeCard({
   return (
     <>
       <div
-        className={`card recipe-card press-anim press-${cardLongPress.pressState} ${entered ? "" : "card-enter"}`}
+        className={`card recipe-card card-enter press-anim press-${cardLongPress.pressState}`}
         // display: none (pas un retrait du DOM) quand la carte ne correspond
         // plus au filtre actif — voir RecipesView.jsx : elle reste montée,
-        // son <img> déjà chargée n'est jamais redémontée/redécodée, donc
-        // repasser sur "Tout" (ou tout autre filtre) la fait juste
-        // réapparaître instantanément plutôt que de la recharger.
+        // son <img> déjà chargée n'est jamais redémontée/redécodée. Seule
+        // l'image est donc épargnée par le changement de filtre : le petit
+        // fondu/zoom d'entrée (.card-enter), lui, rejoue à chaque
+        // réapparition — un display:none->visible relance une animation CSS
+        // déjà présente sur l'élément — et c'est volontaire, demandé
+        // explicitement (l'effet "en saccadé" est apprécié, seul le
+        // rechargement d'image gênait).
         style={hidden ? { display: "none" } : { animationDelay: `${enterDelay}ms` }}
         onClick={handleClick}
-        onAnimationEnd={(e) => { if (e.animationName === "cardEnter") setEntered(true); }}
         {...cardLongPress.handlers}
       >
         <div className="illus-wrap">
