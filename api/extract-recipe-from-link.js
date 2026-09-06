@@ -5,14 +5,17 @@
 /*              steps, notes }, sourceImage, sourceCaption }               */
 /*                                                                          */
 /*  Deux étapes, chacune capable d'échouer indépendamment :                 */
-/*  1) Récupérer la légende publique du post (balises Open Graph de la       */
-/*     page HTML — Instagram/TikTok n'offrent aucune API gratuite pour        */
-/*     ça). Fonctionne pour une bonne partie des posts TikTok publics ;        */
-/*     BEAUCOUP MOINS pour Instagram, qui bloque agressivement depuis           */
-/*     plusieurs années les requêtes non authentifiées/sans JS — un échec        */
-/*     y est fréquent et attendu, pas un bug. En cas d'échec, l'utilisateur        */
-/*     est invité à coller la légende à la main via l'import texte déjà           */
-/*     existant (voir TextTemplateImportModal.jsx).                                */
+/*  1) Récupérer la légende publique du post :                               */
+/*     - TikTok : via son API oEmbed publique et gratuite (voir                */
+/*       fetchCaptionViaTikTokOEmbed) — fiable, aucun blocage rencontré.         */
+/*     - Instagram : via les balises Open Graph de la page HTML (voir            */
+/*       fetchCaptionViaScraping), faute de mieux — Instagram n'a plus            */
+/*       d'oEmbed public utilisable sans jeton d'app Meta, et bloque              */
+/*       agressivement les requêtes non authentifiées/sans JS depuis               */
+/*       plusieurs années. Un échec y est fréquent et attendu, pas un bug.          */
+/*     Dans les deux cas, en cas d'échec, l'utilisateur est invité à coller           */
+/*     la légende à la main via l'import texte déjà existant (voir                    */
+/*     TextTemplateImportModal.jsx).                                                   */
 /*  2) Faire lire cette légende par un modèle de langage (OpenAI) pour            */
 /*     en extraire une recette structurée. Nécessite la variable                    */
 /*     d'environnement OPENAI_API_KEY (Vercel > Settings > Environment               */
@@ -66,7 +69,27 @@ function extractMeta(html, property) {
   return "";
 }
 
-async function fetchCaption(url) {
+// TikTok expose une vraie API publique gratuite et sans clé pour ça —
+// testée manuellement (curl) le 2026-09-06 sur un post public : renvoie du
+// JSON propre avec la légende complète (`title`, hashtags inclus) et une
+// vignette, sans aucun blocage. Bien plus fiable qu'un scraping de balises
+// Open Graph, qu'on garde uniquement pour Instagram (qui n'a plus d'oEmbed
+// public utilisable sans jeton d'app Meta depuis plusieurs années — testé
+// le même jour : la page d'un post renvoie un simple mur de connexion,
+// sans aucune balise og:description, quel que soit le User-Agent envoyé).
+async function fetchCaptionViaTikTokOEmbed(url) {
+  const res = await fetchWithTimeout(
+    `https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`,
+    {},
+    FETCH_TIMEOUT_MS
+  );
+  if (!res.ok) throw new Error(`oEmbed TikTok inaccessible (${res.status})`);
+  const data = await res.json();
+  if (!data || !data.title) throw new Error("oEmbed TikTok : légende introuvable");
+  return { description: data.title, title: "", image: data.thumbnail_url || "" };
+}
+
+async function fetchCaptionViaScraping(url) {
   const res = await fetchWithTimeout(
     url,
     {
@@ -87,6 +110,18 @@ async function fetchCaption(url) {
     title: extractMeta(html, "og:title"),
     image: extractMeta(html, "og:image"),
   };
+}
+
+function isTikTokUrl(raw) {
+  try {
+    return /(^|\.)tiktok\.com$/i.test(new URL(raw).hostname);
+  } catch {
+    return false;
+  }
+}
+
+async function fetchCaption(url) {
+  return isTikTokUrl(url) ? fetchCaptionViaTikTokOEmbed(url) : fetchCaptionViaScraping(url);
 }
 
 const SYSTEM_PROMPT = `Tu extrais une recette de cuisine à partir de la légende d'un post Instagram ou TikTok (qui peut être dans n'importe quelle langue — traduis toujours le résultat en français).
