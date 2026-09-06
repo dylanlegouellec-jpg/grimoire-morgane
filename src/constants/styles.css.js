@@ -354,6 +354,18 @@ html, body {
 .recipe-card:active {
   transform: scale(0.95);
 }
+/* Le rebond ".press-fired" (voir .press-anim.press-fired plus bas, partagé
+   avec NavButton/les rangées à appui long) reste visible un instant même
+   une fois RecipeOptionsModal ouverte par-dessus — sur demande, désactivé
+   spécifiquement pour les cartes de recette (sélecteur à 3 classes,
+   volontairement plus spécifique que .press-anim.press-fired pour gagner
+   quel que soit l'ordre dans la feuille de style, voir la même technique
+   déjà utilisée pour .recipe-picker-modal). Les autres appuis longs de
+   l'app (foyer, navigation...) gardent leur rebond, non concernés par
+   cette demande. */
+.press-anim.press-fired.recipe-card {
+  animation: none;
+}
 /* --- Retour tactile d'appui long (enfoncement puis rebond) -----------
    Piloté en JS par un état "idle" | "pressing" | "fired" (voir
    hooks/useLongPress.js, RecipeCard.jsx, NavButton.jsx) plutôt que par le
