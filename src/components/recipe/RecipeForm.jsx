@@ -9,9 +9,12 @@ import { formatPressDuration } from "../common/pressDuration";
 import { resolveIllustrationKey } from "../art/illustrations";
 import useSecretTrigger from "../../hooks/useSecretTrigger";
 import useDragReorder from "../../hooks/useDragReorder";
+import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
+import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import Flourish from "../common/Flourish";
 import Seal from "../common/Seal";
 import WheelPickerModal from "../common/WheelPickerModal";
+import UnsavedChangesModal from "../common/UnsavedChangesModal";
 
 /* ------------------------------------------------------------------ */
 /*  UNITÉS DISPONIBLES POUR LES INGRÉDIENTS                            */
@@ -36,6 +39,7 @@ export const UNIT_OPTIONS = [
 /* ------------------------------------------------------------------ */
 
 export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, pressDuration = 750 }) {
+  useBodyScrollLock(true);
   const isEdit = !!initialRecipe;
   const [title, setTitle] = useState(initialRecipe ? initialRecipe.title : "");
   const [category, setCategory] = useState(initialRecipe ? initialRecipe.category : "Salé");
@@ -83,6 +87,41 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
   const [saving, setSaving] = useState(false);
   const [showTimeWheel, setShowTimeWheel] = useState(false);
   const [showServingsWheel, setShowServingsWheel] = useState(false);
+  const [showUnsavedConfirm, setShowUnsavedConfirm] = useState(false);
+
+  // État "modifié" (dirty) : compare un instantané JSON des champs
+  // pertinents à leur valeur au tout premier rendu — jamais les `id`
+  // internes des rangées d'ingrédients/étapes (juste des clés React, pas
+  // une donnée de la recette), sinon un simple réordonnancement identique
+  // au contenu original se signalerait à tort comme une modification.
+  const buildSnapshot = () =>
+    JSON.stringify({
+      title, category, time, servings, calories, protein, carbs, fat, notes,
+      ingredients: ingredientRows.map((r) => (r.isSection ? { isSection: true, title: r.title } : { qty: r.qty, unit: r.unit, name: r.name })),
+      steps: stepRows.map((r) => (r.isSection ? { isSection: true, title: r.title } : { text: r.text })),
+    });
+  const initialSnapshotRef = useRef(null);
+  if (initialSnapshotRef.current === null) initialSnapshotRef.current = buildSnapshot();
+  const isDirty = initialSnapshotRef.current !== buildSnapshot();
+
+  // Point de passage UNIQUE pour toute tentative de fermeture (bouton "X",
+  // clic sur le fond, tirage vers le bas) : jamais de fermeture silencieuse
+  // d'un changement non enregistré, voir UnsavedChangesModal ci-dessous.
+  const attemptClose = () => {
+    if (isDirty) { setShowUnsavedConfirm(true); return; }
+    onClose();
+  };
+
+  // "Tirer pour fermer" : le formulaire lui-même EST le conteneur défilant
+  // (.modal a overflow-y: auto). Désactivé pendant qu'une roue de sélection
+  // ou la boîte de dialogue "non enregistré" est ouverte par-dessus — même
+  // raison que dans SecretSettingsModal.jsx (évite qu'un tirage à
+  // l'intérieur de ce sous-composant ne remonte jusqu'ici).
+  const formRef = useRef(null);
+  const swipe = useSwipeToDismiss(attemptClose, {
+    scrollRef: formRef,
+    disabled: showUnsavedConfirm || showTimeWheel || showServingsWheel,
+  });
 
   const secretImport = useSecretTrigger(() => setImportUnlocked(true));
 
@@ -261,13 +300,16 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
 
   return (
     <>
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className="modal-backdrop" onClick={attemptClose}>
       <form
+        ref={formRef}
         className="modal grimoire-page form-clean"
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
+        style={swipe.style}
+        {...swipe.handlers}
       >
-        <button type="button" className="modal-close" onClick={onClose}><X size={20} /></button>
+        <button type="button" className="modal-close" onClick={attemptClose}><X size={20} /></button>
         <h2 className="dropcap-title" {...(isEdit ? {} : secretImport)}>
           {isEdit ? "Modifier la recette" : "Invoquer une recette"}
         </h2>
@@ -558,6 +600,13 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
         columns={[{ key: "servings", initialValue: Number(servings) || 1, min: 1, max: 24, suffix: "pers." }]}
         onSave={({ servings: s }) => setServings(s)}
         onClose={() => setShowServingsWheel(false)}
+      />
+    )}
+    {showUnsavedConfirm && (
+      <UnsavedChangesModal
+        onSave={async () => { setShowUnsavedConfirm(false); await submit({ preventDefault: () => {} }); }}
+        onDiscard={() => { setShowUnsavedConfirm(false); onClose(); }}
+        onCancel={() => setShowUnsavedConfirm(false)}
       />
     )}
     </>
