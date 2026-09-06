@@ -124,6 +124,10 @@ html, body {
   gap: 12px; min-height: 100vh; color: var(--gold);
 }
 .loading-screen p { color: var(--ink-soft); font-style: italic; }
+.view-loading {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 200px; color: var(--gold);
+}
 .login-screen { padding: 24px; text-align: center; }
 .login-title { font-family: 'Cinzel Decorative', 'Cinzel', serif; font-size: 1.6rem; color: var(--ink); margin: 0; }
 

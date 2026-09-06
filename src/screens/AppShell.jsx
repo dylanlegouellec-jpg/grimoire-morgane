@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Heart, Search, Settings } from "lucide-react";
+import { useEffect, useRef, useState, lazy, Suspense } from "react";
+import { Heart, Search, Settings, Wand2 } from "lucide-react";
 
 import { FILTERS, TABS } from "../constants";
 import { CSS } from "../constants/styles.css";
@@ -7,11 +7,39 @@ import { triggerHaptic, nextId, copyText } from "../utils/helpers";
 import { getCachedProfile, getProfile } from "../utils/profile";
 import { useTranslation } from "../contexts/LanguageContext";
 
-import { NavButton, TextShareModal, ImportConfirmModal, JoinHouseholdConfirmModal, DeleteConfirmModal, TextTemplateImportModal, RecipeLinkImportModal, SecretSettingsModal, ListsManagerModal } from "../components/common";
+import { NavButton } from "../components/common";
 import { RecipesView, RecipeForm, RecipeDetail, CookMode } from "../components/recipe";
-import { FridgeView } from "../components/fridge";
-import { ShoppingView } from "../components/shopping";
-import { PlanningView } from "../components/planning";
+
+// Chargés à la demande (React.lazy), importés directement depuis leur
+// fichier — jamais depuis le barrel components/*/index.js, qui est déjà
+// importé statiquement plus haut (NavButton, RecipesView...) : passer par
+// le même barrel aurait ramené tout son contenu dans le bundle initial et
+// annulé le découpage. Recettes reste le seul onglet chargé "en dur" (c'est
+// l'onglet d'atterrissage par défaut) ; Planning/Frigo/Courses et les
+// fenêtres modales peu fréquentes rejoignent chacun leur propre chunk,
+// récupéré au premier clic qui les ouvre.
+const PlanningView = lazy(() => import("../components/planning/PlanningView"));
+const FridgeView = lazy(() => import("../components/fridge/FridgeView"));
+const ShoppingView = lazy(() => import("../components/shopping/ShoppingView"));
+const TextShareModal = lazy(() => import("../components/common/TextShareModal"));
+const ImportConfirmModal = lazy(() => import("../components/common/ImportConfirmModal"));
+const JoinHouseholdConfirmModal = lazy(() => import("../components/common/JoinHouseholdConfirmModal"));
+const DeleteConfirmModal = lazy(() => import("../components/common/DeleteConfirmModal"));
+const TextTemplateImportModal = lazy(() => import("../components/common/TextTemplateImportModal"));
+const RecipeLinkImportModal = lazy(() => import("../components/common/RecipeLinkImportModal"));
+const SecretSettingsModal = lazy(() => import("../components/common/SecretSettingsModal"));
+const ListsManagerModal = lazy(() => import("../components/common/ListsManagerModal"));
+
+// Fallback minimal pour les onglets secondaires (Planning/Frigo/Courses) :
+// juste la baguette qui tourne déjà utilisée sur l'écran de chargement
+// global, mais en version compacte insérée dans la mise en page (pas de
+// min-height: 100vh) — le chunk est petit, ce spinner n'est visible qu'une
+// fraction de seconde au tout premier accès à l'onglet.
+const ViewLoadingFallback = () => (
+  <div className="view-loading">
+    <Wand2 className="spin-wand" size={22} />
+  </div>
+);
 
 /* ------------------------------------------------------------------ */
 /*  COQUILLE APPLICATIVE — onglets, modales, gestes                    */
@@ -262,46 +290,52 @@ export default function AppShell({
           />
         )}
         {tab === "plan" && (
-          <PlanningView
-            recipes={recipes}
-            mealPlan={mealPlan}
-            onAddMeal={addMealPlanEntry}
-            onRemoveMeal={removeMealPlanEntry}
-            onSendToShoppingList={(ids) => {
-              generateShoppingList(recipes, ids);
-              setTab("courses");
-            }}
-            showToast={showToast}
-          />
+          <Suspense fallback={<ViewLoadingFallback />}>
+            <PlanningView
+              recipes={recipes}
+              mealPlan={mealPlan}
+              onAddMeal={addMealPlanEntry}
+              onRemoveMeal={removeMealPlanEntry}
+              onSendToShoppingList={(ids) => {
+                generateShoppingList(recipes, ids);
+                setTab("courses");
+              }}
+              showToast={showToast}
+            />
+          </Suspense>
         )}
         {tab === "frigo" && (
-          <FridgeView
-            recipes={recipes}
-            pantry={pantry}
-            setPantry={setPantry}
-            basics={basics}
-            search={fridgeSearch}
-            onMoveBasicToVariable={moveBasicToVariable}
-            onRemoveBasic={removeBasic}
-            onResetPantry={resetPantry}
-            onOpen={setOpenRecipe}
-          />
+          <Suspense fallback={<ViewLoadingFallback />}>
+            <FridgeView
+              recipes={recipes}
+              pantry={pantry}
+              setPantry={setPantry}
+              basics={basics}
+              search={fridgeSearch}
+              onMoveBasicToVariable={moveBasicToVariable}
+              onRemoveBasic={removeBasic}
+              onResetPantry={resetPantry}
+              onOpen={setOpenRecipe}
+            />
+          </Suspense>
         )}
         {tab === "courses" && (
-          <ShoppingView
-            recipes={recipes}
-            activeList={shoppingLists.find((l) => l.id === activeListId) || null}
-            onAddManualItem={addManualItem}
-            onToggleItem={toggleShoppingItem}
-            onDeleteItem={deleteShoppingItem}
-            onAdjustQty={adjustShoppingQty}
-            onSetItemQty={setShoppingItemQty}
-            onGenerateFromRecipes={(ids) => generateShoppingList(recipes, ids)}
-            onResetActiveList={resetActiveList}
-            onOpenManager={() => setShowListsManager(true)}
-            showToast={showToast}
-            pressDuration={pressDuration}
-          />
+          <Suspense fallback={<ViewLoadingFallback />}>
+            <ShoppingView
+              recipes={recipes}
+              activeList={shoppingLists.find((l) => l.id === activeListId) || null}
+              onAddManualItem={addManualItem}
+              onToggleItem={toggleShoppingItem}
+              onDeleteItem={deleteShoppingItem}
+              onAdjustQty={adjustShoppingQty}
+              onSetItemQty={setShoppingItemQty}
+              onGenerateFromRecipes={(ids) => generateShoppingList(recipes, ids)}
+              onResetActiveList={resetActiveList}
+              onOpenManager={() => setShowListsManager(true)}
+              showToast={showToast}
+              pressDuration={pressDuration}
+            />
+          </Suspense>
         )}
       </main>
 
@@ -353,90 +387,106 @@ export default function AppShell({
         <CookMode recipe={cookingRecipe} onClose={() => setCookingRecipe(null)} pressDuration={pressDuration} />
       )}
       {textModal && (
-        <TextShareModal title={textModal.title} text={textModal.text} onClose={() => setTextModal(null)} />
+        <Suspense fallback={null}>
+          <TextShareModal title={textModal.title} text={textModal.text} onClose={() => setTextModal(null)} />
+        </Suspense>
       )}
       {pendingImport && (
-        <ImportConfirmModal
-          recipe={pendingImport}
-          onConfirm={confirmPendingImport}
-          onCancel={() => setPendingImport(null)}
-        />
+        <Suspense fallback={null}>
+          <ImportConfirmModal
+            recipe={pendingImport}
+            onConfirm={confirmPendingImport}
+            onCancel={() => setPendingImport(null)}
+          />
+        </Suspense>
       )}
       {pendingHouseholdJoin && (
-        <JoinHouseholdConfirmModal
-          householdId={pendingHouseholdJoin}
-          onRequestJoin={onRequestJoinHousehold}
-          onClose={() => setPendingHouseholdJoin(null)}
-          showToast={showToast}
-        />
+        <Suspense fallback={null}>
+          <JoinHouseholdConfirmModal
+            householdId={pendingHouseholdJoin}
+            onRequestJoin={onRequestJoinHousehold}
+            onClose={() => setPendingHouseholdJoin(null)}
+            showToast={showToast}
+          />
+        </Suspense>
       )}
       {deleteTarget && (
-        <DeleteConfirmModal
-          recipe={deleteTarget}
-          onConfirm={() => {
-            deleteRecipe(deleteTarget.id);
-            showToast(t("app.recipeDeleted"));
-            setDeleteTarget(null);
-          }}
-          onCancel={() => setDeleteTarget(null)}
-        />
+        <Suspense fallback={null}>
+          <DeleteConfirmModal
+            recipe={deleteTarget}
+            onConfirm={() => {
+              deleteRecipe(deleteTarget.id);
+              showToast(t("app.recipeDeleted"));
+              setDeleteTarget(null);
+            }}
+            onCancel={() => setDeleteTarget(null)}
+          />
+        </Suspense>
       )}
       {showTemplateImport && (
-        <TextTemplateImportModal
-          onClose={() => setShowTemplateImport(false)}
-          onImport={(parsed) => importRecipe(parsed, t("app.sheetImported"))}
-        />
+        <Suspense fallback={null}>
+          <TextTemplateImportModal
+            onClose={() => setShowTemplateImport(false)}
+            onImport={(parsed) => importRecipe(parsed, t("app.sheetImported"))}
+          />
+        </Suspense>
       )}
       {showLinkImport && (
-        <RecipeLinkImportModal
-          onClose={() => setShowLinkImport(false)}
-          onCreateRecipe={() => setFormTarget("new")}
-        />
+        <Suspense fallback={null}>
+          <RecipeLinkImportModal
+            onClose={() => setShowLinkImport(false)}
+            onCreateRecipe={() => setFormTarget("new")}
+          />
+        </Suspense>
       )}
       {showSecretSettings && (
-        <SecretSettingsModal
-          onClose={() => setShowSecretSettings(false)}
-          connectionStatus={connectionStatus}
-          onExport={exportGrimoire}
-          onImportFile={handleImportFile}
-          onImportTextRecipe={() => setShowTemplateImport(true)}
-          onImportLink={() => setShowLinkImport(true)}
-          pressDuration={pressDuration}
-          onSetPressDuration={setPressDuration}
-          theme={theme}
-          onSetTheme={setTheme}
-          showNutriscore={showNutriscore}
-          onSetShowNutriscore={setShowNutriscore}
-          textSize={textSize}
-          onSetTextSize={setTextSize}
-          language={language}
-          onSetLanguage={setLanguage}
-          user={user}
-          householdId={householdId}
-          households={households}
-          onSwitchHousehold={onSwitchHousehold}
-          onCreateHousehold={onCreateHousehold}
-          onRenameHousehold={onRenameHousehold}
-          onDeleteHousehold={onDeleteHousehold}
-          onRequestJoinHousehold={onRequestJoinHousehold}
-          onGetPendingHouseholdRequests={onGetPendingHouseholdRequests}
-          onApproveHouseholdMember={onApproveHouseholdMember}
-          onRejectHouseholdMember={onRejectHouseholdMember}
-          onRefreshHouseholds={onRefreshHouseholds}
-          showToast={showToast}
-          onSignOut={signOut}
-        />
+        <Suspense fallback={null}>
+          <SecretSettingsModal
+            onClose={() => setShowSecretSettings(false)}
+            connectionStatus={connectionStatus}
+            onExport={exportGrimoire}
+            onImportFile={handleImportFile}
+            onImportTextRecipe={() => setShowTemplateImport(true)}
+            onImportLink={() => setShowLinkImport(true)}
+            pressDuration={pressDuration}
+            onSetPressDuration={setPressDuration}
+            theme={theme}
+            onSetTheme={setTheme}
+            showNutriscore={showNutriscore}
+            onSetShowNutriscore={setShowNutriscore}
+            textSize={textSize}
+            onSetTextSize={setTextSize}
+            language={language}
+            onSetLanguage={setLanguage}
+            user={user}
+            householdId={householdId}
+            households={households}
+            onSwitchHousehold={onSwitchHousehold}
+            onCreateHousehold={onCreateHousehold}
+            onRenameHousehold={onRenameHousehold}
+            onDeleteHousehold={onDeleteHousehold}
+            onRequestJoinHousehold={onRequestJoinHousehold}
+            onGetPendingHouseholdRequests={onGetPendingHouseholdRequests}
+            onApproveHouseholdMember={onApproveHouseholdMember}
+            onRejectHouseholdMember={onRejectHouseholdMember}
+            onRefreshHouseholds={onRefreshHouseholds}
+            showToast={showToast}
+            onSignOut={signOut}
+          />
+        </Suspense>
       )}
       {showListsManager && (
-        <ListsManagerModal
-          lists={shoppingLists}
-          activeListId={activeListId}
-          onOpen={(id) => setActiveListId(id)}
-          onCreate={createShoppingList}
-          onRename={renameShoppingList}
-          onDelete={deleteShoppingList}
-          onClose={() => setShowListsManager(false)}
-        />
+        <Suspense fallback={null}>
+          <ListsManagerModal
+            lists={shoppingLists}
+            activeListId={activeListId}
+            onOpen={(id) => setActiveListId(id)}
+            onCreate={createShoppingList}
+            onRename={renameShoppingList}
+            onDelete={deleteShoppingList}
+            onClose={() => setShowListsManager(false)}
+          />
+        </Suspense>
       )}
       {toast && <div className="toast">{toast}</div>}
     </div>
