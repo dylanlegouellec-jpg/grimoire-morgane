@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronLeft, Search, X } from "lucide-react";
+import { ChevronLeft, PenLine, Search, X } from "lucide-react";
 import { MEAL_TYPES, toISODate, formatDayLabel } from "../../utils/planning";
 import { categoryClass, categoryLabel } from "../../utils/helpers";
 import { triggerHaptic } from "../../utils/haptics";
@@ -45,7 +45,18 @@ export default function AddMealModal({ recipes, initialDate, onAdd, onClose }) {
 
   const pickRecipe = (recipeId) => {
     triggerHaptic(15);
-    onAdd(toISODate(selectedDate), mealType, recipeId);
+    onAdd(toISODate(selectedDate), mealType, recipeId, null);
+    onClose();
+  };
+
+  // Repas "personnalisé" : un simple nom (ex. "Restes", "McDo"), sans fiche
+  // recette — réutilise le champ de recherche existant comme champ de
+  // saisie libre plutôt que d'ajouter un second input redondant.
+  const addCustomMeal = () => {
+    const title = search.trim();
+    if (!title) return;
+    triggerHaptic(15);
+    onAdd(toISODate(selectedDate), mealType, null, title);
     onClose();
   };
 
@@ -102,7 +113,7 @@ export default function AddMealModal({ recipes, initialDate, onAdd, onClose }) {
 
         {step === "recipe" && (
           <>
-            <div className="search-bar" style={{ margin: "0 0 14px" }}>
+            <div className="search-bar" style={{ margin: "0 0 10px" }}>
               <Search size={15} />
               <input
                 value={search}
@@ -111,6 +122,9 @@ export default function AddMealModal({ recipes, initialDate, onAdd, onClose }) {
                 autoFocus
               />
             </div>
+            <button type="button" className="link-btn add-custom-meal-btn" onClick={addCustomMeal} disabled={!search.trim()}>
+              <PenLine size={14} /> {search.trim() ? t("planning.addCustomMealWithText", { text: search.trim() }) : t("planning.addCustomMeal")}
+            </button>
             {filtered.length === 0 ? (
               <p className="hint">{t("planning.noRecipeMatch")}</p>
             ) : (

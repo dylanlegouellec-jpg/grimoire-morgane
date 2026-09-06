@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Plus, Send, X } from "lucide-react";
 import { getWeekStart, addWeeks, getWeekDays, toISODate, isSameDay, formatWeekRange, formatDayLabel, mealTypeInfo } from "../../utils/planning";
 import { triggerHaptic } from "../../utils/haptics";
 import { useTranslation } from "../../contexts/LanguageContext";
+import useHorizontalSwipe from "../../hooks/useHorizontalSwipe";
 import Seal from "../common/Seal";
 import AddMealModal from "./AddMealModal";
 
@@ -36,12 +37,17 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
 
   const goPrevWeek = () => { triggerHaptic(10); setWeekStart((w) => addWeeks(w, -1)); };
   const goNextWeek = () => { triggerHaptic(10); setWeekStart((w) => addWeeks(w, 1)); };
+  // Glisser à gauche = avancer d'une semaine (comme tourner une page vers
+  // l'avant), glisser à droite = reculer — mêmes seuils/verrouillage d'axe
+  // que le swipe de filtres déjà en place ailleurs dans l'app, jamais de
+  // preventDefault() donc aucun risque pour le défilement vertical.
+  const weekSwipe = useHorizontalSwipe(goNextWeek, goPrevWeek);
 
   const openAddForDay = (iso) => { triggerHaptic(15); setAddModalDate(iso); setShowAddModal(true); };
   const openAddFab = () => { triggerHaptic(15); setAddModalDate(null); setShowAddModal(true); };
 
-  const handleAdd = (dateISO, mealType, recipeId) => {
-    onAddMeal(dateISO, mealType, recipeId);
+  const handleAdd = (dateISO, mealType, recipeId, customTitle) => {
+    onAddMeal(dateISO, mealType, recipeId, customTitle);
     setShowAddModal(false);
     setWeekStart(getWeekStart(new Date(dateISO)));
   };
@@ -70,7 +76,7 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
         </div>
       </div>
 
-      <div className="planning-days">
+      <div className="planning-days" {...weekSwipe}>
         {days.map((d) => {
           const iso = toISODate(d);
           const dayEntries = entriesForDay(iso);
@@ -95,14 +101,19 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
               {dayEntries.length > 0 && (
                 <div className="planning-meals">
                   {dayEntries.map((entry) => {
-                    const recipe = recipeById.get(entry.recipeId);
+                    const recipe = entry.recipeId ? recipeById.get(entry.recipeId) : null;
                     const meal = mealTypeInfo(entry.mealType);
+                    // Repas personnalisé (texte libre, pas de fiche recette,
+                    // voir AddMealModal.jsx) : affiche directement le nom
+                    // saisi, jamais "Recette supprimée" (réservé aux repas
+                    // qui référençaient une VRAIE recette depuis effacée).
+                    const label = entry.customTitle || (recipe ? recipe.title : t("planning.recipeDeletedLabel"));
                     return (
                       <div className="planning-meal-row" key={entry.id}>
                         <span className="planning-meal-icon" aria-hidden="true">{meal.icon}</span>
                         <span className="planning-meal-info">
                           <span className="planning-meal-type">{t(`mealTypes.${entry.mealType}`)}</span>
-                          <span className="planning-meal-recipe">{recipe ? recipe.title : t("planning.recipeDeletedLabel")}</span>
+                          <span className="planning-meal-recipe">{label}</span>
                         </span>
                         <button
                           type="button"

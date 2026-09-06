@@ -1127,6 +1127,8 @@ html, body {
   display: inline-flex; align-items: center; gap: 5px;
   cursor: pointer; padding: 4px 0; text-transform: uppercase;
 }
+.link-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.add-custom-meal-btn { margin-bottom: 14px; }
 
 /* --- Import / partage --- */
 .import-panel { margin: 10px 0 6px; display: flex; flex-direction: column; gap: 8px; }
