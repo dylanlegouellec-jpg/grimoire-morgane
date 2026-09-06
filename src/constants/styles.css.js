@@ -358,13 +358,19 @@ html, body {
    avec NavButton/les rangées à appui long) reste visible un instant même
    une fois RecipeOptionsModal ouverte par-dessus — sur demande, désactivé
    spécifiquement pour les cartes de recette (sélecteur à 3 classes,
-   volontairement plus spécifique que .press-anim.press-fired pour gagner
-   quel que soit l'ordre dans la feuille de style, voir la même technique
-   déjà utilisée pour .recipe-picker-modal). Les autres appuis longs de
-   l'app (foyer, navigation...) gardent leur rebond, non concernés par
-   cette demande. */
+   volontairement plus spécifique que .press-anim.press-fired ET que
+   .recipe-card:active pour gagner dans les deux cas, quel que soit l'ordre
+   dans la feuille de style, voir la même technique déjà utilisée pour
+   .recipe-picker-modal). transform: scale(1) explicite (pas juste
+   "animation: none") : sans lui, la carte restait visuellement enfoncée
+   tant que le doigt n'était pas relevé, puisque :active continuait sinon
+   de s'appliquer — ici elle revient à sa taille normale dès l'ouverture de
+   la modale, doigt encore posé ou non. Les autres appuis longs de l'app
+   (foyer, navigation...) gardent leur comportement d'origine (rebond +
+   attente du relâchement), non concernés par cette demande. */
 .press-anim.press-fired.recipe-card {
   animation: none;
+  transform: scale(1);
 }
 /* --- Retour tactile d'appui long (enfoncement puis rebond) -----------
    Piloté en JS par un état "idle" | "pressing" | "fired" (voir
