@@ -95,7 +95,7 @@ export const FRIDGE_CSS = `
   font-size: 0.72rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;
   padding: 2px 9px; border-radius: 999px;
 }
-.fridge-badge-ready { color: #fff; background: #3E7A3E; }
+.fridge-badge-ready { color: #fff; background: var(--forest); }
 .fridge-missing { color: var(--wine); font-size: 0.78rem; }
 .fridge-missing-far { color: var(--ink-soft); font-style: italic; }
 .fridge-show-more { display: block; margin: 10px auto 0; }

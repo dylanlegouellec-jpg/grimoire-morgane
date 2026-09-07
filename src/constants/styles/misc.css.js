@@ -11,7 +11,7 @@ export const MISC_CSS = `
 .flourish-swipe {
   cursor: grab; touch-action: pan-y; user-select: none;
 }
-.flourish-swipe.hint-right { color: #3E7A3E; }
+.flourish-swipe.hint-right { color: var(--forest); }
 .flourish-swipe.hint-left { color: var(--wine); }
 
 /* --- Petits liens texte --- */

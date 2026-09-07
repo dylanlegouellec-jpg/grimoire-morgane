@@ -142,7 +142,7 @@ export const SHOPPING_CSS = `
   position: absolute; inset: 0; display: flex; align-items: center;
   font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.5px; text-transform: uppercase; color: #fff;
 }
-.shopping-item-swipe-hint.hint-check { justify-content: flex-start; padding-left: 16px; background: #3E7A3E; }
+.shopping-item-swipe-hint.hint-check { justify-content: flex-start; padding-left: 16px; background: var(--forest); }
 .shopping-item-swipe-hint.hint-delete { justify-content: flex-end; padding-right: 16px; background: var(--wine); }
 .shopping-item-content {
   position: relative; z-index: 1; background: var(--parchment);
