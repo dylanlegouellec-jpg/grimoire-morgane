@@ -82,7 +82,7 @@ export default function RecipeOptionsModal({ recipe, onClose, onUpdateRecipe, on
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal grimoire-page recipe-options-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}><X size={20} /></button>
+        <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">{recipe.title}</h2>
         <Flourish />
 

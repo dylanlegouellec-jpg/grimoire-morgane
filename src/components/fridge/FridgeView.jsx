@@ -190,6 +190,10 @@ export default function FridgeView({ recipes, pantry, setPantry, basics, search,
                 style={{ animationDelay: `${Math.min(i, 10) * 40}ms` }}
                 key={recipe.id}
                 onClick={() => onOpen(recipe)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(recipe); } }}
+                role="button"
+                tabIndex={0}
+                aria-label={recipe.title}
               >
                 <div className="fridge-thumb"><DishArt recipe={recipe} /></div>
                 <div className="fridge-row-body">

@@ -133,7 +133,7 @@ export default function SecretSettingsModal({
         {...swipe.handlers}
       >
         {activeView === "main" ? (
-          <button className="modal-close" onClick={onClose}><X size={20} /></button>
+          <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         ) : (
           <button className="modal-back" onClick={goToMain}><ChevronLeft size={20} /> {t("settings.back")}</button>
         )}
@@ -151,6 +151,7 @@ export default function SecretSettingsModal({
                     className="profile-card-avatar"
                     onClick={openProfileEditor}
                     title={t("settings.editProfile")}
+                    aria-label={t("settings.editProfile")}
                     {...profileLongPress.handlers}
                   >
                     {avatarUrl ? <img src={avatarUrl} alt="" loading="lazy" decoding="async" /> : <UserCircle2 size={44} />}

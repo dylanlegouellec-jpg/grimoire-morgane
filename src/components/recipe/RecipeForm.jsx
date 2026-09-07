@@ -309,7 +309,7 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
         style={swipe.style}
         {...swipe.handlers}
       >
-        <button type="button" className="modal-close" onClick={attemptClose}><X size={20} /></button>
+        <button type="button" className="modal-close" onClick={attemptClose} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title" {...(isEdit ? {} : secretImport)}>
           {isEdit ? "Modifier la recette" : "Invoquer une recette"}
         </h2>

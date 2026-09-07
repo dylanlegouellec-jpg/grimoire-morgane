@@ -94,8 +94,20 @@ function ShoppingItemRow({ item, checked, onToggle, onAdjust, onDelete, onOpenWh
           </span>
           {!checked && onAdjust && (
             <span className="qty-stepper">
-              <button type="button" onClick={(e) => { e.stopPropagation(); onAdjust(item.id, -1); }}><Minus size={11} /></button>
-              <button type="button" onClick={(e) => { e.stopPropagation(); onAdjust(item.id, 1); }}><Plus size={11} /></button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onAdjust(item.id, -1); }}
+                aria-label={`Diminuer la quantité de ${translateRecipeText(item.name, language)}`}
+              >
+                <Minus size={11} />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onAdjust(item.id, 1); }}
+                aria-label={`Augmenter la quantité de ${translateRecipeText(item.name, language)}`}
+              >
+                <Plus size={11} />
+              </button>
             </span>
           )}
         </div>

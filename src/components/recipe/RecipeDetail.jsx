@@ -137,7 +137,7 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
         }}
       >
         <div className="detail-drag-handle" aria-hidden="true" />
-        <button className="modal-close" onClick={onClose}><X size={20} /></button>
+        <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
 
         <div className="detail-columns">
           <div className="detail-info-col">
@@ -161,9 +161,9 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
             <div className="portions-adjuster">
               <span><Users size={14} /> Portions</span>
               <div className="portions-stepper">
-                <button type="button" onClick={() => { triggerHaptic(10); setServings((s) => Math.max(1, Number(s) - 1)); }}><Minus size={14} /></button>
+                <button type="button" onClick={() => { triggerHaptic(10); setServings((s) => Math.max(1, Number(s) - 1)); }} aria-label="Diminuer le nombre de portions"><Minus size={14} /></button>
                 <span>{servings}</span>
-                <button type="button" onClick={() => { triggerHaptic(10); setServings((s) => Number(s) + 1); }}><Plus size={14} /></button>
+                <button type="button" onClick={() => { triggerHaptic(10); setServings((s) => Number(s) + 1); }} aria-label="Augmenter le nombre de portions"><Plus size={14} /></button>
               </div>
             </div>
             <div className="detail-actions">

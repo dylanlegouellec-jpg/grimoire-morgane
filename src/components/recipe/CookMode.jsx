@@ -70,7 +70,7 @@ export default function CookMode({ recipe, onClose, pressDuration = 750 }) {
   return (
     <div className="cookmode-backdrop">
       <div className="cookmode cookmode-list">
-        <button className="modal-close" onClick={onClose}><X size={22} /></button>
+        <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={22} /></button>
         <div className="cookmode-progress">{totalDone} / {totalSteps} étapes terminées</div>
         <h2 className="dropcap-title">{recipe.title}</h2>
 

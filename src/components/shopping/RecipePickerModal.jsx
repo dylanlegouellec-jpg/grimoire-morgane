@@ -44,7 +44,7 @@ export default function RecipePickerModal({ recipes, onGenerate, onClose }) {
             bouton "Générer la liste" est son dernier enfant, en sticky
             flottant (voir plus bas), pas un pied de page séparé. */}
         <div className="recipe-picker-header">
-          <button className="modal-close" onClick={onClose}><X size={20} /></button>
+          <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
           <h2 className="dropcap-title">Générer à partir de recettes</h2>
           <Flourish />
 

@@ -19,7 +19,7 @@ export default function ListsManagerModal({ lists, activeListId, onOpen, onCreat
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal grimoire-page" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}><X size={20} /></button>
+        <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">Mes listes de courses</h2>
         <Flourish />
         {lists.length === 0 ? (

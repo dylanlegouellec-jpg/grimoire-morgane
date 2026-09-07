@@ -68,12 +68,12 @@ export default function ProfileEditor({ user, profile, onClose, onSaved, showToa
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal grimoire-page" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}><X size={20} /></button>
+        <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">Modifier le profil</h2>
         <Flourish />
 
         <div className="profile-editor-row" style={{ marginBottom: 18 }}>
-          <button type="button" className="avatar-picker" onClick={handleAvatarClick} disabled={uploading} title="Changer la photo">
+          <button type="button" className="avatar-picker" onClick={handleAvatarClick} disabled={uploading} title="Changer la photo" aria-label="Changer la photo">
             {avatarUrl ? <img src={avatarUrl} alt="" className="avatar-img" loading="lazy" decoding="async" /> : <UserCircle2 size={26} />}
           </button>
           <p className="hint" style={{ fontStyle: "normal", margin: 0 }}>

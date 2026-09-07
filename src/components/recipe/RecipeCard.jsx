@@ -47,6 +47,19 @@ function RecipeCard({
     onOpen(recipe);
   };
 
+  // La carte est un <div> (pas un <button>) pour pouvoir contenir le
+  // bouton favori sans imbriquer un <button> dans un autre, invalide en
+  // HTML — mais un <div onClick> seul n'est ni focusable au clavier, ni
+  // annoncé comme un contrôle par un lecteur d'écran. role="button" +
+  // tabIndex + ce gestionnaire clavier (Entrée/Espace, comportement natif
+  // d'un vrai bouton) comblent les deux à la main.
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleClick();
+    }
+  };
+
   // Relance le fondu/zoom d'entrée sur TOUTE carte visible à chaque
   // changement de filtre (Tout/Salé/Sucré/Favoris) — pas seulement celles
   // qui viennent individuellement de passer de masquée à visible (sinon,
@@ -89,6 +102,10 @@ function RecipeCard({
         // à chaque changement de filtre.
         style={hidden ? { display: "none" } : { animationDelay: `${enterDelay}ms` }}
         onClick={handleClick}
+        onKeyDown={handleKeyDown}
+        role="button"
+        tabIndex={hidden ? -1 : 0}
+        aria-label={translateRecipeText(recipe.title, language)}
         {...cardLongPress.handlers}
       >
         <div className="illus-wrap">
@@ -101,6 +118,8 @@ function RecipeCard({
               onToggleFavorite(recipe.id);
               triggerHaptic(15);
             }}
+            aria-label={recipe.favorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+            aria-pressed={recipe.favorite}
           >
             <Heart size={16} fill={recipe.favorite ? "currentColor" : "none"} />
           </button>

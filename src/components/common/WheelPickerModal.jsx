@@ -31,7 +31,7 @@ export default function WheelPickerModal({ title, hint, columns, onSave, onClose
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal grimoire-page qty-wheel-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}><X size={20} /></button>
+        <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">{title}</h2>
         <Flourish />
         {hint && <p className="hint" style={{ fontStyle: "normal" }}>{hint}</p>}

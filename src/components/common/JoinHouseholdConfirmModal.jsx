@@ -39,7 +39,7 @@ export default function JoinHouseholdConfirmModal({ householdId, onRequestJoin, 
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal grimoire-page" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}><X size={20} /></button>
+        <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">{t("household.joinInviteTitle")}</h2>
         <Flourish />
         <p className="hint" style={{ fontStyle: "normal" }}>

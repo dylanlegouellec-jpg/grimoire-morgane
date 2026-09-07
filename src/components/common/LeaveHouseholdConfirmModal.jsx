@@ -35,7 +35,7 @@ export default function LeaveHouseholdConfirmModal({ householdName, onConfirm, o
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal grimoire-page" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}><X size={20} /></button>
+        <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">{t("household.leaveTitle")}</h2>
         <Flourish />
         <p className="hint recipe-options-error" style={{ display: "flex", alignItems: "center", gap: 8, fontStyle: "normal" }}>

@@ -54,7 +54,7 @@ export default function RecipeLinkImportModal({ onClose, onCreateRecipe }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal grimoire-page form-clean" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}><X size={20} /></button>
+        <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">Importer depuis un lien</h2>
         <Flourish />
 

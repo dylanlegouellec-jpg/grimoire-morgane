@@ -218,7 +218,7 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
         }}
       >
         <div className="modal grimoire-page" onClick={(e) => e.stopPropagation()}>
-          <button className="modal-close" onClick={onClose}><X size={20} /></button>
+          <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
           <h2 className="dropcap-title">{t("share.title", { title: recipe.title })}</h2>
           <Flourish />
 

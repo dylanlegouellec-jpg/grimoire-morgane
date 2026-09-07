@@ -76,7 +76,7 @@ export default function AddMealModal({ recipes, initialDate, onAdd, onClose }) {
             <ChevronLeft size={20} /> {backLabels[step]}
           </button>
         ) : (
-          <button className="modal-close" onClick={onClose}><X size={20} /></button>
+          <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         )}
         <h2 className="dropcap-title" style={!isFirstStep ? { marginTop: 34 } : undefined}>
           {titles[step]}

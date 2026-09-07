@@ -255,6 +255,7 @@ export default function AppShell({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t("app.searchRecipePlaceholder")}
+              aria-label={t("app.searchRecipePlaceholder")}
             />
           </div>
           <div className="filter-bar">
@@ -284,6 +285,7 @@ export default function AppShell({
             value={fridgeSearch}
             onChange={(e) => setFridgeSearch(e.target.value)}
             placeholder={t("app.searchFridgePlaceholder")}
+            aria-label={t("app.searchFridgePlaceholder")}
           />
         </div>
       )}

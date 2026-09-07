@@ -108,8 +108,9 @@ export default function ShoppingView({
           onChange={(e) => setManualInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addManual(); } }}
           placeholder={t("shopping.addPlaceholder")}
+          aria-label={t("shopping.addPlaceholder")}
         />
-        <button type="button" onClick={addManual}><Plus size={16} /></button>
+        <button type="button" onClick={addManual} aria-label={t("shopping.addPlaceholder")}><Plus size={16} /></button>
       </div>
 
       <div className="recipe-picker-trigger">

@@ -13,7 +13,7 @@ export default function UnsavedChangesModal({ onSave, onDiscard, onCancel }) {
   return (
     <div className="modal-backdrop" onClick={onCancel}>
       <div className="modal grimoire-page" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onCancel}><X size={20} /></button>
+        <button className="modal-close" onClick={onCancel} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">Modifications non enregistrées</h2>
         <Flourish />
         <p className="hint" style={{ fontStyle: "normal" }}>
