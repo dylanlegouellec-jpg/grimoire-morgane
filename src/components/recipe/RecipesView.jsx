@@ -62,6 +62,32 @@ export default function RecipesView({
 
   const hasVisible = visibleIds.size > 0;
 
+  // Compteur incrémenté à chaque VRAI changement de filtre/favoris (jamais
+  // à la recherche texte, ni au premier rendu) — passé à chaque carte pour
+  // qu'elle rejoue son animation d'entrée dès que ce compteur bouge, tant
+  // qu'elle est visible après le changement. Avant, seules les cartes qui
+  // passaient individuellement de masquée à visible rejouaient l'entrée —
+  // ce qui semblait correct en théorie ("ne rejouer l'animation que sur
+  // les éléments concernés"), mais donnait l'impression d'un bug très
+  // concret : passer de "Tout" à "Sucré" ne RÉVÈLE aucune carte sucrée
+  // (elles étaient déjà visibles sous "Tout", donc jamais masquée->visible)
+  // — résultat, aucune animation ne se jouait du tout sur ce changement de
+  // filtre précis, alors que la grille se réorganisait quand même sous les
+  // yeux. Rejouer l'entrée de TOUTES les cartes visibles à chaque
+  // changement de filtre retrouve la cascade attendue à chaque bascule,
+  // pas seulement quand une carte apparaît individuellement — sans
+  // réintroduire le problème d'origine (démontage/rechargement d'image),
+  // puisque c'est toujours le même mécanisme sans démontage (voir
+  // RecipeCard.jsx) qui s'en charge.
+  const filterGenerationRef = useRef(0);
+  const prevFilterKeyRef = useRef(`${filter}|${favoritesOnly}`);
+  const filterKey = `${filter}|${favoritesOnly}`;
+  if (filterKey !== prevFilterKeyRef.current) {
+    prevFilterKeyRef.current = filterKey;
+    filterGenerationRef.current += 1;
+  }
+  const filterGeneration = filterGenerationRef.current;
+
   // Remonte en haut de page à chaque changement de filtre catégorie/favoris
   // (pas à la recherche texte, ni au tout premier montage). Toutes les
   // recettes restent montées en permanence désormais (voir visibleIds
@@ -99,6 +125,7 @@ export default function RecipesView({
             key={r.id}
             recipe={r}
             hidden={!visibleIds.has(r.id)}
+            filterGeneration={filterGeneration}
             onOpen={onOpen}
             onToggleFavorite={onToggleFavorite}
             onRequestDelete={onRequestDelete}

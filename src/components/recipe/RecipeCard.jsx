@@ -13,6 +13,7 @@ import { isGuestMode, debugLog } from "../../utils/guestDebug";
 function RecipeCard({
   recipe,
   hidden = false,
+  filterGeneration = 0,
   onOpen,
   onToggleFavorite,
   onRequestDelete,
@@ -47,40 +48,44 @@ function RecipeCard({
     onOpen(recipe);
   };
 
-  // Relance le fondu/zoom d'entrée UNIQUEMENT sur une carte qui redevient
-  // visible après avoir été masquée par un changement de filtre (Tout/
-  // Salé/Sucré/Favoris) — jamais sur celles déjà affichées qui le restent
-  // ("ne rejouer l'animation que sur les éléments concernés"). La carte
+  // Relance le fondu/zoom d'entrée sur TOUTE carte encore visible après un
+  // changement de filtre (Tout/Salé/Sucré/Favoris) — pas seulement celles
+  // qui viennent individuellement de passer de masquée à visible. La carte
   // n'est toujours pas démontée/remontée pour ça (voir `hidden` ->
   // display:none plus bas) : son <img> ne bouge jamais.
   //
-  // Tentative précédente (retirer puis remettre la classe .card-enter, y
-  // compris regroupée en un seul recalcul de style pour tout le lot) :
-  // encore trop lente en pratique sur un filtre qui révèle beaucoup de
-  // cartes d'un coup (ex. Sucré -> Salé) — un recalcul de mise en page
-  // forcé, même unique, reste coûteux si la page contient beaucoup
-  // d'éléments (TOUTES les recettes sont montées en permanence désormais,
-  // pas seulement celles du filtre actif). On alterne maintenant entre
-  // deux classes strictement identiques visuellement (.card-enter /
-  // .card-enter-alt, voir recipeCards.css.js) à chaque réapparition : le
-  // nom de classe change réellement d'une frame à l'autre, ce qui suffit
-  // au navigateur pour démarrer une nouvelle instance d'animation SANS
-  // qu'aucune lecture de mise en page forcée ne soit nécessaire — donc
-  // aucun coût qui grandit avec le nombre de cartes révélées ensemble.
+  // Version précédente : ne rejouait l'entrée QUE sur les cartes passant
+  // individuellement de hidden=true à hidden=false ("ne rejouer l'animation
+  // que sur les éléments concernés" — la consigne d'origine). Correct en
+  // théorie, mais avec un angle mort concret : passer de "Tout" à "Sucré"
+  // ne fait JAMAIS passer une carte sucrée de masquée à visible (elle était
+  // déjà visible sous "Tout") — donc aucune carte ne rejouait son entrée
+  // sur ce changement de filtre précis, alors que la grille se réorganise
+  // quand même. Résultat perçu : "aucune animation" sur Tout -> Sucré,
+  // rapporté comme un bug à part entière. `filterGeneration` (compteur
+  // fourni par RecipesView, incrémenté à chaque changement de filtre/
+  // favoris réel — jamais à la recherche texte) redonne la cascade
+  // attendue à CHAQUE bascule de filtre, tant que la carte reste/redevient
+  // visible, sans rien changer au reste (toujours aucun démontage, toujours
+  // aucun rechargement d'image).
   //
-  // La bascule elle-même se fait pendant le rendu (pas dans un effet) :
-  // c'est le mécanisme React recommandé pour "réagir" à un changement de
-  // prop sans un aller-retour de rendu supplémentaire (qui laisserait
-  // passer une frame sans animation avant de la corriger).
+  // Le mécanisme de relance lui-même est inchangé : deux classes
+  // strictement identiques visuellement (.card-enter / .card-enter-alt,
+  // voir recipeCards.css.js) qu'on alterne à chaque déclenchement — le nom
+  // de classe change réellement d'une frame à l'autre, ce qui suffit au
+  // navigateur pour démarrer une nouvelle instance d'animation SANS lecture
+  // de mise en page forcée (donc un coût qui ne grandit pas avec le nombre
+  // de cartes concernées, vérifié sur 20+ cartes). La bascule se fait
+  // pendant le rendu (pas dans un effet), le mécanisme React recommandé
+  // pour "réagir" à un changement de prop sans laisser passer une frame
+  // sans animation avant de la corriger.
   const [enterVariant, setEnterVariant] = useState(0);
-  const [prevHidden, setPrevHidden] = useState(hidden);
-  if (hidden !== prevHidden) {
-    setPrevHidden(hidden);
-    if (prevHidden && !hidden) {
+  const [prevGeneration, setPrevGeneration] = useState(filterGeneration);
+  if (filterGeneration !== prevGeneration) {
+    setPrevGeneration(filterGeneration);
+    if (!hidden) {
       setEnterVariant((v) => (v === 0 ? 1 : 0));
-      if (isGuestMode()) debugLog(`[${recipe.title}] hidden->visible, bascule variante`);
-    } else if (isGuestMode()) {
-      debugLog(`[${recipe.title}] hidden: ${prevHidden}->${hidden}`);
+      if (isGuestMode()) debugLog(`[${recipe.title}] filtre changé (#${filterGeneration}), bascule variante`);
     }
   }
   const enterClass = enterVariant === 0 ? "card-enter" : "card-enter-alt";
