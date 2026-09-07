@@ -47,41 +47,21 @@ const ViewLoadingFallback = () => (
 /*  courses, synchro) ; ne fait plus aucun appel Supabase directement — */
 /*  c'était le rôle de GrimoireDeMorgane.jsx / des hooks data.          */
 /* ------------------------------------------------------------------ */
+// `settingsApi`/`householdApi`/`syncApi` regroupent (côté GrimoireDeMorgane.jsx)
+// des lots de props apparentées qui, prises une par une, faisaient grimper
+// AppShell à 36 props distinctes — le même principe déjà appliqué à
+// recipesApi/pantryApi/mealPlanApi/shoppingApi, juste étendu au reste.
+// Aucun changement de comportement : chaque groupe est déstructuré ci-dessous
+// sous EXACTEMENT les mêmes noms qu'avant (theme, user, onSwitchHousehold...),
+// donc tout le reste du composant — state, gestes, JSX — n'a pas bougé.
 export default function AppShell({
   recipesApi,
   pantryApi,
   mealPlanApi,
   shoppingApi,
-  offlineQueueSize,
-  connectionStatus,
-  onRetryConnection,
-  pendingImport,
-  setPendingImport,
-  pendingHouseholdJoin,
-  setPendingHouseholdJoin,
-  theme,
-  setTheme,
-  pressDuration,
-  setPressDuration,
-  showNutriscore,
-  setShowNutriscore,
-  textSize,
-  setTextSize,
-  language,
-  setLanguage,
-  user,
-  householdId,
-  households,
-  onSwitchHousehold,
-  onCreateHousehold,
-  onRenameHousehold,
-  onDeleteHousehold,
-  onRequestJoinHousehold,
-  onGetPendingHouseholdRequests,
-  onApproveHouseholdMember,
-  onRejectHouseholdMember,
-  onRefreshHouseholds,
-  signOut,
+  settingsApi,
+  householdApi,
+  syncApi,
   toast,
   showToast,
 }) {
@@ -104,6 +84,42 @@ export default function AppShell({
     generateShoppingList,
     resetActiveList,
   } = shoppingApi;
+  const {
+    theme,
+    setTheme,
+    pressDuration,
+    setPressDuration,
+    showNutriscore,
+    setShowNutriscore,
+    textSize,
+    setTextSize,
+    language,
+    setLanguage,
+  } = settingsApi;
+  const {
+    user,
+    householdId,
+    households,
+    onSwitchHousehold,
+    onCreateHousehold,
+    onRenameHousehold,
+    onDeleteHousehold,
+    onRequestJoinHousehold,
+    onGetPendingHouseholdRequests,
+    onApproveHouseholdMember,
+    onRejectHouseholdMember,
+    onRefreshHouseholds,
+    signOut,
+  } = householdApi;
+  const {
+    offlineQueueSize,
+    connectionStatus,
+    onRetryConnection,
+    pendingImport,
+    setPendingImport,
+    pendingHouseholdJoin,
+    setPendingHouseholdJoin,
+  } = syncApi;
 
   const [tab, setTab] = useState("recettes");
   const [filter, setFilter] = useState("tout");

@@ -287,6 +287,52 @@ export default function GrimoireDeMorgane() {
     }
   }
 
+  // Regroupées ici pour qu'AppShell.jsx n'ait plus à porter chacune de ces
+  // valeurs comme prop séparée (36 props distinctes avant ce regroupement,
+  // voir l'audit "God Component") — même principe que recipesApi/pantryApi/
+  // mealPlanApi/shoppingApi ci-dessus, juste étendu au reste. Ce sont de
+  // simples objets recréés à chaque rendu (pas de useMemo) : AppShell est
+  // le seul consommateur, il les déstructure immédiatement en variables
+  // locales, donc une nouvelle référence d'objet à chaque rendu de
+  // GrimoireDeMorgane ne change rien à ce qui est réellement comparé plus
+  // bas dans l'arbre (les valeurs primitives qu'ils contiennent).
+  const settingsApi = {
+    theme,
+    setTheme,
+    pressDuration,
+    setPressDuration,
+    showNutriscore,
+    setShowNutriscore,
+    textSize,
+    setTextSize,
+    language,
+    setLanguage,
+  };
+  const householdApi = {
+    user,
+    householdId,
+    households,
+    onSwitchHousehold: switchHousehold,
+    onCreateHousehold: createHousehold,
+    onRenameHousehold: renameHousehold,
+    onDeleteHousehold: deleteHousehold,
+    onRequestJoinHousehold: requestJoinHousehold,
+    onGetPendingHouseholdRequests: getPendingHouseholdRequests,
+    onApproveHouseholdMember: approveHouseholdMember,
+    onRejectHouseholdMember: rejectHouseholdMember,
+    onRefreshHouseholds: refreshHouseholds,
+    signOut,
+  };
+  const syncApi = {
+    offlineQueueSize: sync.offlineQueueSize,
+    connectionStatus,
+    onRetryConnection: recheckConnection,
+    pendingImport: sync.pendingImport,
+    setPendingImport: sync.setPendingImport,
+    pendingHouseholdJoin: sync.pendingHouseholdJoin,
+    setPendingHouseholdJoin: sync.setPendingHouseholdJoin,
+  };
+
   return (
     <LanguageProvider language={language}>
       <AppShell
@@ -294,36 +340,9 @@ export default function GrimoireDeMorgane() {
         pantryApi={pantryApi}
         mealPlanApi={mealPlanApi}
         shoppingApi={shoppingApi}
-        offlineQueueSize={sync.offlineQueueSize}
-        connectionStatus={connectionStatus}
-        onRetryConnection={recheckConnection}
-        pendingImport={sync.pendingImport}
-        setPendingImport={sync.setPendingImport}
-        pendingHouseholdJoin={sync.pendingHouseholdJoin}
-        setPendingHouseholdJoin={sync.setPendingHouseholdJoin}
-        theme={theme}
-        setTheme={setTheme}
-        pressDuration={pressDuration}
-        setPressDuration={setPressDuration}
-        showNutriscore={showNutriscore}
-        setShowNutriscore={setShowNutriscore}
-        textSize={textSize}
-        setTextSize={setTextSize}
-        language={language}
-        setLanguage={setLanguage}
-        user={user}
-        householdId={householdId}
-        households={households}
-        onSwitchHousehold={switchHousehold}
-        onCreateHousehold={createHousehold}
-        onRenameHousehold={renameHousehold}
-        onDeleteHousehold={deleteHousehold}
-        onRequestJoinHousehold={requestJoinHousehold}
-        onGetPendingHouseholdRequests={getPendingHouseholdRequests}
-        onApproveHouseholdMember={approveHouseholdMember}
-        onRejectHouseholdMember={rejectHouseholdMember}
-        onRefreshHouseholds={refreshHouseholds}
-        signOut={signOut}
+        settingsApi={settingsApi}
+        householdApi={householdApi}
+        syncApi={syncApi}
         toast={toast}
         showToast={showToast}
       />
