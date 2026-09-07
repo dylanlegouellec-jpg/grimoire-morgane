@@ -2,7 +2,6 @@ import { useLayoutEffect, useMemo, useRef } from "react";
 import { Plus } from "lucide-react";
 import { normalize, triggerHaptic } from "../../utils/helpers";
 import { useTranslation } from "../../contexts/LanguageContext";
-import { isGuestMode, debugLog } from "../../utils/guestDebug";
 import RecipeCard from "./RecipeCard";
 
 export default function RecipesView({
@@ -45,8 +44,18 @@ export default function RecipesView({
   // carte montée en permanence élimine ce rechargement visuel : basculer
   // entre les filtres ne fait plus qu'afficher/masquer des cartes déjà
   // prêtes, jamais recréer leurs images.
-  const visibleIds = useMemo(() => {
-    const set = new Set();
+  // `visibleIds` (correspondance filtre/recherche) ET `visibleIndexById`
+  // (position de chaque recette DANS la liste effectivement visible, pas
+  // dans la liste complète) calculés dans le même passage — ce second index
+  // sert au délai d'entrée échelonné ci-dessous : `Math.min(i, 10) * 45`
+  // sur la position dans le tableau COMPLET donnait un délai souvent
+  // identique (plafonné) pour toutes les cartes d'un petit filtre, cassant
+  // visuellement la cascade. Basé sur la position dans le sous-ensemble
+  // visible, chaque filtre retrouve son propre échelonnement 0,50,100...ms
+  // quel que soit son effectif.
+  const { visibleIds, visibleIndexById } = useMemo(() => {
+    const ids = new Set();
+    const indexById = new Map();
     sorted.forEach((r) => {
       if (filter !== "tout" && normalize(r.category) !== filter) return;
       if (favoritesOnly && !r.favorite) return;
@@ -55,9 +64,10 @@ export default function RecipesView({
         const inIngredients = r.ingredients.some((ing) => !ing.isSection && ing.name.toLowerCase().includes(q));
         if (!inTitle && !inIngredients) return;
       }
-      set.add(r.id);
+      indexById.set(r.id, ids.size);
+      ids.add(r.id);
     });
-    return set;
+    return { visibleIds: ids, visibleIndexById: indexById };
   }, [sorted, filter, favoritesOnly, q]);
 
   const hasVisible = visibleIds.size > 0;
@@ -103,15 +113,11 @@ export default function RecipesView({
   // déjà là, juste hors de vue.
   const mountedRef = useRef(false);
   useLayoutEffect(() => {
-    if (isGuestMode()) {
-      debugLog(`RecipesView render: filter=${filter} favoris=${favoritesOnly} visibles=${visibleIds.size}/${sorted.length} docHeight=${document.documentElement.scrollHeight} scrollY=${window.scrollY}`);
-    }
     if (!mountedRef.current) {
       mountedRef.current = true;
       return;
     }
     window.scrollTo(0, 0);
-    if (isGuestMode()) debugLog(`scrollTo(0,0) exécuté, nouvelle docHeight=${document.documentElement.scrollHeight}`);
   }, [filter, favoritesOnly]);
 
   return (
@@ -120,7 +126,7 @@ export default function RecipesView({
         <p className="hint" style={{ textAlign: "center", marginTop: 30 }}>{t("recipes.noMatch")}</p>
       )}
       <div className="recipes-grid" style={hasVisible ? undefined : { display: "none" }}>
-        {sorted.map((r, i) => (
+        {sorted.map((r) => (
           <RecipeCard
             key={r.id}
             recipe={r}
@@ -130,7 +136,7 @@ export default function RecipesView({
             onToggleFavorite={onToggleFavorite}
             onRequestDelete={onRequestDelete}
             onUpdateRecipe={onUpdateRecipe}
-            enterDelay={Math.min(i, 10) * 45}
+            enterDelay={(visibleIndexById.get(r.id) || 0) * 50}
             pressDuration={pressDuration}
             showNutriscore={showNutriscore}
             householdId={householdId}

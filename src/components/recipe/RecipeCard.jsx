@@ -8,7 +8,6 @@ import { translateRecipeText } from "../../utils/recipeTranslation";
 import useLongPress from "../../hooks/useLongPress";
 import DishArt from "../art/DishArt";
 import RecipeOptionsModal from "../common/RecipeOptionsModal";
-import { isGuestMode, debugLog } from "../../utils/guestDebug";
 
 function RecipeCard({
   recipe,
@@ -48,45 +47,34 @@ function RecipeCard({
     onOpen(recipe);
   };
 
-  // Relance le fondu/zoom d'entrée sur TOUTE carte encore visible après un
+  // Relance le fondu/zoom d'entrée sur TOUTE carte visible à chaque
   // changement de filtre (Tout/Salé/Sucré/Favoris) — pas seulement celles
-  // qui viennent individuellement de passer de masquée à visible. La carte
-  // n'est toujours pas démontée/remontée pour ça (voir `hidden` ->
-  // display:none plus bas) : son <img> ne bouge jamais.
+  // qui viennent individuellement de passer de masquée à visible (sinon,
+  // passer de "Tout" à "Sucré" ne révèle aucune carte sucrée au sens
+  // strict — elle était déjà visible sous "Tout" — et rien n'animait sur ce
+  // changement précis). `filterGeneration` (fourni par RecipesView,
+  // incrémenté à chaque changement de filtre/favoris réel — jamais à la
+  // recherche texte) porte ce déclenchement. La condition `!hidden` évite
+  // tout travail (état, comparaison) pour les cartes actuellement masquées :
+  // aucune raison de les toucher tant qu'elles ne sont pas affichées.
   //
-  // Version précédente : ne rejouait l'entrée QUE sur les cartes passant
-  // individuellement de hidden=true à hidden=false ("ne rejouer l'animation
-  // que sur les éléments concernés" — la consigne d'origine). Correct en
-  // théorie, mais avec un angle mort concret : passer de "Tout" à "Sucré"
-  // ne fait JAMAIS passer une carte sucrée de masquée à visible (elle était
-  // déjà visible sous "Tout") — donc aucune carte ne rejouait son entrée
-  // sur ce changement de filtre précis, alors que la grille se réorganise
-  // quand même. Résultat perçu : "aucune animation" sur Tout -> Sucré,
-  // rapporté comme un bug à part entière. `filterGeneration` (compteur
-  // fourni par RecipesView, incrémenté à chaque changement de filtre/
-  // favoris réel — jamais à la recherche texte) redonne la cascade
-  // attendue à CHAQUE bascule de filtre, tant que la carte reste/redevient
-  // visible, sans rien changer au reste (toujours aucun démontage, toujours
-  // aucun rechargement d'image).
-  //
-  // Le mécanisme de relance lui-même est inchangé : deux classes
-  // strictement identiques visuellement (.card-enter / .card-enter-alt,
-  // voir recipeCards.css.js) qu'on alterne à chaque déclenchement — le nom
-  // de classe change réellement d'une frame à l'autre, ce qui suffit au
+  // La carte n'est jamais démontée/remontée pour ça (voir `hidden` ->
+  // display:none plus bas) : son <img> ne bouge jamais, donc jamais
+  // rechargée. Le mécanisme de relance : deux classes strictement
+  // identiques visuellement (.card-enter / .card-enter-alt, voir
+  // recipeCards.css.js) qu'on alterne à chaque déclenchement — le nom de
+  // classe change réellement d'une frame à l'autre, ce qui suffit au
   // navigateur pour démarrer une nouvelle instance d'animation SANS lecture
-  // de mise en page forcée (donc un coût qui ne grandit pas avec le nombre
-  // de cartes concernées, vérifié sur 20+ cartes). La bascule se fait
-  // pendant le rendu (pas dans un effet), le mécanisme React recommandé
-  // pour "réagir" à un changement de prop sans laisser passer une frame
-  // sans animation avant de la corriger.
+  // de mise en page forcée (coût qui ne grandit donc pas avec le nombre de
+  // cartes concernées — vérifié sur 20+ cartes en conditions réelles). La
+  // bascule se fait pendant le rendu (pas dans un effet), le mécanisme
+  // React recommandé pour "réagir" à un changement de prop sans laisser
+  // passer une frame sans animation avant de la corriger.
   const [enterVariant, setEnterVariant] = useState(0);
   const [prevGeneration, setPrevGeneration] = useState(filterGeneration);
-  if (filterGeneration !== prevGeneration) {
+  if (!hidden && filterGeneration !== prevGeneration) {
     setPrevGeneration(filterGeneration);
-    if (!hidden) {
-      setEnterVariant((v) => (v === 0 ? 1 : 0));
-      if (isGuestMode()) debugLog(`[${recipe.title}] filtre changé (#${filterGeneration}), bascule variante`);
-    }
+    setEnterVariant((v) => (v === 0 ? 1 : 0));
   }
   const enterClass = enterVariant === 0 ? "card-enter" : "card-enter-alt";
 
@@ -98,11 +86,9 @@ function RecipeCard({
         // plus au filtre actif — voir RecipesView.jsx : elle reste montée,
         // son <img> déjà chargée n'est jamais redémontée/redécodée. Le
         // fondu/zoom d'entrée, lui, est relancé plus haut (voir enterClass)
-        // à chaque réapparition.
+        // à chaque changement de filtre.
         style={hidden ? { display: "none" } : { animationDelay: `${enterDelay}ms` }}
         onClick={handleClick}
-        onAnimationStart={isGuestMode() ? (e) => debugLog(`[${recipe.title}] animationstart ${e.animationName}`) : undefined}
-        onAnimationEnd={isGuestMode() ? (e) => debugLog(`[${recipe.title}] animationend ${e.animationName}`) : undefined}
         {...cardLongPress.handlers}
       >
         <div className="illus-wrap">

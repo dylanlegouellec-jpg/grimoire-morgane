@@ -1,6 +1,5 @@
 import { useRef, useState } from "react";
 import { ILLUSTRATIONS, resolveIllustrationKey } from "./illustrations";
-import { isGuestMode, debugLog } from "../../utils/guestDebug";
 
 let dishArtCounter = 0;
 
@@ -79,7 +78,6 @@ export default function DishArt({ recipe }) {
           decoding="async"
           crossOrigin="anonymous"
           onError={handleImgError}
-          onLoad={isGuestMode() ? () => debugLog(`[${recipe.title}] <img> onLoad (décodage terminé)`) : undefined}
         />
         <div className="illus-photo-guard" aria-hidden="true" />
       </div>
