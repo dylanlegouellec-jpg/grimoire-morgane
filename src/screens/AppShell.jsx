@@ -8,6 +8,7 @@ import { getCachedProfile, getProfile } from "../utils/profile";
 import { useTranslation } from "../contexts/LanguageContext";
 
 import { NavButton } from "../components/common";
+import ErrorBoundary from "../components/common/ErrorBoundary";
 import { RecipesView, RecipeForm, RecipeDetail, CookMode } from "../components/recipe";
 
 // Chargés à la demande (React.lazy), importés directement depuis leur
@@ -288,6 +289,12 @@ export default function AppShell({
       )}
 
       <main className="app-content" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+        {/* key={tab} : une erreur dans un onglet ne doit emporter que son
+            propre contenu (en-tête/filtres/nav basse restent utilisables) —
+            et changer d'onglet remonte le filet (nouvelle `key`), donc
+            réinitialise l'erreur automatiquement plutôt que de rester
+            bloqué sur le message d'erreur en revenant sur cet onglet. */}
+        <ErrorBoundary compact key={tab}>
         {tab === "recettes" && (
           <RecipesView
             recipes={recipes}
@@ -353,6 +360,7 @@ export default function AppShell({
             />
           </Suspense>
         )}
+        </ErrorBoundary>
       </main>
 
       <nav className="bottom-nav">
