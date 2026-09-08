@@ -25,14 +25,19 @@
          rendait entièrement redondante. Retirée : chaque élément gère
          désormais son propre touch-action (voir .recipe-card notamment)
          sans restriction globale imposée par la racine.
-         overscroll-behavior-y aligné sur "contain" (pas "none") pour rester
-         cohérent avec tous les autres conteneurs défilants de l'app (voir
-         styles.css.js) — bloque le rebond natif sans rien désactiver de plus
-         agressif que le reste de l'app. */
+         overscroll-behavior-y: contain, posé ici un temps pour rester
+         cohérent avec les autres conteneurs défilants de l'app, RETIRÉ : en
+         mode portrait, c'est le document lui-même (html/body) qui défile —
+         aucun conteneur borné à proximité (voir .grimoire-app, overflow-y:
+         visible volontaire, theme.css.js). "contain" semblait alors
+         provoquer un rebond élastique répété au geste (tactile/pavé tactile)
+         au lieu d'un simple défilement, sur Chrome desktop comme d'après les
+         essais de l'utilisateur — la valeur par défaut ("auto") laisse le
+         rebond natif se dérouler normalement sans le contenir artificiellement
+         à la racine du document. */
       html, body {
         user-select: none;
         -webkit-user-select: none;
-        overscroll-behavior-y: contain;
         min-height: 100dvh;
       }
     </style>
