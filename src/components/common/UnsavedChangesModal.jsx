@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
+import useFocusTrap from "../../hooks/useFocusTrap";
 
 /* ------------------------------------------------------------------ */
 /*  MODIFICATIONS NON ENREGISTRÉES — 3 choix, jamais de fermeture         */
@@ -10,9 +11,10 @@ import Seal from "./Seal";
 /*  ce même fichier) : l'empiler stoppe net le fond, jusqu'à un choix.         */
 /* ------------------------------------------------------------------ */
 export default function UnsavedChangesModal({ onSave, onDiscard, onCancel }) {
+  const modalRef = useFocusTrap(onCancel);
   return (
     <div className="modal-backdrop" onClick={onCancel}>
-      <div className="modal grimoire-page" onClick={(e) => e.stopPropagation()}>
+      <div className="modal grimoire-page" ref={modalRef} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={onCancel} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">Modifications non enregistrées</h2>
         <Flourish />

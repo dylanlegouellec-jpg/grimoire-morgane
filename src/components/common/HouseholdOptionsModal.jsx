@@ -2,6 +2,7 @@ import { useState } from "react";
 import { AlertTriangle, Check, Trash2, X } from "lucide-react";
 import { triggerHaptic } from "../../utils/helpers";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
+import useFocusTrap from "../../hooks/useFocusTrap";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
 
@@ -16,6 +17,7 @@ export default function HouseholdOptionsModal({ household, onClose, onRename, on
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState(null);
+  const modalRef = useFocusTrap(onClose);
 
   useBodyScrollLock(true);
 
@@ -51,7 +53,7 @@ export default function HouseholdOptionsModal({ household, onClose, onRename, on
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal grimoire-page recipe-options-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal grimoire-page recipe-options-modal" ref={modalRef} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">{household.name}</h2>
         <Flourish />

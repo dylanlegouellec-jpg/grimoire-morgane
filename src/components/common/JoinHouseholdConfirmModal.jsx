@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import { useTranslation } from "../../contexts/LanguageContext";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
+import useFocusTrap from "../../hooks/useFocusTrap";
 
 /* ------------------------------------------------------------------ */
 /*  CONFIRMATION D'ADHÉSION À UN FOYER — ouverte automatiquement quand      */
@@ -18,6 +19,7 @@ import Seal from "./Seal";
 /* ------------------------------------------------------------------ */
 export default function JoinHouseholdConfirmModal({ householdId, onRequestJoin, onClose, showToast }) {
   const { t } = useTranslation();
+  const modalRef = useFocusTrap(onClose);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
 
@@ -38,7 +40,7 @@ export default function JoinHouseholdConfirmModal({ householdId, onRequestJoin, 
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal grimoire-page" onClick={(e) => e.stopPropagation()}>
+      <div className="modal grimoire-page" ref={modalRef} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">{t("household.joinInviteTitle")}</h2>
         <Flourish />

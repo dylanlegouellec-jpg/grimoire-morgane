@@ -2,8 +2,10 @@ import { useState } from "react";
 import { Plus, X } from "lucide-react";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
+import useFocusTrap from "../../hooks/useFocusTrap";
 
 export default function ListsManagerModal({ lists, activeListId, onOpen, onCreate, onRename, onDelete, onClose }) {
+  const modalRef = useFocusTrap(onClose);
   const [renamingId, setRenamingId] = useState(null);
   const [renameValue, setRenameValue] = useState("");
 
@@ -18,7 +20,7 @@ export default function ListsManagerModal({ lists, activeListId, onOpen, onCreat
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal grimoire-page" onClick={(e) => e.stopPropagation()}>
+      <div className="modal grimoire-page" ref={modalRef} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">Mes listes de courses</h2>
         <Flourish />
@@ -34,7 +36,14 @@ export default function ListsManagerModal({ lists, activeListId, onOpen, onCreat
                     value={renameValue}
                     autoFocus
                     onChange={(e) => setRenameValue(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") setRenamingId(null); }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") commitRename();
+                      // stopPropagation : sans ça, l'Échap qui annule juste le
+                      // renommage remontait aussi jusqu'au piège à focus de la
+                      // modale (useFocusTrap) et fermait toute la modale d'un
+                      // coup — un seul Échap ne doit annuler qu'UNE chose à la fois.
+                      if (e.key === "Escape") { e.stopPropagation(); setRenamingId(null); }
+                    }}
                     onBlur={commitRename}
                   />
                 ) : (

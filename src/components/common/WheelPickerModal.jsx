@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
+import useFocusTrap from "../../hooks/useFocusTrap";
 import PortionWheel from "../recipe/PortionWheel";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
@@ -19,6 +20,7 @@ import Seal from "./Seal";
 /* ------------------------------------------------------------------ */
 export default function WheelPickerModal({ title, hint, columns, onSave, onClose }) {
   useBodyScrollLock(true);
+  const modalRef = useFocusTrap(onClose);
   const [values, setValues] = useState(() =>
     Object.fromEntries(columns.map((c) => [c.key, c.initialValue]))
   );
@@ -30,7 +32,7 @@ export default function WheelPickerModal({ title, hint, columns, onSave, onClose
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal grimoire-page qty-wheel-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal grimoire-page qty-wheel-modal" ref={modalRef} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">{title}</h2>
         <Flourish />

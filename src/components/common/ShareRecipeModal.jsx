@@ -13,6 +13,7 @@ import {
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
 import { generateRecipeCardPng, shareOrDownloadPng } from "../../utils/recipeCardCanvas";
 import { useTranslation } from "../../contexts/LanguageContext";
+import useFocusTrap from "../../hooks/useFocusTrap";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
 import Switch from "./Switch";
@@ -56,6 +57,7 @@ function currentTheme() {
 }
 
 export default function ShareRecipeModal({ recipe, servings, ingredients, onClose, shareText, showToast }) {
+  const modalRef = useFocusTrap(onClose);
   const hasPhoto = Boolean(recipe.imageUrl);
   const hasNotes = Boolean(recipe.notes);
   const [includePhoto, setIncludePhoto] = useState(hasPhoto);
@@ -217,7 +219,7 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
           onClose();
         }}
       >
-        <div className="modal grimoire-page" onClick={(e) => e.stopPropagation()}>
+        <div className="modal grimoire-page" ref={modalRef} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
           <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
           <h2 className="dropcap-title">{t("share.title", { title: recipe.title })}</h2>
           <Flourish />

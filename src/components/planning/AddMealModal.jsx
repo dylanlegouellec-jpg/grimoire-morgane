@@ -5,6 +5,7 @@ import { categoryClass, categoryLabel } from "../../utils/helpers";
 import { triggerHaptic } from "../../utils/haptics";
 import { useTranslation } from "../../contexts/LanguageContext";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
+import useFocusTrap from "../../hooks/useFocusTrap";
 import Flourish from "../common/Flourish";
 import CalendarPicker from "./CalendarPicker";
 
@@ -22,6 +23,7 @@ import CalendarPicker from "./CalendarPicker";
 /* ------------------------------------------------------------------ */
 export default function AddMealModal({ recipes, initialDate, onAdd, onClose }) {
   useBodyScrollLock(true);
+  const modalRef = useFocusTrap(onClose);
   const { t, dict, language } = useTranslation();
   const hasDateStep = !initialDate;
   const [selectedDate, setSelectedDate] = useState(() => (initialDate ? new Date(initialDate) : null));
@@ -70,7 +72,7 @@ export default function AddMealModal({ recipes, initialDate, onAdd, onClose }) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal grimoire-page planning-step-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal grimoire-page planning-step-modal" ref={modalRef} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         {!isFirstStep ? (
           <button className="modal-back" onClick={goBack}>
             <ChevronLeft size={20} /> {backLabels[step]}

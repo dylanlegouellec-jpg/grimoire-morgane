@@ -4,6 +4,7 @@ import { FILTERS } from "../../constants";
 import { normalize, categoryClass, categoryLabel } from "../../utils/helpers";
 import { triggerHaptic } from "../../utils/haptics";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
+import useFocusTrap from "../../hooks/useFocusTrap";
 import Flourish from "../common/Flourish";
 import Seal from "../common/Seal";
 
@@ -16,6 +17,7 @@ import Seal from "../common/Seal";
 /* ------------------------------------------------------------------ */
 export default function RecipePickerModal({ recipes, onGenerate, onClose }) {
   useBodyScrollLock(true);
+  const modalRef = useFocusTrap(onClose);
   const [selected, setSelected] = useState([]);
   const [filter, setFilter] = useState("tout");
 
@@ -38,7 +40,7 @@ export default function RecipePickerModal({ recipes, onGenerate, onClose }) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal grimoire-page recipe-picker-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal grimoire-page recipe-picker-modal" ref={modalRef} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         {/* En-tête fixe / corps scrollable (voir .recipe-picker-modal dans
             styles.css.js) — le corps est la SEULE zone qui défile ; le
             bouton "Générer la liste" est son dernier enfant, en sticky

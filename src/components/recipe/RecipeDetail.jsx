@@ -5,6 +5,7 @@ import { categoryLabel, categoryClass, groupSteps, triggerHaptic } from "../../u
 import { useTranslation } from "../../contexts/LanguageContext";
 import { translateRecipeText } from "../../utils/recipeTranslation";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
+import useFocusTrap from "../../hooks/useFocusTrap";
 import DishArt from "../art/DishArt";
 import Flourish from "../common/Flourish";
 import Seal from "../common/Seal";
@@ -16,6 +17,15 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
   const [servings, setServings] = useState(() => baseServings);
   const [showShare, setShowShare] = useState(false);
   const scrollRef = useRef(null);
+  // Deux refs à poser sur le même conteneur (scrollRef pour le geste de
+  // fermeture par glissement, celle du piège à focus pour Échap/Tab) —
+  // combinées dans setScrollRef un peu plus bas, un seul <div ref=...> ne
+  // pouvant recevoir qu'une seule ref (même principe que SecretSettingsModal).
+  const focusTrapRef = useFocusTrap(onClose);
+  const setScrollRef = (node) => {
+    scrollRef.current = node;
+    focusTrapRef.current = node;
+  };
   const overscrollRef = useRef(0);
   const touchYRef = useRef(null);
   const closeStartYRef = useRef(null);
@@ -123,8 +133,10 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
     <div className="modal-backdrop" onClick={onClose}>
       <div
         className="modal grimoire-page detail-scroll"
+        role="dialog"
+        aria-modal="true"
         onClick={(e) => e.stopPropagation()}
-        ref={scrollRef}
+        ref={setScrollRef}
         onWheel={handleWheel}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}

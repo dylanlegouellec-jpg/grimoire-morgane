@@ -3,6 +3,7 @@ import { Check, Copy, PenLine, Search, X } from "lucide-react";
 import { fetchCaptionFromLink } from "../../utils/recipeLinkImportClient";
 import { copyText } from "../../utils/helpers";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
+import useFocusTrap from "../../hooks/useFocusTrap";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
 
@@ -18,6 +19,7 @@ import Seal from "./Seal";
 /* ------------------------------------------------------------------ */
 export default function RecipeLinkImportModal({ onClose, onCreateRecipe }) {
   useBodyScrollLock(true);
+  const modalRef = useFocusTrap(onClose);
   const [url, setUrl] = useState("");
   const [status, setStatus] = useState("idle"); // idle | loading | done | error
   const [error, setError] = useState("");
@@ -53,7 +55,7 @@ export default function RecipeLinkImportModal({ onClose, onCreateRecipe }) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal grimoire-page form-clean" onClick={(e) => e.stopPropagation()}>
+      <div className="modal grimoire-page form-clean" ref={modalRef} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">Importer depuis un lien</h2>
         <Flourish />

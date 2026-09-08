@@ -4,6 +4,7 @@ import { triggerHaptic } from "../../utils/helpers";
 import { getCachedProfile, getProfile } from "../../utils/profile";
 import { useTranslation } from "../../contexts/LanguageContext";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
+import useFocusTrap from "../../hooks/useFocusTrap";
 import useLongPress from "../../hooks/useLongPress";
 import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
 import Flourish from "./Flourish";
@@ -99,6 +100,17 @@ export default function SecretSettingsModal({
     scrollRef: modalPanelRef,
     disabled: showProfileEditor,
   });
+  // Même cible que le "tirer pour fermer" ci-dessus (retour à la liste
+  // principale depuis une sous-vue, fermeture complète depuis l'écran
+  // principal) — cohérent avec Échap/le piège à focus (useFocusTrap). Deux
+  // refs à poser sur le même conteneur (celle-ci pour le scroll/swipe, celle
+  // du piège à focus ci-dessous) : combinées dans setModalPanelRef un peu
+  // plus bas, un seul <div ref=...> ne pouvant recevoir qu'une seule ref.
+  const focusTrapRef = useFocusTrap(activeView === "main" ? onClose : goToMain);
+  const setModalPanelRef = (node) => {
+    modalPanelRef.current = node;
+    focusTrapRef.current = node;
+  };
 
   useEffect(() => {
     if (!user) return undefined;
@@ -126,8 +138,10 @@ export default function SecretSettingsModal({
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
-        ref={modalPanelRef}
+        ref={setModalPanelRef}
         className="modal grimoire-page ios-settings-modal"
+        role="dialog"
+        aria-modal="true"
         onClick={(e) => e.stopPropagation()}
         style={swipe.style}
         {...swipe.handlers}

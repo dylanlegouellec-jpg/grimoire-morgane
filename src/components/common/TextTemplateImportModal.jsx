@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { Wand2, X } from "lucide-react";
 import { parseRecipeTemplate, TEMPLATE_PLACEHOLDER } from "../../utils/templateParser";
+import useFocusTrap from "../../hooks/useFocusTrap";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
 
 export default function TextTemplateImportModal({ onClose, onImport }) {
+  const modalRef = useFocusTrap(onClose);
   const [text, setText] = useState("");
   const [error, setError] = useState("");
 
@@ -20,7 +22,7 @@ export default function TextTemplateImportModal({ onClose, onImport }) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal grimoire-page form-clean" onClick={(e) => e.stopPropagation()}>
+      <div className="modal grimoire-page form-clean" ref={modalRef} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">Importer ma fiche texte</h2>
         <Flourish />

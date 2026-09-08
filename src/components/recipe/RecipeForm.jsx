@@ -11,6 +11,7 @@ import useSecretTrigger from "../../hooks/useSecretTrigger";
 import useDragReorder from "../../hooks/useDragReorder";
 import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
+import useFocusTrap from "../../hooks/useFocusTrap";
 import Flourish from "../common/Flourish";
 import Seal from "../common/Seal";
 import WheelPickerModal from "../common/WheelPickerModal";
@@ -122,6 +123,14 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
     scrollRef: formRef,
     disabled: showUnsavedConfirm || showTimeWheel || showServingsWheel,
   });
+  // Même principe de fusion de refs que SecretSettingsModal/RecipeDetail :
+  // formRef sert déjà au geste de fermeture, le piège à focus a besoin du
+  // même conteneur pour Échap/Tab — combinées dans setFormRef.
+  const focusTrapRef = useFocusTrap(attemptClose);
+  const setFormRef = (node) => {
+    formRef.current = node;
+    focusTrapRef.current = node;
+  };
 
   const secretImport = useSecretTrigger(() => setImportUnlocked(true));
 
@@ -302,8 +311,10 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
     <>
     <div className="modal-backdrop" onClick={attemptClose}>
       <form
-        ref={formRef}
+        ref={setFormRef}
         className="modal grimoire-page form-clean"
+        role="dialog"
+        aria-modal="true"
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
         style={swipe.style}

@@ -1,10 +1,12 @@
 import { useRef, useEffect } from "react";
 import { Copy, X } from "lucide-react";
 import { copyText } from "../../utils/helpers";
+import useFocusTrap from "../../hooks/useFocusTrap";
 import Seal from "./Seal";
 
 export default function TextShareModal({ title, text, onClose }) {
   const ref = useRef(null);
+  const modalRef = useFocusTrap(onClose);
   useEffect(() => {
     if (ref.current) {
       ref.current.focus();
@@ -13,7 +15,7 @@ export default function TextShareModal({ title, text, onClose }) {
   }, []);
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal grimoire-page" onClick={(e) => e.stopPropagation()}>
+      <div className="modal grimoire-page" ref={modalRef} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">{title}</h2>
         <p className="hint" style={{ margin: "4px 0 12px" }}>Ton navigateur a bloqué la copie automatique — sélectionne et copie le texte ci-dessous.</p>
