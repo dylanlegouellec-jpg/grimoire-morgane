@@ -55,6 +55,23 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,ico,jpeg,png,svg,webp}"],
         runtimeCaching: [
           {
+            // Ping de connectivité (pingSupabase() / useConnectionStatus.js,
+            // repéré par ?_conncheck=1) — DOIT taper le vrai réseau à
+            // chaque fois, jamais retomber sur une réponse mise en cache.
+            // Sans cette règle, il tombait sous la règle générale juste en
+            // dessous (même hôte/chemin) : NetworkFirst y retombe sur le
+            // cache si le réseau échoue, et un fetch() servi depuis le
+            // cache résout normalement (aucune exception) — la pastille de
+            // statut restait alors "en ligne" indéfiniment, même hors
+            // ligne, dès qu'une réponse Supabase avait été mise en cache
+            // une fois (quasi toujours vrai après le tout premier
+            // chargement). DOIT rester AVANT la règle générale ci-dessous :
+            // Workbox retient la première correspondance, jamais la plus
+            // spécifique.
+            urlPattern: ({ url }) => url.hostname.endsWith(".supabase.co") && url.searchParams.has("_conncheck"),
+            handler: "NetworkOnly",
+          },
+          {
             // Lectures Supabase (recettes, app_state, shopping_lists) :
             // réseau en premier, secours sur la dernière réponse en
             // cache si le réseau ne répond pas dans les 5s.

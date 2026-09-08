@@ -67,8 +67,19 @@ export async function pingSupabase() {
   let reachable = false;
   try {
     const token = await getAuthToken();
+    // `_conncheck=1` : sans lui, cette URL tombe sous la même règle du
+    // service worker que toute autre lecture Supabase (NetworkFirst, voir
+    // vite.config.js) — un fetch() servi depuis SON cache résout
+    // normalement, sans jamais lever d'exception. pingSupabase() ne
+    // pouvait alors plus jamais détecter une vraie coupure réseau dès
+    // qu'une réponse Supabase avait été mise en cache une fois (quasi
+    // toujours vrai après le tout premier chargement de l'app) : la
+    // pastille restait verte indéfiniment même hors ligne. Ce paramètre
+    // fait correspondre la requête à une règle dédiée, ajoutée AVANT la
+    // règle générale, qui force NetworkOnly — jamais de repli sur le
+    // cache pour un ping, par définition.
     await fetchWithTimeout(
-      `${SUPABASE_URL}/rest/v1/recipes?select=id&limit=1`,
+      `${SUPABASE_URL}/rest/v1/recipes?select=id&limit=1&_conncheck=1`,
       { method: "GET", headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` } },
       PING_TIMEOUT_MS
     );
