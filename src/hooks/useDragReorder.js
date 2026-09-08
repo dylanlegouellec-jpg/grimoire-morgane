@@ -14,9 +14,41 @@ export default function useDragReorder(items, setItems) {
     else nodeRefs.current.delete(id);
   };
 
+  // Hauteur RÉELLE d'une rangée précise (repli sur la hauteur mesurée au
+  // début du glissement si son nœud n'est pas — ou plus — monté). Sert à
+  // computeSteps ci-dessous : des rangées de hauteurs différentes (ex. une
+  // étape dont le texte passe sur 2 lignes à côté d'une autre sur 1 seule)
+  // faussaient sinon le calcul de la rangée cible, puisqu'une seule
+  // hauteur fixe (celle de la rangée SAISIE) servait d'unité pour toutes.
+  const measureRowHeight = (id) => {
+    const node = nodeRefs.current.get(id);
+    return node ? node.getBoundingClientRect().height + 8 : rowHeightRef.current;
+  };
+
+  // Parcourt les rangées une à une dans le sens du glissement, en
+  // cumulant leur VRAIE hauteur (pas une valeur unique supposée
+  // identique pour toutes) — une rangée n'est franchie que lorsque le
+  // glissement a dépassé la MOITIÉ de sa propre hauteur, pour ne pas
+  // basculer l'ordre au moindre pixel de la frontière (même logique que
+  // l'ancien Math.round, juste rangée par rangée plutôt qu'en un seul
+  // calcul supposant une hauteur uniforme).
   const computeSteps = (dy, index) => {
-    const raw = Math.round(dy / rowHeightRef.current);
-    return Math.max(-index, Math.min(items.length - 1 - index, raw));
+    if (dy === 0) return 0;
+    const direction = dy > 0 ? 1 : -1;
+    const distance = Math.abs(dy);
+    let covered = 0;
+    let steps = 0;
+    let i = index;
+    while (true) {
+      const nextIndex = i + direction;
+      if (nextIndex < 0 || nextIndex > items.length - 1) break;
+      const h = measureRowHeight(items[nextIndex].id);
+      if (covered + h / 2 > distance) break;
+      covered += h;
+      steps += direction;
+      i = nextIndex;
+    }
+    return steps;
   };
 
   const onHandlePointerDown = (id, index) => (e) => {

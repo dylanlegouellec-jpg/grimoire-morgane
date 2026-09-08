@@ -1,5 +1,5 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_READY } from "../constants";
-import { enqueueOfflineAction, getOfflineQueue, removeFromOfflineQueue } from "./offlineQueue";
+import { enqueueOfflineAction, getOfflineQueue, removeFromOfflineQueue, incrementOfflineActionFailCount } from "./offlineQueue";
 import { normalizeIngredientList } from "./ingredients";
 import { getSupabaseClient } from "./supabaseClient";
 
@@ -231,9 +231,23 @@ export async function deleteRow(table, id) {
 // Chaque action réussie est retirée de la file ; on s'arrête à la
 // première erreur pour ne pas rejouer la suite dans le désordre — elle
 // sera retentée au prochain retour réseau.
+//
+// Exception : une action qui a déjà échoué MAX_ACTION_RETRIES fois de
+// suite est abandonnée (retirée de la file) plutôt que de continuer à
+// bloquer indéfiniment tout ce qui la suit — un conflit définitif (ex. le
+// foyer visé a été supprimé entre-temps) ne se résoudra jamais tout seul
+// en réessayant, contrairement à un simple aléa réseau. On continue alors
+// la boucle sur les actions suivantes plutôt que de s'arrêter, puisque le
+// blocage vient d'être levé. `dropped` (renvoyé séparément de `flushed`)
+// permet à l'appelant de prévenir l'utilisateur que quelque chose a été
+// abandonné, plutôt que de le laisser croire à une simple synchronisation
+// silencieuse.
+const MAX_ACTION_RETRIES = 5;
+
 export async function flushOfflineQueue() {
   const queue = getOfflineQueue();
   let flushed = 0;
+  let dropped = 0;
   for (const action of queue) {
     try {
       if (action.type === "insert") {
@@ -249,11 +263,18 @@ export async function flushOfflineQueue() {
       removeFromOfflineQueue(action.id);
       flushed += 1;
     } catch (err) {
+      const failCount = incrementOfflineActionFailCount(action.id);
+      if (failCount >= MAX_ACTION_RETRIES) {
+        console.error(`Action hors-ligne abandonnée après ${failCount} échecs :`, action, err);
+        removeFromOfflineQueue(action.id);
+        dropped += 1;
+        continue;
+      }
       console.error("Échec de la resynchronisation d'une action hors-ligne :", err);
       break;
     }
   }
-  return flushed;
+  return { flushed, dropped };
 }
 
 export async function loadAppState(householdId) {

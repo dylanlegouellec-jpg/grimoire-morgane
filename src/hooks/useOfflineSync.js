@@ -233,9 +233,24 @@ export default function useOfflineSync({
   useEffect(() => {
     if (!SUPABASE_READY) return undefined;
     const handleOnline = async () => {
-      const flushed = await flushOfflineQueue();
+      const { flushed, dropped } = await flushOfflineQueue();
       setOfflineQueueSize(getOfflineQueueSize());
-      if (flushed > 0) showToast(`${flushed} modification(s) resynchronisée(s) !`);
+      // Un seul appel à showToast : useToast.js n'affiche qu'un message à
+      // la fois (pas de file d'attente) — appeler showToast deux fois de
+      // suite ici aurait fait disparaître le premier message avant même
+      // qu'il ait pu s'afficher, jamais vu par l'utilisateur.
+      if (flushed > 0 || dropped > 0) {
+        const parts = [];
+        if (flushed > 0) parts.push(`${flushed} modification(s) resynchronisée(s)`);
+        if (dropped > 0) {
+          parts.push(
+            dropped > 1
+              ? `${dropped} abandonnées après plusieurs échecs`
+              : "1 abandonnée après plusieurs échecs"
+          );
+        }
+        showToast(`${parts.join(", ")}.`);
+      }
       if (!householdId) return;
       try {
         const [rows, listRows] = await Promise.all([

@@ -30,13 +30,14 @@ function writeQueue(queue) {
   }
 }
 
-// action = { id, table, type: "insert"|"update"|"delete", payload?, recordId?, ts }
+// action = { id, table, type: "insert"|"update"|"delete", payload?, recordId?, ts, failCount }
 export function enqueueOfflineAction(action) {
   const queue = readQueue();
   queue.push({
     ...action,
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     ts: Date.now(),
+    failCount: 0,
   });
   writeQueue(queue);
   return queue;
@@ -52,6 +53,24 @@ export function getOfflineQueueSize() {
 
 export function removeFromOfflineQueue(actionId) {
   writeQueue(readQueue().filter((a) => a.id !== actionId));
+}
+
+// Incrémente le compteur d'échecs d'UNE action précise et renvoie sa
+// nouvelle valeur — voir flushOfflineQueue (utils/supabase.js) : une
+// action qui échoue sans cesse (conflit définitif, pas juste un réseau
+// capricieux — ex. le foyer visé a été supprimé entre-temps) bloquait
+// autrement toute la file derrière elle indéfiniment, sans qu'aucun
+// signal ne prévienne l'utilisateur de quoi que ce soit de particulier.
+export function incrementOfflineActionFailCount(actionId) {
+  const queue = readQueue();
+  let nextCount = 0;
+  const updated = queue.map((a) => {
+    if (a.id !== actionId) return a;
+    nextCount = (a.failCount || 0) + 1;
+    return { ...a, failCount: nextCount };
+  });
+  writeQueue(updated);
+  return nextCount;
 }
 
 export function clearOfflineQueue() {
