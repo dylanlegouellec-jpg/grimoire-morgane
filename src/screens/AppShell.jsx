@@ -138,7 +138,6 @@ export default function AppShell({
   const [showListsManager, setShowListsManager] = useState(false);
 
   const touchStart = useRef(null);
-  const axisLock = useRef(null);
 
   // Photo de profil affichée dans le bouton de réglages de l'en-tête —
   // cache-first (voir utils/profile.js) : s'affiche instantanément avec la
@@ -171,28 +170,46 @@ export default function AppShell({
   const filterIndex = FILTERS.findIndex((f) => f.key === filter);
 
   // Swipe horizontal : bascule les filtres Recettes ("Tout"/"Salé"/"Sucré").
-  // Verrouillage d'axe pour ne pas interférer avec un scroll vertical.
+  //
+  // Avant : l'axe était verrouillé DÉFINITIVEMENT dès les 10 premiers
+  // pixels de mouvement, sur un simple `dx > dy` — sans marge, et sans
+  // jamais être reconsidéré ensuite. Un balayage vertical (scroll) qui
+  // commence avec ne serait-ce qu'un tout petit bruit horizontal (courant
+  // avec un pavé tactile Windows à deux doigts, ou un vrai doigt qui n'est
+  // jamais parfaitement vertical) se retrouvait alors verrouillé "x" pour
+  // toute la suite du geste, même s'il devenait ensuite clairement
+  // vertical. En fin de geste, `Math.abs(dx) >= 55` pouvait alors être
+  // atteint par la seule dérive horizontale accumulée sur un long
+  // défilement, déclenchant setFilter() — qui remet le défilement à zéro
+  // (voir RecipesView.jsx, l'effet sur [filter, favoritesOnly]). Posé sur
+  // .app-content (voir plus bas), donc uniquement quand le geste commence
+  // au-dessus de la grille elle-même — confirmé : le défilement au geste
+  // fonctionnait normalement dès que le pointeur était en dehors de cette
+  // zone. En paysage, ce même faux positif passait inaperçu : .app-content
+  // y est un vrai conteneur de scroll (voir responsive.css.js), donc
+  // window.scrollTo(0,0) n'y avait aucun effet visible, contrairement au
+  // mode portrait où c'est le document entier qui défile.
+  //
+  // Plus de verrouillage précoce : la décision ne se prend qu'à la fin du
+  // geste, sur le déplacement cumulé RÉEL depuis le début (pas un
+  // échantillon des 10 premiers pixels), avec une marge nette (pas juste
+  // "plus horizontal que vertical", mais NETTEMENT plus). Filet de sécurité
+  // supplémentaire : si le défilement a par ailleurs réellement bougé
+  // pendant ce geste, ce n'était de toute façon pas une intention de
+  // changer de filtre, quel que soit le dx mesuré (même principe déjà
+  // appliqué à l'appui long, voir hooks/useLongPress.js).
   const onTouchStart = (e) => {
-    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    axisLock.current = null;
-  };
-  const onTouchMove = (e) => {
-    if (touchStart.current == null || axisLock.current != null) return;
-    const dx = e.touches[0].clientX - touchStart.current.x;
-    const dy = e.touches[0].clientY - touchStart.current.y;
-    if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
-    axisLock.current = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, scrollY: window.scrollY };
   };
   const onTouchEnd = (e) => {
-    if (touchStart.current == null || tab !== "recettes" || axisLock.current !== "x") {
-      touchStart.current = null;
-      axisLock.current = null;
-      return;
-    }
-    const dx = e.changedTouches[0].clientX - touchStart.current.x;
+    const start = touchStart.current;
     touchStart.current = null;
-    axisLock.current = null;
+    if (start == null || tab !== "recettes") return;
+    const dx = e.changedTouches[0].clientX - start.x;
+    const dy = e.changedTouches[0].clientY - start.y;
     if (Math.abs(dx) < 55) return;
+    if (Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    if (Math.abs(window.scrollY - start.scrollY) > 5) return;
     const next = dx < 0 ? Math.min(filterIndex + 1, FILTERS.length - 1) : Math.max(filterIndex - 1, 0);
     setFilter(FILTERS[next].key);
   };
@@ -290,7 +307,7 @@ export default function AppShell({
         </div>
       )}
 
-      <main className="app-content" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+      <main className="app-content" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         {/* key={tab} : une erreur dans un onglet ne doit emporter que son
             propre contenu (en-tête/filtres/nav basse restent utilisables) —
             et changer d'onglet remonte le filet (nouvelle `key`), donc
