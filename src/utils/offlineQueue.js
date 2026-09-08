@@ -30,7 +30,8 @@ function writeQueue(queue) {
   }
 }
 
-// action = { id, table, type: "insert"|"update"|"delete", payload?, recordId?, ts, failCount }
+// action = { id, table, type: "insert"|"update"|"delete"|"app_state", payload?, recordId?, ts, failCount }
+// ("app_state" : recordId = householdId, payload = le patch partiel à appliquer — voir saveAppState/applyAppStatePatch dans utils/supabase.js)
 export function enqueueOfflineAction(action) {
   const queue = readQueue();
   queue.push({

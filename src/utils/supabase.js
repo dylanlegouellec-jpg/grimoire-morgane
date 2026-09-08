@@ -237,6 +237,25 @@ export async function deleteRow(table, id) {
   );
 }
 
+// PATCH d'abord (foyer déjà connu, cas quasi systématique) ; si aucune
+// ligne n'existe encore pour ce foyer (tout premier enregistrement),
+// repli sur un POST. Partagé entre saveAppState (chemin direct) et
+// flushOfflineQueue (rejeu d'une action "app_state" mise en attente) pour
+// ne pas dupliquer cette logique PATCH-puis-POST.
+async function applyAppStatePatch(householdId, patch) {
+  const rows = await supabaseRequest(`app_state?household_id=eq.${encodeURIComponent(householdId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+  if (!rows || !rows.length) {
+    await supabaseRequest("app_state", {
+      method: "POST",
+      headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+      body: JSON.stringify({ household_id: householdId, ...patch }),
+    });
+  }
+}
+
 // Rejoue, dans l'ordre, chaque action mise en file pendant une coupure
 // réseau (appelé par l'écouteur "online" — voir hooks/useOfflineSync.js).
 // Chaque action réussie est retirée de la file ; on s'arrête à la
@@ -270,6 +289,8 @@ export async function flushOfflineQueue() {
         });
       } else if (action.type === "delete") {
         await supabaseRequest(`${action.table}?id=eq.${encodeURIComponent(action.recordId)}`, { method: "DELETE" });
+      } else if (action.type === "app_state") {
+        await applyAppStatePatch(action.recordId, action.payload);
       }
       removeFromOfflineQueue(action.id);
       flushed += 1;
@@ -296,25 +317,24 @@ export async function loadAppState(householdId) {
   );
   return rows && rows[0];
 }
+// Avant : une panne réseau ici était avalée en silence (aucune trace,
+// aucune file de rattrapage), contrairement aux recettes/listes de
+// courses qui, elles, passent déjà par withOfflineFallback — un
+// changement de frigo/basiques/plan de repas fait hors-ligne pouvait
+// donc être perdu pour de bon si l'utilisateur ne retouchait pas cette
+// même donnée avant de fermer l'app. `withOfflineFallback` met
+// maintenant l'action en file (rejouée par flushOfflineQueue via le
+// type "app_state" ci-dessus) exactement comme le reste des écritures.
+// Une vraie erreur applicative (RLS, 4xx...) n'est plus avalée non plus :
+// elle remonte à l'appelant (voir hooks/useOfflineSync.js) pour être
+// loguée et signalée à l'utilisateur.
 export async function saveAppState(householdId, patch) {
   if (!householdId) return;
-  try {
-    const rows = await supabaseRequest(`app_state?household_id=eq.${encodeURIComponent(householdId)}`, {
-      method: "PATCH",
-      body: JSON.stringify(patch),
-    });
-    if (!rows || !rows.length) throw new Error("Aucune ligne app_state pour ce foyer");
-  } catch {
-    try {
-      await supabaseRequest("app_state", {
-        method: "POST",
-        headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
-        body: JSON.stringify({ household_id: householdId, ...patch }),
-      });
-    } catch {
-      /* silencieux : le grimoire continue de fonctionner en mémoire */
-    }
-  }
+  return withOfflineFallback(
+    { table: "app_state", type: "app_state", recordId: householdId, payload: patch },
+    () => applyAppStatePatch(householdId, patch),
+    undefined
+  );
 }
 
 

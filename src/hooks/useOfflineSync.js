@@ -200,33 +200,51 @@ export default function useOfflineSync({
     if (serialized === lastSyncedPantryRef.current) return undefined; // écho Realtime d'une sauvegarde qu'on vient de faire, pas une vraie modification
     if (pantrySaveTimerRef.current) clearTimeout(pantrySaveTimerRef.current);
     pantrySaveTimerRef.current = setTimeout(() => {
-      lastSyncedPantryRef.current = serialized;
-      saveAppState(householdId, { pantry });
+      // La ref n'est mise à jour qu'APRÈS coup (succès direct OU mise en
+      // file hors-ligne réussie — saveAppState ne résout normalement que
+      // dans ces deux cas) : la marquer avant, comme c'était le cas
+      // auparavant, faisait croire cette sauvegarde "faite" même quand
+      // elle avait échoué en silence, et aucun mécanisme ne la reprenait
+      // jamais ensuite (voir utils/supabase.js, saveAppState).
+      saveAppState(householdId, { pantry })
+        .then(() => { lastSyncedPantryRef.current = serialized; })
+        .catch((err) => {
+          console.error("Échec de sauvegarde du frigo :", err);
+          showToast("Impossible d'enregistrer le frigo — réessaie plus tard.");
+        });
     }, SAVE_DEBOUNCE_MS);
     return () => clearTimeout(pantrySaveTimerRef.current);
-  }, [pantry, ready, householdId]);
+  }, [pantry, ready, householdId, showToast]);
   useEffect(() => {
     if (!ready || !SUPABASE_READY || !householdId) return undefined;
     const serialized = JSON.stringify(basics);
     if (serialized === lastSyncedBasicsRef.current) return undefined;
     if (basicsSaveTimerRef.current) clearTimeout(basicsSaveTimerRef.current);
     basicsSaveTimerRef.current = setTimeout(() => {
-      lastSyncedBasicsRef.current = serialized;
-      saveAppState(householdId, { basics });
+      saveAppState(householdId, { basics })
+        .then(() => { lastSyncedBasicsRef.current = serialized; })
+        .catch((err) => {
+          console.error("Échec de sauvegarde des basiques :", err);
+          showToast("Impossible d'enregistrer les basiques — réessaie plus tard.");
+        });
     }, SAVE_DEBOUNCE_MS);
     return () => clearTimeout(basicsSaveTimerRef.current);
-  }, [basics, ready, householdId]);
+  }, [basics, ready, householdId, showToast]);
   useEffect(() => {
     if (!ready || !SUPABASE_READY || !householdId) return undefined;
     const serialized = JSON.stringify(mealPlan);
     if (serialized === lastSyncedMealPlanRef.current) return undefined;
     if (mealPlanSaveTimerRef.current) clearTimeout(mealPlanSaveTimerRef.current);
     mealPlanSaveTimerRef.current = setTimeout(() => {
-      lastSyncedMealPlanRef.current = serialized;
-      saveAppState(householdId, { meal_plan: mealPlan });
+      saveAppState(householdId, { meal_plan: mealPlan })
+        .then(() => { lastSyncedMealPlanRef.current = serialized; })
+        .catch((err) => {
+          console.error("Échec de sauvegarde du plan de repas :", err);
+          showToast("Impossible d'enregistrer le plan de repas — réessaie plus tard.");
+        });
     }, SAVE_DEBOUNCE_MS);
     return () => clearTimeout(mealPlanSaveTimerRef.current);
-  }, [mealPlan, ready, householdId]);
+  }, [mealPlan, ready, householdId, showToast]);
 
   // Retour du réseau : rejoue la file d'attente hors-ligne, puis
   // rafraîchit depuis Supabase.
