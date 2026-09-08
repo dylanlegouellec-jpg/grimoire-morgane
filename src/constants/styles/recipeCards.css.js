@@ -208,9 +208,21 @@ export const RECIPE_CARDS_CSS = `
 .fav-btn {
   position: absolute; top: 8px; right: 8px;
   width: 30px; height: 30px; border-radius: 50%; border: none;
+  /* Pas de backdrop-filter ici (retiré) : Chrome ne peut pas le composer
+     sur le thread de composition pendant un défilement — le contenu
+     derrière le bouton doit être ré-échantillonné et flouté à NOUVEAU à
+     chaque frame de scroll, ce qui force un repaint sur le thread
+     principal pour toute la zone qui défile en dessous (visible dans
+     Chrome DevTools, onglet Rendering > "Scrolling performance issues",
+     surligné "main thread scroll repaint" sur toute la grille de
+     recettes — un bouton par carte, potentiellement des dizaines à la
+     fois). C'est exactement le genre de coût qui peut faire "geler" le
+     scroll sur un appareil Android plus modeste. Le fond semi-opaque
+     ci-dessous (40% d'opacité) donne déjà assez de contraste au cœur
+     blanc par-dessus n'importe quelle photo sans ce flou. */
   background: rgba(20,14,4,0.4); color: #fff;
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; backdrop-filter: blur(2px);
+  cursor: pointer;
 }
 .fav-btn.active { color: #e8607a; background: rgba(20,14,4,0.55); }
 .spin-wand { animation: spin 1.4s linear infinite; }
