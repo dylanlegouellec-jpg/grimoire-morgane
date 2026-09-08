@@ -121,8 +121,18 @@ export default function SecretSettingsModal({
     return () => { cancelled = true; };
   }, [user]);
 
-  const profileLongPress = useLongPress(() => { triggerHaptic(20); setShowProfileEditor(true); }, pressDuration);
-  const openProfileEditor = () => { if (!profileLongPress.wasLongPress()) { triggerHaptic(15); setShowProfileEditor(true); } };
+  // Deux instances plutôt qu'une seule partagée entre l'avatar et le nom :
+  // useLongPress.js n'attache plus ses écouteurs tactiles que sur UN seul
+  // noeud à la fois (ref native, voir hooks/useLongPress.js) — un hook
+  // unique posé sur deux boutons distincts perdrait le suivi de l'appui
+  // long sur le second. Chacun ne connaît alors que son propre geste, ce
+  // qui est de toute façon plus correct : un clic sur un bouton ne peut
+  // provenir que d'un appui commencé SUR ce même bouton.
+  const avatarLongPress = useLongPress(() => { triggerHaptic(20); setShowProfileEditor(true); }, pressDuration);
+  const nameLongPress = useLongPress(() => { triggerHaptic(20); setShowProfileEditor(true); }, pressDuration);
+  const openProfileEditor = (longPress) => () => {
+    if (!longPress.wasLongPress()) { triggerHaptic(15); setShowProfileEditor(true); }
+  };
 
   const avatarUrl = profile && profile.avatar_url;
   const displayName = (profile && (profile.username || profile.display_name))
@@ -162,11 +172,12 @@ export default function SecretSettingsModal({
                 <div className="profile-card-avatar-wrap">
                   <button
                     type="button"
+                    ref={avatarLongPress.ref}
                     className="profile-card-avatar"
-                    onClick={openProfileEditor}
+                    onClick={openProfileEditor(avatarLongPress)}
                     title={t("settings.editProfile")}
                     aria-label={t("settings.editProfile")}
-                    {...profileLongPress.handlers}
+                    {...avatarLongPress.handlers}
                   >
                     {avatarUrl ? <img src={avatarUrl} alt="" loading="lazy" decoding="async" /> : <UserCircle2 size={44} />}
                   </button>
@@ -182,7 +193,13 @@ export default function SecretSettingsModal({
                     aria-hidden="true"
                   />
                 </div>
-                <button type="button" className="profile-card-name" onClick={openProfileEditor} {...profileLongPress.handlers}>
+                <button
+                  type="button"
+                  ref={nameLongPress.ref}
+                  className="profile-card-name"
+                  onClick={openProfileEditor(nameLongPress)}
+                  {...nameLongPress.handlers}
+                >
                   {displayName}
                 </button>
                 {user.email && <p className="profile-card-email">{user.email}</p>}

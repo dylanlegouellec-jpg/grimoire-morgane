@@ -94,6 +94,7 @@ function RecipeCard({
   return (
     <>
       <div
+        ref={cardLongPress.ref}
         className={`card recipe-card ${enterClass} press-anim press-${cardLongPress.pressState}`}
         // display: none (pas un retrait du DOM) quand la carte ne correspond
         // plus au filtre actif — voir RecipesView.jsx : elle reste montée,

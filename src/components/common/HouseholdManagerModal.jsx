@@ -14,10 +14,11 @@ import LeaveHouseholdConfirmModal from "./LeaveHouseholdConfirmModal";
 // Appui court = bascule vers ce foyer. Appui long = ouvre les options
 // (renommer / supprimer) — voir hooks/useLongPress.js.
 function HouseholdRow({ household, active, pressDuration, onSelect, onOpenOptions }) {
-  const { handlers, wasLongPress, pressState } = useLongPress(() => onOpenOptions(household), pressDuration);
+  const { ref, handlers, wasLongPress, pressState } = useLongPress(() => onOpenOptions(household), pressDuration);
   return (
     <button
       type="button"
+      ref={ref}
       className={`theme-pill press-anim press-${pressState} ${active ? "active" : ""}`}
       onClick={() => {
         if (wasLongPress()) return;
@@ -38,12 +39,13 @@ function HouseholdRow({ household, active, pressDuration, onSelect, onOpenOption
 // qu'inline dans un .map() : useLongPress est un hook, il ne peut pas
 // être appelé un nombre de fois variable dans une boucle.
 function MemberRow({ member, canManage, pressDuration, onOpenOptions, t }) {
-  const { handlers, wasLongPress, pressState } = useLongPress(
+  const { ref, handlers, wasLongPress, pressState } = useLongPress(
     () => canManage && onOpenOptions(member),
     pressDuration
   );
   return (
     <li
+      ref={canManage ? ref : undefined}
       className={`household-member-row press-anim press-${pressState}`}
       {...(canManage ? handlers : {})}
       onClick={() => { if (canManage && wasLongPress()) return; }}
