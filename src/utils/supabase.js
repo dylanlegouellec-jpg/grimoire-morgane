@@ -274,7 +274,30 @@ async function applyAppStatePatch(householdId, patch) {
 // silencieuse.
 const MAX_ACTION_RETRIES = 5;
 
+// Garde-fou contre un rejeu en double : l'événement "online" du navigateur
+// peut se déclencher plusieurs fois de suite sur un réseau instable (retour
+// 4G→WiFi, bascule d'antenne...), et chaque déclenchement appelle
+// flushOfflineQueue (voir hooks/useOfflineSync.js). Sans garde, deux appels
+// concurrents liraient la même file, tenteraient tous les deux la même
+// action en tête de file avant que le premier n'ait eu le temps de la
+// retirer — un simple insert rejoué deux fois crée une ligne en double en
+// base. Un second appel pendant qu'un premier est déjà en cours ne relit
+// donc plus la file : il n'y a rien d'utile à y faire tant que le premier
+// n'est pas arrivé au bout (voir le même principe pour le ping de
+// connectivité, useConnectionStatus.js/inFlightRef).
+let flushInFlight = false;
+
 export async function flushOfflineQueue() {
+  if (flushInFlight) return { flushed: 0, dropped: 0 };
+  flushInFlight = true;
+  try {
+    return await runFlushOfflineQueue();
+  } finally {
+    flushInFlight = false;
+  }
+}
+
+async function runFlushOfflineQueue() {
   const queue = getOfflineQueue();
   let flushed = 0;
   let dropped = 0;
