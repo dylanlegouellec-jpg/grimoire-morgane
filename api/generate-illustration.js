@@ -67,7 +67,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Méthode non autorisée' });
   }
 
-  const { title, category } = req.body;
+  const { title, category } = req.body || {};
   const cleanTitle = sanitizeTitle(title);
   if (!cleanTitle) {
     return res.status(400).json({ error: 'Titre de recette manquant.' });
@@ -84,9 +84,6 @@ export default async function handler(req, res) {
   const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&model=flux`;
 
   try {
-    // On simule un léger délai pour que l'interface affiche bien l'état de chargement
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
     // On renvoie l'URL gratuite à l'application
     res.status(200).json({ imageUrl: imageUrl });
 
