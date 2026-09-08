@@ -59,17 +59,29 @@ export const RECIPE_CARDS_CSS = `
 }
 .recipe-card {
   overflow: hidden; cursor: pointer;
-  /* Explicite plutôt qu'implicite : cette carte porte 3 écouteurs tactiles
-     (onTouchStart/onTouchMove/onTouchEnd, voir RecipeCard.jsx, pour
-     l'appui long) sans qu'aucun n'appelle jamais preventDefault() — le
-     défilement vertical natif ne devrait donc jamais être bloqué. Sur
-     Android Chrome, laisser touch-action à sa valeur implicite ("auto")
-     sur un élément qui porte autant d'écouteurs tactiles s'est montré
-     moins fiable dans la pratique qu'une valeur explicite : pan-y déclare
-     sans ambiguïté que seul le défilement vertical doit être laissé au
-     navigateur, ce qui correspond exactement à ce que la grille doit
-     permettre. */
-  touch-action: pan-y;
+  /* Historique : "pan-y" explicite avait été ajouté ici parce que laisser
+     touch-action à sa valeur implicite ("auto") sur un élément portant
+     plusieurs écouteurs tactiles se montrait moins fiable sur Android
+     Chrome — le navigateur ne pouvait pas être sûr à l'avance qu'aucun de
+     ces écouteurs n'appellerait preventDefault(). Ce doute n'a plus lieu
+     d'être : ces écouteurs sont désormais attachés nativement en
+     { passive: true } (voir hooks/useLongPress.js), une garantie plus
+     forte que touch-action ne peut en offrir. Repassé à "auto" (valeur par
+     défaut, retirée plutôt que reconduite) car "pan-y" semble au contraire
+     être la cause d'un défilement au geste bloqué en mode portrait sur
+     desktop (Chrome + pavé tactile) : en portrait, la grille n'a AUCUN
+     conteneur de défilement propre à proximité (.grimoire-app déclare
+     volontairement overflow-y: visible, voir theme.css.js) — le document
+     entier, plusieurs niveaux plus haut, est le seul véritable conteneur
+     scrollable. Un "pan-y" posé sur la carte, seule déclaration de
+     touch-action de toute la chaîne d'ancêtres jusqu'à <html>, semble alors
+     dérouter l'arbitrage geste-vs-scroll de Chrome desktop pour ce cas
+     précis (le défilement programmatique et au clavier, eux, fonctionnent
+     très bien — seule la RECONNAISSANCE DU GESTE échouait). En paysage, où
+     .app-content est un vrai conteneur overflow-y: auto tout proche, le
+     problème ne se posait pas, d'où le "ça marche en paysage mais pas en
+     portrait" observé. */
+  touch-action: auto;
   /* Le fondu d'enfoncement/rebond vient de .press-anim (voir plus bas),
      toujours appliqué avec cette classe — pas besoin d'une deuxième
      transition ici, elle serait de toute façon masquée par la sienne. */
@@ -199,11 +211,14 @@ export const RECIPE_CARDS_CSS = `
   background: transparent;
   -webkit-touch-callout: none !important;
   -webkit-user-select: none !important; user-select: none !important;
-  /* pan-y (pas none) : le doigt doit pouvoir faire défiler la page
-     verticalement en glissant par-dessus une photo — seul le menu iOS
-     natif (Copier/Enregistrer) doit être bloqué, via -webkit-touch-callout
-     ci-dessus, pas le scroll lui-même. */
-  touch-action: pan-y;
+  /* auto (pas pan-y) : le doigt doit pouvoir faire défiler la page en
+     glissant par-dessus une photo — seul le menu iOS natif (Copier/
+     Enregistrer) doit être bloqué, via -webkit-touch-callout ci-dessus, sans
+     rapport avec touch-action. Repassé à "auto" en même temps que
+     .recipe-card ci-dessus (voir son commentaire) : "pan-y" ici aussi
+     semblait contribuer au défilement au geste bloqué en portrait sur
+     desktop. */
+  touch-action: auto;
 }
 .fav-btn {
   position: absolute; top: 8px; right: 8px;
