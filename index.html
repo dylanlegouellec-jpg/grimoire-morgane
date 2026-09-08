@@ -34,11 +34,19 @@
          au lieu d'un simple défilement, sur Chrome desktop comme d'après les
          essais de l'utilisateur — la valeur par défaut ("auto") laisse le
          rebond natif se dérouler normalement sans le contenir artificiellement
-         à la racine du document. */
+         à la racine du document.
+         min-height: 100dvh également RETIRÉ (redondant de toute façon avec
+         min-height: 100vh déjà posé sur .grimoire-app/.loading-screen, voir
+         theme.css.js) : "dvh" n'a de sens que sur mobile (barre d'adresse qui
+         apparaît/disparaît) et a des bugs de recalcul connus sur certains
+         Chromium desktop — un traceur sur window.scrollTo() a confirmé que le
+         rebond au geste sur la grille de recettes n'est déclenché par AUCUN
+         appel JS de l'app (jamais loggé pendant le rebond) : c'est donc un
+         comportement natif du navigateur pendant le défilement, pas un
+         appel scripté — dvh est la piste suivante la plus plausible. */
       html, body {
         user-select: none;
         -webkit-user-select: none;
-        min-height: 100dvh;
       }
     </style>
     <link rel="apple-touch-icon" href="/Icon.jpeg">
