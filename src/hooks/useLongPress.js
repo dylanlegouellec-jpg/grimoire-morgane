@@ -38,6 +38,7 @@ export default function useLongPress(onLongPress, pressDuration = 750) {
   const visualTimer = useRef(null);
   const fired = useRef(false);
   const startPos = useRef(null);
+  const startScrollY = useRef(0);
   const [pressState, setPressState] = useState("idle");
 
   const cancel = () => {
@@ -58,8 +59,25 @@ export default function useLongPress(onLongPress, pressDuration = 750) {
     startPos.current = e && e.touches && e.touches[0]
       ? { x: e.touches[0].clientX, y: e.touches[0].clientY }
       : null;
+    // Filet de sécurité contre une vraie course entre ce minuteur et
+    // `move()` ci-dessous : `move()` n'annule que sur un `touchmove` REÇU
+    // À TEMPS — sur un appareil sous charge (CPU faible, thread principal
+    // occupé), ces événements peuvent être livrés à React en retard, après
+    // même que ce minuteur ait déjà déclenché l'appui long. `touch-action:
+    // pan-y` (voir recipeCards.css.js) laisse pourtant le navigateur
+    // défiler la page sur le thread de composition sans attendre React —
+    // la page a donc déjà réellement bougé même si `move()` n'a encore
+    // rien vu passer. Comparer le défilement réel juste avant de déclencher
+    // rattrape ce cas : mémorisé ici, revérifié dans le minuteur plus bas.
+    startScrollY.current = typeof window !== "undefined" ? window.scrollY : 0;
     visualTimer.current = setTimeout(() => setPressState("pressing"), PRESS_VISUAL_DELAY_MS);
     timer.current = setTimeout(() => {
+      const scrolled = typeof window !== "undefined"
+        && Math.abs(window.scrollY - startScrollY.current) > MOVE_CANCEL_THRESHOLD_PX;
+      if (scrolled) {
+        cancel();
+        return;
+      }
       fired.current = true;
       setPressState("fired");
       triggerHapticFeedback(e && e.currentTarget, 20);
