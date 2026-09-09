@@ -70,7 +70,7 @@ export const SETTINGS_IOS_CSS = `
   transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 .segmented-btn.active { background: var(--parchment); color: var(--ink); box-shadow: 0 1px 3px var(--card-shadow); font-weight: 600; }
-/* Variante compacte (voir SegmentedControl.jsx, prop `compact`) : largeur
+/* Variante compacte (voir SegmentedControl.jsx, prop "compact") : largeur
    au contenu plutôt qu'étirée sur toute la ligne — pour une variante
    uniquement iconographique à 2 options (ex. portée du plan de repas,
    voir PlanningView.jsx) qui n'a pas besoin d'occuper toute la largeur
