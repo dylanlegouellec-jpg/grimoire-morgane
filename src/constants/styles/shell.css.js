@@ -141,9 +141,17 @@ export const SHELL_CSS = `
 .app-content {
   padding: 16px; min-height: 50vh; overflow-x: hidden;
   /* Neutralise le rebond élastique (iOS) qui, sans ça, pouvait geler le
-     scroll 3 à 5s en butant sur les bords haut/bas de la vue Recettes. */
+     scroll 3 à 5s en butant sur les bords haut/bas de la vue Recettes.
+     Conservé : overscroll-behavior-y (la partie qui agit réellement ici).
+     -webkit-overflow-scrolling: touch RETIRÉ — cette propriété n'a de sens
+     que sur un élément qui défile LUI-MÊME (overflow-y: auto/scroll), ce
+     que .app-content n'est pas en portrait (c'est le document qui défile,
+     voir theme.css.js) ; probablement un vestige d'une version antérieure
+     où .app-content défilait par lui-même. Candidat plausible pour le
+     rebond au geste constaté uniquement sous Chromium (Chrome/Edge
+     desktop, Android) — jamais sous Safari iOS, la seule vraie
+     destinataire de cette propriété. */
   overscroll-behavior-y: contain;
-  -webkit-overflow-scrolling: touch;
 }
 .view { animation: fadeIn 0.35s ease; }
 /* Pas de transform ici (volontairement) : un .view contient des boutons

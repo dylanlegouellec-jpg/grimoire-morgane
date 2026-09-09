@@ -18,7 +18,15 @@ export const RECIPE_CARDS_CSS = `
 .recipes-grid {
   display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-bottom: 110px;
   overscroll-behavior-y: contain;
-  -webkit-overflow-scrolling: touch;
+  /* PAS de -webkit-overflow-scrolling: touch ici (retiré) — cette
+     propriété n'a de sens que sur un élément qui défile LUI-MÊME
+     (overflow-y: auto/scroll), ce que .recipes-grid n'est pas (c'est le
+     document qui défile en portrait, voir theme.css.js). Héritée de
+     Safari, qui l'ignore proprement sur un élément non-scrollable ; Chrome
+     n'a jamais eu à en garantir un comportement aussi propre dans ce même
+     cas, et c'est un candidat plausible pour le rebond au geste constaté
+     uniquement sous Chromium (Chrome/Edge desktop, Android Chrome) —
+     jamais sous Safari iOS. */
 }
 /* "backwards" et non "both" : "both" retenait le "transform: none" du
    dernier keyframe indéfiniment après la fin de l'animation (une
