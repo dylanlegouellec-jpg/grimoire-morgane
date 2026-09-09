@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, Send, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Send, User, Users, X } from "lucide-react";
 import { getWeekStart, addWeeks, getWeekDays, toISODate, isSameDay, formatWeekRange, formatDayLabel, mealTypeInfo } from "../../utils/planning";
 import { triggerHaptic } from "../../utils/haptics";
+import { getStoredPlanningScope, storePlanningScope } from "../../utils/localSettings";
 import { useTranslation } from "../../contexts/LanguageContext";
 import useHorizontalSwipe from "../../hooks/useHorizontalSwipe";
 import Seal from "../common/Seal";
+import SegmentedControl from "../common/SegmentedControl";
 import AddMealModal from "./AddMealModal";
 
 /* ------------------------------------------------------------------ */
@@ -23,16 +25,35 @@ import AddMealModal from "./AddMealModal";
 /*  quel jour de l'année est possible, pas seulement ceux de la semaine        */
 /*  actuellement affichée.                                                     */
 /* ------------------------------------------------------------------ */
-export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMeal, onSendToShoppingList, showToast }) {
+export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMeal, onSendToShoppingList, showToast, user }) {
   const { t, language } = useTranslation();
   const [weekStart, setWeekStart] = useState(() => getWeekStart());
   const [showAddModal, setShowAddModal] = useState(false);
   const [addModalDate, setAddModalDate] = useState(null); // date ISO pré-remplie ("YYYY-MM-DD") | null (FAB, calendrier libre)
+  // Portée affichée ("household" | "personal") — préférence locale à
+  // l'appareil (voir utils/localSettings.js), pas une donnée de foyer :
+  // chaque membre peut avoir son propre onglet de départ.
+  const [scope, setScope] = useState(() => getStoredPlanningScope());
+  const changeScope = (next) => {
+    setScope(next);
+    storePlanningScope(next);
+  };
 
   const days = getWeekDays(weekStart);
   const today = new Date();
   const recipeById = new Map(recipes.map((r) => [r.id, r]));
-  const entriesForDay = (isoDate) => mealPlan.filter((e) => e.date === isoDate);
+  // "household" couvre aussi les entrées créées avant l'existence de ce
+  // champ (scope absent, voir hooks/useMealPlan.js) — jamais traitées comme
+  // "personal" par défaut. Une entrée "personal" n'est visible que pour
+  // SON propriétaire (userId) : stockée dans le même app_state.meal_plan
+  // partagé du foyer (donc techniquement lisible par les autres membres
+  // au niveau des données, les RLS restant au niveau du foyer), ce filtre
+  // ne garantit qu'une séparation d'AFFICHAGE, pas une confidentialité
+  // stricte entre membres du même foyer.
+  const scopedMealPlan = mealPlan.filter((e) => (
+    scope === "personal" ? (e.scope === "personal" && e.userId === (user && user.id)) : e.scope !== "personal"
+  ));
+  const entriesForDay = (isoDate) => scopedMealPlan.filter((e) => e.date === isoDate);
   const weekEntries = days.flatMap((d) => entriesForDay(toISODate(d)));
 
   const goPrevWeek = () => { triggerHaptic(10); setWeekStart((w) => addWeeks(w, -1)); };
@@ -47,7 +68,9 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
   const openAddFab = () => { triggerHaptic(15); setAddModalDate(null); setShowAddModal(true); };
 
   const handleAdd = (dateISO, mealType, recipeId, customTitle) => {
-    onAddMeal(dateISO, mealType, recipeId, customTitle);
+    // Le nouveau repas hérite automatiquement de la portée actuellement
+    // affichée (voir hooks/useMealPlan.js pour la forme exacte de l'entrée).
+    onAddMeal(dateISO, mealType, recipeId, customTitle, scope, user && user.id);
     setShowAddModal(false);
     setWeekStart(getWeekStart(new Date(dateISO)));
   };
@@ -65,6 +88,18 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
     <div className="view">
       <div className="planning-header">
         <h2 className="dropcap-title" style={{ margin: 0, textAlign: "center" }}>{t("planning.title")}</h2>
+        <div className="planning-scope-toggle-wrap">
+          <SegmentedControl
+            compact
+            ariaLabel={t("planning.scopeToggleLabel")}
+            value={scope}
+            onChange={changeScope}
+            options={[
+              { value: "household", label: "", icon: Users, ariaLabel: t("planning.scopeHousehold") },
+              { value: "personal", label: "", icon: User, ariaLabel: t("planning.scopePersonal") },
+            ]}
+          />
+        </div>
         <div className="planning-week-nav">
           <button type="button" className="planning-week-arrow" onClick={goPrevWeek} aria-label={t("planning.prevWeek")}>
             <ChevronLeft size={18} />

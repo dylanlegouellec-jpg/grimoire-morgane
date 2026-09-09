@@ -105,6 +105,9 @@ export const translations = {
       addCustomMealWithText: "Ajouter « {text} » comme repas personnalisé",
       prevMonth: "Mois précédent",
       nextMonth: "Mois suivant",
+      scopeToggleLabel: "Portée du plan de repas",
+      scopeHousehold: "Plan du foyer",
+      scopePersonal: "Mon plan personnel",
     },
     settings: {
       title: "Réglages du grimoire",
@@ -360,6 +363,9 @@ export const translations = {
       addCustomMealWithText: "Add \"{text}\" as a custom meal",
       prevMonth: "Previous month",
       nextMonth: "Next month",
+      scopeToggleLabel: "Meal plan scope",
+      scopeHousehold: "Household plan",
+      scopePersonal: "My personal plan",
     },
     settings: {
       title: "Grimoire settings",

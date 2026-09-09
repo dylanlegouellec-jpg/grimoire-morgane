@@ -373,6 +373,7 @@ export default function AppShell({
                 setTab("courses");
               }}
               showToast={showToast}
+              user={user}
             />
           </Suspense>
         )}

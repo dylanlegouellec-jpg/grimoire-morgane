@@ -11,6 +11,7 @@ export const PLANNING_CSS = `
 /*  PLANIFICATION — plan de repas hebdomadaire (voir PlanningView.jsx)   */
 /* ------------------------------------------------------------------ */
 .planning-header { margin-bottom: 4px; }
+.planning-scope-toggle-wrap { display: flex; justify-content: center; margin-top: 10px; }
 .planning-week-nav { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 10px; }
 .planning-week-arrow {
   width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;

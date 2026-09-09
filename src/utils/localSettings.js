@@ -136,3 +136,30 @@ export function storeSoundEffects(value) {
     /* rien à faire si le stockage échoue */
   }
 }
+
+/* --- Portée du plan de repas affichée ("household" | "personal") -------
+   Purement local à l'appareil, comme les effets sonores ci-dessus : c'est
+   une préférence d'AFFICHAGE (quel sous-ensemble du plan regarder), pas
+   une donnée de foyer — chaque membre peut préférer un onglet de départ
+   différent sans que ça n'affecte les autres ni ne mérite une
+   synchronisation. Voir PlanningView.jsx. */
+const PLANNING_SCOPE_KEY = "grimoire_planning_scope";
+const VALID_PLANNING_SCOPES = ["household", "personal"];
+
+export function getStoredPlanningScope() {
+  try {
+    const v = localStorage.getItem(PLANNING_SCOPE_KEY);
+    if (VALID_PLANNING_SCOPES.includes(v)) return v;
+  } catch {
+    /* repli ci-dessous */
+  }
+  return "household";
+}
+
+export function storePlanningScope(scope) {
+  try {
+    localStorage.setItem(PLANNING_SCOPE_KEY, scope);
+  } catch {
+    /* rien à faire si le stockage échoue */
+  }
+}
