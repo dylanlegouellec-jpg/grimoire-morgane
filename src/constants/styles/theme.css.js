@@ -111,13 +111,20 @@ html, body {
   padding-top: env(safe-area-inset-top);
   padding-bottom: 84px;
   box-shadow: 0 0 40px var(--card-shadow);
-  /* overflow-y explicite : sans lui, la spec CSS force le calcul de
-     overflow-y à "auto" dès qu'un axe (ici overflow-x) n'est pas
-     "visible" — .grimoire-app devenait ainsi implicitement son propre
-     conteneur de défilement potentiel, sans que ce soit écrit nulle part
-     ni voulu (la page entière est censée défiler via le document, pas via
-     ce conteneur). Le rendre explicite élimine toute ambiguïté entre
-     moteurs de rendu plutôt que de compter sur ce calcul implicite. */
+  /* Correctif historique erroné : écrire overflow-y: visible ici ne
+     suffit PAS à empêcher .grimoire-app de devenir son propre conteneur
+     de défilement — la spec CSS force le calcul d'un axe "visible" à
+     "auto" dès que l'AUTRE axe (ici overflow-x: hidden) ne l'est pas, quoi
+     que ce soit écrit pour overflow-y (vérifié : la valeur CALCULÉE reste
+     "auto" malgré cette ligne). Gardée pour la lisibilité de l'intention
+     (et parce qu'écrire "visible" ne fait de mal à rien), mais ce n'est
+     PAS ce qui protège du vrai risque : .grimoire-app calcule bel et bien
+     overflow-y: auto. Ce qui évite un problème concret ici, c'est
+     l'absence de tout overscroll-behavior restrictif sur cet élément
+     (contrairement à .app-content, qui avait "contain" — voir
+     shell.css.js pour le bug que ça causait) : un geste qui ne trouve
+     rien à faire défiler dans .grimoire-app remonte donc normalement vers
+     le document, qui lui déborde réellement. */
   overflow-x: hidden;
   overflow-y: visible;
 }

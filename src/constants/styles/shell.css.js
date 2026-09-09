@@ -140,18 +140,28 @@ export const SHELL_CSS = `
 
 .app-content {
   padding: 16px; min-height: 50vh; overflow-x: hidden;
-  /* Neutralise le rebond élastique (iOS) qui, sans ça, pouvait geler le
-     scroll 3 à 5s en butant sur les bords haut/bas de la vue Recettes.
-     Conservé : overscroll-behavior-y (la partie qui agit réellement ici).
-     -webkit-overflow-scrolling: touch RETIRÉ — cette propriété n'a de sens
-     que sur un élément qui défile LUI-MÊME (overflow-y: auto/scroll), ce
-     que .app-content n'est pas en portrait (c'est le document qui défile,
-     voir theme.css.js) ; probablement un vestige d'une version antérieure
-     où .app-content défilait par lui-même. Candidat plausible pour le
-     rebond au geste constaté uniquement sous Chromium (Chrome/Edge
-     desktop, Android) — jamais sous Safari iOS, la seule vraie
-     destinataire de cette propriété. */
-  overscroll-behavior-y: contain;
+  /* LA vraie cause du scroll bloqué au geste sous Chromium (Chrome/Edge
+     desktop, Android — jamais Safari iOS), trouvée en inspectant les
+     valeurs CALCULÉES (pas juste le CSS source) directement sur le site
+     déployé :
+     `overflow-x: hidden` ci-dessus, SANS overflow-y assorti, ne laisse
+     PAS overflow-y à "visible" comme on pourrait le croire (et comme le
+     déclarait — inutilement — .grimoire-app, voir theme.css.js) : la
+     spec CSS force le calcul d'un axe "visible" à "auto" dès que l'AUTRE
+     axe ne l'est pas, QUELLE QUE SOIT la valeur écrite ou son absence.
+     Aucune manière d'y échapper en déclarant explicitement "visible" —
+     .app-content devient donc bel et bien un conteneur de scroll
+     (overflow-y: auto calculé), sans jamais l'avoir voulu ni écrit.
+     Comme .app-content n'est lui-même jamais contraint en hauteur (il
+     grandit avec son contenu, voir .view/.recipes-grid), il n'a
+     concrètement rien à faire défiler — MAIS un `overscroll-behavior-y:
+     contain` ici (retiré) empêchait justement le geste, une fois cette
+     absence de défilement local constatée, de remonter vers le VRAI
+     conteneur qui déborde (.grimoire-app, puis le document) : Chromium
+     respecte "contain" à la lettre et bloque net, Safari semble gérer
+     cette chaîne différemment. Sans "contain" (valeur par défaut "auto"),
+     un geste qui ne trouve rien à faire défiler ici remonte normalement
+     vers l'ancêtre suivant, comme prévu. */
 }
 .view { animation: fadeIn 0.35s ease; }
 /* Pas de transform ici (volontairement) : un .view contient des boutons
