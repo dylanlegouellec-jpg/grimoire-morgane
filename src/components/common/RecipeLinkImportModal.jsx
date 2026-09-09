@@ -4,6 +4,7 @@ import { fetchCaptionFromLink } from "../../utils/recipeLinkImportClient";
 import { copyText } from "../../utils/helpers";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
+import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
 
@@ -20,6 +21,7 @@ import Seal from "./Seal";
 export default function RecipeLinkImportModal({ onClose, onCreateRecipe }) {
   useBodyScrollLock(true);
   const modalRef = useFocusTrap(onClose);
+  const swipe = useSwipeToDismiss(onClose, { scrollRef: modalRef });
   const [url, setUrl] = useState("");
   const [status, setStatus] = useState("idle"); // idle | loading | done | error
   const [error, setError] = useState("");
@@ -55,7 +57,15 @@ export default function RecipeLinkImportModal({ onClose, onCreateRecipe }) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal grimoire-page form-clean" ref={modalRef} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal grimoire-page form-clean modal-swipeable"
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+        style={swipe.style}
+        {...swipe.handlers}
+      >
         <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">Importer depuis un lien</h2>
         <Flourish />

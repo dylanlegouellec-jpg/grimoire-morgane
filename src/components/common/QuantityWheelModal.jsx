@@ -4,6 +4,14 @@ import { getWheelRange } from "../../utils/templateParser";
 import PortionWheel from "../recipe/PortionWheel";
 import useFocusTrap from "../../hooks/useFocusTrap";
 
+// Volontairement SANS le geste "tirer pour fermer" (voir modal-swipeable
+// sur les autres modales) : cette molette EST une zone de défilement
+// vertical (PortionWheel, overflow-y: scroll) — un tirage vers le bas
+// pour la faire tourner déclencherait aussi, à tort, la fermeture de la
+// modale (useSwipeToDismiss ne connaît que le scrollTop de la modale
+// elle-même, jamais à 0 quand on manipule la molette). La fermeture reste
+// possible via le bouton "X" ou, une fois la valeur stabilisée, via
+// onSettle (voir PortionWheel.jsx).
 export default function QuantityWheelModal({ item, onChange, onClose }) {
   const { min, max, step } = getWheelRange(item.unit);
   const modalRef = useFocusTrap(onClose);

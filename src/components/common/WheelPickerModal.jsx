@@ -17,6 +17,14 @@ import Seal from "./Seal";
 /*                                                                          */
 /*  `columns`: [{ key, initialValue, min, max, step?, suffix }]            */
 /*  `onSave(values)`: values = { [key]: nombre final de chaque roue }      */
+/*                                                                          */
+/*  Volontairement SANS le geste "tirer pour fermer" (voir modal-swipeable */
+/*  sur les autres modales) : cette modale n'est qu'une ou plusieurs        */
+/*  roues défilantes (PortionWheel, overflow-y: scroll) — un tirage vers    */
+/*  le bas pour faire tourner une roue déclencherait aussi, à tort, la      */
+/*  fermeture de la modale (useSwipeToDismiss ne connaît que le scrollTop   */
+/*  de la modale elle-même, jamais à 0 quand on manipule une roue). La      */
+/*  fermeture reste possible via le bouton "X" ou "Enregistrer".           */
 /* ------------------------------------------------------------------ */
 export default function WheelPickerModal({ title, hint, columns, onSave, onClose }) {
   useBodyScrollLock(true);

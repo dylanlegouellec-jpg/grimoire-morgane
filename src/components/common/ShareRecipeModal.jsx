@@ -56,6 +56,13 @@ function currentTheme() {
   return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
 }
 
+// Volontairement SANS le geste "tirer pour fermer" (voir modal-swipeable
+// sur les autres modales) : cette modale est imbriquée DANS RecipeDetail
+// (voir son propre geste de tirage bespoke, handleTouchStart/Move/End),
+// qui ne sait pas ignorer un tirage qui commence ici plutôt que sur la
+// fiche recette elle-même — l'ajouter ici risquerait de faire réagir les
+// DEUX gestes à la fois sur le même mouvement de doigt. Fermeture via le
+// bouton "X" ou un tap sur le fond, comme avant.
 export default function ShareRecipeModal({ recipe, servings, ingredients, onClose, shareText, showToast }) {
   const modalRef = useFocusTrap(onClose);
   const hasPhoto = Boolean(recipe.imageUrl);

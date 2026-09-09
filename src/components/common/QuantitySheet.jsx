@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import { triggerHaptic } from "../../utils/haptics";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
+import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
 
@@ -28,6 +29,7 @@ const QUICK_PICKS = [
 export default function QuantitySheet({ item, onChange, onClose }) {
   useBodyScrollLock(true);
   const modalRef = useFocusTrap(onClose);
+  const swipe = useSwipeToDismiss(onClose, { scrollRef: modalRef });
   const [value, setValue] = useState(item.qty > 0 ? String(Math.round(item.qty * 100) / 100) : "");
   const [unit, setUnit] = useState(item.unit || "unité");
 
@@ -49,7 +51,15 @@ export default function QuantitySheet({ item, onChange, onClose }) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal grimoire-page qty-sheet" ref={modalRef} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal grimoire-page qty-sheet modal-swipeable"
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+        style={swipe.style}
+        {...swipe.handlers}
+      >
         <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">{item.name}</h2>
         <Flourish />

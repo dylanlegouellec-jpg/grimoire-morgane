@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { CheckSquare, ShoppingBasket, Square, X } from "lucide-react";
 import { FILTERS } from "../../constants";
 import { normalize, categoryClass, categoryLabel } from "../../utils/helpers";
 import { triggerHaptic } from "../../utils/haptics";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
+import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
 import Flourish from "../common/Flourish";
 import Seal from "../common/Seal";
 
@@ -18,6 +19,15 @@ import Seal from "../common/Seal";
 export default function RecipePickerModal({ recipes, onGenerate, onClose }) {
   useBodyScrollLock(true);
   const modalRef = useFocusTrap(onClose);
+  // scrollRef pointe sur .recipe-picker-body (le corps défilant), PAS sur
+  // la modale elle-même : celle-ci ne défile jamais (mise en page flex,
+  // voir shopping.css.js), c'est son corps interne qui déborde. Avec
+  // modalRef ici, atScrollTop() aurait toujours renvoyé "vrai" (la modale
+  // n'a jamais de scrollTop propre), transformant tout tirage vers le bas
+  // dans la liste — même en plein milieu d'un défilement normal — en
+  // fermeture involontaire.
+  const bodyRef = useRef(null);
+  const swipe = useSwipeToDismiss(onClose, { scrollRef: bodyRef });
   const [selected, setSelected] = useState([]);
   const [filter, setFilter] = useState("tout");
 
@@ -40,7 +50,15 @@ export default function RecipePickerModal({ recipes, onGenerate, onClose }) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal grimoire-page recipe-picker-modal" ref={modalRef} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal grimoire-page recipe-picker-modal modal-swipeable"
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+        style={swipe.style}
+        {...swipe.handlers}
+      >
         {/* En-tête fixe / corps scrollable (voir .recipe-picker-modal dans
             styles.css.js) — le corps est la SEULE zone qui défile ; le
             bouton "Générer la liste" est son dernier enfant, en sticky
@@ -68,7 +86,7 @@ export default function RecipePickerModal({ recipes, onGenerate, onClose }) {
           </div>
         </div>
 
-        <div className="recipe-picker-body">
+        <div className="recipe-picker-body" ref={bodyRef}>
           {filtered.length === 0 ? (
             <p className="hint">Aucune recette dans cette catégorie.</p>
           ) : (

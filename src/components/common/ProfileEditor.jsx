@@ -4,6 +4,7 @@ import { saveProfile, uploadAvatar } from "../../utils/profile";
 import { triggerHaptic } from "../../utils/helpers";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
+import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
 import Flourish from "./Flourish";
 
 /* ------------------------------------------------------------------ */
@@ -15,6 +16,7 @@ import Flourish from "./Flourish";
 export default function ProfileEditor({ user, profile, onClose, onSaved, showToast }) {
   useBodyScrollLock(true);
   const modalRef = useFocusTrap(onClose);
+  const swipe = useSwipeToDismiss(onClose, { scrollRef: modalRef });
 
   const [firstName, setFirstName] = useState((profile && profile.first_name) || "");
   const [lastName, setLastName] = useState((profile && profile.last_name) || "");
@@ -69,7 +71,15 @@ export default function ProfileEditor({ user, profile, onClose, onSaved, showToa
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal grimoire-page" ref={modalRef} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal grimoire-page modal-swipeable"
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+        style={swipe.style}
+        {...swipe.handlers}
+      >
         <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">Modifier le profil</h2>
         <Flourish />

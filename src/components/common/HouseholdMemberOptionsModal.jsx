@@ -5,6 +5,7 @@ import { changeHouseholdMemberRole, removeHouseholdMember } from "../../utils/au
 import { useTranslation } from "../../contexts/LanguageContext";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
+import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
 
@@ -21,6 +22,7 @@ export default function HouseholdMemberOptionsModal({ member, householdId, onClo
   const { t } = useTranslation();
   useBodyScrollLock(true);
   const modalRef = useFocusTrap(onClose);
+  const swipe = useSwipeToDismiss(onClose, { scrollRef: modalRef });
   const [busy, setBusy] = useState(false);
   const [confirmingRemove, setConfirmingRemove] = useState(false);
   const [error, setError] = useState("");
@@ -59,7 +61,15 @@ export default function HouseholdMemberOptionsModal({ member, householdId, onClo
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal grimoire-page recipe-options-modal" ref={modalRef} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal grimoire-page recipe-options-modal modal-swipeable"
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+        style={swipe.style}
+        {...swipe.handlers}
+      >
         <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">{name}</h2>
         <Flourish />

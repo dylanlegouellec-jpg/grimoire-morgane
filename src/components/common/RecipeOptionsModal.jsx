@@ -5,6 +5,7 @@ import { generateAIIllustration } from "../../utils/aiIllustration";
 import { uploadRecipeImage } from "../../utils/imageUpload";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
+import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
 import Flourish from "./Flourish";
 
 /* ------------------------------------------------------------------ */
@@ -16,6 +17,7 @@ export default function RecipeOptionsModal({ recipe, onClose, onUpdateRecipe, on
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const modalRef = useFocusTrap(onClose);
+  const swipe = useSwipeToDismiss(onClose, { scrollRef: modalRef });
 
   // Fige le <body> tant que ce menu est ouvert (même hook que RecipeDetail.jsx).
   useBodyScrollLock(true);
@@ -83,7 +85,15 @@ export default function RecipeOptionsModal({ recipe, onClose, onUpdateRecipe, on
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal grimoire-page recipe-options-modal" ref={modalRef} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal grimoire-page recipe-options-modal modal-swipeable"
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+        style={swipe.style}
+        {...swipe.handlers}
+      >
         <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">{recipe.title}</h2>
         <Flourish />
