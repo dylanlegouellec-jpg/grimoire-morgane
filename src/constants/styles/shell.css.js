@@ -144,7 +144,7 @@ export const SHELL_CSS = `
      desktop, Android — jamais Safari iOS), trouvée en inspectant les
      valeurs CALCULÉES (pas juste le CSS source) directement sur le site
      déployé :
-     `overflow-x: hidden` ci-dessus, SANS overflow-y assorti, ne laisse
+     "overflow-x: hidden" ci-dessus, SANS overflow-y assorti, ne laisse
      PAS overflow-y à "visible" comme on pourrait le croire (et comme le
      déclarait — inutilement — .grimoire-app, voir theme.css.js) : la
      spec CSS force le calcul d'un axe "visible" à "auto" dès que l'AUTRE
@@ -154,8 +154,8 @@ export const SHELL_CSS = `
      (overflow-y: auto calculé), sans jamais l'avoir voulu ni écrit.
      Comme .app-content n'est lui-même jamais contraint en hauteur (il
      grandit avec son contenu, voir .view/.recipes-grid), il n'a
-     concrètement rien à faire défiler — MAIS un `overscroll-behavior-y:
-     contain` ici (retiré) empêchait justement le geste, une fois cette
+     concrètement rien à faire défiler — MAIS un "overscroll-behavior-y:
+     contain" ici (retiré) empêchait justement le geste, une fois cette
      absence de défilement local constatée, de remonter vers le VRAI
      conteneur qui déborde (.grimoire-app, puis le document) : Chromium
      respecte "contain" à la lettre et bloque net, Safari semble gérer
