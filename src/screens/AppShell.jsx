@@ -138,6 +138,7 @@ export default function AppShell({
   const [showListsManager, setShowListsManager] = useState(false);
 
   const touchStart = useRef(null);
+  const appContentRef = useRef(null);
 
   // Photo de profil affichée dans le bouton de réglages de l'en-tête —
   // cache-first (voir utils/profile.js) : s'affiche instantanément avec la
@@ -198,21 +199,50 @@ export default function AppShell({
   // pendant ce geste, ce n'était de toute façon pas une intention de
   // changer de filtre, quel que soit le dx mesuré (même principe déjà
   // appliqué à l'appui long, voir hooks/useLongPress.js).
-  const onTouchStart = (e) => {
-    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, scrollY: window.scrollY };
-  };
-  const onTouchEnd = (e) => {
-    const start = touchStart.current;
-    touchStart.current = null;
-    if (start == null || tab !== "recettes") return;
-    const dx = e.changedTouches[0].clientX - start.x;
-    const dy = e.changedTouches[0].clientY - start.y;
-    if (Math.abs(dx) < 55) return;
-    if (Math.abs(dx) < Math.abs(dy) * 1.5) return;
-    if (Math.abs(window.scrollY - start.scrollY) > 5) return;
-    const next = dx < 0 ? Math.min(filterIndex + 1, FILTERS.length - 1) : Math.max(filterIndex - 1, 0);
-    setFilter(FILTERS[next].key);
-  };
+  // Toujours les dernières valeurs, sans jamais réattacher les écouteurs
+  // natifs ci-dessous (même principe que useFocusTrap.js/useLongPress.js).
+  const tabRef = useRef(tab);
+  tabRef.current = tab;
+  const filterIndexRef = useRef(filterIndex);
+  filterIndexRef.current = filterIndex;
+
+  // Attachés nativement en { passive: true } plutôt que via les props JSX
+  // onTouchStart/onTouchEnd — repéré dans Chrome DevTools (Rendering >
+  // "Scrolling performance issues") : ce geste était posé sur .app-content,
+  // le conteneur COMMUN à tous les onglets (Recettes, Frigo...), et
+  // apparaissait comme cause potentielle de "main thread scroll repaint" /
+  // "touch event listener" sur chacun d'eux, pas seulement la grille de
+  // recettes. Ce hook n'appelle jamais preventDefault() sur un événement
+  // tactile, donc { passive: true } est toujours sûr ici — voir
+  // hooks/useLongPress.js, qui a reçu le même traitement.
+  useEffect(() => {
+    const node = appContentRef.current;
+    if (!node) return undefined;
+    const handleTouchStart = (e) => {
+      touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, scrollY: window.scrollY };
+    };
+    const handleTouchEnd = (e) => {
+      const start = touchStart.current;
+      touchStart.current = null;
+      if (start == null || tabRef.current !== "recettes") return;
+      const dx = e.changedTouches[0].clientX - start.x;
+      const dy = e.changedTouches[0].clientY - start.y;
+      if (Math.abs(dx) < 55) return;
+      if (Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      if (Math.abs(window.scrollY - start.scrollY) > 5) return;
+      const next = dx < 0
+        ? Math.min(filterIndexRef.current + 1, FILTERS.length - 1)
+        : Math.max(filterIndexRef.current - 1, 0);
+      setFilter(FILTERS[next].key);
+    };
+    const opts = { passive: true };
+    node.addEventListener("touchstart", handleTouchStart, opts);
+    node.addEventListener("touchend", handleTouchEnd, opts);
+    return () => {
+      node.removeEventListener("touchstart", handleTouchStart, opts);
+      node.removeEventListener("touchend", handleTouchEnd, opts);
+    };
+  }, [setFilter]);
 
   return (
     <div className="grimoire-app">
@@ -307,7 +337,7 @@ export default function AppShell({
         </div>
       )}
 
-      <main className="app-content" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <main className="app-content" ref={appContentRef}>
         {/* key={tab} : une erreur dans un onglet ne doit emporter que son
             propre contenu (en-tête/filtres/nav basse restent utilisables) —
             et changer d'onglet remonte le filet (nouvelle `key`), donc
