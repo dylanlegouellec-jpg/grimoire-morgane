@@ -312,7 +312,7 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
     <div className="modal-backdrop" onClick={attemptClose}>
       <form
         ref={setFormRef}
-        className="modal grimoire-page form-clean"
+        className="modal grimoire-page form-clean modal-swipeable"
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}

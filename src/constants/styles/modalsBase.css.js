@@ -47,16 +47,18 @@ export const MODALS_BASE_CSS = `
   overscroll-behavior: contain;
   touch-action: pan-y;
 }
-/* Poignée de tirage — un ::before sur .modal (jamais .grimoire-page, qui
-   n'est pas une feuille du bas mais le conteneur racine de l'appli) : une
-   seule règle CSS l'ajoute automatiquement à TOUTE feuille modale de
-   l'appli (Réglages/Foyer, RecipePickerModal, RecipeOptionsModal,
-   confirmations...) sans avoir à toucher le JSX de chacune. top:8px, sous
-   les 14px de .modal-close/.modal-back : aucun chevauchement. Purement
-   visuel (aria-hidden implicite, un ::before n'est jamais focusable) —
-   ne remplace pas le geste "tirer pour fermer" (voir useSwipeToDismiss),
-   qui reste indépendant de la présence de cette barre. */
-.modal::before {
+/* Poignée de tirage — réservée aux modales qui gèrent RÉELLEMENT le geste
+   "tirer pour fermer" (RecipeDetail, RecipeForm, SecretSettingsModal —
+   voir leur classe modal-swipeable dans leur JSX respectif). Auparavant
+   posée sur TOUT .modal sans distinction (via un ::before universel) :
+   purement décorative sur les ~20 autres modales de l'appli
+   (RecipeOptionsModal, confirmations, Réglages/Foyer...), elle y
+   suggérait à tort qu'on pouvait tirer vers le bas pour fermer alors que
+   rien ne l'implémentait pour elles — signalé comme trompeur ("n'a pas
+   vraiment d'intérêt") après un test réel sur iPhone. top:8px, sous les
+   14px de .modal-close/.modal-back : aucun chevauchement. Purement
+   visuel (aria-hidden implicite, un ::before n'est jamais focusable). */
+.modal-swipeable::before {
   content: "";
   position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
   width: 40px; height: 4px; border-radius: 999px; background: var(--drag-handle);

@@ -149,7 +149,7 @@ export default function SecretSettingsModal({
     <div className="modal-backdrop" onClick={onClose}>
       <div
         ref={setModalPanelRef}
-        className="modal grimoire-page ios-settings-modal"
+        className="modal grimoire-page ios-settings-modal modal-swipeable"
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}

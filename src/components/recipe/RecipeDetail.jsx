@@ -132,7 +132,7 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
-        className="modal grimoire-page detail-scroll"
+        className="modal grimoire-page detail-scroll modal-swipeable"
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
