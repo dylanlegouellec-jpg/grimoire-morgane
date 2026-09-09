@@ -75,32 +75,33 @@ export const MODALS_BASE_CSS = `
 .modal h4 { font-family: 'Cinzel', serif; font-size: 0.85rem; letter-spacing: 0.5px; margin: 16px 0 8px; color: var(--ink-soft); }
 
 /* --- Menu d'actions sur une recette (appui long) ----------------------
-   Bottom sheet ancré en bas (voir .modal-backdrop) : sur mobile (PWA iOS
-   en particulier), son contenu pouvait dépasser sous la barre de
-   navigation basse et cacher le dernier bouton ("Supprimer la recette").
-   z-index explicite au-dessus de .bottom-nav, hauteur plafonnée avec
-   défilement interne garanti, et un padding bas qui réserve toute la
-   hauteur de la nav basse (~70px) EN PLUS de la zone sûre iOS (encoche/
-   indicateur d'accueil) — un simple env(safe-area-inset-bottom) seul ne
-   suffisait pas : il protège de l'encoche du système, pas de la barre de
-   navigation propre à l'appli, posée par-dessus. --- */
+   Ancien correctif erroné retiré : le padding bas de ~70-90px "pour ne
+   pas passer sous .bottom-nav" partait du principe que .bottom-nav se
+   dessine PAR-DESSUS cette modale — vérifié faux. .modal-backdrop (le
+   fond de cette modale) a déjà z-index: 55, largement au-dessus de
+   .bottom-nav (aucun z-index propre, donc 0 implicite) : le fond de la
+   modale couvre déjà TOUT l'écran, .bottom-nav est entièrement invisible
+   derrière, quelle que soit la hauteur du contenu. Ce padding ne faisait
+   donc que creuser un grand vide sous "Supprimer la recette" pour rien
+   (confirmé visuellement) — et sur certains appareils, semblait aussi
+   perturber la zone tactile du bouton "Fermer" une fois la feuille
+   étirée par ce vide. z-index: 60 sur l'élément ci-dessous est function-
+   nellement redondant pour la même raison (le z-index de son parent
+   .modal-backdrop suffit déjà) mais gardé : retirer un z-index déjà
+   correct n'apporte rien, seul le padding était le problème. */
 .modal.recipe-options-modal {
   z-index: 60;
   max-height: 80vh;
   overflow-y: auto;
-  padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 70px);
 }
 
-/* --- Assistant "Ajouter un repas" (Planification) — même défaut que
-   .recipe-options-modal ci-dessus : sur l'étape "Quel repas ?" (4 lignes
-   pleine largeur), le bas de la feuille se retrouvait caché sous
-   .bottom-nav. Même remède : hauteur plafonnée avec défilement interne
-   garanti, plus un padding bas qui réserve la hauteur de la nav basse EN
-   PLUS de la zone sûre iOS. --- */
+/* --- Assistant "Ajouter un repas" (Planification) — portait le même
+   padding bas inutile que .recipe-options-modal ci-dessus (retiré, voir
+   son commentaire pour l'explication complète : .modal-backdrop couvre
+   déjà .bottom-nav entièrement, rien à réserver). --- */
 .modal.planning-step-modal {
   max-height: 80vh;
   overflow-y: auto;
-  padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 70px);
 }
 
 .recipe-options-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
