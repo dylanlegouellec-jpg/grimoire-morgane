@@ -104,7 +104,15 @@ html, body {
   background:
     radial-gradient(ellipse at top left, var(--page-glow), transparent 60%),
     var(--parchment);
-  min-height: 100vh;
+  /* "100dvh", pas "100vh" : en PWA installée sur iOS (mode standalone,
+     sans barre de navigateur), "100vh" se calcule parfois un peu plus
+     court que l'écran réel — cette boîte s'arrêtait alors avant le vrai
+     bas de l'écran, laissant transparaître le fond de html/body
+     (--page-bg, un blanc cassé proche mais différent du parchemin ici)
+     en un bandeau clair sous n'importe quelle vue au contenu court
+     (modale ou fiche recette) — signalé précisément dans ce cas. "dvh"
+     reste, par construction, toujours égal au vrai viewport visuel. */
+  min-height: 100dvh;
   max-width: 480px;
   margin: 0 auto;
   position: relative;
@@ -131,7 +139,7 @@ html, body {
 
 .loading-screen {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 12px; min-height: 100vh; color: var(--gold);
+  gap: 12px; min-height: 100dvh; color: var(--gold);
 }
 .loading-screen p { color: var(--ink-soft); font-style: italic; }
 .view-loading {
