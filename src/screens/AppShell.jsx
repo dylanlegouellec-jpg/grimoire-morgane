@@ -84,6 +84,8 @@ function NavDebugOverlay({ tab, navBottomOffset }) {
       setLines([
         `tab: ${tab}`,
         `innerHeight: ${window.innerHeight} / clientHeight: ${document.documentElement.clientHeight}`,
+        `screen.height: ${window.screen ? window.screen.height : "n/a"} / availHeight: ${window.screen ? window.screen.availHeight : "n/a"}`,
+        `visualViewport.height: ${window.visualViewport ? window.visualViewport.height : "n/a"} / devicePixelRatio: ${window.devicePixelRatio}`,
         `navBottomOffset (calculé, PAS appliqué): ${navBottomOffset}`,
         `nav top/bottom: ${navRect ? `${Math.round(navRect.top)}/${Math.round(navRect.bottom)}` : "n/a"}`,
         `app-content scrollTop/scrollHeight/clientHeight: ${appContent ? `${Math.round(appContent.scrollTop)}/${appContent.scrollHeight}/${appContent.clientHeight}` : "n/a"}`,
