@@ -95,13 +95,6 @@ html[data-text-size="large"] { font-size: 18px; }
 html, body {
   margin: 0;
   padding: 0;
-  /* "position: relative" : donne à .bottom-nav (position: absolute, voir
-     modalsBase.css.js) une base de calcul fiable pour "bottom: 0" — body
-     ne défile jamais dans cette appli (.app-content porte tout le scroll
-     réel), donc ancrer .bottom-nav ici plutôt qu'en "position: fixed"
-     (viewport natif) ne change rien au comportement visuel, seulement à
-     la fiabilité du calcul en PWA standalone iOS. */
-  position: relative;
   /* "height: 100%", pas "100dvh" : mesuré en direct sur un appareil réel
      (PWA installée, iOS), window.innerHeight vaut 874 juste au lancement
      PUIS se stabilise sur 812 quelques secondes plus tard — TOUTE unité

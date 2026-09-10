@@ -9,16 +9,18 @@
 export const MODALS_BASE_CSS = `
 /* --- Navigation basse --- */
 .bottom-nav {
-  /* "absolute", pas "fixed" : mesuré en direct sur un appareil réel, un
-     "position: fixed; bottom: 0" ne colle pas toujours au vrai bas de
-     l'écran en PWA standalone iOS (même famille de souci que
-     .modal-backdrop, déjà rencontrée et corrigée ailleurs cette session)
-     — laissant un bandeau vide sous les icônes au lieu de la nav
-     réellement plaquée en bas. "absolute" s'ancre au bloc html/body
-     (position: relative, voir theme.css.js), qui lui ne défile jamais
-     dans cette appli — donc visuellement identique à "fixed" ici, mais
-     calculé de façon fiable plutôt que via le viewport natif instable. */
-  position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+  /* CORRECTIF REVERTÉ : "position: absolute" ancré à .grimoire-app semblait
+     une bonne idée (même logique que le correctif qui a marché sur
+     .modal-backdrop), mais .grimoire-app n'est PAS plafonné à 100% de haut
+     — min-height est un plancher, pas un plafond, et .app-content (dedans)
+     grandit avec tout le contenu de la grille de recettes (plusieurs
+     milliers de px). "absolute" ancrait donc la nav au bas de CETTE boîte
+     géante, pas au bas de l'écran visible : elle défilait avec la page au
+     lieu de rester fixe, "disparaissant" dès qu'on n'était plus tout en
+     haut — confirmé cassé sur appareil réel, retour à "fixed". Le bandeau
+     vide original sous la nav reste donc non résolu, à reprendre avec de
+     vraies mesures plutôt qu'une nouvelle supposition. */
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
   width: 100%; max-width: 480px;
   display: flex; justify-content: space-around;
   /* Fond transparent + flou plutôt que le chrome sombre plein d'avant : le
