@@ -42,55 +42,6 @@ const ViewLoadingFallback = () => (
   </div>
 );
 
-// DEBUG TEMPORAIRE — à retirer une fois le bandeau blanc bas (mode PWA
-// standalone iOS) diagnostiqué avec certitude. Affiche les chiffres bruts
-// dont on a besoin (impossible à obtenir sans Mac/Web Inspector) plutôt que
-// de continuer à déployer des correctifs au hasard.
-function ViewportDebugOverlay() {
-  const probeRef = useRef(null);
-  const appRef = useRef(null);
-  const [lines, setLines] = useState(["mesure..."]);
-  useEffect(() => {
-    const measure = () => {
-      const probe = probeRef.current;
-      const app = document.querySelector(".grimoire-app");
-      const backdrop = document.querySelector(".modal-backdrop");
-      const safeBottom = probe ? probe.getBoundingClientRect().height : -1;
-      const appRect = app ? app.getBoundingClientRect() : null;
-      const appCs = app ? getComputedStyle(app) : null;
-      const bdRect = backdrop ? backdrop.getBoundingClientRect() : null;
-      setLines([
-        `innerHeight: ${window.innerHeight}`,
-        `docEl.clientHeight: ${document.documentElement.clientHeight}`,
-        `visualViewport: ${window.visualViewport ? Math.round(window.visualViewport.height) : "n/a"}`,
-        `standalone: ${window.navigator.standalone ? "OUI" : "non"}`,
-        `safeAreaBottom: ${Math.round(safeBottom)}`,
-        `grimoire-app bottom: ${appRect ? Math.round(appRect.bottom) : "n/a"}`,
-        `grimoire-app minH css: ${appCs ? appCs.minHeight : "n/a"}`,
-        `modal-backdrop bottom: ${bdRect ? Math.round(bdRect.bottom) : "aucune modale ouverte"}`,
-      ]);
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    const id = setInterval(measure, 1000);
-    return () => { window.removeEventListener("resize", measure); clearInterval(id); };
-  }, []);
-  return (
-    <div
-      ref={appRef}
-      style={{
-        position: "fixed", top: 0, left: 0, right: 0, zIndex: 99999,
-        background: "red", color: "#fff", fontSize: 13, lineHeight: 1.5,
-        padding: "4px 6px", paddingTop: "calc(env(safe-area-inset-top) + 30px)",
-        fontFamily: "monospace", wordBreak: "break-all",
-      }}
-    >
-      {lines.map((l) => <div key={l}>{l}</div>)}
-      <div ref={probeRef} style={{ height: "env(safe-area-inset-bottom)", width: 1 }} />
-    </div>
-  );
-}
-
 /* ------------------------------------------------------------------ */
 /*  COQUILLE APPLICATIVE — onglets, modales, gestes                    */
 /*  Ne connaît que ce que les hooks lui exposent (recettes, frigo,      */
@@ -300,7 +251,6 @@ export default function AppShell({
   return (
     <div className="grimoire-app">
       <style>{CSS}</style>
-      <ViewportDebugOverlay />
 
       <header className="app-header">
         <button

@@ -95,7 +95,17 @@ html[data-text-size="large"] { font-size: 18px; }
 html, body {
   margin: 0;
   padding: 0;
-  background: var(--page-bg);
+  /* "--parchment", pas "--page-bg" : en PWA standalone sur iOS, mesuré en
+     direct sur un appareil réel, window.innerHeight (874) et
+     document.documentElement.clientHeight (812) ne sont PAS d'accord — un
+     écart de 62px sans lien avec dvh/vh/safe-area-inset, qu'aucune unité
+     CSS de hauteur ne peut donc combler de façon fiable dans ce contexte
+     précis (deux tentatives par la hauteur ont déjà échoué). Plutôt que de
+     continuer à viser une taille exacte, on rend l'éventuel espace non
+     couvert INVISIBLE : --page-bg (blanc cassé, #fcf8f2) tranchait
+     nettement avec le parchemin de .grimoire-app juste au-dessus — même
+     couleur ici, pas de bandeau visible quel que soit l'écart réel. */
+  background: var(--parchment);
 }
 
 .grimoire-app, .loading-screen {
