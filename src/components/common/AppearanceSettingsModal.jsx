@@ -17,6 +17,8 @@ export default function AppearanceSettingsModal({
   onSetLanguage,
   showNutriscore,
   onSetShowNutriscore,
+  navOpacity,
+  onSetNavOpacity,
 }) {
   const { t } = useTranslation();
 
@@ -42,6 +44,35 @@ export default function AppearanceSettingsModal({
       <p className="ios-group-title">{t("settings.languageTitle")}</p>
       <div className="ios-group ios-group-padded">
         <SegmentedControl options={LANGUAGE_OPTIONS} value={language} onChange={onSetLanguage} ariaLabel={t("settings.languageTitle")} />
+      </div>
+
+      <p className="ios-group-title">{t("settings.navigationSection")}</p>
+      <div className="ios-group">
+        <div className="settings-slider-row">
+          <div className="settings-slider-head">
+            <div className="settings-row-label">
+              <span className="settings-row-title">{t("settings.navOpacityTitle")}</span>
+              <span className="settings-row-sub">{t("settings.navOpacityHint")}</span>
+            </div>
+            <span className="settings-slider-value">{Math.round(navOpacity * 100)} %</span>
+          </div>
+          <input
+            type="range"
+            className="settings-slider"
+            min="0"
+            max="1"
+            step="0.05"
+            value={navOpacity}
+            onChange={(e) => onSetNavOpacity(Number(e.target.value))}
+            aria-label={t("settings.navOpacityTitle")}
+            // La modale des Réglages se ferme sur un tirage vers le bas
+            // (useSwipeToDismiss, posé sur son conteneur) : sans ça, la
+            // moindre dérive verticale en traînant le curseur remonterait
+            // jusqu'à ce geste et refermerait le panneau en plein réglage.
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+          />
+        </div>
       </div>
 
       <p className="ios-group-title">{t("settings.recipesSection")}</p>

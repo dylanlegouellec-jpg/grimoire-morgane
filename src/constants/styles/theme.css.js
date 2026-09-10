@@ -33,6 +33,16 @@ export const THEME_CSS = `
      avec leur texte clair assorti, quel que soit le thème actif. */
   --chrome: #2a2013;
   --chrome-text: #f1e6c8;
+  /* Fond de la nav basse : teinte donnée en composantes RVB brutes (pas en
+     #hex) pour pouvoir y injecter une opacité variable via rgba() — celle-ci
+     est réglable dans Réglages > Apparence (voir .bottom-nav et
+     utils/localSettings.js). Même teinte que --parchment ci-dessus.
+     --nav-opacity n'est PAS redéfini dans le thème sombre : c'est un choix
+     de l'utilisateur, pas une couleur. Sa valeur réelle est posée en style
+     inline sur <html> au démarrage (applyNavOpacity), qui prend le pas sur
+     la valeur par défaut ci-dessous. */
+  --nav-bg-rgb: 241, 230, 200;
+  --nav-opacity: 0;
   /* Réglages façon iOS (liste groupée) : fond légèrement plus sombre que
      le reste de l'app pour faire ressortir les cartes arrondies posées
      dessus (voir .ios-settings-modal / .ios-group ci-dessous). */
@@ -73,6 +83,7 @@ export const THEME_CSS = `
   --drag-handle: rgba(231,229,228,0.25);
   /* --chrome / --chrome-text ne sont volontairement PAS redéfinis ici :
      ces accents restent identiques dans les deux thèmes. */
+  --nav-bg-rgb: 28, 25, 23;
   --grouped-bg: #0e0c0a;
   --grouped-card-bg: var(--parchment-deep);
   --forest: #4f9e52;

@@ -11,6 +11,9 @@ import {
   getStoredTextSize,
   storeTextSize,
   applyTextSize,
+  getStoredNavOpacity,
+  storeNavOpacity,
+  applyNavOpacity,
   getStoredLanguage,
   storeLanguage,
 } from "./utils/localSettings";
@@ -117,6 +120,14 @@ export default function GrimoireDeMorgane() {
   const [pressDuration, setPressDurationState] = useState(() => getStoredPressDuration());
   const [showNutriscore, setShowNutriscoreState] = useState(() => getStoredShowNutriscore());
   const [textSize, setTextSizeState] = useState(() => getStoredTextSize());
+  // Purement local à l'appareil (voir utils/localSettings.js) : pas de
+  // colonne dédiée dans `profiles`, donc rien à tirer/pousser côté compte
+  // comme le font le thème et les trois réglages juste au-dessus.
+  const [navOpacity, setNavOpacityState] = useState(() => getStoredNavOpacity());
+  const setNavOpacity = (value) => {
+    storeNavOpacity(value);
+    setNavOpacityState(value);
+  };
   // Réglage mémorisé localement uniquement (pas encore de vraie traduction
   // à synchroniser — voir la note dans utils/localSettings.js).
   const [language, setLanguageState] = useState(() => getStoredLanguage());
@@ -206,6 +217,11 @@ export default function GrimoireDeMorgane() {
   useLayoutEffect(() => {
     applyTextSize(textSize);
   }, [textSize]);
+
+  // Idem, en variable CSS --nav-opacity sur <html> (voir .bottom-nav).
+  useLayoutEffect(() => {
+    applyNavOpacity(navOpacity);
+  }, [navOpacity]);
 
   const setTheme = (nextTheme) => {
     storeTheme(nextTheme);
@@ -304,6 +320,8 @@ export default function GrimoireDeMorgane() {
     setPressDuration,
     showNutriscore,
     setShowNutriscore,
+    navOpacity,
+    setNavOpacity,
     textSize,
     setTextSize,
     language,

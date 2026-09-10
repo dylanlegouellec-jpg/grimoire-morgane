@@ -49,6 +49,8 @@ export default function SecretSettingsModal({
   onSetLanguage,
   showNutriscore,
   onSetShowNutriscore,
+  navOpacity,
+  onSetNavOpacity,
   textSize,
   onSetTextSize,
   user,
@@ -269,6 +271,8 @@ export default function SecretSettingsModal({
             onSetLanguage={onSetLanguage}
             showNutriscore={showNutriscore}
             onSetShowNutriscore={onSetShowNutriscore}
+            navOpacity={navOpacity}
+            onSetNavOpacity={onSetNavOpacity}
           />
         )}
         {activeView === "accessibility" && (

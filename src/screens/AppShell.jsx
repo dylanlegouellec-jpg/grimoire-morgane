@@ -96,6 +96,8 @@ export default function AppShell({
     setPressDuration,
     showNutriscore,
     setShowNutriscore,
+    navOpacity,
+    setNavOpacity,
     textSize,
     setTextSize,
     language,
@@ -534,6 +536,8 @@ export default function AppShell({
             onSetTheme={setTheme}
             showNutriscore={showNutriscore}
             onSetShowNutriscore={setShowNutriscore}
+            navOpacity={navOpacity}
+            onSetNavOpacity={setNavOpacity}
             textSize={textSize}
             onSetTextSize={setTextSize}
             language={language}

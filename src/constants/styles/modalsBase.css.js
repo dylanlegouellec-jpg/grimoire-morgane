@@ -17,20 +17,16 @@ export const MODALS_BASE_CSS = `
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
   width: 100%; max-width: 480px;
   display: flex; justify-content: space-around;
-  /* "backdrop-filter: blur" (retiré) promeut un élément "position: fixed"
-     dans son propre calque GPU sous WebKit — un terrain connu pour des bugs
-     de repositionnement où ce calque reste figé sur une ancienne mesure du
-     viewport au lieu de se recaler quand iOS termine son calcul du vrai
-     écran (le "874 au lancement puis 812 plus tard" déjà noté ailleurs dans
-     ce fichier). Repéré comme la cause probable de la nav mal positionnée
-     UNIQUEMENT en PWA installée sur iPhone (jamais dans l'onglet Safari
-     normal, jamais sur Android/desktop) : ce bug de calque est spécifique à
-     WebKit et plus fréquent en mode standalone (pas de chrome Safari pour
-     stabiliser l'affichage). Un fond semi-transparent uni (sans filtre)
-     garde un effet "on devine le contenu en dessous" sans le flou, sans
-     déclencher cette catégorie de bug. Couleurs d'icônes/texte (--ink-soft/
-     --gold ci-dessous) inchangées : toujours pensées pour un fond clair. */
-  background: rgba(241, 230, 200, 0.92);
+  /* Verre dépoli : le contenu qui défile en dessous reste visible (flouté)
+     à travers la barre plutôt que masqué par un bandeau opaque. Le taux
+     d'opacité du fond posé PAR-DESSUS ce flou est réglable par
+     l'utilisateur (Réglages > Apparence) — 0 = verre dépoli seul,
+     1 = bandeau plein. Voir --nav-bg-rgb/--nav-opacity dans theme.css.js.
+     Les couleurs d'icônes/texte ci-dessous (--ink-soft/--gold) sont pensées
+     pour ce fond clair, à toutes les opacités. */
+  background: rgba(var(--nav-bg-rgb), var(--nav-opacity, 0));
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-top: 2px solid var(--gold);
   padding: 10px 0 max(10px, env(safe-area-inset-bottom));
 }
