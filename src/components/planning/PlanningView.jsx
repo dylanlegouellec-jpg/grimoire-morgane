@@ -88,7 +88,19 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
     <div className="view">
       <div className="planning-header">
         <h2 className="dropcap-title" style={{ margin: 0, textAlign: "center" }}>{t("planning.title")}</h2>
-        <div className="planning-scope-toggle-wrap">
+        {/* Semaine + portée sur une seule ligne : le toggle vient se caler
+            juste après la flèche ">", donc c'est TOUT le groupe (flèches +
+            date + toggle) qui est centré ici, pas la date seule comme
+            avant — la date se retrouve légèrement décalée à gauche du
+            centre de l'écran pour laisser la place au toggle à droite. */}
+        <div className="planning-week-nav">
+          <button type="button" className="planning-week-arrow" onClick={goPrevWeek} aria-label={t("planning.prevWeek")}>
+            <ChevronLeft size={18} />
+          </button>
+          <span className="planning-week-range">{formatWeekRange(weekStart, language)}</span>
+          <button type="button" className="planning-week-arrow" onClick={goNextWeek} aria-label={t("planning.nextWeek")}>
+            <ChevronRight size={18} />
+          </button>
           <SegmentedControl
             compact
             ariaLabel={t("planning.scopeToggleLabel")}
@@ -99,15 +111,6 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
               { value: "personal", label: "", icon: User, ariaLabel: t("planning.scopePersonal") },
             ]}
           />
-        </div>
-        <div className="planning-week-nav">
-          <button type="button" className="planning-week-arrow" onClick={goPrevWeek} aria-label={t("planning.prevWeek")}>
-            <ChevronLeft size={18} />
-          </button>
-          <span className="planning-week-range">{formatWeekRange(weekStart, language)}</span>
-          <button type="button" className="planning-week-arrow" onClick={goNextWeek} aria-label={t("planning.nextWeek")}>
-            <ChevronRight size={18} />
-          </button>
         </div>
       </div>
 

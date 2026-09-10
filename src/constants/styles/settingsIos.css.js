@@ -75,8 +75,8 @@ export const SETTINGS_IOS_CSS = `
    uniquement iconographique à 2 options (ex. portée du plan de repas,
    voir PlanningView.jsx) qui n'a pas besoin d'occuper toute la largeur
    comme Thème/Langue dans les Réglages. */
-.segmented-compact { display: inline-flex; }
-.segmented-compact .segmented-btn { flex: none; padding: 7px 12px; }
+.segmented-compact { display: inline-flex; flex-shrink: 0; }
+.segmented-compact .segmented-btn { flex: none; padding: 6px 9px; }
 
 /* --- Retour vers Réglages (navigation par couches, sous-panneaux) --- */
 .modal-back {

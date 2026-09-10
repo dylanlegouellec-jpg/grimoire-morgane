@@ -11,17 +11,20 @@ export const PLANNING_CSS = `
 /*  PLANIFICATION — plan de repas hebdomadaire (voir PlanningView.jsx)   */
 /* ------------------------------------------------------------------ */
 .planning-header { margin-bottom: 4px; }
-.planning-scope-toggle-wrap { display: flex; justify-content: center; margin-top: 10px; }
-.planning-week-nav { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 10px; }
+/* Flèches + date + toggle de portée sur une seule ligne (voir
+   PlanningView.jsx) : gap resserré et flèches/texte légèrement réduits
+   pour que tout tienne sans retour à la ligne, y compris sur un écran
+   étroit (iPhone SE, ~375px) une fois le toggle ajouté à droite. */
+.planning-week-nav { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; }
 .planning-week-arrow {
-  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
   background: var(--surface-strong); border: 1px solid var(--line); color: var(--ink-soft);
   display: flex; align-items: center; justify-content: center; cursor: pointer;
 }
 .planning-week-arrow:active { background: var(--surface); }
 .planning-week-range {
-  font-family: 'EB Garamond', serif; font-style: italic; font-size: 0.9rem; color: var(--ink-soft);
-  min-width: 190px; text-align: center;
+  font-family: 'EB Garamond', serif; font-style: italic; font-size: 0.82rem; color: var(--ink-soft);
+  min-width: 0; white-space: nowrap; text-align: center;
 }
 
 .planning-days { display: flex; flex-direction: column; gap: 10px; margin: 18px 0 20px; }
