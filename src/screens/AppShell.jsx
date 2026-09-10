@@ -72,6 +72,47 @@ function useNavBottomOffset() {
   return offset;
 }
 
+// DEBUG TEMPORAIRE (round 4) — le correctif tient sur les 4 onglets au
+// repos, mais reste décalé une fois scrollé tout en bas d'une longue
+// grille, même arrêté (pas juste le rebond élastique). Remesure donc dans
+// ce nouvel état précis plutôt que de deviner. À retirer une fois
+// diagnostiqué.
+function NavDebugOverlay({ tab, navBottomOffset }) {
+  const [lines, setLines] = useState(["mesure..."]);
+  useEffect(() => {
+    const measure = () => {
+      const nav = document.querySelector(".bottom-nav");
+      const appContent = document.querySelector(".app-content");
+      const navRect = nav ? nav.getBoundingClientRect() : null;
+      setLines([
+        `tab: ${tab}`,
+        `innerHeight: ${window.innerHeight} / clientHeight: ${document.documentElement.clientHeight}`,
+        `navBottomOffset (appliqué): ${navBottomOffset}`,
+        `nav top/bottom: ${navRect ? `${Math.round(navRect.top)}/${Math.round(navRect.bottom)}` : "n/a"}`,
+        `app-content scrollTop/scrollHeight/clientHeight: ${appContent ? `${Math.round(appContent.scrollTop)}/${appContent.scrollHeight}/${appContent.clientHeight}` : "n/a"}`,
+        `window.scrollY: ${window.scrollY}`,
+      ]);
+    };
+    measure();
+    const id = setInterval(measure, 400);
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, true);
+    return () => { clearInterval(id); window.removeEventListener("resize", measure); window.removeEventListener("scroll", measure, true); };
+  }, [tab, navBottomOffset]);
+  return (
+    <div
+      style={{
+        position: "fixed", top: 0, left: 0, right: 0, zIndex: 99999,
+        background: "red", color: "#fff", fontSize: 12, lineHeight: 1.4,
+        padding: "4px 6px", paddingTop: "calc(env(safe-area-inset-top) + 30px)",
+        fontFamily: "monospace", wordBreak: "break-all",
+      }}
+    >
+      {lines.map((l) => <div key={l}>{l}</div>)}
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /*  COQUILLE APPLICATIVE — onglets, modales, gestes                    */
 /*  Ne connaît que ce que les hooks lui exposent (recettes, frigo,      */
@@ -282,6 +323,7 @@ export default function AppShell({
   return (
     <div className="grimoire-app">
       <style>{CSS}</style>
+      <NavDebugOverlay tab={tab} navBottomOffset={navBottomOffset} />
 
       <header className="app-header">
         <button
