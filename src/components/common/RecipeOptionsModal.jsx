@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Camera, ImageOff, Sparkles, Trash2, X } from "lucide-react";
 import { triggerHaptic } from "../../utils/helpers";
 import { generateAIIllustration } from "../../utils/aiIllustration";
@@ -83,7 +84,16 @@ export default function RecipeOptionsModal({ recipe, onClose, onUpdateRecipe, on
     onClose();
   };
 
-  return (
+  // Portail vers <body> : sans ça, cette modale reste imbriquée dans
+  // .app-content — le conteneur qui assure RÉELLEMENT le défilement de la
+  // page (voir shell.css.js, .app-content, forcé en overflow-y: auto par
+  // sa propre règle overflow-x: hidden). Un élément "position: fixed"
+  // imbriqué dans un ancêtre scrollable AUTRE que <body> est un cas connu
+  // de bug WebKit sur Safari iOS : il ne reste pas toujours calé sur le
+  // vrai viewport de l'écran, laissant un bandeau (souvent blanc) en bas —
+  // signalé sur cette modale précisément. Le portail sort la modale de cet
+  // ancêtre scrollable une bonne fois pour toutes, quel que soit le moteur.
+  return createPortal(
     <div className="modal-backdrop" onClick={onClose}>
       <div
         className="modal grimoire-page recipe-options-modal modal-swipeable"
@@ -132,6 +142,7 @@ export default function RecipeOptionsModal({ recipe, onClose, onUpdateRecipe, on
           onChange={handleFileChange}
         />
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
