@@ -95,18 +95,24 @@ html[data-text-size="large"] { font-size: 18px; }
 html, body {
   margin: 0;
   padding: 0;
-  /* "--parchment", pas "--page-bg" : en PWA standalone sur iOS, mesuré en
-     direct sur un appareil réel, window.innerHeight (874) et
-     document.documentElement.clientHeight (812) ne sont PAS d'accord — un
-     écart de 62px sans lien avec dvh/vh/safe-area-inset, qu'aucune unité
-     CSS de hauteur ne peut donc combler de façon fiable dans ce contexte
-     précis (deux tentatives par la hauteur ont déjà échoué). Plutôt que de
-     continuer à viser une taille exacte, on rend l'éventuel espace non
-     couvert INVISIBLE : --page-bg (blanc cassé, #fcf8f2) tranchait
-     nettement avec le parchemin de .grimoire-app juste au-dessus — même
-     couleur ici, pas de bandeau visible quel que soit l'écart réel. */
+  /* "height: 100%", pas "100dvh" : mesuré en direct sur un appareil réel
+     (PWA installée, iOS), window.innerHeight vaut 874 juste au lancement
+     PUIS se stabilise sur 812 quelques secondes plus tard — TOUTE unité
+     basée sur le viewport (vh/dvh/svh/lvh) partage cette même source et
+     peut donc figer une mise en page sur la valeur instable de départ.
+     document.documentElement.clientHeight, lui, est resté fiable à 812
+     dans toutes les mesures prises (avant et après stabilisation) : une
+     chaîne de hauteurs en pourcentage (html/body/#root ci-dessous, puis
+     .grimoire-app en min-height: 100% un peu plus bas) se cale sur cette
+     même mesure fiable plutôt que sur le viewport instable. */
+  height: 100%;
+  /* --parchment, pas --page-bg (blanc cassé) : sécurité si un enfant
+     n'atteint malgré tout pas tout à fait le bas réel de l'écran — même
+     couleur que .grimoire-app juste en dessous, donc invisible. */
   background: var(--parchment);
 }
+
+#root { height: 100%; }
 
 .grimoire-app, .loading-screen {
   font-family: 'EB Garamond', Georgia, serif;
@@ -114,15 +120,14 @@ html, body {
   background:
     radial-gradient(ellipse at top left, var(--page-glow), transparent 60%),
     var(--parchment);
-  /* "100dvh", pas "100vh" : en PWA installée sur iOS (mode standalone,
-     sans barre de navigateur), "100vh" se calcule parfois un peu plus
-     court que l'écran réel — cette boîte s'arrêtait alors avant le vrai
-     bas de l'écran, laissant transparaître le fond de html/body
-     (--page-bg, un blanc cassé proche mais différent du parchemin ici)
-     en un bandeau clair sous n'importe quelle vue au contenu court
-     (modale ou fiche recette) — signalé précisément dans ce cas. "dvh"
-     reste, par construction, toujours égal au vrai viewport visuel. */
-  min-height: 100dvh;
+  /* "100%", pas "100dvh"/"100vh" — voir le commentaire sur html/body
+     juste au-dessus : dvh avait semblé corriger le bandeau clair en bas
+     (mesuré à l'instant T où il collait, par hasard, à window.innerHeight
+     à ce moment précis), mais génère à la place un excédent d'espace
+     ailleurs (RecipeOptionsModal) une fois figé sur la valeur instable de
+     départ (874 au lieu de 812). "100%" hérite de la chaîne de hauteurs
+     fiables ci-dessus (html/body/#root), pas du viewport. */
+  min-height: 100%;
   max-width: 480px;
   margin: 0 auto;
   position: relative;
@@ -149,7 +154,7 @@ html, body {
 
 .loading-screen {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 12px; min-height: 100dvh; color: var(--gold);
+  gap: 12px; min-height: 100%; color: var(--gold);
 }
 .loading-screen p { color: var(--ink-soft); font-style: italic; }
 .view-loading {

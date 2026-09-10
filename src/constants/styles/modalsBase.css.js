@@ -47,9 +47,23 @@ export const MODALS_BASE_CSS = `
    problème (overscroll-behavior sur .app-content). */
 .modal, .grimoire-page {
   background: var(--parchment);
-  width: 100%; max-width: 480px; max-height: 88vh; overflow-y: auto; overflow-x: hidden;
+  /* "dvh", pas "vh" : "vh" se fige à sa valeur de calcul initiale et ne se
+     remet jamais à jour — en PWA standalone iOS, mesuré en direct,
+     window.innerHeight vaut 874 au tout premier rendu puis se stabilise
+     sur 812 quelques secondes après ; un max-height en "vh" pris à ce
+     premier instant restait donc bloqué sur 874 (moins de contenu réel
+     ne remplissant jamais cette hauteur = grand vide en bas d'une courte
+     modale ; à l'inverse, un contenu long dont on attend qu'il s'arrête à
+     812 débordait de 62px de trop avant coupure). "dvh" se recalcule en
+     continu et suit donc la valeur stable. */
+  width: 100%; max-width: 480px; max-height: 88dvh; overflow-y: auto; overflow-x: hidden;
   border-radius: 18px 18px 0 0;
-  padding: 22px 20px 30px;
+  /* padding-bottom inclut env(safe-area-inset-bottom) : sans lui, le
+     dernier texte défilable (ex. la dernière étape d'une recette) finit
+     pile au bord de l'écran, sans respirer au-dessus de la zone
+     d'indicateur d'accueil iOS — signalé comme "coupé" même s'il était
+     techniquement tout affiché. */
+  padding: 22px 20px calc(30px + env(safe-area-inset-bottom));
   position: relative;
   border-top: 3px solid var(--gold);
   animation: slideUp 0.28s ease;
@@ -102,7 +116,7 @@ export const MODALS_BASE_CSS = `
    correct n'apporte rien, seul le padding était le problème. */
 .modal.recipe-options-modal {
   z-index: 60;
-  max-height: 80vh;
+  max-height: 80dvh;
   overflow-y: auto;
 }
 
@@ -111,7 +125,7 @@ export const MODALS_BASE_CSS = `
    son commentaire pour l'explication complète : .modal-backdrop couvre
    déjà .bottom-nav entièrement, rien à réserver). --- */
 .modal.planning-step-modal {
-  max-height: 80vh;
+  max-height: 80dvh;
   overflow-y: auto;
 }
 
