@@ -50,7 +50,23 @@
       }
     </style>
     <link rel="apple-touch-icon" href="/Icon.jpeg">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">     <meta name="theme-color" content="#f5f0e1">
+    <!-- "default", surtout PAS "black-translucent" : une fois l'app ajoutée à
+         l'écran d'accueil, black-translucent place la webview en plein écran
+         à partir de y=0 (sous la Dynamic Island) mais lui laisse une hauteur
+         de viewport amputée de cette même zone. Mesuré image par image sur
+         l'appareil : 812pt de viewport pour 874pt d'écran réel — exactement
+         les 62pt de env(safe-area-inset-top). Tout "position: fixed;
+         bottom: 0" (.bottom-nav en tête) s'ancre alors 62pt au-dessus du vrai
+         bas de l'écran, le contenu continue de défiler dans la bande morte du
+         bas, et WebKit alterne entre les deux références d'un repaint à
+         l'autre — d'où la nav tantôt bien placée tantôt remontée, et ses
+         libellés rognés quand sa boîte tombe à cheval sur la frontière. Ce
+         méta est ignoré dans un onglet Safari normal, ce qui explique que le
+         bug ne se voyait QUE dans l'app installée. Avec "default", iOS place
+         la webview sous la barre d'état et sa hauteur correspond enfin à la
+         place qu'elle occupe réellement. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#f5f0e1">
   </head>
   <body>
     <div id="root"></div>
