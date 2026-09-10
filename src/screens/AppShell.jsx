@@ -90,15 +90,19 @@ function NavDebugOverlay({ tab, navBottomOffset }) {
       const nav = document.querySelector(".bottom-nav");
       const appContent = document.querySelector(".app-content");
       const navRect = nav ? nav.getBoundingClientRect() : null;
+      const bodyRect = document.body.getBoundingClientRect();
+      const bodyCs = getComputedStyle(document.body);
+      const firstLabel = nav ? nav.querySelector(".nav-btn span") : null;
+      const labelRect = firstLabel ? firstLabel.getBoundingClientRect() : null;
       setLines([
         `tab: ${tab}`,
         `innerHeight: ${window.innerHeight} / clientHeight: ${document.documentElement.clientHeight}`,
         `screen.height: ${window.screen ? window.screen.height : "n/a"} / availHeight: ${window.screen ? window.screen.availHeight : "n/a"}`,
-        `visualViewport.height: ${window.visualViewport ? window.visualViewport.height : "n/a"} / devicePixelRatio: ${window.devicePixelRatio}`,
         `navBottomOffset (appliqué en bottom NÉGATIF): ${navBottomOffset}`,
         `nav top/bottom: ${navRect ? `${Math.round(navRect.top)}/${Math.round(navRect.bottom)}` : "n/a"}`,
+        `label exists: ${!!firstLabel} / label rect top/bottom: ${labelRect ? `${Math.round(labelRect.top)}/${Math.round(labelRect.bottom)}` : "n/a"} / label text: "${firstLabel ? firstLabel.textContent : "n/a"}"`,
+        `body rect top/bottom: ${Math.round(bodyRect.top)}/${Math.round(bodyRect.bottom)} / body overflow: ${bodyCs.overflow} / body overflowY: ${bodyCs.overflowY}`,
         `app-content scrollTop/scrollHeight/clientHeight: ${appContent ? `${Math.round(appContent.scrollTop)}/${appContent.scrollHeight}/${appContent.clientHeight}` : "n/a"}`,
-        `window.scrollY: ${window.scrollY}`,
       ]);
     };
     measure();
