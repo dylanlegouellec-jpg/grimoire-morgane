@@ -49,20 +49,26 @@ const ViewLoadingFallback = () => (
 function ViewportDebugOverlay() {
   const probeRef = useRef(null);
   const appRef = useRef(null);
-  const [info, setInfo] = useState("mesure...");
+  const [lines, setLines] = useState(["mesure..."]);
   useEffect(() => {
     const measure = () => {
       const probe = probeRef.current;
       const app = document.querySelector(".grimoire-app");
+      const backdrop = document.querySelector(".modal-backdrop");
       const safeBottom = probe ? probe.getBoundingClientRect().height : -1;
       const appRect = app ? app.getBoundingClientRect() : null;
       const appCs = app ? getComputedStyle(app) : null;
-      setInfo(
-        `iH:${window.innerHeight} dcH:${document.documentElement.clientHeight} ` +
-        `vv:${window.visualViewport ? Math.round(window.visualViewport.height) : "n/a"} ` +
-        `standalone:${window.navigator.standalone ? 1 : 0} safeBot:${Math.round(safeBottom)} ` +
-        `appBot:${appRect ? Math.round(appRect.bottom) : "n/a"} appMinH:${appCs ? appCs.minHeight : "n/a"}`
-      );
+      const bdRect = backdrop ? backdrop.getBoundingClientRect() : null;
+      setLines([
+        `innerHeight: ${window.innerHeight}`,
+        `docEl.clientHeight: ${document.documentElement.clientHeight}`,
+        `visualViewport: ${window.visualViewport ? Math.round(window.visualViewport.height) : "n/a"}`,
+        `standalone: ${window.navigator.standalone ? "OUI" : "non"}`,
+        `safeAreaBottom: ${Math.round(safeBottom)}`,
+        `grimoire-app bottom: ${appRect ? Math.round(appRect.bottom) : "n/a"}`,
+        `grimoire-app minH css: ${appCs ? appCs.minHeight : "n/a"}`,
+        `modal-backdrop bottom: ${bdRect ? Math.round(bdRect.bottom) : "aucune modale ouverte"}`,
+      ]);
     };
     measure();
     window.addEventListener("resize", measure);
@@ -74,11 +80,12 @@ function ViewportDebugOverlay() {
       ref={appRef}
       style={{
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 99999,
-        background: "red", color: "#fff", fontSize: 10, lineHeight: 1.3,
-        padding: "4px 6px", fontFamily: "monospace", wordBreak: "break-all",
+        background: "red", color: "#fff", fontSize: 13, lineHeight: 1.5,
+        padding: "4px 6px", paddingTop: "calc(env(safe-area-inset-top) + 30px)",
+        fontFamily: "monospace", wordBreak: "break-all",
       }}
     >
-      {info}
+      {lines.map((l) => <div key={l}>{l}</div>)}
       <div ref={probeRef} style={{ height: "env(safe-area-inset-bottom)", width: 1 }} />
     </div>
   );
