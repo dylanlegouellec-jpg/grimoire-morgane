@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, lazy, Suspense } from "react";
+import { createPortal } from "react-dom";
 import { Heart, Search, Settings, Wand2 } from "lucide-react";
 
 import { FILTERS, TABS } from "../constants";
@@ -464,20 +465,34 @@ export default function AppShell({
         </ErrorBoundary>
       </main>
 
-      <nav className="bottom-nav">
-        {TABS.map(({ key, icon: Icon }) => (
-          <NavButton
-            key={key}
-            tabKey={key}
-            label={t(`nav.${key}`)}
-            Icon={Icon}
-            active={tab === key}
-            onSelect={() => setTab(key)}
-            onLongPress={key === "courses" && shoppingLists.length > 0 ? () => setShowListsManager(true) : null}
-            pressDuration={pressDuration}
-          />
-        ))}
-      </nav>
+      {/* Portail vers <body> : mesuré en direct sur un appareil réel (PWA
+          standalone iOS), .bottom-nav (position: fixed; bottom: 0) restait
+          imbriquée dans .grimoire-app — un bandeau de diagnostic a montré
+          que sa position se calcule correctement quand window.innerHeight
+          == document.documentElement.clientHeight, mais se décale de ~62px
+          vers le haut dès que ces deux valeurs divergent (874 vs 812),
+          reproductible sur Plan/Frigo, correct sur Courses/Recettes-avec-
+          modale-ouverte selon l'état du moment. Même famille de bug, et
+          même correctif, que RecipeOptionsModal.jsx plus tôt dans la
+          session : sortir l'élément de .grimoire-app le rend indépendant
+          de cette instabilité, quel que soit le mécanisme WebKit exact. */}
+      {createPortal(
+        <nav className="bottom-nav">
+          {TABS.map(({ key, icon: Icon }) => (
+            <NavButton
+              key={key}
+              tabKey={key}
+              label={t(`nav.${key}`)}
+              Icon={Icon}
+              active={tab === key}
+              onSelect={() => setTab(key)}
+              onLongPress={key === "courses" && shoppingLists.length > 0 ? () => setShowListsManager(true) : null}
+              pressDuration={pressDuration}
+            />
+          ))}
+        </nav>,
+        document.body
+      )}
 
       {openRecipe && (
         <RecipeDetail
