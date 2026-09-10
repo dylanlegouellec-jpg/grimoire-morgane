@@ -12,17 +12,25 @@ export const MODALS_BASE_CSS = `
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
   width: 100%; max-width: 480px;
   display: flex; justify-content: space-around;
-  background: var(--chrome);
+  /* Fond transparent + flou plutôt que le chrome sombre plein d'avant : le
+     contenu qui défile en dessous reste visible (flouté) au lieu d'être
+     masqué par un bandeau opaque. Les couleurs d'icônes/texte ci-dessous
+     sont donc passées de tons clairs (pensés pour un fond sombre) à des
+     tons foncés (--ink-soft/--gold, déjà utilisés partout ailleurs sur
+     fond parchemin) pour rester lisibles sur ce nouveau fond clair. */
+  background: transparent;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-top: 2px solid var(--gold);
   padding: 10px 0 max(10px, env(safe-area-inset-bottom));
 }
 .nav-btn {
-  background: none; border: none; color: #b6a884;
+  background: none; border: none; color: var(--ink-soft);
   display: flex; flex-direction: column; align-items: center; gap: 3px;
   font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.5px;
   cursor: pointer; padding: 4px 10px;
 }
-.nav-btn.active { color: var(--gold-light); }
+.nav-btn.active { color: var(--gold); }
 
 /* --- Modales / page de grimoire --- */
 .modal-backdrop {
