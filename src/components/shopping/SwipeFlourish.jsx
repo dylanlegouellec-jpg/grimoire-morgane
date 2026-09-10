@@ -46,7 +46,9 @@ export default function SwipeFlourish({ onSwipeRight, onSwipeLeft, onTap }) {
       className={`flourish flourish-swipe ${hintClass}`}
       aria-hidden="true"
       style={{
-        transform: `translateX(${dragX}px)`,
+        // "undefined" au repos, pas "translateX(0px)" — voir le même
+        // correctif et son explication dans ShoppingItemRow.jsx.
+        transform: dragX !== 0 ? `translateX(${dragX}px)` : undefined,
         // Aucune transition pendant le geste (suit le doigt au pixel près) ;
         // un rebond élastique uniquement au relâchement.
         transition: isDragging

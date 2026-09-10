@@ -77,7 +77,15 @@ function ShoppingItemRow({ item, checked, onToggle, onAdjust, onDelete, onOpenWh
         <div
           className="shopping-item-content"
           style={{
-            transform: `translateX(${dragX}px)`,
+            // "undefined" au repos (dragX === 0), pas "translateX(0px)" : une
+            // transform non vide force sa propre couche de composition GPU
+            // même immobile — sur cette vue, avec potentiellement plusieurs
+            // lignes en même temps, ça a fini par perturber le rendu de
+            // .bottom-nav (position: fixed + backdrop-filter, ailleurs sur
+            // la page) sur iOS Safari : la nav apparaissait plus haute et
+            // opaque spécifiquement sur l'onglet Courses. Même principe déjà
+            // appliqué dans useSwipeToDismiss.js.
+            transform: dragX !== 0 ? `translateX(${dragX}px)` : undefined,
             transition: dragging ? "none" : "transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
           }}
           onTouchStart={handleTouchStart}
