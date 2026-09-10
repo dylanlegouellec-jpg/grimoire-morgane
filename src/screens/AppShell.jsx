@@ -72,8 +72,12 @@ export default function AppShell({
   const { t } = useTranslation();
   const {
     shoppingLists,
+    visibleShoppingLists,
     activeListId,
     setActiveListId,
+    openShoppingList,
+    shoppingScope,
+    setShoppingScope,
     createShoppingList,
     renameShoppingList,
     deleteShoppingList,
@@ -397,6 +401,8 @@ export default function AppShell({
             <ShoppingView
               recipes={recipes}
               activeList={shoppingLists.find((l) => l.id === activeListId) || null}
+              scope={shoppingScope}
+              onChangeScope={setShoppingScope}
               onAddManualItem={addManualItem}
               onToggleItem={toggleShoppingItem}
               onDeleteItem={deleteShoppingItem}
@@ -552,9 +558,10 @@ export default function AppShell({
       {showListsManager && (
         <Suspense fallback={null}>
           <ListsManagerModal
-            lists={shoppingLists}
+            lists={visibleShoppingLists}
             activeListId={activeListId}
-            onOpen={(id) => setActiveListId(id)}
+            scope={shoppingScope}
+            onOpen={openShoppingList}
             onCreate={createShoppingList}
             onRename={renameShoppingList}
             onDelete={deleteShoppingList}

@@ -150,6 +150,7 @@ export default function GrimoireDeMorgane() {
   });
   const shoppingApi = useShoppingLists({
     householdId,
+    userId: user && user.id,
     initialLists: Array.isArray(localCache.shoppingLists) ? localCache.shoppingLists : [],
     initialActiveListId: localCache.activeListId || null,
     showToast,

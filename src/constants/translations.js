@@ -82,6 +82,10 @@ export const translations = {
       alreadyBought: "Déjà achetés :",
       emptyList: "Ta liste est vide — ajoute un article ou génère-la à partir de tes recettes.",
       listCopied: "Liste copiée !",
+      scopeToggleLabel: "Portée des listes de courses",
+      scopeHousehold: "Listes du foyer",
+      scopePersonal: "Mes listes personnelles",
+      noListYet: "Aucune liste",
     },
     planning: {
       title: "Mon plan de repas",
@@ -340,6 +344,10 @@ export const translations = {
       alreadyBought: "Already bought:",
       emptyList: "Your list is empty — add an item or generate it from your recipes.",
       listCopied: "List copied!",
+      scopeToggleLabel: "Shopping list scope",
+      scopeHousehold: "Household lists",
+      scopePersonal: "My personal lists",
+      noListYet: "No list yet",
     },
     planning: {
       title: "My meal plan",

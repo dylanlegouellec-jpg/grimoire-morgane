@@ -32,7 +32,7 @@ const PING_TIMEOUT_MS = 8000;
 /* ------------------------------------------------------------------ */
 export const RECIPE_COLUMNS =
   "id,title,category,time,servings,carbs,calories,protein,fat,notes,illustration_key,is_favorite,ingredients,steps,image_url,image_source,nutriscore_grade,created_at";
-export const SHOPPING_LIST_COLUMNS = "id,name,items,created_at";
+export const SHOPPING_LIST_COLUMNS = "id,name,items,scope,user_id,created_at";
 export const APP_STATE_COLUMNS = "household_id,pantry,basics,meal_plan,updated_at";
 
 // Dernier statut de connectivité RÉEL connu, mesuré par un ping Supabase
@@ -418,13 +418,20 @@ export function mapRowToShoppingList(row) {
     id: row.id,
     name: row.name,
     items: Array.isArray(row.items) ? row.items : [],
+    // "scope" absent (listes créées avant ce champ) traité comme
+    // "household", jamais "personal" par défaut — voir useShoppingLists.js.
+    scope: row.scope === "personal" ? "personal" : "household",
+    userId: row.user_id || null,
   };
 }
 export function mapShoppingListToRow(list, householdId) {
+  const scope = list.scope === "personal" ? "personal" : "household";
   return {
     id: list.id,
     name: list.name,
     items: list.items,
+    scope,
+    user_id: scope === "personal" ? (list.userId || null) : null,
     ...(householdId ? { household_id: householdId } : {}),
   };
 }

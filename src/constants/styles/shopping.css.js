@@ -8,13 +8,24 @@
 
 export const SHOPPING_CSS = `
 /* --- Courses --- */
-.active-list-header { margin-bottom: 12px; }
+/* Ligne "Liste 1  changer ▾" + toggle foyer/personnel (voir
+   ShoppingView.jsx) : même principe que la ligne semaine de la
+   Planification — le toggle reste collé au bord droit
+   (flex-shrink: 0 par défaut sur .segmented), le bouton nom-de-liste
+   prend tout le reste (flex: 1, min-width: 0) et son propre texte
+   s'ellipse (.active-list-name-text) plutôt que de pousser le toggle
+   hors de l'écran si le nom de la liste est long. */
+.active-list-header { margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
 .active-list-name {
+  flex: 1; min-width: 0;
   background: none; border: none; cursor: pointer; padding: 0;
   font-family: 'Cinzel', serif; font-size: 1rem; color: var(--ink);
   display: flex; align-items: baseline; gap: 8px;
 }
-.active-list-switch { font-family: 'EB Garamond', serif; font-style: italic; font-size: 0.78rem; color: var(--gold); }
+.active-list-name-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.active-list-name-empty { color: var(--ink-soft); }
+.active-list-name-empty .active-list-name-text { font-style: italic; }
+.active-list-switch { font-family: 'EB Garamond', serif; font-style: italic; font-size: 0.78rem; color: var(--gold); flex-shrink: 0; }
 .manual-add-row {
   display: flex; gap: 8px; margin-bottom: 16px;
   background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 4px 4px 14px;

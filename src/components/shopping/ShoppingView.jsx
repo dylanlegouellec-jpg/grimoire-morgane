@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
-import { ChevronDown, Plus, ShoppingBasket } from "lucide-react";
+import { ChevronDown, Plus, ShoppingBasket, User, Users } from "lucide-react";
 import { aisleIcon, copyText } from "../../utils/helpers";
 import { triggerHaptic } from "../../utils/haptics";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { translateRecipeText } from "../../utils/recipeTranslation";
 import Seal from "../common/Seal";
+import SegmentedControl from "../common/SegmentedControl";
 import QuantitySheet from "../common/QuantitySheet";
 import RecipePickerModal from "./RecipePickerModal";
 import SwipeFlourish from "./SwipeFlourish";
@@ -24,6 +25,8 @@ import ShoppingItemRow from "./ShoppingItemRow";
 export default function ShoppingView({
   recipes,
   activeList,
+  scope,
+  onChangeScope,
   onAddManualItem,
   onToggleItem,
   onAdjustQty,
@@ -94,13 +97,33 @@ export default function ShoppingView({
 
   return (
     <div className="view">
-      {activeList && (
-        <div className="active-list-header">
+      {/* La ligne reste toujours affichée, même sans liste active dans la
+          portée courante (ex. "personal" avant la toute première liste
+          perso créée) — sinon le toggle lui-même disparaîtrait avec elle,
+          coinçant l'utilisateur sans moyen de revenir sur "household". */}
+      <div className="active-list-header">
+        {activeList ? (
           <button type="button" className="active-list-name" onClick={onOpenManager}>
-            {activeList.name} <span className="active-list-switch">{t("shopping.changeList")} ▾</span>
+            <span className="active-list-name-text">{activeList.name}</span>
+            <span className="active-list-switch">{t("shopping.changeList")} ▾</span>
           </button>
-        </div>
-      )}
+        ) : (
+          <button type="button" className="active-list-name active-list-name-empty" onClick={onOpenManager}>
+            <span className="active-list-name-text">{t("shopping.noListYet")}</span>
+            <span className="active-list-switch">{t("shopping.changeList")} ▾</span>
+          </button>
+        )}
+        <SegmentedControl
+          compact
+          ariaLabel={t("shopping.scopeToggleLabel")}
+          value={scope}
+          onChange={onChangeScope}
+          options={[
+            { value: "household", label: "", icon: Users, ariaLabel: t("shopping.scopeHousehold") },
+            { value: "personal", label: "", icon: User, ariaLabel: t("shopping.scopePersonal") },
+          ]}
+        />
+      </div>
 
       <div className="manual-add-row">
         <input

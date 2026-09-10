@@ -2,18 +2,60 @@ import { useCallback, useRef, useState } from "react";
 import { SUPABASE_READY } from "../constants";
 import { nextId, guessAisle, ingredientKey, triggerHaptic } from "../utils/helpers";
 import { insertRow, updateRow, deleteRow, mapShoppingListToRow } from "../utils/supabase";
+import { getStoredShoppingScope, storeShoppingScope, getStoredActiveShoppingListId, storeActiveShoppingListId } from "../utils/localSettings";
 
 /* ------------------------------------------------------------------ */
 /*  LISTES DE COURSES — état + actions                                 */
+/*  `userId` : propriétaire des listes "personal" (voir `scope` sur      */
+/*  chaque liste, colonne Supabase `shopping_lists.scope`/`user_id`).     */
+/*  La portée AFFICHÉE (household/personal) reste une préférence locale   */
+/*  à l'appareil (voir utils/localSettings.js), mais filtre ici un vrai    */
+/*  champ de données, contrairement au plan de repas.                      */
 /* ------------------------------------------------------------------ */
-export default function useShoppingLists({ householdId, initialLists = [], initialActiveListId = null, showToast }) {
+export default function useShoppingLists({ householdId, userId, initialLists = [], initialActiveListId = null, showToast }) {
   const [shoppingLists, setShoppingLists] = useState(initialLists);
   const [activeListId, setActiveListId] = useState(initialActiveListId);
+  const [shoppingScope, setShoppingScopeState] = useState(() => getStoredShoppingScope());
 
   const listsRef = useRef(shoppingLists);
   listsRef.current = shoppingLists;
   const activeListIdRef = useRef(activeListId);
   activeListIdRef.current = activeListId;
+  const shoppingScopeRef = useRef(shoppingScope);
+  shoppingScopeRef.current = shoppingScope;
+  const userIdRef = useRef(userId);
+  userIdRef.current = userId;
+
+  const isListInScope = useCallback((list, scope) => (
+    scope === "personal" ? list.scope === "personal" && list.userId === userIdRef.current : list.scope !== "personal"
+  ), []);
+
+  const visibleShoppingLists = shoppingLists.filter((l) => isListInScope(l, shoppingScope));
+
+  // Ouvre une liste ET mémorise, PAR PORTÉE, qu'elle est la dernière
+  // consultée sur cet appareil (voir getStoredActiveShoppingListId) — pour
+  // qu'un aller-retour household -> personal -> household retombe sur la
+  // même liste de chaque côté plutôt que sur la première trouvée.
+  const openShoppingList = useCallback((id) => {
+    setActiveListId(id);
+    storeActiveShoppingListId(shoppingScopeRef.current, id);
+  }, []);
+
+  // Change l'onglet affiché et fait immédiatement basculer la liste active
+  // sur la dernière liste connue de cette portée (mémoire ci-dessus), sinon
+  // la première liste existante de cette portée, sinon aucune (l'utilisateur
+  // devra en créer une — voir ShoppingView.jsx, état "aucune liste").
+  const setShoppingScope = useCallback((next) => {
+    const scope = next === "personal" ? "personal" : "household";
+    setShoppingScopeState(scope);
+    storeShoppingScope(scope);
+    const candidates = listsRef.current.filter((l) => isListInScope(l, scope));
+    const remembered = getStoredActiveShoppingListId(scope);
+    const nextActive = (remembered && candidates.some((l) => l.id === remembered))
+      ? remembered
+      : (candidates[0] ? candidates[0].id : null);
+    setActiveListId(nextActive);
+  }, [isListInScope]);
 
   const nextListName = useCallback(() => {
     const nums = listsRef.current.map((l) => {
@@ -24,12 +66,21 @@ export default function useShoppingLists({ householdId, initialLists = [], initi
     return `Liste ${max + 1}`;
   }, []);
 
-  const createShoppingList = useCallback(async () => {
+  // `scope`/`ownerId` optionnels : par défaut, une nouvelle liste prend la
+  // portée actuellement affichée (voir shoppingScopeRef) — c'est le cas de
+  // la création explicite (bouton "+" du gestionnaire) comme de la création
+  // implicite (withActiveList ci-dessous, quand on ajoute un article sans
+  // liste active : sinon elle serait TOUJOURS créée en "household", même
+  // si l'onglet "personal" est actif).
+  const createShoppingList = useCallback(async (scopeArg, ownerIdArg) => {
+    const scope = (scopeArg || shoppingScopeRef.current) === "personal" ? "personal" : "household";
+    const ownerId = scope === "personal" ? (ownerIdArg || userIdRef.current) : null;
     const id = nextId();
     const name = nextListName();
-    const newList = { id, name, items: [] };
+    const newList = { id, name, items: [], scope, userId: ownerId };
     setShoppingLists((prev) => [...prev, newList]);
     setActiveListId(id);
+    storeActiveShoppingListId(scope, id);
     triggerHaptic(15);
     if (SUPABASE_READY) {
       try {
@@ -161,8 +212,12 @@ export default function useShoppingLists({ householdId, initialLists = [], initi
   return {
     shoppingLists,
     setShoppingLists,
+    visibleShoppingLists,
     activeListId,
     setActiveListId,
+    openShoppingList,
+    shoppingScope,
+    setShoppingScope,
     createShoppingList,
     renameShoppingList,
     deleteShoppingList,

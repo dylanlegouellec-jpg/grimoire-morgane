@@ -5,7 +5,18 @@ import Seal from "./Seal";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
 
-export default function ListsManagerModal({ lists, activeListId, onOpen, onCreate, onRename, onDelete, onClose }) {
+// `scope` optionnel : quand fourni (voir AppShell.jsx, listes de courses),
+// `lists` n'est déjà qu'un sous-ensemble filtré par portée (household/
+// personal — voir useShoppingLists.js) — le titre le rappelle pour que ce
+// soit sans ambiguïté quelle portée on est en train de gérer. Omis, le
+// modal se comporte comme avant (titre générique, ex. gestionnaire de
+// recettes s'il en existait un autre usage).
+const SCOPE_TITLES = {
+  household: "Listes du foyer",
+  personal: "Mes listes personnelles",
+};
+
+export default function ListsManagerModal({ lists, activeListId, scope, onOpen, onCreate, onRename, onDelete, onClose }) {
   const modalRef = useFocusTrap(onClose);
   const swipe = useSwipeToDismiss(onClose, { scrollRef: modalRef });
   const [renamingId, setRenamingId] = useState(null);
@@ -32,7 +43,7 @@ export default function ListsManagerModal({ lists, activeListId, onOpen, onCreat
         {...swipe.handlers}
       >
         <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
-        <h2 className="dropcap-title">Mes listes de courses</h2>
+        <h2 className="dropcap-title">{scope ? SCOPE_TITLES[scope] : "Mes listes de courses"}</h2>
         <Flourish />
         {lists.length === 0 ? (
           <p className="hint">Aucune liste pour l'instant.</p>

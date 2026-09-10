@@ -163,3 +163,55 @@ export function storePlanningScope(scope) {
     /* rien à faire si le stockage échoue */
   }
 }
+
+/* --- Portée des listes de courses ("household" | "personal") -----------
+   Même principe que la portée du plan de repas ci-dessus, mais ICI le
+   champ "scope" qu'elle filtre est une vraie colonne Supabase sur
+   `shopping_lists` (pas juste un champ dans un tableau partagé) : chaque
+   liste appartient réellement à une portée, et une liste "personal" est en
+   plus rattachée à un `user_id`. Ce qui reste purement local ici, c'est
+   seulement LA PRÉFÉRENCE D'ONGLET actif sur cet appareil (+ la mémoire de
+   la dernière liste ouverte par portée, ci-dessous) — voir
+   useShoppingLists.js. */
+const SHOPPING_SCOPE_KEY = "grimoire_shopping_scope";
+const VALID_SHOPPING_SCOPES = ["household", "personal"];
+
+export function getStoredShoppingScope() {
+  try {
+    const v = localStorage.getItem(SHOPPING_SCOPE_KEY);
+    if (VALID_SHOPPING_SCOPES.includes(v)) return v;
+  } catch {
+    /* repli ci-dessous */
+  }
+  return "household";
+}
+
+export function storeShoppingScope(scope) {
+  try {
+    localStorage.setItem(SHOPPING_SCOPE_KEY, scope);
+  } catch {
+    /* rien à faire si le stockage échoue */
+  }
+}
+
+// Mémorise, par portée, la dernière liste ouverte sur CET appareil — pour
+// qu'en rebasculant sur "personal" on retrouve la même liste perso plutôt
+// que la première de la liste à chaque fois.
+const SHOPPING_ACTIVE_LIST_PREFIX = "grimoire_shopping_active_list_";
+
+export function getStoredActiveShoppingListId(scope) {
+  try {
+    return localStorage.getItem(SHOPPING_ACTIVE_LIST_PREFIX + scope) || null;
+  } catch {
+    return null;
+  }
+}
+
+export function storeActiveShoppingListId(scope, id) {
+  try {
+    if (id) localStorage.setItem(SHOPPING_ACTIVE_LIST_PREFIX + scope, id);
+    else localStorage.removeItem(SHOPPING_ACTIVE_LIST_PREFIX + scope);
+  } catch {
+    /* rien à faire si le stockage échoue */
+  }
+}
