@@ -43,17 +43,26 @@ const ViewLoadingFallback = () => (
   </div>
 );
 
-// EN COURS DE TEST A/B — hypothèse initiale (caler la nav sur clientHeight
-// plutôt que innerHeight) probablement FAUSSE : appliquée, elle a créé un
-// vide visible sous la nav une fois scrollé tout en bas d'une longue liste
-// (rapporté + confirmé par capture). Le calcul reste ici mais n'est PLUS
-// appliqué au style (voir plus bas, <nav> sans "style=") le temps de
-// vérifier si le portail seul (sans ce décalage) suffit déjà.
+// Troisième mouture, cette fois vérifiée par des mesures concordantes :
+// window.innerHeight, document.documentElement.clientHeight ET même
+// window.visualViewport.height se sont avérés TOUS LES TROIS faux
+// ensemble sur certains onglets (812 au lieu de 874) — d'où l'échec des
+// deux tentatives précédentes, qui ne comparaient que des valeurs
+// elles-mêmes en défaut. window.screen.height / screen.availHeight (une
+// propriété MATÉRIELLE, indépendante de la page) s'est lui montré
+// constant à 874 sur tous les onglets, dans tous les états testés — la
+// seule valeur fiable trouvée. "position: fixed; bottom: 0" s'ancre
+// nativement sur window.innerHeight (vérifié : le bas rendu de la nav
+// correspond TOUJOURS exactement à innerHeight, jamais à screen.height) ;
+// l'écart ci-dessous compense donc la différence entre les deux, dans le
+// bon sens cette fois (bottom NÉGATIF = pousse vers le bas, au-delà de
+// l'ancrage natif, pas vers le haut comme la version précédente).
 function useNavBottomOffset() {
   const [offset, setOffset] = useState(0);
   useEffect(() => {
     const measure = () => {
-      const gap = window.innerHeight - document.documentElement.clientHeight;
+      const trueHeight = (window.screen && (window.screen.availHeight || window.screen.height)) || window.innerHeight;
+      const gap = trueHeight - window.innerHeight;
       setOffset(gap > 0 ? gap : 0);
     };
     measure();
@@ -86,7 +95,7 @@ function NavDebugOverlay({ tab, navBottomOffset }) {
         `innerHeight: ${window.innerHeight} / clientHeight: ${document.documentElement.clientHeight}`,
         `screen.height: ${window.screen ? window.screen.height : "n/a"} / availHeight: ${window.screen ? window.screen.availHeight : "n/a"}`,
         `visualViewport.height: ${window.visualViewport ? window.visualViewport.height : "n/a"} / devicePixelRatio: ${window.devicePixelRatio}`,
-        `navBottomOffset (calculé, PAS appliqué): ${navBottomOffset}`,
+        `navBottomOffset (appliqué en bottom NÉGATIF): ${navBottomOffset}`,
         `nav top/bottom: ${navRect ? `${Math.round(navRect.top)}/${Math.round(navRect.bottom)}` : "n/a"}`,
         `app-content scrollTop/scrollHeight/clientHeight: ${appContent ? `${Math.round(appContent.scrollTop)}/${appContent.scrollHeight}/${appContent.clientHeight}` : "n/a"}`,
         `window.scrollY: ${window.scrollY}`,
@@ -505,7 +514,7 @@ export default function AppShell({
           l'élément se trouve dans le DOM. Voir "style" ci-dessous pour le
           vrai correctif (useNavBottomOffset, décalage mesuré en JS). */}
       {createPortal(
-        <nav className="bottom-nav">
+        <nav className="bottom-nav" style={navBottomOffset ? { bottom: -navBottomOffset } : undefined}>
           {TABS.map(({ key, icon: Icon }) => (
             <NavButton
               key={key}
