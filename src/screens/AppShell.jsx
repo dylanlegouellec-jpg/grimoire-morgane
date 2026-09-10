@@ -42,6 +42,48 @@ const ViewLoadingFallback = () => (
   </div>
 );
 
+// DEBUG TEMPORAIRE — à retirer une fois le bandeau blanc bas (mode PWA
+// standalone iOS) diagnostiqué avec certitude. Affiche les chiffres bruts
+// dont on a besoin (impossible à obtenir sans Mac/Web Inspector) plutôt que
+// de continuer à déployer des correctifs au hasard.
+function ViewportDebugOverlay() {
+  const probeRef = useRef(null);
+  const appRef = useRef(null);
+  const [info, setInfo] = useState("mesure...");
+  useEffect(() => {
+    const measure = () => {
+      const probe = probeRef.current;
+      const app = document.querySelector(".grimoire-app");
+      const safeBottom = probe ? probe.getBoundingClientRect().height : -1;
+      const appRect = app ? app.getBoundingClientRect() : null;
+      const appCs = app ? getComputedStyle(app) : null;
+      setInfo(
+        `iH:${window.innerHeight} dcH:${document.documentElement.clientHeight} ` +
+        `vv:${window.visualViewport ? Math.round(window.visualViewport.height) : "n/a"} ` +
+        `standalone:${window.navigator.standalone ? 1 : 0} safeBot:${Math.round(safeBottom)} ` +
+        `appBot:${appRect ? Math.round(appRect.bottom) : "n/a"} appMinH:${appCs ? appCs.minHeight : "n/a"}`
+      );
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    const id = setInterval(measure, 1000);
+    return () => { window.removeEventListener("resize", measure); clearInterval(id); };
+  }, []);
+  return (
+    <div
+      ref={appRef}
+      style={{
+        position: "fixed", top: 0, left: 0, right: 0, zIndex: 99999,
+        background: "red", color: "#fff", fontSize: 10, lineHeight: 1.3,
+        padding: "4px 6px", fontFamily: "monospace", wordBreak: "break-all",
+      }}
+    >
+      {info}
+      <div ref={probeRef} style={{ height: "env(safe-area-inset-bottom)", width: 1 }} />
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /*  COQUILLE APPLICATIVE — onglets, modales, gestes                    */
 /*  Ne connaît que ce que les hooks lui exposent (recettes, frigo,      */
@@ -251,6 +293,7 @@ export default function AppShell({
   return (
     <div className="grimoire-app">
       <style>{CSS}</style>
+      <ViewportDebugOverlay />
 
       <header className="app-header">
         <button
