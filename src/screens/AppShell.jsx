@@ -42,6 +42,55 @@ const ViewLoadingFallback = () => (
   </div>
 );
 
+// DEBUG TEMPORAIRE (round 2) — mesure cette fois la modale/page elle-même
+// (pas seulement le viewport global) pour comprendre l'espace en trop
+// signalé dans RecipeOptionsModal et le texte coupé dans RecipeDetail. À
+// retirer une fois diagnostiqué.
+function ViewportDebugOverlay() {
+  const probeRef = useRef(null);
+  const [lines, setLines] = useState(["mesure..."]);
+  useEffect(() => {
+    const measure = () => {
+      const probe = probeRef.current;
+      const app = document.querySelector(".grimoire-app");
+      const backdrop = document.querySelector(".modal-backdrop");
+      const modalEl = document.querySelector(".modal, .grimoire-page");
+      const safeBottom = probe ? probe.getBoundingClientRect().height : -1;
+      const appRect = app ? app.getBoundingClientRect() : null;
+      const bdRect = backdrop ? backdrop.getBoundingClientRect() : null;
+      const modalRect = modalEl ? modalEl.getBoundingClientRect() : null;
+      setLines([
+        `innerHeight: ${window.innerHeight} / clientHeight: ${document.documentElement.clientHeight}`,
+        `safeAreaBottom: ${Math.round(safeBottom)}`,
+        `grimoire-app bottom: ${appRect ? Math.round(appRect.bottom) : "n/a"}`,
+        `backdrop top/bottom: ${bdRect ? `${Math.round(bdRect.top)}/${Math.round(bdRect.bottom)}` : "aucune"}`,
+        `modal class: ${modalEl ? modalEl.className : "aucune"}`,
+        `modal top/bottom: ${modalRect ? `${Math.round(modalRect.top)}/${Math.round(modalRect.bottom)}` : "n/a"}`,
+        `modal height (rect): ${modalRect ? Math.round(modalRect.height) : "n/a"}`,
+        `modal scrollHeight: ${modalEl ? modalEl.scrollHeight : "n/a"}`,
+        `modal maxHeight css: ${modalEl ? getComputedStyle(modalEl).maxHeight : "n/a"}`,
+      ]);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    const id = setInterval(measure, 800);
+    return () => { window.removeEventListener("resize", measure); clearInterval(id); };
+  }, []);
+  return (
+    <div
+      style={{
+        position: "fixed", top: 0, left: 0, right: 0, zIndex: 99999,
+        background: "red", color: "#fff", fontSize: 12, lineHeight: 1.4,
+        padding: "4px 6px", paddingTop: "calc(env(safe-area-inset-top) + 30px)",
+        fontFamily: "monospace", wordBreak: "break-all",
+      }}
+    >
+      {lines.map((l) => <div key={l}>{l}</div>)}
+      <div ref={probeRef} style={{ height: "env(safe-area-inset-bottom)", width: 1 }} />
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /*  COQUILLE APPLICATIVE — onglets, modales, gestes                    */
 /*  Ne connaît que ce que les hooks lui exposent (recettes, frigo,      */
@@ -251,6 +300,7 @@ export default function AppShell({
   return (
     <div className="grimoire-app">
       <style>{CSS}</style>
+      <ViewportDebugOverlay />
 
       <header className="app-header">
         <button
