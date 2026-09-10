@@ -26,7 +26,7 @@ export const MODALS_BASE_CSS = `
 
 /* --- Modales / page de grimoire --- */
 .modal-backdrop {
-  position: fixed; inset: 0; background: rgba(20,14,4,0.55);
+  position: fixed; inset: 0; height: 100dvh; background: rgba(20,14,4,0.55);
   display: flex; align-items: flex-end; justify-content: center;
   /* Volontairement au-dessus du FAB "+" (voir .fab, z-index: 50) : les
      deux étaient à égalité avant ce correctif, un pur hasard d'ordre DOM
@@ -36,6 +36,15 @@ export const MODALS_BASE_CSS = `
   padding: 0;
   touch-action: none; overscroll-behavior: contain;
 }
+/* "height: 100dvh" ci-dessus (en plus de "inset: 0") : sur iOS Safari, une
+   fois la barre d'adresse rétractée par un scroll plein écran, "inset: 0"
+   seul laisse parfois un mince bandeau blanc sous la modale (la page NATIVE
+   en dessous, pas ce fond semi-transparent) le temps que la barre finisse
+   sa transition — "dvh" force ce fond à occuper la vraie hauteur visuelle
+   à tout moment, sans dépendre de cette resynchronisation. Contenu ICI à ce
+   seul overlay (jamais html/body) : pas de lien avec le blocage de scroll
+   déjà corrigé ailleurs (voir shell.css.js), qui venait d'un tout autre
+   problème (overscroll-behavior sur .app-content). */
 .modal, .grimoire-page {
   background: var(--parchment);
   width: 100%; max-width: 480px; max-height: 88vh; overflow-y: auto; overflow-x: hidden;
