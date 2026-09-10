@@ -72,50 +72,6 @@ function useNavBottomOffset() {
   return offset;
 }
 
-// DEBUG TEMPORAIRE (round 3) — cible cette fois .bottom-nav précisément :
-// le correctif transform-at-rest de ShoppingItemRow/SwipeFlourish n'a pas
-// suffi, donc mesure directe plutôt qu'une nouvelle hypothèse. À retirer
-// une fois diagnostiqué.
-function NavDebugOverlay({ tab }) {
-  const [lines, setLines] = useState(["mesure..."]);
-  useEffect(() => {
-    const measure = () => {
-      const nav = document.querySelector(".bottom-nav");
-      const app = document.querySelector(".grimoire-app");
-      const navRect = nav ? nav.getBoundingClientRect() : null;
-      const navCs = nav ? getComputedStyle(nav) : null;
-      const appRect = app ? app.getBoundingClientRect() : null;
-      setLines([
-        `tab: ${tab}`,
-        `innerHeight: ${window.innerHeight} / clientHeight: ${document.documentElement.clientHeight}`,
-        `nav top/bottom: ${navRect ? `${Math.round(navRect.top)}/${Math.round(navRect.bottom)}` : "n/a"}`,
-        `nav height: ${navRect ? Math.round(navRect.height) : "n/a"}`,
-        `nav position css: ${navCs ? navCs.position : "n/a"}`,
-        `nav background: ${navCs ? navCs.backgroundColor : "n/a"}`,
-        `nav backdropFilter: ${navCs ? (navCs.backdropFilter || navCs.webkitBackdropFilter) : "n/a"}`,
-        `nav paddingBottom: ${navCs ? navCs.paddingBottom : "n/a"}`,
-        `grimoire-app top/bottom: ${appRect ? `${Math.round(appRect.top)}/${Math.round(appRect.bottom)}` : "n/a"}`,
-      ]);
-    };
-    measure();
-    const id = setInterval(measure, 700);
-    window.addEventListener("resize", measure);
-    return () => { clearInterval(id); window.removeEventListener("resize", measure); };
-  }, [tab]);
-  return (
-    <div
-      style={{
-        position: "fixed", top: 0, left: 0, right: 0, zIndex: 99999,
-        background: "red", color: "#fff", fontSize: 12, lineHeight: 1.4,
-        padding: "4px 6px", paddingTop: "calc(env(safe-area-inset-top) + 30px)",
-        fontFamily: "monospace", wordBreak: "break-all",
-      }}
-    >
-      {lines.map((l) => <div key={l}>{l}</div>)}
-    </div>
-  );
-}
-
 /* ------------------------------------------------------------------ */
 /*  COQUILLE APPLICATIVE — onglets, modales, gestes                    */
 /*  Ne connaît que ce que les hooks lui exposent (recettes, frigo,      */
@@ -326,7 +282,6 @@ export default function AppShell({
   return (
     <div className="grimoire-app">
       <style>{CSS}</style>
-      <NavDebugOverlay tab={tab} />
 
       <header className="app-header">
         <button
