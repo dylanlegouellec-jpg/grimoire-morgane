@@ -43,15 +43,12 @@ const ViewLoadingFallback = () => (
   </div>
 );
 
-// Correctif mesuré en direct : sur cet appareil (PWA standalone iOS),
-// "position: fixed; bottom: 0" ne s'ancre PAS de façon fiable au vrai bas
-// de l'écran — le portail vers <body> (voir plus bas) n'a rien changé,
-// donc ce n'est pas un souci d'élément imbriqué mais un calcul WebKit plus
-// bas niveau. Seul document.documentElement.clientHeight s'est montré
-// fiable dans toutes les mesures ; window.innerHeight, dont "fixed"
-// dépend, dérive parfois de +62px selon l'onglet/l'état de la page. Plutôt
-// que de deviner une unité CSS qui suivrait clientHeight, on mesure
-// l'écart en JS et on décale la nav de cette valeur exacte, en continu.
+// EN COURS DE TEST A/B — hypothèse initiale (caler la nav sur clientHeight
+// plutôt que innerHeight) probablement FAUSSE : appliquée, elle a créé un
+// vide visible sous la nav une fois scrollé tout en bas d'une longue liste
+// (rapporté + confirmé par capture). Le calcul reste ici mais n'est PLUS
+// appliqué au style (voir plus bas, <nav> sans "style=") le temps de
+// vérifier si le portail seul (sans ce décalage) suffit déjà.
 function useNavBottomOffset() {
   const [offset, setOffset] = useState(0);
   useEffect(() => {
@@ -87,7 +84,7 @@ function NavDebugOverlay({ tab, navBottomOffset }) {
       setLines([
         `tab: ${tab}`,
         `innerHeight: ${window.innerHeight} / clientHeight: ${document.documentElement.clientHeight}`,
-        `navBottomOffset (appliqué): ${navBottomOffset}`,
+        `navBottomOffset (calculé, PAS appliqué): ${navBottomOffset}`,
         `nav top/bottom: ${navRect ? `${Math.round(navRect.top)}/${Math.round(navRect.bottom)}` : "n/a"}`,
         `app-content scrollTop/scrollHeight/clientHeight: ${appContent ? `${Math.round(appContent.scrollTop)}/${appContent.scrollHeight}/${appContent.clientHeight}` : "n/a"}`,
         `window.scrollY: ${window.scrollY}`,
@@ -506,7 +503,7 @@ export default function AppShell({
           l'élément se trouve dans le DOM. Voir "style" ci-dessous pour le
           vrai correctif (useNavBottomOffset, décalage mesuré en JS). */}
       {createPortal(
-        <nav className="bottom-nav" style={navBottomOffset ? { bottom: navBottomOffset } : undefined}>
+        <nav className="bottom-nav">
           {TABS.map(({ key, icon: Icon }) => (
             <NavButton
               key={key}
