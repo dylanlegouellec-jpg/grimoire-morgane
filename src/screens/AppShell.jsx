@@ -43,6 +43,35 @@ const ViewLoadingFallback = () => (
   </div>
 );
 
+// Correctif mesuré en direct : sur cet appareil (PWA standalone iOS),
+// "position: fixed; bottom: 0" ne s'ancre PAS de façon fiable au vrai bas
+// de l'écran — le portail vers <body> (voir plus bas) n'a rien changé,
+// donc ce n'est pas un souci d'élément imbriqué mais un calcul WebKit plus
+// bas niveau. Seul document.documentElement.clientHeight s'est montré
+// fiable dans toutes les mesures ; window.innerHeight, dont "fixed"
+// dépend, dérive parfois de +62px selon l'onglet/l'état de la page. Plutôt
+// que de deviner une unité CSS qui suivrait clientHeight, on mesure
+// l'écart en JS et on décale la nav de cette valeur exacte, en continu.
+function useNavBottomOffset() {
+  const [offset, setOffset] = useState(0);
+  useEffect(() => {
+    const measure = () => {
+      const gap = window.innerHeight - document.documentElement.clientHeight;
+      setOffset(gap > 0 ? gap : 0);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    window.addEventListener("orientationchange", measure);
+    const id = setInterval(measure, 500);
+    return () => {
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("orientationchange", measure);
+      clearInterval(id);
+    };
+  }, []);
+  return offset;
+}
+
 // DEBUG TEMPORAIRE (round 3) — cible cette fois .bottom-nav précisément :
 // le correctif transform-at-rest de ShoppingItemRow/SwipeFlourish n'a pas
 // suffi, donc mesure directe plutôt qu'une nouvelle hypothèse. À retirer
@@ -171,6 +200,7 @@ export default function AppShell({
     setPendingHouseholdJoin,
   } = syncApi;
 
+  const navBottomOffset = useNavBottomOffset();
   const [tab, setTab] = useState("recettes");
   const [filter, setFilter] = useState("tout");
   const [search, setSearch] = useState("");
@@ -472,12 +502,14 @@ export default function AppShell({
           == document.documentElement.clientHeight, mais se décale de ~62px
           vers le haut dès que ces deux valeurs divergent (874 vs 812),
           reproductible sur Plan/Frigo, correct sur Courses/Recettes-avec-
-          modale-ouverte selon l'état du moment. Même famille de bug, et
-          même correctif, que RecipeOptionsModal.jsx plus tôt dans la
-          session : sortir l'élément de .grimoire-app le rend indépendant
-          de cette instabilité, quel que soit le mécanisme WebKit exact. */}
+          modale-ouverte selon l'état du moment. Le portail vers <body>
+          ci-dessous (au cas où .grimoire-app y était pour quelque chose)
+          n'a PAS suffi à corriger ça une fois testé sur appareil réel :
+          le calcul de "bottom: 0" lui-même dérive, peu importe où
+          l'élément se trouve dans le DOM. Voir "style" ci-dessous pour le
+          vrai correctif (useNavBottomOffset, décalage mesuré en JS). */}
       {createPortal(
-        <nav className="bottom-nav">
+        <nav className="bottom-nav" style={navBottomOffset ? { bottom: navBottomOffset } : undefined}>
           {TABS.map(({ key, icon: Icon }) => (
             <NavButton
               key={key}
