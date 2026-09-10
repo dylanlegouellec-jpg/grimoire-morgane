@@ -33,6 +33,16 @@ export const THEME_CSS = `
      avec leur texte clair assorti, quel que soit le thème actif. */
   --chrome: #2a2013;
   --chrome-text: #f1e6c8;
+  /* Fond de la nav basse : teinte donnée en composantes RVB brutes (pas en
+     #hex) pour pouvoir y injecter une opacité variable via rgba() — celle-ci
+     est réglable dans Réglages > Apparence (voir .bottom-nav et
+     utils/localSettings.js). Même teinte que --parchment ci-dessus.
+     --nav-opacity n'est PAS redéfini dans le thème sombre : c'est un choix
+     de l'utilisateur, pas une couleur. Sa valeur réelle est posée en style
+     inline sur <html> au démarrage (applyNavOpacity), qui prend le pas sur
+     la valeur par défaut ci-dessous. */
+  --nav-bg-rgb: 241, 230, 200;
+  --nav-opacity: 0;
   /* Réglages façon iOS (liste groupée) : fond légèrement plus sombre que
      le reste de l'app pour faire ressortir les cartes arrondies posées
      dessus (voir .ios-settings-modal / .ios-group ci-dessous). */
@@ -73,6 +83,7 @@ export const THEME_CSS = `
   --drag-handle: rgba(231,229,228,0.25);
   /* --chrome / --chrome-text ne sont volontairement PAS redéfinis ici :
      ces accents restent identiques dans les deux thèmes. */
+  --nav-bg-rgb: 28, 25, 23;
   --grouped-bg: #0e0c0a;
   --grouped-card-bg: var(--parchment-deep);
   --forest: #4f9e52;
@@ -92,6 +103,18 @@ html[data-theme="dark"] { color-scheme: dark; }
    rem, ça le fait grossir uniformément sans toucher aux espacements en px. */
 html { font-size: 16px; }
 html[data-text-size="large"] { font-size: 18px; }
+html {
+  /* Réserve la place de la scrollbar en permanence, plutôt que de la
+     laisser apparaître/disparaître selon que l'onglet actif déborde ou
+     non de l'écran (Recettes déborde généralement, Courses vide non) :
+     sans ça, .grimoire-app (centré via margin: 0 auto un peu plus bas)
+     gagne/perd la largeur de cette scrollbar à chaque changement d'onglet
+     et se recentre visiblement d'un coup — signalé comme "la page se
+     décale légèrement en arrivant sur Courses" (PC, où la scrollbar est
+     dans le flux, contrairement à Android/iOS où elle se superpose déjà
+     au contenu sans jamais en changer la largeur). */
+  scrollbar-gutter: stable;
+}
 html, body {
   margin: 0;
   padding: 0;
@@ -134,21 +157,19 @@ html, body {
   padding-top: env(safe-area-inset-top);
   padding-bottom: 84px;
   box-shadow: 0 0 40px var(--card-shadow);
-  /* Correctif historique erroné : écrire overflow-y: visible ici ne
-     suffit PAS à empêcher .grimoire-app de devenir son propre conteneur
-     de défilement — la spec CSS force le calcul d'un axe "visible" à
-     "auto" dès que l'AUTRE axe (ici overflow-x: hidden) ne l'est pas, quoi
-     que ce soit écrit pour overflow-y (vérifié : la valeur CALCULÉE reste
-     "auto" malgré cette ligne). Gardée pour la lisibilité de l'intention
-     (et parce qu'écrire "visible" ne fait de mal à rien), mais ce n'est
-     PAS ce qui protège du vrai risque : .grimoire-app calcule bel et bien
-     overflow-y: auto. Ce qui évite un problème concret ici, c'est
-     l'absence de tout overscroll-behavior restrictif sur cet élément
-     (contrairement à .app-content, qui avait "contain" — voir
-     shell.css.js pour le bug que ça causait) : un geste qui ne trouve
-     rien à faire défiler dans .grimoire-app remonte donc normalement vers
-     le document, qui lui déborde réellement. */
-  overflow-x: hidden;
+  /* "overflow-x: hidden" forçait la spec CSS à calculer overflow-y en
+     "auto" (dès qu'un axe n'est pas "visible", l'autre l'est aussi tout
+     seul, quoi que ce soit écrit ici) — .grimoire-app devenait donc malgré
+     lui son propre conteneur de défilement. Deux dégâts concrets : (1)
+     .bottom-nav (position: fixed, enfant direct) hérite d'un bug WebKit
+     connu où un "fixed" niché dans un ancêtre non "visible" peut se recaler
+     par rapport à CET ancêtre plutôt que par rapport au vrai écran — signalé
+     comme "la nav est remontée/coupée" ; (2) le point ci-dessus dans ce
+     fichier sur scrollbar-gutter. "overflow-x: clip" évite ce couplage
+     (contrairement à "hidden") : overflow-y reste réellement "visible", et
+     le défilement de la page continue de remonter normalement vers le
+     document (rien ne change dans le flux ci-dessus). */
+  overflow-x: clip;
   overflow-y: visible;
 }
 

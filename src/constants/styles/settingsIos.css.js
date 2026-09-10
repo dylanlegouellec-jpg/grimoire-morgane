@@ -78,6 +78,33 @@ export const SETTINGS_IOS_CSS = `
 .segmented-compact { display: inline-flex; flex-shrink: 0; }
 .segmented-compact .segmented-btn { flex: none; padding: 6px 9px; }
 
+/* --- Curseur glissant (opacité du fond de la nav basse) --- */
+.settings-slider-row { display: flex; flex-direction: column; gap: 6px; padding: 11px 14px; }
+.settings-slider-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.settings-slider-value {
+  flex-shrink: 0;
+  font-family: 'Cinzel', serif; font-size: 0.78rem; letter-spacing: 0.5px; color: var(--gold);
+}
+.settings-slider {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 4px; margin: 8px 0 2px;
+  border-radius: 999px; background: var(--surface-strong); outline: none;
+  /* Le doigt qui traîne le curseur ne doit jamais faire défiler la page
+     derrière — recommandation standard pour tout contrôle glissant. */
+  touch-action: none;
+}
+.settings-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--gold); border: 2px solid var(--grouped-card-bg);
+  box-shadow: 0 1px 4px var(--card-shadow); cursor: pointer;
+}
+.settings-slider::-moz-range-thumb {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--gold); border: 2px solid var(--grouped-card-bg);
+  box-shadow: 0 1px 4px var(--card-shadow); cursor: pointer;
+}
+
 /* --- Retour vers Réglages (navigation par couches, sous-panneaux) --- */
 .modal-back {
   position: absolute; top: 14px; left: 14px; z-index: 5;

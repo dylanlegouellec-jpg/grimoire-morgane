@@ -137,6 +137,45 @@ export function storeSoundEffects(value) {
   }
 }
 
+/* --- Opacité du fond de la nav basse (0 → 1) ---------------------------
+   0 = verre dépoli seul (on voit le contenu défiler, flouté, à travers la
+   barre), 1 = bandeau parchemin plein. Purement local à l'appareil, comme
+   les effets sonores ci-dessus : `profiles` n'a pas de colonne pour ça,
+   donc rien à synchroniser par compte. */
+const NAV_OPACITY_KEY = "grimoire_nav_opacity";
+const DEFAULT_NAV_OPACITY = 0;
+
+export function getStoredNavOpacity() {
+  try {
+    const raw = localStorage.getItem(NAV_OPACITY_KEY);
+    if (raw !== null) {
+      const v = Number(raw);
+      if (Number.isFinite(v) && v >= 0 && v <= 1) return v;
+    }
+  } catch {
+    /* repli ci-dessous */
+  }
+  return DEFAULT_NAV_OPACITY;
+}
+
+export function storeNavOpacity(value) {
+  try {
+    localStorage.setItem(NAV_OPACITY_KEY, String(value));
+  } catch {
+    /* rien à faire si le stockage échoue */
+  }
+}
+
+// Exposé en variable CSS sur <html> (donc :root) plutôt qu'en style inline
+// sur la nav : la mise en page paysage redéfinit son fond de son côté (voir
+// responsive.css.js), le CSS reste ainsi seul juge de qui s'en sert. Même
+// principe qu'applyTheme()/applyTextSize(), qui posent un attribut.
+export function applyNavOpacity(value) {
+  if (typeof document !== "undefined" && document.documentElement) {
+    document.documentElement.style.setProperty("--nav-opacity", String(value));
+  }
+}
+
 /* --- Portée du plan de repas affichée ("household" | "personal") -------
    Purement local à l'appareil, comme les effets sonores ci-dessus : c'est
    une préférence d'AFFICHAGE (quel sous-ensemble du plan regarder), pas
