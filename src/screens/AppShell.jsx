@@ -58,9 +58,34 @@ const ViewLoadingFallback = () => (
 // bon sens cette fois. Appliqué via "transform" plus bas (pas "bottom"
 // négatif, qui déclenchait son propre bug de peinture — voir le
 // commentaire sur <nav> juste avant son style).
-function useNavBottomOffset() {
+// Vrai/faux pendant qu'un <input>/<textarea> a le focus — sert à mettre
+// useNavBottomOffset en pause (voir plus bas) : l'ouverture du clavier
+// iOS réduit légitimement window.innerHeight (il prend de la place à
+// l'écran), et cette réduction-là ressemble, chiffres en main, exactement
+// au même symptôme que le bug qu'on corrige (innerHeight plus petit que
+// screen.height) — sans cette pause, le correctif "corrige" un écart qui
+// n'en est pas un et fait sauter la nav vers le haut/au milieu de l'écran
+// à l'ouverture du clavier (signalé + reproduit).
+function useIsInputFocused() {
+  const [focused, setFocused] = useState(false);
+  useEffect(() => {
+    const isFieldEl = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA");
+    const onFocusIn = (e) => { if (isFieldEl(e.target)) setFocused(true); };
+    const onFocusOut = (e) => { if (isFieldEl(e.target)) setFocused(false); };
+    document.addEventListener("focusin", onFocusIn);
+    document.addEventListener("focusout", onFocusOut);
+    return () => {
+      document.removeEventListener("focusin", onFocusIn);
+      document.removeEventListener("focusout", onFocusOut);
+    };
+  }, []);
+  return focused;
+}
+
+function useNavBottomOffset(paused) {
   const [offset, setOffset] = useState(0);
   useEffect(() => {
+    if (paused) return undefined;
     const measure = () => {
       const trueHeight = (window.screen && (window.screen.availHeight || window.screen.height)) || window.innerHeight;
       const gap = trueHeight - window.innerHeight;
@@ -75,7 +100,7 @@ function useNavBottomOffset() {
       window.removeEventListener("orientationchange", measure);
       clearInterval(id);
     };
-  }, []);
+  }, [paused]);
   return offset;
 }
 
@@ -210,7 +235,8 @@ export default function AppShell({
     setPendingHouseholdJoin,
   } = syncApi;
 
-  const navBottomOffset = useNavBottomOffset();
+  const isInputFocused = useIsInputFocused();
+  const navBottomOffset = useNavBottomOffset(isInputFocused);
   const [tab, setTab] = useState("recettes");
   const [filter, setFilter] = useState("tout");
   const [search, setSearch] = useState("");
@@ -518,19 +544,30 @@ export default function AppShell({
           le calcul de "bottom: 0" lui-même dérive, peu importe où
           l'élément se trouve dans le DOM. Voir "style" ci-dessous pour le
           vrai correctif (useNavBottomOffset, décalage mesuré en JS). */}
+      {/* "transform: translate(-50%, Npx)", pas "bottom: -Npx" : mesuré en
+          direct sur un appareil réel, un "bottom" négatif ici (pourtant
+          géométriquement correct, vérifié par getBoundingClientRect)
+          déclenchait un bug de PEINTURE WebKit qui rognait le contenu de
+          la nav (icônes visibles, libellés invisibles) — alors que la
+          MÊME position atteinte naturellement (bottom: 0, sans décalage)
+          affichait tout correctement. "transform" est une opération de
+          composition GPU distincte du calcul de position/peinture par
+          "bottom" ; décaler ainsi contourne ce bug précis.
+          isInputFocused ci-dessous masque en plus la nav (opacity: 0,
+          pointer-events: none — jamais display:none, pour ne pas perdre
+          le focus en cours) pendant qu'un champ est actif : le clavier
+          iOS réduit légitimement innerHeight, useNavBottomOffset est mis
+          en pause pendant ce temps (voir plus haut) mais peut encore
+          afficher une dernière valeur obsolète le temps que le clavier
+          se stabilise — signalé comme "la nav flotte au milieu de
+          l'écran" à l'ouverture du clavier. */}
       {createPortal(
-        {/* "transform: translate(-50%, Npx)", pas "bottom: -Npx" : mesuré en
-            direct sur un appareil réel, un "bottom" négatif ici (pourtant
-            géométriquement correct, vérifié par getBoundingClientRect)
-            déclenchait un bug de PEINTURE WebKit qui rognait le contenu de
-            la nav (icônes visibles, libellés invisibles) — alors que la
-            MÊME position atteinte naturellement (bottom: 0, sans décalage)
-            affichait tout correctement. "transform" est une opération de
-            composition GPU distincte du calcul de position/peinture par
-            "bottom" ; décaler ainsi contourne ce bug précis. */}
         <nav
           className="bottom-nav"
-          style={navBottomOffset ? { transform: `translate(-50%, ${navBottomOffset}px)` } : undefined}
+          style={{
+            ...(navBottomOffset ? { transform: `translate(-50%, ${navBottomOffset}px)` } : null),
+            ...(isInputFocused ? { opacity: 0, pointerEvents: "none" } : null),
+          }}
         >
           {TABS.map(({ key, icon: Icon }) => (
             <NavButton
