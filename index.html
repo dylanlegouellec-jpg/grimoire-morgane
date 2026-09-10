@@ -2,7 +2,21 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <!-- Pas de "viewport-fit=cover" (retiré) : en PWA installée sur iPhone, il
+         demande à iOS d'étendre la webview bord à bord, ce qu'iOS fait
+         VISUELLEMENT — mais en gardant un viewport de mise en page amputé de
+         la hauteur de la barre d'état. Mesuré sur captures : la page ne
+         dessine jamais plus bas que 812pt sur un écran de 874pt, les 62pt
+         restants (= env(safe-area-inset-top)) n'étant remplis que par le fond
+         propagé de html/body. D'où la nav en "bottom: 0" qui se pose 62pt
+         trop haut, et le voile des modales qui ne descend pas jusqu'en bas.
+         Vérifié : le style de la barre d'état (black-translucent vs default)
+         ne change RIEN à cette valeur — seul "cover" est en cause. Sans lui,
+         iOS place la webview dans la zone sûre et les deux hauteurs
+         coïncident enfin ; les env(safe-area-inset-*) tombent à 0, ce que les
+         quelques règles qui s'en servent absorbent sans dommage (elles sont
+         toutes en max()/calc() avec une valeur de repli). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <!-- Le manifest et l'enregistrement du service worker sont injectés
          automatiquement par vite-plugin-pwa (voir vite.config.js) — plus
          besoin de <link rel="manifest"> manuel ni de manifest.json à la
