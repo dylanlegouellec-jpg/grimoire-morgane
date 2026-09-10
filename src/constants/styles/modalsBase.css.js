@@ -10,18 +10,11 @@ export const MODALS_BASE_CSS = `
 /* --- Navigation basse --- */
 .bottom-nav {
   /* "position: fixed" (pas "absolute" — testé, cassé : voir git log de ce
-     fichier) + un correctif JS (useNavBottomOffset, AppShell.jsx) qui
-     recale la nav via "transform: translate(-50%, Npx)" quand
-     window.innerHeight ment par rapport à window.screen.height. Confirmé
-     sur appareil réel + investigation de code dédiée : cet écart n'est PAS
-     dû à un défaut de code propre à un onglet précis (aucune différence
-     structurelle trouvée entre Courses et les autres vues) — c'est un
-     vrai bug de TIMING WebKit, qui a déjà touché différents onglets à
-     différents moments de cette session. "transition" ci-dessous lisse le
-     changement de "transform" plutôt que de le laisser sauter d'un coup
-     sec au changement d'onglet (signalé comme "la nav saute"). */
+     fichier). Rendue directement dans le flux du DOM (AppShell.jsx), comme
+     enfant de .grimoire-app : nécessaire pour que la mise en page paysage
+     ci-dessous (grid-area: nav) s'applique — un portail vers <body> la sort
+     de la grille et la fait disparaître entièrement sur PC/tablette. */
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-  transition: transform 0.18s ease;
   width: 100%; max-width: 480px;
   display: flex; justify-content: space-around;
   /* Fond transparent + flou plutôt que le chrome sombre plein d'avant : le

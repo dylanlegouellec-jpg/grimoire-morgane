@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, lazy, Suspense } from "react";
-import { createPortal } from "react-dom";
 import { Heart, Search, Settings, Wand2 } from "lucide-react";
 
 import { FILTERS, TABS } from "../constants";
@@ -42,114 +41,6 @@ const ViewLoadingFallback = () => (
     <Wand2 className="spin-wand" size={22} />
   </div>
 );
-
-// Troisième mouture, cette fois vérifiée par des mesures concordantes :
-// window.innerHeight, document.documentElement.clientHeight ET même
-// window.visualViewport.height se sont avérés TOUS LES TROIS faux
-// ensemble sur certains onglets (812 au lieu de 874) — d'où l'échec des
-// deux tentatives précédentes, qui ne comparaient que des valeurs
-// elles-mêmes en défaut. window.screen.height / screen.availHeight (une
-// propriété MATÉRIELLE, indépendante de la page) s'est lui montré
-// constant à 874 sur tous les onglets, dans tous les états testés — la
-// seule valeur fiable trouvée. "position: fixed; bottom: 0" s'ancre
-// nativement sur window.innerHeight (vérifié : le bas rendu de la nav
-// correspond TOUJOURS exactement à innerHeight, jamais à screen.height) ;
-// l'écart ci-dessous compense donc la différence entre les deux, dans le
-// bon sens cette fois. Appliqué via "transform" plus bas (pas "bottom"
-// négatif, qui déclenchait son propre bug de peinture — voir le
-// commentaire sur <nav> juste avant son style).
-// Vrai/faux pendant qu'un <input>/<textarea> a le focus — sert à mettre
-// useNavBottomOffset en pause (voir plus bas) : l'ouverture du clavier
-// iOS réduit légitimement window.innerHeight (il prend de la place à
-// l'écran), et cette réduction-là ressemble, chiffres en main, exactement
-// au même symptôme que le bug qu'on corrige (innerHeight plus petit que
-// screen.height) — sans cette pause, le correctif "corrige" un écart qui
-// n'en est pas un et fait sauter la nav vers le haut/au milieu de l'écran
-// à l'ouverture du clavier (signalé + reproduit).
-function useIsInputFocused() {
-  const [focused, setFocused] = useState(false);
-  useEffect(() => {
-    const isFieldEl = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA");
-    const onFocusIn = (e) => { if (isFieldEl(e.target)) setFocused(true); };
-    const onFocusOut = (e) => { if (isFieldEl(e.target)) setFocused(false); };
-    document.addEventListener("focusin", onFocusIn);
-    document.addEventListener("focusout", onFocusOut);
-    return () => {
-      document.removeEventListener("focusin", onFocusIn);
-      document.removeEventListener("focusout", onFocusOut);
-    };
-  }, []);
-  return focused;
-}
-
-function useNavBottomOffset(paused) {
-  const [offset, setOffset] = useState(0);
-  useEffect(() => {
-    if (paused) return undefined;
-    const measure = () => {
-      const trueHeight = (window.screen && (window.screen.availHeight || window.screen.height)) || window.innerHeight;
-      const gap = trueHeight - window.innerHeight;
-      setOffset(gap > 0 ? gap : 0);
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    window.addEventListener("orientationchange", measure);
-    const id = setInterval(measure, 500);
-    return () => {
-      window.removeEventListener("resize", measure);
-      window.removeEventListener("orientationchange", measure);
-      clearInterval(id);
-    };
-  }, [paused]);
-  return offset;
-}
-
-// DEBUG TEMPORAIRE (round 4) — le correctif tient sur les 4 onglets au
-// repos, mais reste décalé une fois scrollé tout en bas d'une longue
-// grille, même arrêté (pas juste le rebond élastique). Remesure donc dans
-// ce nouvel état précis plutôt que de deviner. À retirer une fois
-// diagnostiqué.
-function NavDebugOverlay({ tab, navBottomOffset }) {
-  const [lines, setLines] = useState(["mesure..."]);
-  useEffect(() => {
-    const measure = () => {
-      const nav = document.querySelector(".bottom-nav");
-      const appContent = document.querySelector(".app-content");
-      const navRect = nav ? nav.getBoundingClientRect() : null;
-      const bodyRect = document.body.getBoundingClientRect();
-      const bodyCs = getComputedStyle(document.body);
-      const firstLabel = nav ? nav.querySelector(".nav-btn span") : null;
-      const labelRect = firstLabel ? firstLabel.getBoundingClientRect() : null;
-      setLines([
-        `tab: ${tab}`,
-        `innerHeight: ${window.innerHeight} / clientHeight: ${document.documentElement.clientHeight}`,
-        `screen.height: ${window.screen ? window.screen.height : "n/a"} / availHeight: ${window.screen ? window.screen.availHeight : "n/a"}`,
-        `navBottomOffset (appliqué en transform translateY): ${navBottomOffset}`,
-        `nav top/bottom: ${navRect ? `${Math.round(navRect.top)}/${Math.round(navRect.bottom)}` : "n/a"}`,
-        `label exists: ${!!firstLabel} / label rect top/bottom: ${labelRect ? `${Math.round(labelRect.top)}/${Math.round(labelRect.bottom)}` : "n/a"} / label text: "${firstLabel ? firstLabel.textContent : "n/a"}"`,
-        `body rect top/bottom: ${Math.round(bodyRect.top)}/${Math.round(bodyRect.bottom)} / body overflow: ${bodyCs.overflow} / body overflowY: ${bodyCs.overflowY}`,
-        `app-content scrollTop/scrollHeight/clientHeight: ${appContent ? `${Math.round(appContent.scrollTop)}/${appContent.scrollHeight}/${appContent.clientHeight}` : "n/a"}`,
-      ]);
-    };
-    measure();
-    const id = setInterval(measure, 400);
-    window.addEventListener("resize", measure);
-    window.addEventListener("scroll", measure, true);
-    return () => { clearInterval(id); window.removeEventListener("resize", measure); window.removeEventListener("scroll", measure, true); };
-  }, [tab, navBottomOffset]);
-  return (
-    <div
-      style={{
-        position: "fixed", top: 0, left: 0, right: 0, zIndex: 99999,
-        background: "red", color: "#fff", fontSize: 12, lineHeight: 1.4,
-        padding: "4px 6px", paddingTop: "calc(env(safe-area-inset-top) + 30px)",
-        fontFamily: "monospace", wordBreak: "break-all",
-      }}
-    >
-      {lines.map((l) => <div key={l}>{l}</div>)}
-    </div>
-  );
-}
 
 /* ------------------------------------------------------------------ */
 /*  COQUILLE APPLICATIVE — onglets, modales, gestes                    */
@@ -235,8 +126,6 @@ export default function AppShell({
     setPendingHouseholdJoin,
   } = syncApi;
 
-  const isInputFocused = useIsInputFocused();
-  const navBottomOffset = useNavBottomOffset(isInputFocused);
   const [tab, setTab] = useState("recettes");
   const [filter, setFilter] = useState("tout");
   const [search, setSearch] = useState("");
@@ -362,7 +251,6 @@ export default function AppShell({
   return (
     <div className="grimoire-app">
       <style>{CSS}</style>
-      <NavDebugOverlay tab={tab} navBottomOffset={navBottomOffset} />
 
       <header className="app-header">
         <button
@@ -531,59 +419,20 @@ export default function AppShell({
         </ErrorBoundary>
       </main>
 
-      {/* Portail vers <body> : mesuré en direct sur un appareil réel (PWA
-          standalone iOS), .bottom-nav (position: fixed; bottom: 0) restait
-          imbriquée dans .grimoire-app — un bandeau de diagnostic a montré
-          que sa position se calcule correctement quand window.innerHeight
-          == document.documentElement.clientHeight, mais se décale de ~62px
-          vers le haut dès que ces deux valeurs divergent (874 vs 812),
-          reproductible sur Plan/Frigo, correct sur Courses/Recettes-avec-
-          modale-ouverte selon l'état du moment. Le portail vers <body>
-          ci-dessous (au cas où .grimoire-app y était pour quelque chose)
-          n'a PAS suffi à corriger ça une fois testé sur appareil réel :
-          le calcul de "bottom: 0" lui-même dérive, peu importe où
-          l'élément se trouve dans le DOM. Voir "style" ci-dessous pour le
-          vrai correctif (useNavBottomOffset, décalage mesuré en JS). */}
-      {/* "transform: translate(-50%, Npx)", pas "bottom: -Npx" : mesuré en
-          direct sur un appareil réel, un "bottom" négatif ici (pourtant
-          géométriquement correct, vérifié par getBoundingClientRect)
-          déclenchait un bug de PEINTURE WebKit qui rognait le contenu de
-          la nav (icônes visibles, libellés invisibles) — alors que la
-          MÊME position atteinte naturellement (bottom: 0, sans décalage)
-          affichait tout correctement. "transform" est une opération de
-          composition GPU distincte du calcul de position/peinture par
-          "bottom" ; décaler ainsi contourne ce bug précis.
-          isInputFocused ci-dessous masque en plus la nav (opacity: 0,
-          pointer-events: none — jamais display:none, pour ne pas perdre
-          le focus en cours) pendant qu'un champ est actif : le clavier
-          iOS réduit légitimement innerHeight, useNavBottomOffset est mis
-          en pause pendant ce temps (voir plus haut) mais peut encore
-          afficher une dernière valeur obsolète le temps que le clavier
-          se stabilise — signalé comme "la nav flotte au milieu de
-          l'écran" à l'ouverture du clavier. */}
-      {createPortal(
-        <nav
-          className="bottom-nav"
-          style={{
-            ...(navBottomOffset ? { transform: `translate(-50%, ${navBottomOffset}px)` } : null),
-            ...(isInputFocused ? { opacity: 0, pointerEvents: "none" } : null),
-          }}
-        >
-          {TABS.map(({ key, icon: Icon }) => (
-            <NavButton
-              key={key}
-              tabKey={key}
-              label={t(`nav.${key}`)}
-              Icon={Icon}
-              active={tab === key}
-              onSelect={() => setTab(key)}
-              onLongPress={key === "courses" && shoppingLists.length > 0 ? () => setShowListsManager(true) : null}
-              pressDuration={pressDuration}
-            />
-          ))}
-        </nav>,
-        document.body
-      )}
+      <nav className="bottom-nav">
+        {TABS.map(({ key, icon: Icon }) => (
+          <NavButton
+            key={key}
+            tabKey={key}
+            label={t(`nav.${key}`)}
+            Icon={Icon}
+            active={tab === key}
+            onSelect={() => setTab(key)}
+            onLongPress={key === "courses" && shoppingLists.length > 0 ? () => setShowListsManager(true) : null}
+            pressDuration={pressDuration}
+          />
+        ))}
+      </nav>
 
       {openRecipe && (
         <RecipeDetail
