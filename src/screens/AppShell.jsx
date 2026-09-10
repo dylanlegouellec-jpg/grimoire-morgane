@@ -55,8 +55,9 @@ const ViewLoadingFallback = () => (
 // nativement sur window.innerHeight (vérifié : le bas rendu de la nav
 // correspond TOUJOURS exactement à innerHeight, jamais à screen.height) ;
 // l'écart ci-dessous compense donc la différence entre les deux, dans le
-// bon sens cette fois (bottom NÉGATIF = pousse vers le bas, au-delà de
-// l'ancrage natif, pas vers le haut comme la version précédente).
+// bon sens cette fois. Appliqué via "transform" plus bas (pas "bottom"
+// négatif, qui déclenchait son propre bug de peinture — voir le
+// commentaire sur <nav> juste avant son style).
 function useNavBottomOffset() {
   const [offset, setOffset] = useState(0);
   useEffect(() => {
@@ -98,7 +99,7 @@ function NavDebugOverlay({ tab, navBottomOffset }) {
         `tab: ${tab}`,
         `innerHeight: ${window.innerHeight} / clientHeight: ${document.documentElement.clientHeight}`,
         `screen.height: ${window.screen ? window.screen.height : "n/a"} / availHeight: ${window.screen ? window.screen.availHeight : "n/a"}`,
-        `navBottomOffset (appliqué en bottom NÉGATIF): ${navBottomOffset}`,
+        `navBottomOffset (appliqué en transform translateY): ${navBottomOffset}`,
         `nav top/bottom: ${navRect ? `${Math.round(navRect.top)}/${Math.round(navRect.bottom)}` : "n/a"}`,
         `label exists: ${!!firstLabel} / label rect top/bottom: ${labelRect ? `${Math.round(labelRect.top)}/${Math.round(labelRect.bottom)}` : "n/a"} / label text: "${firstLabel ? firstLabel.textContent : "n/a"}"`,
         `body rect top/bottom: ${Math.round(bodyRect.top)}/${Math.round(bodyRect.bottom)} / body overflow: ${bodyCs.overflow} / body overflowY: ${bodyCs.overflowY}`,
@@ -518,7 +519,19 @@ export default function AppShell({
           l'élément se trouve dans le DOM. Voir "style" ci-dessous pour le
           vrai correctif (useNavBottomOffset, décalage mesuré en JS). */}
       {createPortal(
-        <nav className="bottom-nav" style={navBottomOffset ? { bottom: -navBottomOffset } : undefined}>
+        {/* "transform: translate(-50%, Npx)", pas "bottom: -Npx" : mesuré en
+            direct sur un appareil réel, un "bottom" négatif ici (pourtant
+            géométriquement correct, vérifié par getBoundingClientRect)
+            déclenchait un bug de PEINTURE WebKit qui rognait le contenu de
+            la nav (icônes visibles, libellés invisibles) — alors que la
+            MÊME position atteinte naturellement (bottom: 0, sans décalage)
+            affichait tout correctement. "transform" est une opération de
+            composition GPU distincte du calcul de position/peinture par
+            "bottom" ; décaler ainsi contourne ce bug précis. */}
+        <nav
+          className="bottom-nav"
+          style={navBottomOffset ? { transform: `translate(-50%, ${navBottomOffset}px)` } : undefined}
+        >
           {TABS.map(({ key, icon: Icon }) => (
             <NavButton
               key={key}
