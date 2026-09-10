@@ -12,10 +12,15 @@ export const PLANNING_CSS = `
 /* ------------------------------------------------------------------ */
 .planning-header { margin-bottom: 4px; }
 /* Flèches + date + toggle de portée sur une seule ligne (voir
-   PlanningView.jsx) : gap resserré et flèches/texte légèrement réduits
-   pour que tout tienne sans retour à la ligne, y compris sur un écran
-   étroit (iPhone SE, ~375px) une fois le toggle ajouté à droite. */
-.planning-week-nav { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; }
+   PlanningView.jsx) : le toggle reste collé au bord droit
+   (flex-shrink: 0 par défaut sur .segmented), tout le reste de la
+   largeur va à .planning-week-date-group (flex: 1) — les flèches
+   s'écartent jusqu'aux bords de cet espace restant et la date (elle
+   aussi flex: 1, entre les deux flèches) se centre dans tout ce qui
+   reste, donc utilise toute la largeur disponible au lieu de rester
+   en cluster serré au milieu de l'écran. */
+.planning-week-nav { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.planning-week-date-group { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; }
 .planning-week-arrow {
   width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
   background: var(--surface-strong); border: 1px solid var(--line); color: var(--ink-soft);
@@ -23,8 +28,9 @@ export const PLANNING_CSS = `
 }
 .planning-week-arrow:active { background: var(--surface); }
 .planning-week-range {
-  font-family: 'EB Garamond', serif; font-style: italic; font-size: 0.82rem; color: var(--ink-soft);
-  min-width: 0; white-space: nowrap; text-align: center;
+  flex: 1; min-width: 0;
+  font-family: 'EB Garamond', serif; font-style: italic; font-size: 0.86rem; color: var(--ink-soft);
+  white-space: nowrap; text-align: center;
 }
 
 .planning-days { display: flex; flex-direction: column; gap: 10px; margin: 18px 0 20px; }
