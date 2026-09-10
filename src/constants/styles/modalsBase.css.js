@@ -9,18 +9,19 @@
 export const MODALS_BASE_CSS = `
 /* --- Navigation basse --- */
 .bottom-nav {
-  /* CORRECTIF REVERTÉ : "position: absolute" ancré à .grimoire-app semblait
-     une bonne idée (même logique que le correctif qui a marché sur
-     .modal-backdrop), mais .grimoire-app n'est PAS plafonné à 100% de haut
-     — min-height est un plancher, pas un plafond, et .app-content (dedans)
-     grandit avec tout le contenu de la grille de recettes (plusieurs
-     milliers de px). "absolute" ancrait donc la nav au bas de CETTE boîte
-     géante, pas au bas de l'écran visible : elle défilait avec la page au
-     lieu de rester fixe, "disparaissant" dès qu'on n'était plus tout en
-     haut — confirmé cassé sur appareil réel, retour à "fixed". Le bandeau
-     vide original sous la nav reste donc non résolu, à reprendre avec de
-     vraies mesures plutôt qu'une nouvelle supposition. */
+  /* "position: fixed" (pas "absolute" — testé, cassé : voir git log de ce
+     fichier) + un correctif JS (useNavBottomOffset, AppShell.jsx) qui
+     recale la nav via "transform: translate(-50%, Npx)" quand
+     window.innerHeight ment par rapport à window.screen.height. Confirmé
+     sur appareil réel + investigation de code dédiée : cet écart n'est PAS
+     dû à un défaut de code propre à un onglet précis (aucune différence
+     structurelle trouvée entre Courses et les autres vues) — c'est un
+     vrai bug de TIMING WebKit, qui a déjà touché différents onglets à
+     différents moments de cette session. "transition" ci-dessous lisse le
+     changement de "transform" plutôt que de le laisser sauter d'un coup
+     sec au changement d'onglet (signalé comme "la nav saute"). */
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  transition: transform 0.18s ease;
   width: 100%; max-width: 480px;
   display: flex; justify-content: space-around;
   /* Fond transparent + flou plutôt que le chrome sombre plein d'avant : le
