@@ -117,8 +117,15 @@ export const RESPONSIVE_CSS = `
      d'écran, le FAB peut donc se rapprocher du coin. */
   .fab { bottom: 24px; }
 
-  /* --- Fiche recette : deux colonnes, sans long défilement vertical --- */
-  .detail-scroll { max-width: 900px; max-height: 84vh; }
+  /* --- Fiche recette : deux colonnes, sans long défilement vertical ---
+     "min(84vh, calc(var(--app-vvh) - ...))", pas "84vh" seul : ce bloc
+     paysage (tablette/iPhone tourné) est concaténé APRÈS modalsBase.css.js
+     dans styles.css.js et cible le même élément que ".modal, .grimoire-page"
+     (voir RecipeDetail.jsx, className="modal grimoire-page detail-scroll..."),
+     donc gagne à l'ordre de la cascade — sans --app-vvh ici, ce bloc
+     réintroduisait tel quel le bug de hauteur figée déjà corrigé une fois
+     dans modalsBase.css.js (dvh/vh ne suivent jamais le clavier virtuel). */
+  .detail-scroll { max-width: 900px; max-height: min(84vh, var(--app-vvh, 84vh)); }
   .detail-columns {
     display: grid;
     grid-template-columns: 320px 1fr;
@@ -127,7 +134,7 @@ export const RESPONSIVE_CSS = `
   }
   .detail-info-col .detail-hero { border-radius: 12px; overflow: hidden; }
   .detail-body-col {
-    max-height: calc(84vh - 90px);
+    max-height: min(calc(84vh - 90px), calc(var(--app-vvh, 84vh) - 90px));
     overflow-y: auto;
     padding-right: 6px;
   }

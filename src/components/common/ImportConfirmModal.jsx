@@ -1,10 +1,12 @@
 import { X } from "lucide-react";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
+import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
 
 export default function ImportConfirmModal({ recipe, onConfirm, onCancel }) {
+  useBodyScrollLock(true);
   const modalRef = useFocusTrap(onCancel);
   const swipe = useSwipeToDismiss(onCancel, { scrollRef: modalRef });
   return (

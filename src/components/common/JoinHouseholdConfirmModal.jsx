@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import { useTranslation } from "../../contexts/LanguageContext";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
+import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
 
@@ -20,6 +21,7 @@ import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
 /* ------------------------------------------------------------------ */
 export default function JoinHouseholdConfirmModal({ householdId, onRequestJoin, onClose, showToast }) {
   const { t } = useTranslation();
+  useBodyScrollLock(true);
   const modalRef = useFocusTrap(onClose);
   const swipe = useSwipeToDismiss(onClose, { scrollRef: modalRef });
   const [sending, setSending] = useState(false);

@@ -33,6 +33,24 @@ export default function useFocusTrap(onClose) {
     if (!container) return undefined;
     const previouslyFocused = document.activeElement;
 
+    // Empile une entrée d'historique par modale ouverte : sans ça, le
+    // bouton/geste "retour" Android (qui n'a rien à voir avec le clavier —
+    // Échap ci-dessous ne le couvre pas) navigue directement en arrière
+    // dans l'historique du navigateur, donc quitte l'onglet/l'app au lieu
+    // de simplement refermer la modale ouverte. iOS n'a pas d'équivalent
+    // matériel, donc rien à couvrir de ce côté. `closedByBack` distingue
+    // un "retour" déclenché PAR l'utilisateur (doit fermer la modale) d'un
+    // history.back() déclenché PAR NOUS à la fermeture normale ci-dessous
+    // (ne doit pas refermer une deuxième fois une modale déjà en train de
+    // se démonter).
+    let closedByBack = false;
+    window.history.pushState({ grimoireModal: true }, "");
+    const handlePopState = () => {
+      closedByBack = true;
+      if (onCloseRef.current) onCloseRef.current();
+    };
+    window.addEventListener("popstate", handlePopState);
+
     const getFocusable = () =>
       Array.from(container.querySelectorAll(FOCUSABLE_SELECTOR)).filter((el) => el.offsetParent !== null);
 
@@ -73,6 +91,12 @@ export default function useFocusTrap(onClose) {
 
     return () => {
       container.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("popstate", handlePopState);
+      // Fermeture "normale" (croix, Échap, backdrop, tirer pour fermer) :
+      // on retire notre propre entrée d'historique pour ne pas la laisser
+      // trainer — sans rejouer onClose, déjà en cours via le chemin qui a
+      // causé ce démontage.
+      if (!closedByBack) window.history.back();
       if (previouslyFocused && typeof previouslyFocused.focus === "function") {
         previouslyFocused.focus({ preventScroll: true });
       }

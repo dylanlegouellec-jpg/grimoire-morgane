@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Plus, X } from "lucide-react";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
+import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
 
@@ -17,6 +18,7 @@ const SCOPE_TITLES = {
 };
 
 export default function ListsManagerModal({ lists, activeListId, scope, onOpen, onCreate, onRename, onDelete, onClose }) {
+  useBodyScrollLock(true);
   const modalRef = useFocusTrap(onClose);
   const swipe = useSwipeToDismiss(onClose, { scrollRef: modalRef });
   const [renamingId, setRenamingId] = useState(null);

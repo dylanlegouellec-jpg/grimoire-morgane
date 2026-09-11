@@ -1,11 +1,13 @@
 import { useRef, useEffect } from "react";
 import { Copy, X } from "lucide-react";
 import { copyText } from "../../utils/helpers";
+import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
 import Seal from "./Seal";
 
 export default function TextShareModal({ title, text, onClose }) {
+  useBodyScrollLock(true);
   const ref = useRef(null);
   const modalRef = useFocusTrap(onClose);
   const swipe = useSwipeToDismiss(onClose, { scrollRef: modalRef });
