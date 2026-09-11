@@ -101,6 +101,13 @@ export default function SecretSettingsModal({
   const swipe = useSwipeToDismiss(activeView === "main" ? onClose : goToMain, {
     scrollRef: modalPanelRef,
     disabled: showProfileEditor,
+    // Depuis une sous-vue, ce tirage ne ferme rien : il ramène juste à la
+    // liste principale des Réglages, qui reste montée (voir le commentaire
+    // de fichier en tête — une seule coquille modale pour tout le module).
+    // Sans ceci, le retour rebondissait visiblement (voir useSwipeToDismiss.js)
+    // au moment même où le contenu bascule, comme si le panneau se refermait
+    // puis se rouvrait — signalé alors que l'écran principal "était déjà là".
+    resetInstantlyOnDismiss: activeView !== "main",
   });
   // Même cible que le "tirer pour fermer" ci-dessus (retour à la liste
   // principale depuis une sous-vue, fermeture complète depuis l'écran
