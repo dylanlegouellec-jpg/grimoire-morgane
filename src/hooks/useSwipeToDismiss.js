@@ -129,7 +129,15 @@ export default function useSwipeToDismiss(onDismiss, { scrollRef, disabled = fal
     },
     style: {
       transform: translateY > 0 ? `translateY(${translateY}px)` : undefined,
-      transition: isDragging ? "none" : "transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
+      // Fondu progressif pendant le tirage, comme RecipeDetail.jsx (seule
+      // modale à avoir eu ce geste jusqu'ici, via sa propre logique de
+      // glissement plutôt que ce hook partagé) : sans lui, seule la
+      // position suivait le doigt, jamais l'opacité — le geste "marchait"
+      // mais paraissait moins vivant, moins "physique" que sur la fiche
+      // recette. Même formule (plafond à 0.4, jamais totalement invisible
+      // avant que le seuil de fermeture ne soit franchi).
+      opacity: translateY > 0 ? Math.max(1 - translateY / 300, 0.4) : 1,
+      transition: isDragging ? "none" : "transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease",
     },
     isDragging,
   };
