@@ -26,7 +26,7 @@ const AXIS_LOCK_THRESHOLD_PX = 8;
 const DISMISS_DISTANCE_PX = 100;
 const DISMISS_VELOCITY_PX_PER_MS = 0.6;
 
-export default function useSwipeToDismiss(onDismiss, { scrollRef, disabled = false } = {}) {
+export default function useSwipeToDismiss(onDismiss, { scrollRef, disabled = false, fade = false } = {}) {
   const startYRef = useRef(null);
   const draggingRef = useRef(false);
   // Deux derniers échantillons (position + horodatage) : sert à calculer une
@@ -136,8 +136,23 @@ export default function useSwipeToDismiss(onDismiss, { scrollRef, disabled = fal
       // mais paraissait moins vivant, moins "physique" que sur la fiche
       // recette. Même formule (plafond à 0.4, jamais totalement invisible
       // avant que le seuil de fermeture ne soit franchi).
-      opacity: translateY > 0 ? Math.max(1 - translateY / 300, 0.4) : 1,
-      transition: isDragging ? "none" : "transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease",
+      //
+      // DÉSACTIVÉ PAR DÉFAUT (`fade: true` explicite pour l'activer) : la
+      // moitié des ~20 appelants de ce hook sont des modales empilées
+      // PAR-DESSUS une autre modale déjà affichée (RecipeForm par-dessus
+      // RecipeDetail en édition, ProfileEditor par-dessus les Réglages,
+      // les sous-modales Foyer empilées jusqu'à 3 niveaux...). Rendre la
+      // feuille elle-même translucide pendant le tirage y laisse
+      // transparaître la modale du dessous À TRAVERS son propre contenu
+      // (pas seulement dans l'espace qu'elle libère en glissant) : les deux
+      // écrans de texte se superposent en un fouillis illisible — signalé
+      // comme un "bug chelou" après l'avoir activé partout par défaut, sur
+      // le panneau Accessibilité (empilé sur le panneau principal des
+      // Réglages). Sans danger seulement quand rien de chargé/lisible ne se
+      // trouve juste derrière (un simple onglet, une grille de recettes) —
+      // à activer au cas par cas, pas par défaut.
+      opacity: fade && translateY > 0 ? Math.max(1 - translateY / 300, 0.4) : 1,
+      transition: isDragging ? "none" : `transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)${fade ? ", opacity 0.25s ease" : ""}`,
     },
     isDragging,
   };
