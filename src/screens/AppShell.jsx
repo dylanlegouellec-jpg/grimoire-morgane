@@ -74,7 +74,6 @@ export default function AppShell({
     shoppingLists,
     visibleShoppingLists,
     activeListId,
-    setActiveListId,
     openShoppingList,
     shoppingScope,
     setShoppingScope,
@@ -425,7 +424,6 @@ export default function AppShell({
         {TABS.map(({ key, icon: Icon }) => (
           <NavButton
             key={key}
-            tabKey={key}
             label={t(`nav.${key}`)}
             Icon={Icon}
             active={tab === key}

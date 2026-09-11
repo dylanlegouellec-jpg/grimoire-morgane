@@ -4,7 +4,7 @@ import { triggerHaptic, triggerHapticFeedback } from "../../utils/haptics";
 // utils/audioUtils.js, initAudioOnFirstTouch) — plus besoin de l'appeler
 // ici, ça doublerait le son.
 
-export default function NavButton({ tabKey, label, Icon, active, onSelect, onLongPress, pressDuration = 750 }) {
+export default function NavButton({ label, Icon, active, onSelect, onLongPress, pressDuration = 750 }) {
   const timer = useRef(null);
   const fired = useRef(false);
   const btnRef = useRef(null);
