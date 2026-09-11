@@ -329,9 +329,10 @@ export const RECIPE_CARDS_CSS = `
 }
 /* Reprend, seulement en PWA installée, le +10px de hauteur donné à
    .bottom-nav (voir modalsBase.css.js) : garde le même espace de
-   respiration au-dessus du FAB sans toucher au navigateur normal. */
-@media (display-mode: standalone) {
-  .fab { bottom: 108px; }
-}
+   respiration au-dessus du FAB sans toucher au navigateur normal.
+   ":where(...)" : voir le commentaire détaillé dans modalsBase.css.js —
+   ramène la spécificité à zéro pour ne pas gagner contre la règle paysage
+   juste au-dessus ("bottom: 24px") sur une tablette en PWA installée. */
+:where(html[data-standalone="true"]) .fab { bottom: 108px; }
 
 `;

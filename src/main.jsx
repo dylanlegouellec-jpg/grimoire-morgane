@@ -38,6 +38,21 @@ if ("serviceWorker" in navigator) {
 }
 
 registerSW({ immediate: true })
+
+// Détecte l'app installée sur l'écran d'accueil pour le CSS (voir
+// .bottom-nav/.fab/.grimoire-app) : le média CSS "display-mode: standalone"
+// existe, mais s'est avéré peu fiable sous iOS Safari selon la manière dont
+// l'app a été ajoutée à l'écran d'accueil — signalé comme "aucune
+// différence" alors que le CSS ciblait très exactement ce média.
+// window.navigator.standalone (propriété non standard, propre à iOS) est
+// la détection fiable documentée sur cette plateforme ; matchMedia reste le
+// bon repli pour Android/desktop, où il fonctionne correctement. Posé en
+// attribut sur <html>, comme data-theme/data-text-size (voir
+// utils/theme.js, utils/localSettings.js) : un simple sélecteur CSS suffit
+// alors, sans dépendre du support du média par le moteur de rendu.
+if (window.navigator.standalone || window.matchMedia("(display-mode: standalone)").matches) {
+  document.documentElement.setAttribute("data-standalone", "true");
+}
 // Débloque l'AudioContext au tout premier geste utilisateur et branche le
 // clic sonore global — voir utils/audioUtils.js.
 initAudioOnFirstTouch()
