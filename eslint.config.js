@@ -1,5 +1,6 @@
 import js from "@eslint/js";
 import globals from "globals";
+import react from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 
@@ -25,12 +26,22 @@ export default [
       },
     },
     plugins: {
+      react,
       "react-hooks": reactHooks,
       "react-refresh": reactRefresh,
     },
     rules: {
       ...js.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
+      // Seule règle reprise d'eslint-plugin-react (pas tout son ruleset
+      // "recommended", qui aurait fait surgir d'un coup des dizaines
+      // d'avertissements sans rapport sur le reste du projet) : sans elle,
+      // no-unused-vars (ci-dessus, via js.configs.recommended) ne sait pas
+      // qu'un import utilisé UNIQUEMENT en JSX (ex. <Search size={15} />)
+      // compte comme une utilisation réelle — signalé comme des imports
+      // "jamais utilisés" alors qu'ils l'étaient bel et bien, partout où le
+      // seul usage d'un composant/icône est du JSX.
+      "react/jsx-uses-vars": "error",
       // "Vite Fast Refresh" (rechargement à chaud) exige qu'un fichier de
       // composant n'exporte QUE des composants — un fichier qui exporte
       // aussi une constante ou une fonction utilitaire casse le rechargement

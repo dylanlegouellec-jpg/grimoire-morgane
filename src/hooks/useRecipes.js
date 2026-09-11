@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { SUPABASE_READY } from "../constants";
-import { nextId, triggerHaptic } from "../utils/helpers";
+import { nextId } from "../utils/helpers";
 import { normalizeIngredientList } from "../utils/ingredients";
 import { resolveIllustrationKey } from "../components/art";
 import { insertRow, updateRow, deleteRow, mapRecipeToRow } from "../utils/supabase";
