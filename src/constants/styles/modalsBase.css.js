@@ -28,19 +28,27 @@ export const MODALS_BASE_CSS = `
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border-top: 2px solid var(--gold);
-  /* 16px (au lieu de 10px) + 6px sur .nav-btn ci-dessous (au lieu de 4px) :
-     barre un peu plus haute pour mieux équilibrer visuellement le FAB "+"
-     qui flotte juste au-dessus (voir .fab, recipeCards.css.js — son "bottom"
-     est remonté d'autant pour garder le même espace de respiration). */
-  padding: 16px 0 max(16px, env(safe-area-inset-bottom));
+  padding: 10px 0 max(10px, env(safe-area-inset-bottom));
 }
 .nav-btn {
   background: none; border: none; color: var(--ink-soft);
   display: flex; flex-direction: column; align-items: center; gap: 3px;
   font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.5px;
-  cursor: pointer; padding: 6px 10px;
+  cursor: pointer; padding: 4px 10px;
 }
 .nav-btn.active { color: var(--gold); }
+/* Barre un peu plus haute, mais SEULEMENT dans l'app installée (PWA) — pas
+   dans un onglet de navigateur normal, ni sur PC/Android en mode web.
+   "display-mode: standalone" est le média-query standard pour détecter
+   précisément ce mode-là (supporté par WebKit iOS comme par Chrome/Android),
+   sans toucher à qui que ce soit d'autre. Voir .fab (recipeCards.css.js) et
+   .grimoire-app (theme.css.js), ajustés à l'identique pour garder le même
+   espace de respiration au-dessus du FAB et au-dessus du contenu, mais eux
+   aussi seulement en standalone. */
+@media (display-mode: standalone) {
+  .bottom-nav { padding: 16px 0 max(16px, env(safe-area-inset-bottom)); }
+  .nav-btn { padding: 6px 10px; }
+}
 
 /* --- Modales / page de grimoire --- */
 .modal-backdrop {

@@ -155,7 +155,7 @@ html, body {
   margin: 0 auto;
   position: relative;
   padding-top: env(safe-area-inset-top);
-  padding-bottom: 94px;
+  padding-bottom: 84px;
   box-shadow: 0 0 40px var(--card-shadow);
   /* "overflow-x: hidden" forçait la spec CSS à calculer overflow-y en
      "auto" (dès qu'un axe n'est pas "visible", l'autre l'est aussi tout
@@ -171,6 +171,15 @@ html, body {
      document (rien ne change dans le flux ci-dessus). */
   overflow-x: clip;
   overflow-y: visible;
+}
+/* Reprend, seulement en PWA installée, le +10px de hauteur donné à
+   .bottom-nav en portrait (voir modalsBase.css.js) : la dernière ligne de
+   contenu défilable ne doit pas se retrouver plus serrée contre la barre
+   dans l'app installée, sans changer quoi que ce soit dans un navigateur
+   normal. .loading-screen exclu à dessein : rien n'y défile derrière la nav
+   (elle n'est même pas montée à cet écran), ce padding n'y sert à rien. */
+@media (display-mode: standalone) {
+  .grimoire-app { padding-bottom: 94px; }
 }
 
 .loading-screen {
