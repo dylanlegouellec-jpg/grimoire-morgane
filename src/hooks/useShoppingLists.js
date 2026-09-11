@@ -57,14 +57,21 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
     setActiveListId(nextActive);
   }, [isListInScope]);
 
-  const nextListName = useCallback(() => {
-    const nums = listsRef.current.map((l) => {
-      const m = l.name.match(/^Liste (\d+)$/);
-      return m ? parseInt(m[1], 10) : 0;
-    });
+  // Numérotée par PORTÉE (foyer/personnel), pas sur l'ensemble des listes :
+  // sans ce filtre, "Liste 1" déjà prise côté foyer faisait sauter la toute
+  // première liste personnelle directement à "Liste 2" — le compteur
+  // comptait les deux portées comme une seule séquence partagée alors
+  // qu'elles sont numérotées indépendamment aux yeux de l'utilisateur.
+  const nextListName = useCallback((scope) => {
+    const nums = listsRef.current
+      .filter((l) => isListInScope(l, scope))
+      .map((l) => {
+        const m = l.name.match(/^Liste (\d+)$/);
+        return m ? parseInt(m[1], 10) : 0;
+      });
     const max = nums.length ? Math.max(...nums) : 0;
     return `Liste ${max + 1}`;
-  }, []);
+  }, [isListInScope]);
 
   // `scope`/`ownerId` optionnels : par défaut, une nouvelle liste prend la
   // portée actuellement affichée (voir shoppingScopeRef) — c'est le cas de
@@ -76,7 +83,7 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
     const scope = (scopeArg || shoppingScopeRef.current) === "personal" ? "personal" : "household";
     const ownerId = scope === "personal" ? (ownerIdArg || userIdRef.current) : null;
     const id = nextId();
-    const name = nextListName();
+    const name = nextListName(scope);
     const newList = { id, name, items: [], scope, userId: ownerId };
     setShoppingLists((prev) => [...prev, newList]);
     setActiveListId(id);
