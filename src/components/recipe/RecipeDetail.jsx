@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, lazy, Suspense } from "react";
 import { ChefHat, Clock, Minus, Plus, Share2, Users, X } from "lucide-react";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
 import { categoryLabel, categoryClass, groupSteps, triggerHaptic } from "../../utils/helpers";
@@ -9,7 +9,12 @@ import useFocusTrap from "../../hooks/useFocusTrap";
 import DishArt from "../art/DishArt";
 import Flourish from "../common/Flourish";
 import Seal from "../common/Seal";
-import ShareRecipeModal from "../common/ShareRecipeModal";
+
+// Chargée à la demande : RecipeDetail est monté dès qu'on ouvre une seule
+// recette (voir AppShell.jsx), mais partager n'est qu'une action parmi
+// d'autres sur cet écran — pas besoin d'alourdir le bundle initial pour un
+// panneau que la plupart des visites n'ouvriront jamais.
+const ShareRecipeModal = lazy(() => import("../common/ShareRecipeModal"));
 
 export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareText, showToast, showNutriscore = true }) {
   // Sécurisation du nombre de portions initiales
@@ -229,14 +234,16 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
         <div className="detail-scroll-hint">· · ·</div>
       </div>
       {showShare && (
-        <ShareRecipeModal
-          recipe={recipe}
-          servings={servings}
-          ingredients={scaledIngredients}
-          onClose={() => setShowShare(false)}
-          shareText={shareText}
-          showToast={showToast}
-        />
+        <Suspense fallback={null}>
+          <ShareRecipeModal
+            recipe={recipe}
+            servings={servings}
+            ingredients={scaledIngredients}
+            onClose={() => setShowShare(false)}
+            shareText={shareText}
+            showToast={showToast}
+          />
+        </Suspense>
       )}
     </div>
   );
