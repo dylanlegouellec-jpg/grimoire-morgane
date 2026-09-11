@@ -53,6 +53,34 @@ registerSW({ immediate: true })
 if (window.navigator.standalone || window.matchMedia("(display-mode: standalone)").matches) {
   document.documentElement.setAttribute("data-standalone", "true");
 }
+
+// Hauteur/décalage RÉELS de la zone visible (--app-vvh/--app-vv-offset),
+// utilisés par .modal-backdrop (modalsBase.css.js) à la place de
+// "height: 100dvh" seul. Corrige un bug précis sur iOS : nos modales sont
+// en "position: fixed" ET s'ouvrent pendant que le <body> est LUI AUSSI
+// figé en "position: fixed" (voir useBodyScrollLock.js, nécessaire par
+// ailleurs pour empêcher le fond de défiler sous la modale). Sur ce
+// terrain, quand un champ à l'intérieur reçoit le clavier (ex. la
+// recherche de AddMealModal.jsx, autoFocus), Safari tente de faire défiler
+// la page pour amener ce champ au-dessus du clavier — mais ne peut pas
+// vraiment scroller un <body> figé, et finit par décaler toute la couche
+// "fixed" au lieu du seul contenu, faisant sortir le haut de la modale
+// (avec la barre de recherche) au-dessus du haut de l'écran. "100dvh" ne
+// suit que le rétractement de la barre d'adresse, jamais le clavier :
+// resynchroniser en continu sur window.visualViewport (hauteur ET
+// décalage réels) permet à la modale de rester correctement cadrée dans
+// l'espace effectivement visible au-dessus du clavier.
+if (window.visualViewport) {
+  const vv = window.visualViewport;
+  const syncViewportVars = () => {
+    document.documentElement.style.setProperty("--app-vvh", `${vv.height}px`);
+    document.documentElement.style.setProperty("--app-vv-offset", `${vv.offsetTop}px`);
+  };
+  syncViewportVars();
+  vv.addEventListener("resize", syncViewportVars);
+  vv.addEventListener("scroll", syncViewportVars);
+}
+
 // Débloque l'AudioContext au tout premier geste utilisateur et branche le
 // clic sonore global — voir utils/audioUtils.js.
 initAudioOnFirstTouch()

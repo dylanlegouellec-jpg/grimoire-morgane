@@ -59,7 +59,9 @@ export const MODALS_BASE_CSS = `
 
 /* --- Modales / page de grimoire --- */
 .modal-backdrop {
-  position: fixed; inset: 0; height: 100dvh; background: rgba(20,14,4,0.55);
+  position: fixed; left: 0; right: 0;
+  top: var(--app-vv-offset, 0px); height: var(--app-vvh, 100dvh);
+  background: rgba(20,14,4,0.55);
   display: flex; align-items: flex-end; justify-content: center;
   /* Volontairement au-dessus du FAB "+" (voir .fab, z-index: 50) : les
      deux étaient à égalité avant ce correctif, un pur hasard d'ordre DOM
@@ -69,15 +71,23 @@ export const MODALS_BASE_CSS = `
   padding: 0;
   touch-action: none; overscroll-behavior: contain;
 }
-/* "height: 100dvh" ci-dessus (en plus de "inset: 0") : sur iOS Safari, une
-   fois la barre d'adresse rétractée par un scroll plein écran, "inset: 0"
-   seul laisse parfois un mince bandeau blanc sous la modale (la page NATIVE
-   en dessous, pas ce fond semi-transparent) le temps que la barre finisse
-   sa transition — "dvh" force ce fond à occuper la vraie hauteur visuelle
-   à tout moment, sans dépendre de cette resynchronisation. Contenu ICI à ce
-   seul overlay (jamais html/body) : pas de lien avec le blocage de scroll
-   déjà corrigé ailleurs (voir shell.css.js), qui venait d'un tout autre
-   problème (overscroll-behavior sur .app-content). */
+/* "top"/"height" pilotés par --app-vv-offset/--app-vvh (posés par
+   main.jsx depuis window.visualViewport), pas "inset: 0; height: 100dvh" :
+   "dvh" ne suit que le rétractement de la barre d'adresse, jamais le
+   clavier virtuel. Sur iOS, une modale "position: fixed" ouverte pendant
+   que le <body> est LUI AUSSI figé (voir useBodyScrollLock.js) et
+   contenant un champ qui reçoit le clavier (ex. la recherche de
+   AddMealModal.jsx, autoFocus) se faisait décaler entièrement vers le haut
+   par la tentative de Safari de "faire défiler jusqu'au champ" — un body
+   figé ne pouvant pas vraiment scroller, c'est toute la couche fixed qui
+   partait, faisant sortir le haut de la modale (barre de recherche
+   comprise) au-dessus de l'écran. Se recaler sur visualViewport (hauteur ET
+   décalage réels de la zone visible, mis à jour en direct) couvre aussi
+   l'ancien cas (barre d'adresse en cours de rétractation) : fallback
+   100dvh/0px si l'API n'existe pas. Contenu ICI à ce seul overlay (jamais
+   html/body) : pas de lien avec le blocage de scroll déjà corrigé ailleurs
+   (voir shell.css.js), qui venait d'un tout autre problème
+   (overscroll-behavior sur .app-content). */
 .modal, .grimoire-page {
   background: var(--parchment);
   /* "dvh", pas "vh" : "vh" se fige à sa valeur de calcul initiale et ne se
@@ -88,8 +98,14 @@ export const MODALS_BASE_CSS = `
      ne remplissant jamais cette hauteur = grand vide en bas d'une courte
      modale ; à l'inverse, un contenu long dont on attend qu'il s'arrête à
      812 débordait de 62px de trop avant coupure). "dvh" se recalcule en
-     continu et suit donc la valeur stable. */
-  width: 100%; max-width: 480px; max-height: 88dvh; overflow-y: auto; overflow-x: hidden;
+     continu et suit donc la valeur stable. "min(…, var(--app-vvh))" en plus
+     de "dvh" (voir .modal-backdrop juste au-dessus pour --app-vvh) : sans
+     ce second plafond, une modale dont le contenu remplit vraiment ses
+     88dvh déborderait quand le clavier réduit la zone visible réelle en
+     dessous de cette hauteur — le clavier ne réduit jamais "dvh" (qui ne
+     suit que la barre d'adresse), le débordement partirait alors PAR LE
+     HAUT du fond (align-items: flex-end), au-dessus de l'écran. */
+  width: 100%; max-width: 480px; max-height: min(88dvh, var(--app-vvh, 88dvh)); overflow-y: auto; overflow-x: hidden;
   border-radius: 18px 18px 0 0;
   /* padding-bottom inclut env(safe-area-inset-bottom) : sans lui, le
      dernier texte défilable (ex. la dernière étape d'une recette) finit
@@ -149,16 +165,19 @@ export const MODALS_BASE_CSS = `
    correct n'apporte rien, seul le padding était le problème. */
 .modal.recipe-options-modal {
   z-index: 60;
-  max-height: 80dvh;
+  max-height: min(80dvh, var(--app-vvh, 80dvh));
   overflow-y: auto;
 }
 
 /* --- Assistant "Ajouter un repas" (Planification) — portait le même
    padding bas inutile que .recipe-options-modal ci-dessus (retiré, voir
    son commentaire pour l'explication complète : .modal-backdrop couvre
-   déjà .bottom-nav entièrement, rien à réserver). --- */
+   déjà .bottom-nav entièrement, rien à réserver). "min(…, var(--app-vvh))" :
+   même raison que .modal/.grimoire-page plus haut — cette feuille contient
+   justement le champ (recherche/recette personnalisée) dont le clavier
+   déclenchait le débordement par le haut. */
 .modal.planning-step-modal {
-  max-height: 80dvh;
+  max-height: min(80dvh, var(--app-vvh, 80dvh));
   overflow-y: auto;
 }
 
