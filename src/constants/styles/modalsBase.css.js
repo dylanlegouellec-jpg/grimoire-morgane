@@ -70,7 +70,12 @@ export const MODALS_BASE_CSS = `
   z-index: 55;
   padding: 0;
   touch-action: none; overscroll-behavior: contain;
+  /* Fondu de fermeture — voir hooks/useAnimatedClose.js : ".closing" n'est
+     posée que le temps de l'animation de sortie (ne change rien tant
+     qu'elle n'est pas ajoutée, "opacity" vaut déjà 1 par défaut). */
+  transition: opacity 0.22s ease;
 }
+.modal-backdrop.closing { opacity: 0; }
 /* "top"/"height" pilotés par --app-vv-offset/--app-vvh (posés par
    main.jsx depuis window.visualViewport), pas "inset: 0; height: 100dvh" :
    "dvh" ne suit que le rétractement de la barre d'adresse, jamais le
@@ -138,6 +143,18 @@ export const MODALS_BASE_CSS = `
 }
 .form-clean { max-width: 100%; overflow-x: hidden; }
 @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+/* Symétrique de slideUp, pour la fermeture (voir hooks/useAnimatedClose.js) —
+   auparavant inexistante : le clic sur "Fermer"/"Retour" démontait la
+   modale au rendu React suivant, donc instantanément (pas de transition à
+   interrompre), ce qui découvrait d'un coup sec la nav basse et la vue
+   derrière — repéré en particulier quand deux fermetures s'enchaînent vite
+   (ex. Accessibilité -> Réglages -> fermé), chacune étant un "pop" figé.
+   ".closing" n'est posée qu'au moment de fermer (voir le hook), donc sans
+   effet sur l'animation d'entrée ci-dessus. Durée alignée sur la
+   transition d'opacité de .modal-backdrop.closing ci-dessus, pour que le
+   fond et la feuille disparaissent ensemble. */
+.modal.closing, .grimoire-page.closing { animation: slideDown 0.22s ease forwards; }
+@keyframes slideDown { from { transform: translateY(0); opacity: 1; } to { transform: translateY(30px); opacity: 0; } }
 .modal-close {
   position: absolute; top: 14px; right: 14px; z-index: 5;
   background: var(--modal-close-bg); border: none; border-radius: 50%;

@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Home, LogOut, Palette, Pencil, Save, Sliders
 import { triggerHaptic } from "../../utils/helpers";
 import { getCachedProfile, getProfile } from "../../utils/profile";
 import { useTranslation } from "../../contexts/LanguageContext";
+import useAnimatedClose from "../../hooks/useAnimatedClose";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useLongPress from "../../hooks/useLongPress";
@@ -109,12 +110,19 @@ export default function SecretSettingsModal({
   // par-dessus, pour ne pas lui voler le geste — et de toute façon hors de
   // portée du doigt dès qu'une sous-vue est empilée dessus (son propre
   // fond opaque intercepte alors le geste en premier).
+  // Anime la fermeture (bouton/fond/Échap/retour Android) au lieu de
+  // démonter instantanément — voir hooks/useAnimatedClose.js. PAS branché
+  // sur mainSwipe juste en dessous : le geste de tirage anime déjà lui-même
+  // sa sortie via sa propre position suivie au doigt, le mélanger à
+  // l'animation CSS ci-dessous la ferait repartir de zéro plutôt que de la
+  // position réelle du doigt au relâché.
+  const { closing, requestClose } = useAnimatedClose(onClose);
   const mainPanelRef = useRef(null);
   const mainSwipe = useSwipeToDismiss(onClose, {
     scrollRef: mainPanelRef,
     disabled: showProfileEditor,
   });
-  const mainFocusTrapRef = useFocusTrap(onClose);
+  const mainFocusTrapRef = useFocusTrap(requestClose);
   const setMainPanelRef = (node) => {
     mainPanelRef.current = node;
     mainFocusTrapRef.current = node;
@@ -155,17 +163,17 @@ export default function SecretSettingsModal({
 
   return (
     <>
-      <div className="modal-backdrop" onClick={onClose}>
+      <div className={`modal-backdrop ${closing ? "closing" : ""}`} onClick={requestClose}>
         <div
           ref={setMainPanelRef}
-          className="modal grimoire-page ios-settings-modal modal-swipeable"
+          className={`modal grimoire-page ios-settings-modal modal-swipeable ${closing ? "closing" : ""}`}
           role="dialog"
           aria-modal="true"
           onClick={(e) => e.stopPropagation()}
           style={mainSwipe.style}
           {...mainSwipe.handlers}
         >
-          <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
+          <button className="modal-close" onClick={requestClose} aria-label="Fermer"><X size={20} /></button>
 
           <h2 className="dropcap-title">{t("settings.title")}</h2>
           <Flourish />
@@ -343,25 +351,28 @@ export default function SecretSettingsModal({
 function SettingsSubPanel({ onBack, children }) {
   const { t } = useTranslation();
   const panelRef = useRef(null);
+  // Voir le commentaire équivalent sur le panneau principal ci-dessus :
+  // animé sur les déclencheurs "tap", pas sur le geste de tirage.
+  const { closing, requestClose } = useAnimatedClose(onBack);
   const swipe = useSwipeToDismiss(onBack, { scrollRef: panelRef });
-  const focusTrapRef = useFocusTrap(onBack);
+  const focusTrapRef = useFocusTrap(requestClose);
   const setPanelRef = (node) => {
     panelRef.current = node;
     focusTrapRef.current = node;
   };
 
   return (
-    <div className="modal-backdrop" onClick={onBack}>
+    <div className={`modal-backdrop ${closing ? "closing" : ""}`} onClick={requestClose}>
       <div
         ref={setPanelRef}
-        className="modal grimoire-page ios-settings-modal modal-swipeable"
+        className={`modal grimoire-page ios-settings-modal modal-swipeable ${closing ? "closing" : ""}`}
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
         style={swipe.style}
         {...swipe.handlers}
       >
-        <button className="modal-back" onClick={onBack}><ChevronLeft size={20} /> {t("settings.back")}</button>
+        <button className="modal-back" onClick={requestClose}><ChevronLeft size={20} /> {t("settings.back")}</button>
         {children}
       </div>
     </div>
