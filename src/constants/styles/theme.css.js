@@ -177,10 +177,10 @@ html, body {
    contenu défilable ne doit pas se retrouver plus serrée contre la barre
    dans l'app installée, sans changer quoi que ce soit dans un navigateur
    normal. .loading-screen exclu à dessein : rien n'y défile derrière la nav
-   (elle n'est même pas montée à cet écran), ce padding n'y sert à rien. */
-@media (display-mode: standalone) {
-  .grimoire-app { padding-bottom: 94px; }
-}
+   (elle n'est même pas montée à cet écran), ce padding n'y sert à rien.
+   ":where(...)" : voir le commentaire détaillé dans modalsBase.css.js —
+   ramène la spécificité à zéro, par cohérence avec .bottom-nav/.fab. */
+:where(html[data-standalone="true"]) .grimoire-app { padding-bottom: 94px; }
 
 .loading-screen {
   display: flex; flex-direction: column; align-items: center; justify-content: center;

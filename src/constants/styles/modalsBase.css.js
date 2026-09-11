@@ -39,16 +39,23 @@ export const MODALS_BASE_CSS = `
 .nav-btn.active { color: var(--gold); }
 /* Barre un peu plus haute, mais SEULEMENT dans l'app installée (PWA) — pas
    dans un onglet de navigateur normal, ni sur PC/Android en mode web.
-   "display-mode: standalone" est le média-query standard pour détecter
-   précisément ce mode-là (supporté par WebKit iOS comme par Chrome/Android),
-   sans toucher à qui que ce soit d'autre. Voir .fab (recipeCards.css.js) et
-   .grimoire-app (theme.css.js), ajustés à l'identique pour garder le même
-   espace de respiration au-dessus du FAB et au-dessus du contenu, mais eux
-   aussi seulement en standalone. */
-@media (display-mode: standalone) {
-  .bottom-nav { padding: 16px 0 max(16px, env(safe-area-inset-bottom)); }
-  .nav-btn { padding: 6px 10px; }
-}
+   html[data-standalone="true"] (posé par main.jsx), pas
+   "@media (display-mode: standalone)" : ce média CSS existe bel et bien,
+   mais s'est avéré peu fiable sous iOS Safari selon la manière dont l'app a
+   été ajoutée à l'écran d'accueil — confirmé sur appareil réel ("aucune
+   différence" alors que ce bloc ciblait très exactement ce mode).
+   ":where(html[data-standalone])" plutôt que "html[data-standalone] " tout
+   court : :where() ramène la spécificité à zéro, donc ces deux règles
+   pèsent exactement comme ".bottom-nav"/".nav-btn" seuls — sans ça, la
+   règle paysage plus bas (responsive.css.js, qui repasse .bottom-nav en
+   colonne latérale statique avec padding:0) perdrait la bataille de
+   spécificité et resterait bloquée sur ce padding, même sur une tablette en
+   PWA installée. Voir .fab (recipeCards.css.js) et .grimoire-app
+   (theme.css.js), ajustés à l'identique pour garder le même espace de
+   respiration au-dessus du FAB et au-dessus du contenu, mais eux aussi
+   seulement en standalone. */
+:where(html[data-standalone="true"]) .bottom-nav { padding: 16px 0 max(16px, env(safe-area-inset-bottom)); }
+:where(html[data-standalone="true"]) .nav-btn { padding: 6px 10px; }
 
 /* --- Modales / page de grimoire --- */
 .modal-backdrop {
