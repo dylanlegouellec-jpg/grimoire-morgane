@@ -23,6 +23,29 @@
          racine, qui a été retiré pour éviter d'avoir deux manifestes
          divergents. -->
     <title>Le Grimoire de Morgane</title>
+    <!-- Chargées ici, PAS via @import dans theme.css.js (retiré) : un
+         @import doit être la ou les toute(s) première(s) règle(s) d'une
+         feuille de style, et tant que la ressource importée n'a pas fini de
+         charger, la spec CSS bloque l'application de TOUT LE RESTE de
+         CETTE MÊME feuille — pas seulement des règles de police. Le CSS de
+         toute l'app tient dans une seule chaîne concaténée injectée par
+         AppShell.jsx (voir styles.css.js), et THEME_CSS (qui portait cet
+         @import) est le premier morceau concaténé : son import était donc
+         littéralement la première ligne de CE bloc <style> unique. Le temps
+         de l'aller-retour réseau vers Google Fonts (visible sur captures :
+         600-800ms au lancement), l'app entière restait sans AUCUN style —
+         pas juste avec une police de repli — puis basculait d'un coup une
+         fois l'import résolu, plutôt que la dégradation progressive
+         attendue d'une police qui charge. Une vraie balise <link> est une
+         ressource indépendante : elle ne bloque que le texte qui utilise
+         ces polices (repli sur une police système entre-temps, "&display=
+         swap" déjà dans l'URL), jamais le CSS de mise en page/couleurs qui
+         n'a rien à voir avec elle. preconnect vers les deux domaines
+         (google fonts + le CDN qui sert réellement les fichiers de police)
+         accélère cet aller-retour au lieu de se contenter de l'éviter. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cinzel+Decorative:wght@700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
     <style>
       /* touch-action ne "cascade" pas comme les autres propriétés CSS : la
          valeur EFFECTIVE pour un élément touché est l'INTERSECTION de sa
