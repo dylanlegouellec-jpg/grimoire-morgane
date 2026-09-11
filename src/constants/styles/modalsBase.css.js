@@ -28,13 +28,17 @@ export const MODALS_BASE_CSS = `
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border-top: 2px solid var(--gold);
-  padding: 10px 0 max(10px, env(safe-area-inset-bottom));
+  /* 16px (au lieu de 10px) + 6px sur .nav-btn ci-dessous (au lieu de 4px) :
+     barre un peu plus haute pour mieux équilibrer visuellement le FAB "+"
+     qui flotte juste au-dessus (voir .fab, recipeCards.css.js — son "bottom"
+     est remonté d'autant pour garder le même espace de respiration). */
+  padding: 16px 0 max(16px, env(safe-area-inset-bottom));
 }
 .nav-btn {
   background: none; border: none; color: var(--ink-soft);
   display: flex; flex-direction: column; align-items: center; gap: 3px;
   font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.5px;
-  cursor: pointer; padding: 4px 10px;
+  cursor: pointer; padding: 6px 10px;
 }
 .nav-btn.active { color: var(--gold); }
 

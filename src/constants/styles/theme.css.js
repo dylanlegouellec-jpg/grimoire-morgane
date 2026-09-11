@@ -155,7 +155,7 @@ html, body {
   margin: 0 auto;
   position: relative;
   padding-top: env(safe-area-inset-top);
-  padding-bottom: 84px;
+  padding-bottom: 94px;
   box-shadow: 0 0 40px var(--card-shadow);
   /* "overflow-x: hidden" forçait la spec CSS à calculer overflow-y en
      "auto" (dès qu'un axe n'est pas "visible", l'autre l'est aussi tout
