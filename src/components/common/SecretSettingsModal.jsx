@@ -118,9 +118,13 @@ export default function SecretSettingsModal({
   // position réelle du doigt au relâché.
   const { closing, requestClose } = useAnimatedClose(onClose);
   const mainPanelRef = useRef(null);
+  // fade: true — seul cas vérifié sûr : rien de chargé/lisible n'est
+  // affiché derrière ce panneau (l'onglet courant de l'appli), comme pour
+  // RecipeDetail.jsx (voir useSwipeToDismiss.js).
   const mainSwipe = useSwipeToDismiss(onClose, {
     scrollRef: mainPanelRef,
     disabled: showProfileEditor,
+    fade: true,
   });
   const mainFocusTrapRef = useFocusTrap(requestClose);
   const setMainPanelRef = (node) => {
@@ -354,6 +358,9 @@ function SettingsSubPanel({ onBack, children }) {
   // Voir le commentaire équivalent sur le panneau principal ci-dessus :
   // animé sur les déclencheurs "tap", pas sur le geste de tirage.
   const { closing, requestClose } = useAnimatedClose(onBack);
+  // Pas de fade ici (défaut) : cette feuille est toujours empilée
+  // par-dessus le panneau principal des Réglages, laissé visible derrière
+  // — voir le commentaire de useSwipeToDismiss.js.
   const swipe = useSwipeToDismiss(onBack, { scrollRef: panelRef });
   const focusTrapRef = useFocusTrap(requestClose);
   const setPanelRef = (node) => {
