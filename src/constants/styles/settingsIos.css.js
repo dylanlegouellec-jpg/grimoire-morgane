@@ -78,12 +78,6 @@ export const SETTINGS_IOS_CSS = `
 .segmented-compact { display: inline-flex; flex-shrink: 0; }
 .segmented-compact .segmented-btn { flex: none; padding: 6px 9px; }
 
-/* --- Relevé viewport (TEMPORAIRE — voir ViewportDiagnostic.jsx) --- */
-.viewport-diagnostic {
-  font-family: ui-monospace, Menlo, monospace; font-size: 0.62rem; line-height: 1.5;
-  color: var(--ink-soft); word-break: break-word;
-}
-
 /* --- Curseur glissant (opacité du fond de la nav basse) --- */
 .settings-slider-row { display: flex; flex-direction: column; gap: 6px; padding: 11px 14px; }
 .settings-slider-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }

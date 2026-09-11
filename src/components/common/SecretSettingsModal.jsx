@@ -10,7 +10,6 @@ import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
 import ProfileEditor from "./ProfileEditor";
-import ViewportDiagnostic from "./ViewportDiagnostic";
 import AppearanceSettingsModal from "./AppearanceSettingsModal";
 import AccessibilitySettingsModal from "./AccessibilitySettingsModal";
 import DataBackupModal from "./DataBackupModal";
@@ -261,11 +260,6 @@ export default function SecretSettingsModal({
                 </div>
               </>
             )}
-
-            {/* TEMPORAIRE — voir ViewportDiagnostic.jsx : sert à trancher la
-                cause du bas d'écran inatteignable en PWA iOS. À retirer une
-                fois le bug corrigé. */}
-            <ViewportDiagnostic />
           </>
         )}
 
