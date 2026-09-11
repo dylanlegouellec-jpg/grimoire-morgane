@@ -312,15 +312,13 @@ export const RECIPE_CARDS_CSS = `
      recalculé pour un conteneur qui n'existe plus, et atterrissait au
      milieu de l'écran au lieu de rester dans le coin). Un simple ancrage
      fixe au coin de l'écran, comme un FAB Material Design classique,
-     fonctionne correctement quel que soit le layout. "bottom: 108px" en
-     portrait laisse la place à la nav basse, un peu agrandie (voir
-     .bottom-nav, +10px de hauteur — décalage repris ici pour garder le même
-     espace de respiration) ; la règle landscape plus bas la ramène à 24px
-     puisque la nav passe en colonne latérale statique dans ce mode et ne
-     peut plus chevaucher. */
+     fonctionne correctement quel que soit le layout. "bottom: 96px" en
+     portrait laisse la place à la nav basse (voir .bottom-nav) ; la
+     règle landscape plus bas la ramène à 24px puisque la nav passe en
+     colonne latérale statique dans ce mode et ne peut plus chevaucher. */
   position: fixed;
   right: 24px;
-  bottom: 108px;
+  bottom: 96px;
   z-index: 50;
   width: 52px; height: 52px; border-radius: 50%;
   background: var(--chrome); color: var(--gold-light);
@@ -328,6 +326,12 @@ export const RECIPE_CARDS_CSS = `
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 6px 14px rgba(0,0,0,0.3);
   cursor: pointer;
+}
+/* Reprend, seulement en PWA installée, le +10px de hauteur donné à
+   .bottom-nav (voir modalsBase.css.js) : garde le même espace de
+   respiration au-dessus du FAB sans toucher au navigateur normal. */
+@media (display-mode: standalone) {
+  .fab { bottom: 108px; }
 }
 
 `;
