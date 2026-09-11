@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { Wand2, X } from "lucide-react";
 import { parseRecipeTemplate, TEMPLATE_PLACEHOLDER } from "../../utils/templateParser";
+import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
 
 export default function TextTemplateImportModal({ onClose, onImport }) {
+  useBodyScrollLock(true);
   const modalRef = useFocusTrap(onClose);
   const swipe = useSwipeToDismiss(onClose, { scrollRef: modalRef });
   const [text, setText] = useState("");
