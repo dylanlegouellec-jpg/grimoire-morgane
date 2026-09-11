@@ -18,21 +18,23 @@ import HouseholdManagerModal from "./HouseholdManagerModal";
 /* ------------------------------------------------------------------ */
 /*  RÉGLAGES SECRETS DU GRIMOIRE — liste groupée façon iOS (HIG)         */
 /*                                                                        */
-/*  UNE SEULE coquille modale (.modal-backdrop + .modal) pour tout le      */
-/*  module : la navigation entre l'écran principal et chaque sous-vue       */
-/*  (Apparence, Accessibilité, Sauvegarde, Foyer) se fait via l'état         */
-/*  interne `activeView` — jamais en montant un second composant qui         */
-/*  rendrait SA PROPRE .modal-backdrop par-dessus celle-ci. Avant ce          */
-/*  correctif, chaque sous-panneau était un composant "modale" à part          */
-/*  entière (son propre fond, sa propre bordure, sa propre animation            */
-/*  slideUp) : même rendu un seul à la fois (jamais empilés), le DÉMONTAGE       */
-/*  de l'écran principal puis le MONTAGE du sous-panneau créait un vrai          */
-/*  changement de conteneur DOM — visible comme un "saut"/une discontinuité       */
-/*  à l'écran, perçu à tort comme une double modale. Les composants              */
-/*  AppearanceSettingsModal/AccessibilitySettingsModal/DataBackupModal/           */
-/*  HouseholdManagerModal ne rendent donc plus qu'un CONTENU (titre + corps),      */
-/*  jamais leur propre fond/bordure/bouton de retour — ceux-ci sont gérés          */
-/*  ICI, une seule fois, quel que soit l'écran affiché.                            */
+/*  DEUX modales empilées, jamais une seule coquille dont le CONTENU        */
+/*  change : la modale principale (liste "Réglages du grimoire") reste       */
+/*  TOUJOURS montée tant que ce composant existe, et une sous-vue             */
+/*  (Apparence, Accessibilité, Sauvegarde, Foyer) — quand `activeView` en       */
+/*  choisit une — se monte PAR-DESSUS comme sa propre modale indépendante        */
+/*  (son propre fond, sa propre coquille, son propre geste de tirage), sans       */
+/*  jamais démonter ni ranimer la modale principale en dessous. Même            */
+/*  principe déjà en place pour RecipeDetail + RecipeForm dans AppShell.jsx :      */
+/*  la modale du dessous reste visible (assombrie par le fond opaque de           */
+/*  celle du dessus), donc "déjà ouverte" quand on referme la sous-vue —           */
+/*  jamais une réanimation d'ouverture perçue à tort comme "elle se referme         */
+/*  puis se rouvre" (signalé quand une version antérieure de ce fichier             */
+/*  swappait le CONTENU d'une coquille unique plutôt que d'empiler deux              */
+/*  modales distinctes). Les composants AppearanceSettingsModal/                     */
+/*  AccessibilitySettingsModal/DataBackupModal/HouseholdManagerModal ne              */
+/*  rendent toujours qu'un CONTENU (titre + corps), jamais leur propre                */
+/*  fond/bordure/bouton de retour — portés ici par la coquille de la sous-vue.         */
 /* ------------------------------------------------------------------ */
 export default function SecretSettingsModal({
   onClose,
@@ -87,38 +89,35 @@ export default function SecretSettingsModal({
   // tirage puisse s'en servir lui aussi.
   const goToMain = () => { triggerHaptic(10); setActiveView("main"); };
 
-  // "Tirer pour fermer" : le panneau lui-même EST le conteneur défilant
-  // (.modal a overflow-y: auto, voir styles.css.js) — c'est donc lui à la
-  // fois la référence de scroll et la cible du translateY. La cible du
-  // geste dépend de l'écran affiché, comme le bouton d'en-tête juste à
-  // côté : depuis une sous-vue, on ne fait que revenir à la liste
-  // principale des Réglages (pas de saut direct vers la grille de
-  // recettes) ; depuis l'écran principal, il ferme vraiment. Désactivé
-  // pendant que ProfileEditor (une autre feuille) est ouvert par-dessus :
-  // il est rendu comme descendant DOM de ce panneau (voir plus bas), un
-  // tirage à l'intérieur de ProfileEditor remonterait sinon jusqu'ici.
-  const modalPanelRef = useRef(null);
-  const swipe = useSwipeToDismiss(activeView === "main" ? onClose : goToMain, {
-    scrollRef: modalPanelRef,
+  // "Tirer pour fermer" du panneau principal — celui de la sous-vue vit
+  // dans SettingsSubPanel (composant à part, voir plus bas dans ce
+  // fichier) : useFocusTrap/useSwipeToDismiss s'initialisent une seule
+  // fois, AU MONTAGE du composant qui les appelle (effet à deps `[]`) —
+  // les appeler ICI pour la sous-vue n'aurait fonctionné qu'à l'ouverture
+  // de la toute première sous-vue jamais visitée : ce composant-ci reste
+  // monté en permanence pendant que les Réglages sont ouverts (voir le
+  // commentaire de fichier en tête), donc son effet seule-fois se serait
+  // déjà consommé avant même qu'une sous-vue n'existe — sans jamais se
+  // redéclencher aux ouvertures suivantes (repéré : Échap fermait TOUT le
+  // module au lieu de revenir au seul écran principal). Un vrai composant
+  // séparé, qui se démonte pour de bon au retour à "main" et se remonte à
+  // chaque nouvelle ouverture (comme RecipeForm dans AppShell.jsx), refait
+  // tourner ces effets à chaque fois, au bon moment.
+  //
+  // Ferme tout le module. Désactivé pendant que ProfileEditor (une autre
+  // feuille, rendue comme descendant DOM de ce panneau) est ouvert
+  // par-dessus, pour ne pas lui voler le geste — et de toute façon hors de
+  // portée du doigt dès qu'une sous-vue est empilée dessus (son propre
+  // fond opaque intercepte alors le geste en premier).
+  const mainPanelRef = useRef(null);
+  const mainSwipe = useSwipeToDismiss(onClose, {
+    scrollRef: mainPanelRef,
     disabled: showProfileEditor,
-    // Depuis une sous-vue, ce tirage ne ferme rien : il ramène juste à la
-    // liste principale des Réglages, qui reste montée (voir le commentaire
-    // de fichier en tête — une seule coquille modale pour tout le module).
-    // Sans ceci, le retour rebondissait visiblement (voir useSwipeToDismiss.js)
-    // au moment même où le contenu bascule, comme si le panneau se refermait
-    // puis se rouvrait — signalé alors que l'écran principal "était déjà là".
-    resetInstantlyOnDismiss: activeView !== "main",
   });
-  // Même cible que le "tirer pour fermer" ci-dessus (retour à la liste
-  // principale depuis une sous-vue, fermeture complète depuis l'écran
-  // principal) — cohérent avec Échap/le piège à focus (useFocusTrap). Deux
-  // refs à poser sur le même conteneur (celle-ci pour le scroll/swipe, celle
-  // du piège à focus ci-dessous) : combinées dans setModalPanelRef un peu
-  // plus bas, un seul <div ref=...> ne pouvant recevoir qu'une seule ref.
-  const focusTrapRef = useFocusTrap(activeView === "main" ? onClose : goToMain);
-  const setModalPanelRef = (node) => {
-    modalPanelRef.current = node;
-    focusTrapRef.current = node;
+  const mainFocusTrapRef = useFocusTrap(onClose);
+  const setMainPanelRef = (node) => {
+    mainPanelRef.current = node;
+    mainFocusTrapRef.current = node;
   };
 
   useEffect(() => {
@@ -155,9 +154,206 @@ export default function SecretSettingsModal({
   const closeAll = () => { setActiveView("main"); onClose(); };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <>
+      <div className="modal-backdrop" onClick={onClose}>
+        <div
+          ref={setMainPanelRef}
+          className="modal grimoire-page ios-settings-modal modal-swipeable"
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => e.stopPropagation()}
+          style={mainSwipe.style}
+          {...mainSwipe.handlers}
+        >
+          <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
+
+          <h2 className="dropcap-title">{t("settings.title")}</h2>
+          <Flourish />
+
+          {user && (
+            <div className="profile-card">
+              <div className="profile-card-avatar-wrap">
+                <button
+                  type="button"
+                  ref={avatarLongPress.ref}
+                  className="profile-card-avatar"
+                  onClick={openProfileEditor(avatarLongPress)}
+                  title={t("settings.editProfile")}
+                  aria-label={t("settings.editProfile")}
+                  {...avatarLongPress.handlers}
+                >
+                  {avatarUrl ? <img src={avatarUrl} alt="" loading="lazy" decoding="async" /> : <UserCircle2 size={44} />}
+                </button>
+                <span
+                  className={`connection-status-dot connection-status-${connectionStatus || "checking"}`}
+                  title={
+                    connectionStatus === "offline"
+                      ? t("settings.statusOffline")
+                      : connectionStatus === "checking"
+                        ? t("settings.statusChecking")
+                        : t("settings.statusOnline")
+                  }
+                  aria-hidden="true"
+                />
+              </div>
+              <button
+                type="button"
+                ref={nameLongPress.ref}
+                className="profile-card-name"
+                onClick={openProfileEditor(nameLongPress)}
+                {...nameLongPress.handlers}
+              >
+                {displayName}
+              </button>
+              {user.email && <p className="profile-card-email">{user.email}</p>}
+              <div className="profile-card-edit-btn">
+                <Seal tone="gold" onClick={() => setShowProfileEditor(true)}>
+                  <Pencil size={15} /> {t("settings.editProfile")}
+                </Seal>
+              </div>
+            </div>
+          )}
+
+          <p className="ios-group-title">{t("settings.settingsSection")}</p>
+          <div className="ios-group">
+            <button type="button" className="ios-row" onClick={() => { triggerHaptic(15); setActiveView("appearance"); }}>
+              <span className="ios-row-icon" style={{ background: "var(--plum)" }}><Palette size={16} /></span>
+              <span className="ios-row-title">{t("settings.appearanceLanguage")}</span>
+              <ChevronRight size={18} className="ios-chevron" />
+            </button>
+            <button type="button" className="ios-row" onClick={() => { triggerHaptic(15); setActiveView("accessibility"); }}>
+              <span className="ios-row-icon" style={{ background: "var(--wine)" }}><SlidersHorizontal size={16} /></span>
+              <span className="ios-row-title">{t("settings.accessibility")}</span>
+              <ChevronRight size={18} className="ios-chevron" />
+            </button>
+          </div>
+
+          <p className="ios-group-title">{t("settings.dataHousehold")}</p>
+          <div className="ios-group">
+            <button type="button" className="ios-row" onClick={() => { triggerHaptic(15); setActiveView("backup"); }}>
+              <span className="ios-row-icon" style={{ background: "var(--forest)" }}><Save size={16} /></span>
+              <span className="ios-row-title">{t("settings.backup")}</span>
+              <ChevronRight size={18} className="ios-chevron" />
+            </button>
+            {user && (
+              <button type="button" className="ios-row" onClick={() => { triggerHaptic(15); setActiveView("household"); }}>
+                <span className="ios-row-icon" style={{ background: "var(--gold)" }}><Home size={16} /></span>
+                <span className="ios-row-title">{t("settings.household")}</span>
+                <ChevronRight size={18} className="ios-chevron" />
+              </button>
+            )}
+          </div>
+
+          {user && (
+            <>
+              <p className="ios-group-title">{t("settings.account")}</p>
+              <p className="hint" style={{ fontStyle: "normal", margin: "0 6px 8px" }}>
+                {t("settings.connectedAs", { email: user.email })}
+              </p>
+              <div className="ios-group">
+                <button
+                  type="button"
+                  className="ios-row ios-row-danger"
+                  onClick={() => { triggerHaptic(15); onSignOut(); onClose(); }}
+                >
+                  <LogOut size={16} /> {t("settings.signOut")}
+                </button>
+              </div>
+            </>
+          )}
+
+          {showProfileEditor && user && (
+            <ProfileEditor
+              user={user}
+              profile={profile}
+              onClose={() => setShowProfileEditor(false)}
+              onSaved={(patch) => setProfile((prev) => ({ ...(prev || {}), ...patch }))}
+              showToast={showToast}
+            />
+          )}
+        </div>
+      </div>
+
+      {activeView !== "main" && (
+        <SettingsSubPanel onBack={goToMain}>
+          {activeView === "appearance" && (
+            <AppearanceSettingsModal
+              theme={theme}
+              onSetTheme={onSetTheme}
+              language={language}
+              onSetLanguage={onSetLanguage}
+              showNutriscore={showNutriscore}
+              onSetShowNutriscore={onSetShowNutriscore}
+              navOpacity={navOpacity}
+              onSetNavOpacity={onSetNavOpacity}
+            />
+          )}
+          {activeView === "accessibility" && (
+            <AccessibilitySettingsModal
+              pressDuration={pressDuration}
+              onSetPressDuration={onSetPressDuration}
+              textSize={textSize}
+              onSetTextSize={onSetTextSize}
+            />
+          )}
+          {activeView === "backup" && (
+            <DataBackupModal
+              onExport={onExport}
+              onImportFile={(e) => { onImportFile(e); closeAll(); }}
+              onImportTextRecipe={() => { onImportTextRecipe(); closeAll(); }}
+              onImportLink={() => { onImportLink(); closeAll(); }}
+            />
+          )}
+          {activeView === "household" && (
+            <HouseholdManagerModal
+              user={user}
+              householdId={householdId}
+              households={households}
+              pressDuration={pressDuration}
+              onSwitchHousehold={onSwitchHousehold}
+              onCreateHousehold={onCreateHousehold}
+              onRenameHousehold={onRenameHousehold}
+              onDeleteHousehold={onDeleteHousehold}
+              onRequestJoinHousehold={onRequestJoinHousehold}
+              onGetPendingHouseholdRequests={onGetPendingHouseholdRequests}
+              onApproveHouseholdMember={onApproveHouseholdMember}
+              onRejectHouseholdMember={onRejectHouseholdMember}
+              onRefreshHouseholds={onRefreshHouseholds}
+              showToast={showToast}
+            />
+          )}
+        </SettingsSubPanel>
+      )}
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  SOUS-VUE EMPILÉE — vrai composant à part (comme RecipeForm dans        */
+/*  AppShell.jsx), PAS des hooks appelés depuis SecretSettingsModal :       */
+/*  useFocusTrap/useSwipeToDismiss ne s'initialisent qu'UNE FOIS, au         */
+/*  montage du composant qui les appelle (effet à deps `[]`) — appelés       */
+/*  depuis SecretSettingsModal, qui reste monté en permanence tant que les    */
+/*  Réglages sont ouverts, cet effet se serait consommé avant même qu'une      */
+/*  sous-vue n'existe, sans jamais se redéclencher aux ouvertures suivantes.    */
+/*  Se démonter/remonter pour de vrai à chaque aller-retour "main" <-> sous-     */
+/*  vue (voir son rendu conditionnel dans SecretSettingsModal) fait tourner       */
+/*  ces effets au bon moment, à chaque fois.                                      */
+/* ------------------------------------------------------------------ */
+function SettingsSubPanel({ onBack, children }) {
+  const { t } = useTranslation();
+  const panelRef = useRef(null);
+  const swipe = useSwipeToDismiss(onBack, { scrollRef: panelRef });
+  const focusTrapRef = useFocusTrap(onBack);
+  const setPanelRef = (node) => {
+    panelRef.current = node;
+    focusTrapRef.current = node;
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onBack}>
       <div
-        ref={setModalPanelRef}
+        ref={setPanelRef}
         className="modal grimoire-page ios-settings-modal modal-swipeable"
         role="dialog"
         aria-modal="true"
@@ -165,167 +361,8 @@ export default function SecretSettingsModal({
         style={swipe.style}
         {...swipe.handlers}
       >
-        {activeView === "main" ? (
-          <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
-        ) : (
-          <button className="modal-back" onClick={goToMain}><ChevronLeft size={20} /> {t("settings.back")}</button>
-        )}
-
-        {activeView === "main" && (
-          <>
-            <h2 className="dropcap-title">{t("settings.title")}</h2>
-            <Flourish />
-
-            {user && (
-              <div className="profile-card">
-                <div className="profile-card-avatar-wrap">
-                  <button
-                    type="button"
-                    ref={avatarLongPress.ref}
-                    className="profile-card-avatar"
-                    onClick={openProfileEditor(avatarLongPress)}
-                    title={t("settings.editProfile")}
-                    aria-label={t("settings.editProfile")}
-                    {...avatarLongPress.handlers}
-                  >
-                    {avatarUrl ? <img src={avatarUrl} alt="" loading="lazy" decoding="async" /> : <UserCircle2 size={44} />}
-                  </button>
-                  <span
-                    className={`connection-status-dot connection-status-${connectionStatus || "checking"}`}
-                    title={
-                      connectionStatus === "offline"
-                        ? t("settings.statusOffline")
-                        : connectionStatus === "checking"
-                          ? t("settings.statusChecking")
-                          : t("settings.statusOnline")
-                    }
-                    aria-hidden="true"
-                  />
-                </div>
-                <button
-                  type="button"
-                  ref={nameLongPress.ref}
-                  className="profile-card-name"
-                  onClick={openProfileEditor(nameLongPress)}
-                  {...nameLongPress.handlers}
-                >
-                  {displayName}
-                </button>
-                {user.email && <p className="profile-card-email">{user.email}</p>}
-                <div className="profile-card-edit-btn">
-                  <Seal tone="gold" onClick={() => setShowProfileEditor(true)}>
-                    <Pencil size={15} /> {t("settings.editProfile")}
-                  </Seal>
-                </div>
-              </div>
-            )}
-
-            <p className="ios-group-title">{t("settings.settingsSection")}</p>
-            <div className="ios-group">
-              <button type="button" className="ios-row" onClick={() => { triggerHaptic(15); setActiveView("appearance"); }}>
-                <span className="ios-row-icon" style={{ background: "var(--plum)" }}><Palette size={16} /></span>
-                <span className="ios-row-title">{t("settings.appearanceLanguage")}</span>
-                <ChevronRight size={18} className="ios-chevron" />
-              </button>
-              <button type="button" className="ios-row" onClick={() => { triggerHaptic(15); setActiveView("accessibility"); }}>
-                <span className="ios-row-icon" style={{ background: "var(--wine)" }}><SlidersHorizontal size={16} /></span>
-                <span className="ios-row-title">{t("settings.accessibility")}</span>
-                <ChevronRight size={18} className="ios-chevron" />
-              </button>
-            </div>
-
-            <p className="ios-group-title">{t("settings.dataHousehold")}</p>
-            <div className="ios-group">
-              <button type="button" className="ios-row" onClick={() => { triggerHaptic(15); setActiveView("backup"); }}>
-                <span className="ios-row-icon" style={{ background: "var(--forest)" }}><Save size={16} /></span>
-                <span className="ios-row-title">{t("settings.backup")}</span>
-                <ChevronRight size={18} className="ios-chevron" />
-              </button>
-              {user && (
-                <button type="button" className="ios-row" onClick={() => { triggerHaptic(15); setActiveView("household"); }}>
-                  <span className="ios-row-icon" style={{ background: "var(--gold)" }}><Home size={16} /></span>
-                  <span className="ios-row-title">{t("settings.household")}</span>
-                  <ChevronRight size={18} className="ios-chevron" />
-                </button>
-              )}
-            </div>
-
-            {user && (
-              <>
-                <p className="ios-group-title">{t("settings.account")}</p>
-                <p className="hint" style={{ fontStyle: "normal", margin: "0 6px 8px" }}>
-                  {t("settings.connectedAs", { email: user.email })}
-                </p>
-                <div className="ios-group">
-                  <button
-                    type="button"
-                    className="ios-row ios-row-danger"
-                    onClick={() => { triggerHaptic(15); onSignOut(); onClose(); }}
-                  >
-                    <LogOut size={16} /> {t("settings.signOut")}
-                  </button>
-                </div>
-              </>
-            )}
-          </>
-        )}
-
-        {activeView === "appearance" && (
-          <AppearanceSettingsModal
-            theme={theme}
-            onSetTheme={onSetTheme}
-            language={language}
-            onSetLanguage={onSetLanguage}
-            showNutriscore={showNutriscore}
-            onSetShowNutriscore={onSetShowNutriscore}
-            navOpacity={navOpacity}
-            onSetNavOpacity={onSetNavOpacity}
-          />
-        )}
-        {activeView === "accessibility" && (
-          <AccessibilitySettingsModal
-            pressDuration={pressDuration}
-            onSetPressDuration={onSetPressDuration}
-            textSize={textSize}
-            onSetTextSize={onSetTextSize}
-          />
-        )}
-        {activeView === "backup" && (
-          <DataBackupModal
-            onExport={onExport}
-            onImportFile={(e) => { onImportFile(e); closeAll(); }}
-            onImportTextRecipe={() => { onImportTextRecipe(); closeAll(); }}
-            onImportLink={() => { onImportLink(); closeAll(); }}
-          />
-        )}
-        {activeView === "household" && (
-          <HouseholdManagerModal
-            user={user}
-            householdId={householdId}
-            households={households}
-            pressDuration={pressDuration}
-            onSwitchHousehold={onSwitchHousehold}
-            onCreateHousehold={onCreateHousehold}
-            onRenameHousehold={onRenameHousehold}
-            onDeleteHousehold={onDeleteHousehold}
-            onRequestJoinHousehold={onRequestJoinHousehold}
-            onGetPendingHouseholdRequests={onGetPendingHouseholdRequests}
-            onApproveHouseholdMember={onApproveHouseholdMember}
-            onRejectHouseholdMember={onRejectHouseholdMember}
-            onRefreshHouseholds={onRefreshHouseholds}
-            showToast={showToast}
-          />
-        )}
-
-        {showProfileEditor && user && (
-          <ProfileEditor
-            user={user}
-            profile={profile}
-            onClose={() => setShowProfileEditor(false)}
-            onSaved={(patch) => setProfile((prev) => ({ ...(prev || {}), ...patch }))}
-            showToast={showToast}
-          />
-        )}
+        <button className="modal-back" onClick={onBack}><ChevronLeft size={20} /> {t("settings.back")}</button>
+        {children}
       </div>
     </div>
   );

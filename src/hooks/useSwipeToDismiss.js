@@ -26,7 +26,7 @@ const AXIS_LOCK_THRESHOLD_PX = 8;
 const DISMISS_DISTANCE_PX = 100;
 const DISMISS_VELOCITY_PX_PER_MS = 0.6;
 
-export default function useSwipeToDismiss(onDismiss, { scrollRef, disabled = false, resetInstantlyOnDismiss = false } = {}) {
+export default function useSwipeToDismiss(onDismiss, { scrollRef, disabled = false } = {}) {
   const startYRef = useRef(null);
   const draggingRef = useRef(false);
   // Deux derniers échantillons (position + horodatage) : sert à calculer une
@@ -37,17 +37,6 @@ export default function useSwipeToDismiss(onDismiss, { scrollRef, disabled = fal
   const lastSampleRef = useRef({ y: 0, time: 0 });
   const [translateY, setTranslateY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
-  // Vrai le temps d'UN SEUL rendu : le tirage vient de déclencher onDismiss()
-  // ET resetInstantlyOnDismiss est demandé (voir plus bas) — évite le rebond
-  // ressort du retour à translateY(0) juste après. Utile quand `onDismiss`
-  // ne referme pas vraiment ce panneau mais bascule son CONTENU (ex.
-  // SecretSettingsModal.jsx, retour à la liste principale des Réglages
-  // depuis une sous-vue) : ce panneau reste monté, donc l'animation de
-  // relâchement a le temps de jouer pour de vrai — sans ce drapeau, on
-  // verrait le nouveau contenu apparaître instantanément PENDANT que tout le
-  // panneau rebondit visuellement vers sa position de repos, comme s'il se
-  // refermait puis se rouvrait, alors que l'écran affiché "était déjà là".
-  const skipNextResetTransitionRef = useRef(false);
 
   const atScrollTop = () => {
     const el = scrollRef && scrollRef.current;
@@ -74,10 +63,6 @@ export default function useSwipeToDismiss(onDismiss, { scrollRef, disabled = fal
     draggingRef.current = false;
     prevSampleRef.current = { y: t.clientY, time: Date.now() };
     lastSampleRef.current = prevSampleRef.current;
-    // Reconsommé à chaque nouveau geste (jamais pendant un rendu — voir la
-    // lecture dans `style` plus bas) : ne doit rester vrai QUE le temps du
-    // repos qui suit le tirage instantané qui l'a posé, pas indéfiniment.
-    skipNextResetTransitionRef.current = false;
   };
 
   const onTouchMove = (e) => {
@@ -127,22 +112,12 @@ export default function useSwipeToDismiss(onDismiss, { scrollRef, disabled = fal
     const { y: lastY, time: lastTime } = lastSampleRef.current;
     const elapsed = Math.max(1, lastTime - prevTime);
     const velocity = Math.max(0, (lastY - prevY) / elapsed); // px/ms, vers le bas seulement
-    const shouldDismiss = wasDragging && (distance > DISMISS_DISTANCE_PX || velocity > DISMISS_VELOCITY_PX_PER_MS);
-
-    // Posé AVANT reset() (donc lu dès le rendu qu'il déclenche) : sans lui,
-    // translateY reviendrait à 0 avec la transition ressort habituelle
-    // pendant que `onDismiss` change le CONTENU du panneau — un rebond
-    // visible juste après l'apparition du nouvel écran, perçu à tort comme
-    // "il se referme puis se rouvre" (signalé sur SecretSettingsModal,
-    // retour à la liste principale des Réglages depuis une sous-vue tiré
-    // vers le bas). N'a d'effet que si `onDismiss` ne démonte pas ce
-    // panneau : une vraie fermeture (le panneau disparaît) n'a de toute
-    // façon jamais le temps de jouer ce rebond.
-    if (shouldDismiss && resetInstantlyOnDismiss) skipNextResetTransitionRef.current = true;
 
     reset();
 
-    if (shouldDismiss) onDismiss();
+    if (wasDragging && (distance > DISMISS_DISTANCE_PX || velocity > DISMISS_VELOCITY_PX_PER_MS)) {
+      onDismiss();
+    }
   };
 
   return {
@@ -154,7 +129,7 @@ export default function useSwipeToDismiss(onDismiss, { scrollRef, disabled = fal
     },
     style: {
       transform: translateY > 0 ? `translateY(${translateY}px)` : undefined,
-      transition: (isDragging || skipNextResetTransitionRef.current) ? "none" : "transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
+      transition: isDragging ? "none" : "transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
     },
     isDragging,
   };
