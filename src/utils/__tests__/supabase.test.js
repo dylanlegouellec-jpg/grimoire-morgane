@@ -127,6 +127,16 @@ describe("flushOfflineQueue", () => {
     const firstCall = flushOfflineQueue();
     const secondCall = flushOfflineQueue();
 
+    // `flushOfflineQueue` passe par au moins un `await` (getAuthToken, voir
+    // supabase.js) avant d'appeler `fetch` — `resolveFetch` n'est donc pas
+    // encore assigné juste après avoir déclenché les deux appels ci-dessus,
+    // seulement une fois ce tour de micro-tâches écoulé. `vi.waitFor`
+    // repasse jusqu'à ce que ce soit le cas plutôt que de supposer un
+    // nombre précis de tours (fragile si l'implémentation gagne/perd un
+    // `await` plus tard).
+    await vi.waitFor(() => {
+      if (typeof resolveFetch !== "function") throw new Error("fetch pas encore appelé");
+    });
     resolveFetch(jsonResponse({ status: 201, body: [{ id: "r1" }] }));
     const [first, second] = await Promise.all([firstCall, secondCall]);
 
