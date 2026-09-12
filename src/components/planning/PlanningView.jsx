@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, Plus, Send, User, Users } from "lucide-react";
-import { getWeekStart, addWeeks, getWeekDays, toISODate, isSameDay, formatWeekRange, formatDayLabel, MEAL_TYPES, COURSE_TYPES, courseTypeInfo, courseTypeOrder, mealTypeHasCourse } from "../../utils/planning";
+import { ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight, Plus, Send, User, Users } from "lucide-react";
+import { getWeekStart, addWeeks, getWeekDays, toISODate, isSameDay, formatWeekRange, formatDayLabel, MEAL_TYPES, COURSE_TYPES, courseTypeInfo, courseTypeOrder } from "../../utils/planning";
 import { triggerHaptic } from "../../utils/haptics";
 import { getStoredPlanningScope, storePlanningScope } from "../../utils/localSettings";
 import { useTranslation } from "../../contexts/LanguageContext";
@@ -8,8 +8,7 @@ import useHorizontalSwipe from "../../hooks/useHorizontalSwipe";
 import Seal from "../common/Seal";
 import SegmentedControl from "../common/SegmentedControl";
 import AddMealModal from "./AddMealModal";
-import PlanningMealItem from "./PlanningMealItem";
-import PlanningCourseGroup from "./PlanningCourseGroup";
+import PlanningMealGroup from "./PlanningMealGroup";
 
 /* ------------------------------------------------------------------ */
 /*  PLANIFICATION — vue chronologique par semaine, un jour par bloc,      */
@@ -27,9 +26,14 @@ import PlanningCourseGroup from "./PlanningCourseGroup";
 /*  quel jour de l'année est possible, pas seulement ceux de la semaine        */
 /*  actuellement affichée.                                                     */
 /* ------------------------------------------------------------------ */
-export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMeal, onRemoveMeals, onUpdateMeal, onSendToShoppingList, showToast, user }) {
+export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMeal, onRemoveMeals, onUpdateMeal, onReorderMeals, onSendToShoppingList, showToast, user }) {
   const { t, language } = useTranslation();
   const [weekStart, setWeekStart] = useState(() => getWeekStart());
+  // Mode réorganisation (voir PlanningMealItem.jsx, poignée ⋮⋮) : masqué par
+  // défaut pour ne pas encombrer la vue normale, affiché sur tous les jours
+  // à la fois une fois activé plutôt que par jour — une seule bascule
+  // globale, plus simple à retenir qu'un état par jour.
+  const [reorderMode, setReorderMode] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [addModalDate, setAddModalDate] = useState(null); // date ISO pré-remplie ("YYYY-MM-DD") | null (FAB, calendrier libre)
   // Moment/type de plat prérempli pour le "+" ouvert depuis le menu d'un
@@ -160,6 +164,18 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
     setEditingEntry(null);
   };
 
+  // "Supprimer la section Déjeuner" du menu d'un en-tête de moment (voir
+  // PlanningMealGroup.jsx/MealSectionOptionsModal.jsx) — vide TOUT le
+  // moment d'un coup (toutes ses entrées, tous types de plat confondus),
+  // via la même suppression groupée que "Tout supprimer" d'une sous-
+  // catégorie (voir onRemoveMeals, hooks/useMealPlan.js).
+  const handleDeleteSection = (entries) => onRemoveMeals(entries.map((e) => e.id));
+
+  const toggleReorderMode = () => {
+    triggerHaptic(15);
+    setReorderMode((v) => !v);
+  };
+
   // Accordéon par jour : seuls les basculements EXPLICITES sont mémorisés
   // (par date ISO, voir expandedOverrides ci-dessus) — sans override, un
   // jour est déplié par défaut UNIQUEMENT s'il s'agit d'aujourd'hui, replié
@@ -188,6 +204,16 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
     <div className="view">
       <div className="planning-header">
         <h2 className="dropcap-title" style={{ margin: 0, textAlign: "center" }}>{t("planning.title")}</h2>
+        <div style={{ textAlign: "center" }}>
+          <button
+            type="button"
+            className="link-btn"
+            onClick={toggleReorderMode}
+            aria-pressed={reorderMode}
+          >
+            <ArrowUpDown size={13} /> {t(reorderMode ? "planning.reorderModeOff" : "planning.reorderModeOn")}
+          </button>
+        </div>
         {/* Semaine + portée sur une seule ligne : le toggle reste collé au
             bord droit (flex-shrink: 0), tout le reste de la largeur va au
             groupe flèches+date (.planning-week-date-group, flex: 1) — les
@@ -260,39 +286,20 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
               {expanded && dayEntries.length > 0 && (
                 <div className="planning-meals">
                   {groupEntriesByMealType(dayEntries).map((group) => (
-                    <div className="planning-meal-group" key={group.mealType.key}>
-                      <div className="planning-meal-group-header">
-                        <span className="planning-meal-icon" aria-hidden="true">{group.mealType.icon}</span>
-                        <span className="planning-meal-type">{t(`mealTypes.${group.mealType.key}`)}</span>
-                      </div>
-                      <div className="planning-meal-group-items">
-                        {/* Aucun type de plat pour petit-déjeuner/en-cas (voir
-                            mealTypeHasCourse) — jamais de sous-groupe pour ces
-                            moments, juste la liste des entrées comme avant. */}
-                        {mealTypeHasCourse(group.mealType.key)
-                          ? groupEntriesByCourse(group.entries).map((courseGroup) => (
-                              <PlanningCourseGroup
-                                key={courseGroup.course.key}
-                                course={courseGroup.course}
-                                entries={courseGroup.entries}
-                                labelForEntry={labelForEntry}
-                                onEdit={setEditingEntry}
-                                onDelete={(e) => onRemoveMeal(e.id)}
-                                onAddToCourse={(courseKey) => openAddForCourse(iso, group.mealType.key, courseKey)}
-                                onDeleteAll={(groupEntries) => onRemoveMeals(groupEntries.map((e) => e.id))}
-                              />
-                            ))
-                          : group.entries.map((entry) => (
-                              <PlanningMealItem
-                                key={entry.id}
-                                entry={entry}
-                                label={labelForEntry(entry)}
-                                onEdit={setEditingEntry}
-                                onDelete={(e) => onRemoveMeal(e.id)}
-                              />
-                            ))}
-                      </div>
-                    </div>
+                    <PlanningMealGroup
+                      key={group.mealType.key}
+                      mealType={group.mealType}
+                      entries={group.entries}
+                      groupEntriesByCourse={groupEntriesByCourse}
+                      labelForEntry={labelForEntry}
+                      reorderMode={reorderMode}
+                      onReorder={onReorderMeals}
+                      onEdit={setEditingEntry}
+                      onDelete={(e) => onRemoveMeal(e.id)}
+                      onDeleteSection={handleDeleteSection}
+                      onAddToCourse={(courseKey) => openAddForCourse(iso, group.mealType.key, courseKey)}
+                      onDeleteAllCourse={(groupEntries) => onRemoveMeals(groupEntries.map((e) => e.id))}
+                    />
                   ))}
                 </div>
               )}

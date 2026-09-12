@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { GripVertical } from "lucide-react";
 import useLongPress from "../../hooks/useLongPress";
 import MealOptionsModal from "./MealOptionsModal";
 
@@ -17,8 +18,14 @@ const LONG_PRESS_DURATION_MS = 500;
 /*  maintenant porté par l'en-tête du sous-groupe qui entoure ces lignes       */
 /*  (voir PlanningView.jsx, groupEntriesByCourse) — cette ligne ne montre     */
 /*  plus que le nom de la recette.                                            */
+/*  Poignée de glisser-déposer (⋮⋮) : visible seulement en mode              */
+/*  réorganisation (voir `reorderMode`, PlanningView.jsx) — un élément à       */
+/*  PART de la ligne à appui long ci-dessous (pas nichée dedans), puisque       */
+/*  le glissement se pilote via ses propres gestionnaires pointer (voir         */
+/*  `dragHandleProps`, hooks/useDragReorder.js), indépendants du minuteur        */
+/*  d'appui long de la ligne.                                                    */
 /* ------------------------------------------------------------------ */
-export default function PlanningMealItem({ entry, label, onEdit, onDelete }) {
+export default function PlanningMealItem({ entry, label, reorderMode, dragHandleProps, onEdit, onDelete }) {
   const [showOptions, setShowOptions] = useState(false);
   const itemLongPress = useLongPress(() => setShowOptions(true), LONG_PRESS_DURATION_MS);
 
@@ -29,13 +36,20 @@ export default function PlanningMealItem({ entry, label, onEdit, onDelete }) {
 
   return (
     <>
-      <div
-        ref={itemLongPress.ref}
-        className={`planning-meal-item press-anim press-${itemLongPress.pressState}`}
-        onClick={() => { itemLongPress.wasLongPress(); }}
-        {...itemLongPress.handlers}
-      >
-        <span className="planning-meal-recipe">{label}</span>
+      <div className="planning-meal-item-row">
+        <div
+          ref={itemLongPress.ref}
+          className={`planning-meal-item press-anim press-${itemLongPress.pressState}`}
+          onClick={() => { itemLongPress.wasLongPress(); }}
+          {...itemLongPress.handlers}
+        >
+          <span className="planning-meal-recipe">{label}</span>
+        </div>
+        {reorderMode && (
+          <button type="button" className="planning-meal-drag-handle" aria-label="Glisser pour réordonner" {...dragHandleProps}>
+            <GripVertical size={16} />
+          </button>
+        )}
       </div>
 
       {showOptions && (

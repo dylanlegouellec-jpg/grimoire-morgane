@@ -84,7 +84,14 @@ export const PLANNING_CSS = `
 .planning-meal-group {
   background: var(--surface-strong); border-radius: 8px; padding: 7px 10px;
 }
-.planning-meal-group-header { display: flex; align-items: center; gap: 10px; }
+/* Appui long sur le TITRE du moment -> menu "Supprimer la section" (voir
+   PlanningMealGroup.jsx, MealSectionOptionsModal.jsx) : padding/border-
+   radius pour la zone tactile et pour la forme du léger enfoncement
+   (.press-anim, même geste que .planning-course-header juste en-dessous). */
+.planning-meal-group-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 2px; border-radius: 6px; margin: -2px -2px 0;
+}
 .planning-meal-icon { font-size: 1.1rem; flex-shrink: 0; line-height: 1; }
 .planning-meal-type {
   font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.5px; text-transform: uppercase; color: var(--ink-soft);
@@ -121,12 +128,27 @@ export const PLANNING_CSS = `
    padding/border-radius sert de zone tactile et de forme au léger
    enfoncement (.press-anim, partagé avec RecipeCard/NavButton/les rangées
    du foyer — voir hooks/useLongPress.js) déclenché pendant l'appui. */
-.planning-meal-item { display: flex; align-items: center; padding: 3px 2px; border-radius: 6px; }
+.planning-meal-item { display: flex; align-items: center; padding: 3px 2px; border-radius: 6px; flex: 1; min-width: 0; }
 .planning-meal-recipe {
   flex: 1; min-width: 0;
   font-family: 'EB Garamond', serif; font-size: 0.9rem; color: var(--ink);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+/* Ligne d'un plat + sa poignée de glisser-déposer (voir PlanningMealItem.jsx,
+   PlanningMealItemsList.jsx/hooks/useDragReorder.js) : deux gestes bien
+   séparés côte à côte plutôt qu'imbriqués — .planning-meal-item garde son
+   propre appui long (Modifier/Supprimer) inchangé, la poignée à droite
+   pilote uniquement le glissement, visible seulement en mode réorganisation
+   (voir "reorderMode", PlanningView.jsx). */
+.planning-meal-item-row { display: flex; align-items: center; gap: 4px; }
+.planning-meal-drag-handle {
+  flex-shrink: 0; width: 26px; height: 26px; border-radius: 6px;
+  background: none; border: none; color: var(--ink-soft); cursor: grab;
+  display: flex; align-items: center; justify-content: center;
+  touch-action: none;
+}
+.planning-meal-drag-handle:active { cursor: grabbing; background: var(--surface); }
+.planning-meal-flat-item { display: flex; }
 .planning-send-wrap { margin: 8px 0 100px; display: flex; justify-content: center; }
 
 /* --- Sélecteur de type de plat (AddMealModal.jsx, étape recette) ---
