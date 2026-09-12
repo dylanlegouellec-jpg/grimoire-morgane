@@ -277,6 +277,15 @@ export const translations = {
       plat: "Plat",
       dessert: "Dessert",
     },
+    // Pluriel de chaque type de plat, utilisé comme en-tête de sous-groupe
+    // dès qu'un moment compte PLUSIEURS plats du même type (voir
+    // PlanningView.jsx) — le singulier ci-dessus reste utilisé pour un seul.
+    courseTypesPlural: {
+      aperitif: "Apéros",
+      entree: "Entrées",
+      plat: "Plats",
+      dessert: "Desserts",
+    },
     labels: {
       "Fruits & Légumes": "Fruits & Légumes",
       "Produits Frais & Crèmerie": "Produits Frais & Crèmerie",
@@ -556,6 +565,12 @@ export const translations = {
       entree: "Starter",
       plat: "Main course",
       dessert: "Dessert",
+    },
+    courseTypesPlural: {
+      aperitif: "Aperitifs",
+      entree: "Starters",
+      plat: "Main courses",
+      dessert: "Desserts",
     },
     labels: {
       "Fruits & Légumes": "Fruits & Vegetables",

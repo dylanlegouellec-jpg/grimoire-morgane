@@ -65,25 +65,36 @@ export const PLANNING_CSS = `
 .planning-meal-type {
   font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.5px; text-transform: uppercase; color: var(--ink-soft);
 }
-.planning-meal-group-items { display: flex; flex-direction: column; gap: 5px; margin-top: 6px; }
+.planning-meal-group-items { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+/* Sous-groupe par TYPE DE PLAT (Apéro/Entrée/Plat/Dessert) au sein d'un
+   moment — voir PlanningView.jsx (groupEntriesByCourse) : un seul en-tête
+   ("Entrées", au pluriel dès que ce type compte plusieurs plats — voir
+   .planning-course-label) plutôt qu'une ligne répétée par recette. N'existe
+   que pour Déjeuner/Dîner (voir mealTypeHasCourse) — pour les autres
+   moments (petit-déjeuner/en-cas), .planning-meal-group-items contient
+   directement les lignes, sans ce niveau intermédiaire. */
+.planning-course-group + .planning-course-group { margin-top: 6px; }
+.planning-course-header { display: flex; align-items: center; gap: 8px; }
+.planning-meal-course-icon { font-size: 0.95rem; flex-shrink: 0; line-height: 1; width: 16px; text-align: center; }
+.planning-course-label {
+  font-family: 'Cinzel', serif; font-size: 0.58rem; letter-spacing: 0.4px; text-transform: uppercase; color: var(--ink-soft);
+}
+/* Liste à puces native (marqueur natif du navigateur, pas de ::before fait
+   main) : le seul contenu de chaque <li> est déjà une ligne à appui long
+   (.planning-meal-item, voir PlanningMealItem.jsx) — ::marker se contente
+   d'en assortir la couleur au reste du texte discret de cette carte. */
+.planning-course-items { list-style: disc; margin: 3px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 2px; }
+.planning-course-item::marker { color: var(--ink-soft); }
 /* Appui long -> menu Modifier/Supprimer (voir PlanningMealItem.jsx,
    MealOptionsModal.jsx) : plus de croix de suppression sur la ligne, le
    padding/border-radius sert de zone tactile et de forme au léger
    enfoncement (.press-anim, partagé avec RecipeCard/NavButton/les rangées
    du foyer — voir hooks/useLongPress.js) déclenché pendant l'appui. */
-.planning-meal-item { display: flex; align-items: center; gap: 8px; padding: 3px 2px; border-radius: 6px; }
-/* Icône du TYPE DE PLAT (Apéro/Entrée/Plat/Dessert) — absente du DOM pour
-   petit-déjeuner/en-cas (voir mealTypeHasCourse), la ligne se réduit alors à
-   son nom de recette sans indentation ni étiquette. */
-.planning-meal-course-icon { font-size: 0.95rem; flex-shrink: 0; line-height: 1; width: 16px; text-align: center; }
-.planning-meal-item-info { flex: 1; display: flex; align-items: baseline; gap: 6px; min-width: 0; }
-.planning-meal-course-label {
-  font-family: 'Cinzel', serif; font-size: 0.55rem; letter-spacing: 0.4px; text-transform: uppercase; color: var(--ink-soft);
-  flex-shrink: 0;
-}
+.planning-meal-item { display: flex; align-items: center; padding: 3px 2px; border-radius: 6px; }
 .planning-meal-recipe {
+  flex: 1; min-width: 0;
   font-family: 'EB Garamond', serif; font-size: 0.9rem; color: var(--ink);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .planning-send-wrap { margin: 8px 0 100px; display: flex; justify-content: center; }
 
