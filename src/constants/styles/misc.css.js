@@ -76,7 +76,11 @@ export const MISC_CSS = `
 
 /* --- Toast --- */
 .toast {
-  position: fixed; bottom: 78px; left: 50%; transform: translateX(-50%);
+  /* "112px" (relevé depuis 78px) : .bottom-nav est désormais un dock
+     flottant avec sa propre marge basse (voir modalsBase.css.js) — ce
+     toast doit dégager sa hauteur ET cette marge, pas juste l'ancienne
+     barre soudée au bord. */
+  position: fixed; bottom: 112px; left: 50%; transform: translateX(-50%);
   background: var(--chrome); color: var(--gold-light);
   font-family: 'Cinzel', serif; font-size: 0.72rem; letter-spacing: 0.5px;
   padding: 10px 18px; border-radius: 999px; border: 1px solid var(--gold);

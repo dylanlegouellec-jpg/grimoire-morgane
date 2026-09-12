@@ -148,10 +148,12 @@ export const SHELL_CSS = `
 .filter-pill.active { color: var(--chrome-text); }
 .heart-pill { display: inline-flex; align-items: center; gap: 5px; }
 .heart-pill.active { color: #e8607a; border-color: #e8607a; background: rgba(232,96,122,0.12); }
-/* --- Pastille glissante --- Mesurée en JS (voir AppShell.jsx), même
-   principe que .nav-indicator (modalsBase.css.js) : positionnée via
-   transform/width pour rester composée sur son propre calque plutôt que de
-   déclencher un calcul de mise en page à chaque frame de la glissade. */
+/* --- Pastille glissante --- Mesurée en JS (voir AppShell.jsx) plutôt que
+   via Framer Motion/layoutId comme .nav-pill (modalsBase.css.js) — voir le
+   commentaire d'AppShell.jsx pour pourquoi (.filter-bar défile
+   horizontalement). Positionnée via transform/width pour rester composée
+   sur son propre calque plutôt que de déclencher un calcul de mise en page
+   à chaque frame de la glissade. */
 .filter-indicator {
   position: absolute; top: 0; left: 0; height: 100%; z-index: 0;
   border-radius: 999px;

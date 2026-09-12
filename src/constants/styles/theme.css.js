@@ -153,7 +153,13 @@ html, body {
   margin: 0 auto;
   position: relative;
   padding-top: env(safe-area-inset-top);
-  padding-bottom: 84px;
+  /* Relevé pour laisser la place au dock flottant (voir .bottom-nav,
+     modalsBase.css.js) : il ne colle plus au bord de l'écran, ce padding
+     doit désormais couvrir sa marge basse ET sa propre hauteur, pas
+     seulement l'ancienne barre pleine largeur (qui n'avait qu'une hauteur
+     à couvrir). Valeur mesurée sur le rendu réel du dock (bottom + hauteur
+     + une petite marge de respiration) plutôt qu'estimée à l'œil. */
+  padding-bottom: 130px;
   box-shadow: 0 0 40px var(--card-shadow);
   /* "overflow-x: hidden" forçait la spec CSS à calculer overflow-y en
      "auto" (dès qu'un axe n'est pas "visible", l'autre l'est aussi tout
@@ -178,7 +184,7 @@ html, body {
    (elle n'est même pas montée à cet écran), ce padding n'y sert à rien.
    ":where(...)" : voir le commentaire détaillé dans modalsBase.css.js —
    ramène la spécificité à zéro, par cohérence avec .bottom-nav/.fab. */
-:where(html[data-standalone="true"]) .grimoire-app { padding-bottom: 94px; }
+:where(html[data-standalone="true"]) .grimoire-app { padding-bottom: 150px; }
 
 .loading-screen {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
