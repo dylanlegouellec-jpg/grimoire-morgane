@@ -15,11 +15,13 @@ const LONG_PRESS_DURATION_MS = 500;
 /*  le double .map() jour/moment : useLongPress est un hook, il ne peut       */
 /*  pas être appelé un nombre de fois variable dans une boucle (même          */
 /*  raison que PlanningCourseGroup.jsx/PlanningMealItem.jsx).                  */
-/*  Un appui long sur le TITRE du moment ("DÉJEUNER") ouvre un menu à une       */
-/*  option — vider toute la section d'un coup — avec une confirmation          */
-/*  intermédiaire (voir MealSectionOptionsModal.jsx/                            */
-/*  DeleteMealSectionConfirmModal.jsx) pour éviter les suppressions             */
-/*  accidentelles d'un repas entier.                                             */
+/*  Un appui long sur le TITRE du moment ("DÉJEUNER") ouvre un menu avec         */
+/*  deux options : basculer le mode réorganisation (poignée ⋮⋮, voir            */
+/*  PlanningMealItem.jsx — pas de bouton permanent en haut de la vue, ce         */
+/*  menu EST le point d'entrée) et vider toute la section d'un coup, avec        */
+/*  une confirmation intermédiaire (voir MealSectionOptionsModal.jsx/            */
+/*  DeleteMealSectionConfirmModal.jsx) pour éviter les suppressions              */
+/*  accidentelles d'un repas entier.                                              */
 /* ------------------------------------------------------------------ */
 export default function PlanningMealGroup({
   mealType,
@@ -27,6 +29,7 @@ export default function PlanningMealGroup({
   groupEntriesByCourse,
   labelForEntry,
   reorderMode,
+  onToggleReorder,
   onReorder,
   onEdit,
   onDelete,
@@ -68,6 +71,7 @@ export default function PlanningMealGroup({
                 entries={courseGroup.entries}
                 labelForEntry={labelForEntry}
                 reorderMode={reorderMode}
+                onToggleReorder={onToggleReorder}
                 onReorder={onReorder}
                 onEdit={onEdit}
                 onDelete={onDelete}
@@ -91,6 +95,8 @@ export default function PlanningMealGroup({
       {showOptions && (
         <MealSectionOptionsModal
           mealLabel={mealLabel}
+          reorderMode={reorderMode}
+          onToggleReorder={onToggleReorder}
           onClose={closeOptions}
           onDeleteSection={() => {
             closeOptions();
