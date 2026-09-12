@@ -13,6 +13,10 @@ export const MEAL_TYPES = [
   { key: "dejeuner", label: "Déjeuner", icon: "☀️" },
   { key: "diner", label: "Dîner", icon: "🌙" },
   { key: "encas", label: "En-cas", icon: "🍪" },
+  { key: "aperitif", label: "Apéro", icon: "🍸" },
+  { key: "entree", label: "Entrée", icon: "🥗" },
+  { key: "plat", label: "Plat", icon: "🍲" },
+  { key: "dessert", label: "Dessert", icon: "🍰" },
 ];
 const MEAL_TYPE_BY_KEY = MEAL_TYPES.reduce((acc, m) => { acc[m.key] = m; return acc; }, {});
 export function mealTypeInfo(key) {
