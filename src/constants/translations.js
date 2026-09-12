@@ -103,6 +103,7 @@ export const translations = {
       recipeStepTitle: "Choisir une recette",
       backToMealType: "Type de repas",
       backToDate: "Date",
+      courseTypeLabel: "Type de plat",
       searchRecipePlaceholder: "Chercher une recette…",
       noRecipeMatch: "Aucune recette ne correspond.",
       addCustomMeal: "Ajouter un repas personnalisé",
@@ -261,6 +262,8 @@ export const translations = {
       dejeuner: "Déjeuner",
       diner: "Dîner",
       encas: "En-cas",
+    },
+    courseTypes: {
       aperitif: "Apéro",
       entree: "Entrée",
       plat: "Plat",
@@ -372,6 +375,7 @@ export const translations = {
       recipeStepTitle: "Choose a recipe",
       backToMealType: "Meal type",
       backToDate: "Date",
+      courseTypeLabel: "Course type",
       searchRecipePlaceholder: "Search a recipe…",
       noRecipeMatch: "No recipe matches.",
       addCustomMeal: "Add a custom meal",
@@ -530,6 +534,8 @@ export const translations = {
       dejeuner: "Lunch",
       diner: "Dinner",
       encas: "Snack",
+    },
+    courseTypes: {
       aperitif: "Aperitif",
       entree: "Starter",
       plat: "Main course",

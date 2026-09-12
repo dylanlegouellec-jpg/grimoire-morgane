@@ -73,6 +73,23 @@ export const PLANNING_CSS = `
 
 .planning-send-wrap { margin: 8px 0 100px; display: flex; justify-content: center; }
 
+/* --- Sélecteur de type de plat (AddMealModal.jsx, étape recette) ---
+   En haut à droite, exactement là où .modal-close (top:14px; right:14px)
+   se pose sur les autres étapes de cet assistant — cette étape-ci utilise
+   .modal-back (haut GAUCHE) à la place, laissant ce coin libre. Un
+   <select> natif plutôt qu'un contrôle personnalisé : le texte de
+   l'option choisie (icône comprise) s'affiche déjà tel quel sans code
+   supplémentaire pour synchroniser une icône séparée, et le clavier/
+   lecteur d'écran du système gèrent son ouverture sans rien de plus ici. */
+.meal-course-select {
+  position: absolute; top: 12px; right: 14px; z-index: 5;
+  max-width: 130px;
+  background: var(--modal-close-bg); border: 1px solid var(--line); border-radius: 999px;
+  padding: 6px 10px;
+  font-family: 'EB Garamond', serif; font-size: 0.82rem; color: var(--ink);
+  cursor: pointer;
+}
+
 /* --- Calendrier mensuel (voir CalendarPicker.jsx, AddMealModal.jsx) --- */
 .calendar-picker { margin: 4px 0 10px; }
 .calendar-picker-nav { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 12px; }

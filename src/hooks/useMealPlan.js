@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { nextId, triggerHaptic } from "../utils/helpers";
+import { DEFAULT_COURSE_TYPE } from "../utils/planning";
 
 /* ------------------------------------------------------------------ */
 /*  PLAN DE REPAS — état + actions.                                    */
@@ -8,12 +9,17 @@ import { nextId, triggerHaptic } from "../utils/helpers";
 /*  peu volumineuse, qui n'a pas besoin de sa propre table dédiée ni de   */
 /*  sa propre file d'attente hors-ligne — elle profite gratuitement de   */
 /*  celle déjà en place pour app_state.                                  */
-/*  Une entrée : { id, date: "YYYY-MM-DD", mealType, recipeId,           */
+/*  Une entrée : { id, date: "YYYY-MM-DD", mealType, courseType, recipeId,  */
 /*  customTitle, scope, userId }. `recipeId` XOR `customTitle` : un repas   */
 /*  "personnalisé" (texte libre, ex. "Restes", "McDo" — voir                */
 /*  AddMealModal.jsx) n'est rattaché à aucune fiche recette, `recipeId`      */
 /*  reste alors null et `customTitle` porte le nom saisi ; l'inverse pour     */
-/*  un repas normal.                                                          */
+/*  un repas normal. `mealType` (moment de la journée) et `courseType`       */
+/*  (type de plat — Apéro/Entrée/Plat/Dessert, voir utils/planning.js)       */
+/*  sont deux dimensions indépendantes, jamais mélangées dans la même        */
+/*  liste de choix (voir AddMealModal.jsx) : `courseType` absent (entrées    */
+/*  créées avant ce champ) est traité comme "plat" à l'affichage, même       */
+/*  logique de rétrocompatibilité sans migration que `scope` ci-dessous.     */
 /*  `scope` ("household" | "personal") + `userId` : voir PlanningView.jsx,   */
 /*  qui filtre l'affichage selon la portée active. Reste stocké dans le       */
 /*  MÊME tableau partagé de foyer plutôt qu'une colonne séparée — donc         */
@@ -27,7 +33,7 @@ import { nextId, triggerHaptic } from "../utils/helpers";
 export default function useMealPlan({ initialMealPlan = [] }) {
   const [mealPlan, setMealPlan] = useState(() => (Array.isArray(initialMealPlan) ? initialMealPlan : []));
 
-  const addMealPlanEntry = useCallback((date, mealType, recipeId, customTitle = null, scope = "household", userId = null) => {
+  const addMealPlanEntry = useCallback((date, mealType, recipeId, customTitle = null, scope = "household", userId = null, courseType = DEFAULT_COURSE_TYPE) => {
     triggerHaptic(15);
     setMealPlan((prev) => [
       ...prev,
@@ -35,6 +41,7 @@ export default function useMealPlan({ initialMealPlan = [] }) {
         id: nextId(),
         date,
         mealType,
+        courseType: courseType || DEFAULT_COURSE_TYPE,
         recipeId: recipeId || null,
         customTitle: customTitle || null,
         scope: scope === "personal" ? "personal" : "household",

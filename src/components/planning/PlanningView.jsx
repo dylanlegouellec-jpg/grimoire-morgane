@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, Send, User, Users, X } from "lucide-react";
-import { getWeekStart, addWeeks, getWeekDays, toISODate, isSameDay, formatWeekRange, formatDayLabel, mealTypeInfo } from "../../utils/planning";
+import { getWeekStart, addWeeks, getWeekDays, toISODate, isSameDay, formatWeekRange, formatDayLabel, mealTypeInfo, courseTypeInfo } from "../../utils/planning";
 import { triggerHaptic } from "../../utils/haptics";
 import { getStoredPlanningScope, storePlanningScope } from "../../utils/localSettings";
 import { useTranslation } from "../../contexts/LanguageContext";
@@ -67,10 +67,10 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
   const openAddForDay = (iso) => { triggerHaptic(15); setAddModalDate(iso); setShowAddModal(true); };
   const openAddFab = () => { triggerHaptic(15); setAddModalDate(null); setShowAddModal(true); };
 
-  const handleAdd = (dateISO, mealType, recipeId, customTitle) => {
+  const handleAdd = (dateISO, mealType, recipeId, customTitle, courseType) => {
     // Le nouveau repas hérite automatiquement de la portée actuellement
     // affichée (voir hooks/useMealPlan.js pour la forme exacte de l'entrée).
-    onAddMeal(dateISO, mealType, recipeId, customTitle, scope, user && user.id);
+    onAddMeal(dateISO, mealType, recipeId, customTitle, scope, user && user.id, courseType);
     setShowAddModal(false);
     setWeekStart(getWeekStart(new Date(dateISO)));
   };
@@ -144,6 +144,10 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
                   {dayEntries.map((entry) => {
                     const recipe = entry.recipeId ? recipeById.get(entry.recipeId) : null;
                     const meal = mealTypeInfo(entry.mealType);
+                    // `courseType` absent (entrées créées avant son ajout) :
+                    // couvert par le repli "plat" de courseTypeInfo, voir
+                    // useMealPlan.js.
+                    const course = courseTypeInfo(entry.courseType);
                     // Repas personnalisé (texte libre, pas de fiche recette,
                     // voir AddMealModal.jsx) : affiche directement le nom
                     // saisi, jamais "Recette supprimée" (réservé aux repas
@@ -151,9 +155,11 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
                     const label = entry.customTitle || (recipe ? recipe.title : t("planning.recipeDeletedLabel"));
                     return (
                       <div className="planning-meal-row" key={entry.id}>
-                        <span className="planning-meal-icon" aria-hidden="true">{meal.icon}</span>
+                        <span className="planning-meal-icon" aria-hidden="true">{meal.icon} {course.icon}</span>
                         <span className="planning-meal-info">
-                          <span className="planning-meal-type">{t(`mealTypes.${entry.mealType}`)}</span>
+                          <span className="planning-meal-type">
+                            {t(`mealTypes.${entry.mealType}`)} · {t(`courseTypes.${course.key}`)}
+                          </span>
                           <span className="planning-meal-recipe">{label}</span>
                         </span>
                         <button

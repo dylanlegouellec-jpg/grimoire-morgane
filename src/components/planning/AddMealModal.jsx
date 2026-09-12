@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChevronLeft, PenLine, Search, X } from "lucide-react";
-import { MEAL_TYPES, toISODate, formatDayLabel } from "../../utils/planning";
+import { MEAL_TYPES, COURSE_TYPES, DEFAULT_COURSE_TYPE, toISODate, formatDayLabel } from "../../utils/planning";
 import { categoryClass, categoryLabel } from "../../utils/helpers";
 import { triggerHaptic } from "../../utils/haptics";
 import { useTranslation } from "../../contexts/LanguageContext";
@@ -31,6 +31,11 @@ export default function AddMealModal({ recipes, initialDate, onAdd, onClose }) {
   const [selectedDate, setSelectedDate] = useState(() => (initialDate ? new Date(initialDate) : null));
   const [viewMonth, setViewMonth] = useState(() => (initialDate ? new Date(initialDate) : new Date()));
   const [mealType, setMealType] = useState(null);
+  // Type de plat (Apéro/Entrée/Plat/Dessert) — dimension INDÉPENDANTE du
+  // moment (mealType) ci-dessus, choisie séparément à l'étape recette (voir
+  // le sélecteur en haut à droite plus bas) : "Plat" par défaut, le cas le
+  // plus fréquent, pour ne pas alourdir l'ajout le plus courant.
+  const [courseType, setCourseType] = useState(DEFAULT_COURSE_TYPE);
   const [search, setSearch] = useState("");
 
   const step = !selectedDate ? "date" : !mealType ? "meal" : "recipe";
@@ -49,7 +54,7 @@ export default function AddMealModal({ recipes, initialDate, onAdd, onClose }) {
 
   const pickRecipe = (recipeId) => {
     triggerHaptic(15);
-    onAdd(toISODate(selectedDate), mealType, recipeId, null);
+    onAdd(toISODate(selectedDate), mealType, recipeId, null, courseType);
     onClose();
   };
 
@@ -60,7 +65,7 @@ export default function AddMealModal({ recipes, initialDate, onAdd, onClose }) {
     const title = search.trim();
     if (!title) return;
     triggerHaptic(15);
-    onAdd(toISODate(selectedDate), mealType, null, title);
+    onAdd(toISODate(selectedDate), mealType, null, title, courseType);
     onClose();
   };
 
@@ -89,6 +94,18 @@ export default function AddMealModal({ recipes, initialDate, onAdd, onClose }) {
           </button>
         ) : (
           <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
+        )}
+        {step === "recipe" && (
+          <select
+            className="meal-course-select"
+            value={courseType}
+            onChange={(e) => { triggerHaptic(10); setCourseType(e.target.value); }}
+            aria-label={t("planning.courseTypeLabel")}
+          >
+            {COURSE_TYPES.map((c) => (
+              <option key={c.key} value={c.key}>{c.icon} {t(`courseTypes.${c.key}`)}</option>
+            ))}
+          </select>
         )}
         <h2 className="dropcap-title" style={!isFirstStep ? { marginTop: 34 } : undefined}>
           {titles[step]}
