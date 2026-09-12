@@ -20,10 +20,10 @@ export function mealTypeInfo(key) {
 }
 
 // TYPE DE PLAT — dimension distincte du MOMENT du repas ci-dessus (on peut
-// avoir une "Entrée" comme un "Plat" au Dîner) : sélectionnée séparément,
-// à l'étape recette de AddMealModal.jsx, une fois le moment déjà choisi.
-// "plat" par défaut (DEFAULT_COURSE_TYPE) — le cas le plus courant, pour
-// ne pas obliger à changer le sélecteur à chaque ajout.
+// avoir une "Entrée" comme un "Plat" au Dîner) : choisie à côté du moment,
+// à l'étape "Quel repas ?" de AddMealModal.jsx. "plat" par défaut
+// (DEFAULT_COURSE_TYPE) — le cas le plus courant, pour ne pas obliger à
+// changer le sélecteur à chaque ajout.
 export const COURSE_TYPES = [
   { key: "aperitif", label: "Apéro", icon: "🍸" },
   { key: "entree", label: "Entrée", icon: "🥗" },
@@ -34,6 +34,16 @@ export const DEFAULT_COURSE_TYPE = "plat";
 const COURSE_TYPE_BY_KEY = COURSE_TYPES.reduce((acc, c) => { acc[c.key] = c; return acc; }, {});
 export function courseTypeInfo(key) {
   return COURSE_TYPE_BY_KEY[key] || COURSE_TYPE_BY_KEY[DEFAULT_COURSE_TYPE];
+}
+// Moments pour lesquels le type de plat a un sens (on ne mange pas une
+// "Entrée" ou un "Dessert" au petit-déjeuner ou en en-cas) : le sélecteur
+// de type de plat n'a donc d'effet que pour ceux-ci — voir AddMealModal.jsx
+// (rien n'est enregistré pour les autres moments) et PlanningView.jsx
+// (rien n'est affiché sur leur carte, même sur d'éventuelles anciennes
+// entrées qui auraient une valeur stockée).
+export const COURSE_TYPE_MEAL_KEYS = ["dejeuner", "diner"];
+export function mealTypeHasCourse(mealTypeKey) {
+  return COURSE_TYPE_MEAL_KEYS.includes(mealTypeKey);
 }
 
 // Lundi 00:00 de la semaine contenant `date`.

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, Send, User, Users, X } from "lucide-react";
-import { getWeekStart, addWeeks, getWeekDays, toISODate, isSameDay, formatWeekRange, formatDayLabel, mealTypeInfo, courseTypeInfo } from "../../utils/planning";
+import { getWeekStart, addWeeks, getWeekDays, toISODate, isSameDay, formatWeekRange, formatDayLabel, mealTypeInfo, courseTypeInfo, mealTypeHasCourse } from "../../utils/planning";
 import { triggerHaptic } from "../../utils/haptics";
 import { getStoredPlanningScope, storePlanningScope } from "../../utils/localSettings";
 import { useTranslation } from "../../contexts/LanguageContext";
@@ -144,10 +144,15 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
                   {dayEntries.map((entry) => {
                     const recipe = entry.recipeId ? recipeById.get(entry.recipeId) : null;
                     const meal = mealTypeInfo(entry.mealType);
-                    // `courseType` absent (entrées créées avant son ajout) :
-                    // couvert par le repli "plat" de courseTypeInfo, voir
-                    // useMealPlan.js.
-                    const course = courseTypeInfo(entry.courseType);
+                    // Aucun type de plat pour petit-déjeuner/en-cas (voir
+                    // mealTypeHasCourse) — jamais affiché pour ces moments,
+                    // même sur une entrée qui en aurait une valeur stockée
+                    // (ex. changement rétroactif du moment sur une entrée
+                    // existante). `courseType` absent sur une entrée
+                    // déjeuner/dîner (créée avant ce champ) : repli "plat"
+                    // via courseTypeInfo, voir useMealPlan.js.
+                    const hasCourse = mealTypeHasCourse(entry.mealType);
+                    const course = hasCourse ? courseTypeInfo(entry.courseType) : null;
                     // Repas personnalisé (texte libre, pas de fiche recette,
                     // voir AddMealModal.jsx) : affiche directement le nom
                     // saisi, jamais "Recette supprimée" (réservé aux repas
@@ -155,10 +160,10 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
                     const label = entry.customTitle || (recipe ? recipe.title : t("planning.recipeDeletedLabel"));
                     return (
                       <div className="planning-meal-row" key={entry.id}>
-                        <span className="planning-meal-icon" aria-hidden="true">{meal.icon} {course.icon}</span>
+                        <span className="planning-meal-icon" aria-hidden="true">{meal.icon}{course ? ` ${course.icon}` : ""}</span>
                         <span className="planning-meal-info">
                           <span className="planning-meal-type">
-                            {t(`mealTypes.${entry.mealType}`)} · {t(`courseTypes.${course.key}`)}
+                            {t(`mealTypes.${entry.mealType}`)}{course ? ` · ${t(`courseTypes.${course.key}`)}` : ""}
                           </span>
                           <span className="planning-meal-recipe">{label}</span>
                         </span>
