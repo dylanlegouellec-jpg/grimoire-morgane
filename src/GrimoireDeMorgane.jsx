@@ -176,11 +176,21 @@ export default function GrimoireDeMorgane() {
     initialMealPlan: Array.isArray(localCache.mealPlan) ? localCache.mealPlan : [],
   });
 
+  // Statut de connexion RÉEL (ping Supabase, pas juste navigator.onLine —
+  // voir hooks/useConnectionStatus.js) : alimente la bannière "Hors ligne"
+  // et la pastille de statut sur l'avatar du profil. `recheckConnection`
+  // permet au bouton "Réessayer" du bandeau de forcer une revérification
+  // immédiate plutôt que d'attendre le prochain ping programmé. Calculé
+  // AVANT useOfflineSync ci-dessous, qui s'en sert désormais pour savoir
+  // quand rejouer la file hors-ligne (voir son commentaire).
+  const { status: connectionStatus, recheck: recheckConnection } = useConnectionStatus();
+
   const sync = useOfflineSync({
     authLoading,
     user,
     householdId,
     localCache,
+    connectionStatus,
     recipes: recipesApi.recipes,
     setRecipes: recipesApi.setRecipes,
     pantry: pantryApi.pantry,
@@ -196,13 +206,6 @@ export default function GrimoireDeMorgane() {
     shoppingScope: shoppingApi.shoppingScope,
     showToast,
   });
-
-  // Statut de connexion RÉEL (ping Supabase, pas juste navigator.onLine —
-  // voir hooks/useConnectionStatus.js) : alimente la bannière "Hors ligne"
-  // et la pastille de statut sur l'avatar du profil. `recheckConnection`
-  // permet au bouton "Réessayer" du bandeau de forcer une revérification
-  // immédiate plutôt que d'attendre le prochain ping programmé.
-  const { status: connectionStatus, recheck: recheckConnection } = useConnectionStatus();
 
   // Applique le thème sur <html data-theme="..."> avant la peinture du
   // navigateur (useLayoutEffect) pour limiter le flash de la mauvaise
