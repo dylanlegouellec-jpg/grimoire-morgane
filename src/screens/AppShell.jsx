@@ -68,7 +68,7 @@ export default function AppShell({
 }) {
   const { recipes, saveRecipe, importRecipe, deleteRecipe, toggleFavorite, exportGrimoire, handleImportFile } = recipesApi;
   const { pantry, setPantry, basics, moveBasicToVariable, removeBasic, resetPantry } = pantryApi;
-  const { mealPlan, addMealPlanEntry, removeMealPlanEntry, removeMealPlanEntries, updateMealPlanEntry, reorderMealPlanEntries } = mealPlanApi;
+  const { mealPlan, addMealPlanEntry, removeMealPlanEntry, removeMealPlanEntries, updateMealPlanEntry, reorderMealPlanEntries, moveMealPlanSection } = mealPlanApi;
   const { t } = useTranslation();
   const {
     shoppingLists,
@@ -376,6 +376,7 @@ export default function AppShell({
               onRemoveMeals={removeMealPlanEntries}
               onUpdateMeal={updateMealPlanEntry}
               onReorderMeals={reorderMealPlanEntries}
+              onMoveMealSection={moveMealPlanSection}
               onSendToShoppingList={(ids) => {
                 generateShoppingList(recipes, ids);
                 setTab("courses");

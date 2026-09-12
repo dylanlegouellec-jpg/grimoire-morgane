@@ -26,7 +26,7 @@ import PlanningMealGroup from "./PlanningMealGroup";
 /*  quel jour de l'année est possible, pas seulement ceux de la semaine        */
 /*  actuellement affichée.                                                     */
 /* ------------------------------------------------------------------ */
-export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMeal, onRemoveMeals, onUpdateMeal, onReorderMeals, onSendToShoppingList, showToast, user }) {
+export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMeal, onRemoveMeals, onUpdateMeal, onReorderMeals, onMoveMealSection, onSendToShoppingList, showToast, user }) {
   const { t, language } = useTranslation();
   const [weekStart, setWeekStart] = useState(() => getWeekStart());
   // Mode réorganisation (voir PlanningMealItem.jsx, poignée ⋮⋮) : masqué par
@@ -175,6 +175,11 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
   // catégorie (voir onRemoveMeals, hooks/useMealPlan.js).
   const handleDeleteSection = (entries) => onRemoveMeals(entries.map((e) => e.id));
 
+  // "Changer le moment du repas" du même menu — reclasse TOUTE la section
+  // vers `newMealTypeKey` (voir MoveMealSectionModal.jsx, hooks/useMealPlan
+  // .js pour l'ajustement du courseType selon le moment d'arrivée).
+  const handleMoveSection = (entries, newMealTypeKey) => onMoveMealSection(entries.map((e) => e.id), newMealTypeKey);
+
   const toggleReorderMode = () => {
     triggerHaptic(15);
     setReorderMode((v) => !v);
@@ -291,6 +296,7 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
                       onReorder={onReorderMeals}
                       onEdit={setEditingEntry}
                       onDelete={(e) => onRemoveMeal(e.id)}
+                      onMoveSection={handleMoveSection}
                       onDeleteSection={handleDeleteSection}
                       onAddToCourse={(courseKey) => openAddForCourse(iso, group.mealType.key, courseKey)}
                       onDeleteAllCourse={(groupEntries) => onRemoveMeals(groupEntries.map((e) => e.id))}
