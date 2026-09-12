@@ -12,7 +12,13 @@ export const RECIPE_CARDS_CSS = `
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 10px;
-  box-shadow: 0 2px 0 rgba(42,32,19,0.06), 0 6px 14px rgba(42,32,19,0.07);
+  /* Ombre portée existante (profondeur extérieure) + un très léger creux
+     intérieur chaud ("inset"), pour donner à la carte un grain de parchemin
+     plutôt qu'une simple plaque plate — inspiré du même procédé sur les
+     sceaux/boutons (.seal) déjà présents. Un box-shadow supplémentaire ne
+     change ni la taille ni le padding de la carte : purement décoratif,
+     aucun risque de régression de mise en page. */
+  box-shadow: inset 0 0 26px rgba(124,90,66,0.06), 0 2px 0 rgba(42,32,19,0.06), 0 6px 14px rgba(42,32,19,0.07);
 }
 
 .recipes-grid {
@@ -213,6 +219,33 @@ export const RECIPE_CARDS_CSS = `
   -webkit-touch-callout: none !important; /* bloque le menu iOS (Copier / Enregistrer) sur appui long */
   -webkit-user-select: none !important; user-select: none !important;
   pointer-events: none; /* le doigt ne touche jamais l'<img> elle-même, voir .illus-photo-guard */
+  /* Zoom très léger uniquement sur les points d'entrée qui ONT un vrai
+     survol de souris — "hover: hover" ET "pointer: fine" ensemble
+     excluent le tactile, où :hover resterait "collé" jusqu'au prochain
+     tap ailleurs (aucune sortie de survol possible au doigt), donnant un
+     flash de zoom qui semblerait figé plutôt que réagir au geste. */
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (hover: hover) and (pointer: fine) {
+  .recipe-card:hover .illus-photo { transform: scale(1.04); }
+}
+/* --- Effet de chargement (voile chatoyant) --------------------------------
+   Affiché par-dessus la zone image tant que la photo (ou l'illustration IA)
+   n'a pas fini de se décoder — voir DishArt.jsx, état "photoLoaded". Un
+   simple dégradé qui balaie l'écran, pas un spinner : cohérent avec le
+   reste de l'app (aucun spinner ailleurs pour une image individuelle), et
+   évite un changement brutal image manquante -> image nette une fois le
+   réseau ou le cache lents. */
+.illus-shimmer {
+  position: absolute; inset: 0;
+  background: linear-gradient(100deg, transparent 20%, rgba(179,135,42,0.16) 50%, transparent 80%);
+  background-size: 200% 100%;
+  background-color: var(--parchment);
+  animation: illusShimmer 1.4s ease-in-out infinite;
+}
+@keyframes illusShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 .illus-photo-guard {
   position: absolute; inset: 0;

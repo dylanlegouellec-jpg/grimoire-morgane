@@ -102,6 +102,11 @@ export const RESPONSIVE_CSS = `
     color: var(--ink-soft); font-size: 0.78rem;
   }
   .nav-btn.active { background: var(--chrome); color: var(--gold-light); }
+  /* La pastille glissante (modalsBase.css.js) n'a de sens que sur une nav
+     horizontale : ses mesures (gauche/largeur) deviendraient incohérentes
+     une fois .bottom-nav repassée en colonne verticale ci-dessus — l'onglet
+     actif garde ici son propre traitement (fond plein, juste au-dessus). */
+  .nav-indicator { display: none; }
 
   .app-content {
     grid-area: content;
