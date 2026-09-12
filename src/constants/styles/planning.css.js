@@ -37,13 +37,37 @@ export const PLANNING_CSS = `
 .planning-day { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 12px 14px; }
 .planning-day.today { border-color: var(--gold); background: rgba(179,135,42,0.08); }
 .planning-day-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+/* Accordéon par jour (voir PlanningView.jsx, isDayExpanded/toggleDay) : le
+   "+" reste un bouton frère séparé (voir .planning-add-btn) plutôt que
+   niché dans celui-ci — un <button> dans un <button> est invalide en HTML,
+   et cliquer sur "+" ne doit de toute façon jamais (re)plier le jour (voir
+   son propre e.stopPropagation() côté PlanningView.jsx). */
+.planning-day-toggle {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;
+  background: none; border: none; padding: 0; margin: 0; text-align: left; cursor: pointer;
+  font: inherit; color: inherit;
+}
+.planning-day-chevron {
+  flex-shrink: 0; color: var(--ink-soft);
+  transform: rotate(-90deg); transition: transform 0.18s ease;
+}
+.planning-day-chevron.expanded { transform: rotate(0deg); }
 .planning-day-label {
   font-family: 'Cinzel', serif; font-size: 0.85rem; letter-spacing: 0.5px; color: var(--ink);
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 8px; min-width: 0;
 }
 .planning-today-badge {
   font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.5px; text-transform: uppercase;
   background: var(--gold); color: #2a1c07; border-radius: 999px; padding: 2px 8px; flex-shrink: 0;
+}
+/* Nombre de repas du jour, visible seulement replié (voir PlanningView.jsx)
+   — garde le jour "scannable" sans avoir à le déplier juste pour savoir
+   s'il contient déjà quelque chose. */
+.planning-day-count {
+  flex-shrink: 0; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px;
+  background: var(--surface-strong); border: 1px solid var(--line); color: var(--ink-soft);
+  font-family: 'Cinzel', serif; font-size: 0.65rem;
+  display: flex; align-items: center; justify-content: center;
 }
 .planning-add-btn {
   width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
@@ -74,7 +98,14 @@ export const PLANNING_CSS = `
    moments (petit-déjeuner/en-cas), .planning-meal-group-items contient
    directement les lignes, sans ce niveau intermédiaire. */
 .planning-course-group + .planning-course-group { margin-top: 6px; }
-.planning-course-header { display: flex; align-items: center; gap: 8px; }
+/* Appui long sur l'en-tête -> menu Ajouter/Tout supprimer (voir
+   PlanningCourseGroup.jsx, CourseOptionsModal.jsx) : padding/border-radius
+   pour la zone tactile et pour la forme du léger enfoncement (.press-anim,
+   même geste que .planning-meal-item — voir hooks/useLongPress.js). */
+.planning-course-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 2px; border-radius: 6px; margin: -2px -2px 0;
+}
 .planning-meal-course-icon { font-size: 0.95rem; flex-shrink: 0; line-height: 1; width: 16px; text-align: center; }
 .planning-course-label {
   font-family: 'Cinzel', serif; font-size: 0.58rem; letter-spacing: 0.4px; text-transform: uppercase; color: var(--ink-soft);

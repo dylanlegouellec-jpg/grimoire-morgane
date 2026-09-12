@@ -46,10 +46,15 @@ export default function ShoppingView({
 
   const items = activeList ? activeList.items : [];
 
+  // "/" permet de saisir plusieurs articles d'un coup (ex. "Lait / Pain /
+  // Œufs") — même geste que pour les repas personnalisés du planning (voir
+  // AddMealModal.jsx) : chacun devient une ligne distincte de la liste.
   const addManual = () => {
-    const name = manualInput.trim();
-    if (!name) return;
-    onAddManualItem(name);
+    const raw = manualInput.trim();
+    if (!raw) return;
+    const names = raw.split("/").map((part) => part.trim()).filter(Boolean);
+    if (!names.length) return;
+    names.forEach((name) => onAddManualItem(name));
     setManualInput("");
   };
 

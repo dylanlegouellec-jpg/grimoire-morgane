@@ -63,6 +63,15 @@ export default function useMealPlan({ initialMealPlan = [] }) {
     setMealPlan((prev) => prev.filter((e) => e.id !== id));
   }, []);
 
+  // Suppression groupée — menu "Tout supprimer" d'un sous-groupe de type de
+  // plat entier (voir PlanningCourseGroup.jsx) : un seul setMealPlan/haptique
+  // pour tout le groupe plutôt qu'un removeMealPlanEntry par entrée.
+  const removeMealPlanEntries = useCallback((ids) => {
+    triggerHaptic(20);
+    const idSet = new Set(ids);
+    setMealPlan((prev) => prev.filter((e) => !idSet.has(e.id)));
+  }, []);
+
   // Modifie la recette/le type de plat d'une entrée existante (voir menu
   // "Modifier" ouvert par l'appui long sur une ligne, PlanningMealItem.jsx)
   // sans toucher à sa date ni à son moment — ceux-là restent fixes, seul
@@ -77,6 +86,7 @@ export default function useMealPlan({ initialMealPlan = [] }) {
     setMealPlan,
     addMealPlanEntry,
     removeMealPlanEntry,
+    removeMealPlanEntries,
     updateMealPlanEntry,
   };
 }

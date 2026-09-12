@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, Send, User, Users } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Plus, Send, User, Users } from "lucide-react";
 import { getWeekStart, addWeeks, getWeekDays, toISODate, isSameDay, formatWeekRange, formatDayLabel, MEAL_TYPES, COURSE_TYPES, courseTypeInfo, courseTypeOrder, mealTypeHasCourse } from "../../utils/planning";
 import { triggerHaptic } from "../../utils/haptics";
 import { getStoredPlanningScope, storePlanningScope } from "../../utils/localSettings";
@@ -9,6 +9,7 @@ import Seal from "../common/Seal";
 import SegmentedControl from "../common/SegmentedControl";
 import AddMealModal from "./AddMealModal";
 import PlanningMealItem from "./PlanningMealItem";
+import PlanningCourseGroup from "./PlanningCourseGroup";
 
 /* ------------------------------------------------------------------ */
 /*  PLANIFICATION — vue chronologique par semaine, un jour par bloc,      */
@@ -26,16 +27,27 @@ import PlanningMealItem from "./PlanningMealItem";
 /*  quel jour de l'année est possible, pas seulement ceux de la semaine        */
 /*  actuellement affichée.                                                     */
 /* ------------------------------------------------------------------ */
-export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMeal, onUpdateMeal, onSendToShoppingList, showToast, user }) {
+export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMeal, onRemoveMeals, onUpdateMeal, onSendToShoppingList, showToast, user }) {
   const { t, language } = useTranslation();
   const [weekStart, setWeekStart] = useState(() => getWeekStart());
   const [showAddModal, setShowAddModal] = useState(false);
   const [addModalDate, setAddModalDate] = useState(null); // date ISO pré-remplie ("YYYY-MM-DD") | null (FAB, calendrier libre)
+  // Moment/type de plat prérempli pour le "+" ouvert depuis le menu d'un
+  // en-tête de sous-catégorie (voir PlanningCourseGroup.jsx) — null pour le
+  // FAB ou le "+" d'un jour, qui démarrent tous deux sans rien de préréglé.
+  const [addModalMealType, setAddModalMealType] = useState(null);
+  const [addModalCourseType, setAddModalCourseType] = useState(null);
   // Entrée en cours de modification (menu "Modifier", voir
   // PlanningMealItem.jsx/MealOptionsModal.jsx) — sa date et son moment
   // restent fixes, seuls la recette/le type de plat peuvent changer (voir
   // AddMealModal.jsx, prop `editEntry`).
   const [editingEntry, setEditingEntry] = useState(null);
+  // Jours dépliés/repliés (voir isDayExpanded plus bas) — seuls les
+  // BASCULEMENTS explicites de l'utilisateur sont mémorisés ici, par date
+  // ISO (persiste donc d'une semaine à l'autre pour cette même date) ;
+  // l'état par défaut (aujourd'hui déplié, le reste replié) n'a pas besoin
+  // d'être stocké puisqu'il est recalculable à tout moment.
+  const [expandedOverrides, setExpandedOverrides] = useState(() => new Map());
   // Portée affichée ("household" | "personal") — préférence locale à
   // l'appareil (voir utils/localSettings.js), pas une donnée de foyer :
   // chaque membre peut avoir son propre onglet de départ.
@@ -104,8 +116,32 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
   // preventDefault() donc aucun risque pour le défilement vertical.
   const weekSwipe = useHorizontalSwipe(goNextWeek, goPrevWeek);
 
-  const openAddForDay = (iso) => { triggerHaptic(15); setAddModalDate(iso); setShowAddModal(true); };
-  const openAddFab = () => { triggerHaptic(15); setAddModalDate(null); setShowAddModal(true); };
+  const openAddForDay = (iso) => {
+    triggerHaptic(15);
+    setAddModalDate(iso);
+    setAddModalMealType(null);
+    setAddModalCourseType(null);
+    setShowAddModal(true);
+  };
+  const openAddFab = () => {
+    triggerHaptic(15);
+    setAddModalDate(null);
+    setAddModalMealType(null);
+    setAddModalCourseType(null);
+    setShowAddModal(true);
+  };
+  // "Ajouter un plat" du menu d'un en-tête de sous-catégorie (voir
+  // PlanningCourseGroup.jsx) : même assistant que les deux ci-dessus, mais
+  // moment ET type de plat démarrent déjà préremplis sur cette catégorie
+  // (voir AddMealModal.jsx, props initialMealType/initialCourseType) —
+  // l'étape recette s'affiche donc directement.
+  const openAddForCourse = (iso, mealTypeKey, courseKey) => {
+    triggerHaptic(15);
+    setAddModalDate(iso);
+    setAddModalMealType(mealTypeKey);
+    setAddModalCourseType(courseKey);
+    setShowAddModal(true);
+  };
 
   const handleAdd = (dateISO, mealType, recipeId, customTitle, courseType) => {
     // Le nouveau repas hérite automatiquement de la portée actuellement
@@ -122,6 +158,21 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
       courseType,
     });
     setEditingEntry(null);
+  };
+
+  // Accordéon par jour : seuls les basculements EXPLICITES sont mémorisés
+  // (par date ISO, voir expandedOverrides ci-dessus) — sans override, un
+  // jour est déplié par défaut UNIQUEMENT s'il s'agit d'aujourd'hui, replié
+  // sinon (y compris pour une semaine sans "aujourd'hui" du tout, passée ou
+  // future : tous ses jours démarrent alors repliés).
+  const isDayExpanded = (iso, isToday) => (expandedOverrides.has(iso) ? expandedOverrides.get(iso) : isToday);
+  const toggleDay = (iso, isToday) => {
+    triggerHaptic(10);
+    setExpandedOverrides((prev) => {
+      const next = new Map(prev);
+      next.set(iso, !isDayExpanded(iso, isToday));
+      return next;
+    });
   };
 
   const handleSend = () => {
@@ -172,23 +223,41 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
           const dayEntries = entriesForDay(iso);
           const todayFlag = isSameDay(d, today);
           const dayLabel = formatDayLabel(d, language);
+          const expanded = isDayExpanded(iso, todayFlag);
           return (
             <div className={`planning-day ${todayFlag ? "today" : ""}`} key={iso}>
               <div className="planning-day-header">
-                <span className="planning-day-label">
-                  {todayFlag && <span className="planning-today-badge">{t("planning.today")}</span>}
-                  {dayLabel}
-                </span>
+                <button
+                  type="button"
+                  className="planning-day-toggle"
+                  onClick={() => toggleDay(iso, todayFlag)}
+                  aria-expanded={expanded}
+                  aria-label={t(expanded ? "planning.collapseDay" : "planning.expandDay", { day: dayLabel })}
+                >
+                  <ChevronDown size={16} className={`planning-day-chevron ${expanded ? "expanded" : ""}`} aria-hidden="true" />
+                  <span className="planning-day-label">
+                    {todayFlag && <span className="planning-today-badge">{t("planning.today")}</span>}
+                    {dayLabel}
+                  </span>
+                  {/* Nombre de repas visible même replié : garde le jour
+                      "scannable" d'un coup d'œil sans avoir à le déplier
+                      juste pour savoir s'il contient déjà quelque chose. */}
+                  {!expanded && dayEntries.length > 0 && (
+                    <span className="planning-day-count" aria-label={t("planning.dayMealCountLabel", { count: dayEntries.length })}>
+                      {dayEntries.length}
+                    </span>
+                  )}
+                </button>
                 <button
                   type="button"
                   className="planning-add-btn"
-                  onClick={() => openAddForDay(iso)}
+                  onClick={(e) => { e.stopPropagation(); openAddForDay(iso); }}
                   aria-label={t("planning.addMealLabel", { day: dayLabel })}
                 >
                   <Plus size={16} />
                 </button>
               </div>
-              {dayEntries.length > 0 && (
+              {expanded && dayEntries.length > 0 && (
                 <div className="planning-meals">
                   {groupEntriesByMealType(dayEntries).map((group) => (
                     <div className="planning-meal-group" key={group.mealType.key}>
@@ -202,36 +271,21 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
                             moments, juste la liste des entrées comme avant. */}
                         {mealTypeHasCourse(group.mealType.key)
                           ? groupEntriesByCourse(group.entries).map((courseGroup) => (
-                              <div className="planning-course-group" key={courseGroup.course.key}>
-                                <div className="planning-course-header">
-                                  <span className="planning-meal-course-icon" aria-hidden="true">{courseGroup.course.icon}</span>
-                                  <span className="planning-course-label">
-                                    {/* Singulier pour un seul plat de ce type, pluriel
-                                        dès qu'il y en a plusieurs (voir
-                                        translations.js, courseTypes/courseTypesPlural). */}
-                                    {t(`courseTypes${courseGroup.entries.length > 1 ? "Plural" : ""}.${courseGroup.course.key}`)}
-                                  </span>
-                                </div>
-                                <ul className="planning-course-items">
-                                  {courseGroup.entries.map((entry) => (
-                                    <li className="planning-course-item" key={entry.id}>
-                                      <PlanningMealItem
-                                        entry={entry}
-                                        course={null}
-                                        label={labelForEntry(entry)}
-                                        onEdit={setEditingEntry}
-                                        onDelete={(e) => onRemoveMeal(e.id)}
-                                      />
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
+                              <PlanningCourseGroup
+                                key={courseGroup.course.key}
+                                course={courseGroup.course}
+                                entries={courseGroup.entries}
+                                labelForEntry={labelForEntry}
+                                onEdit={setEditingEntry}
+                                onDelete={(e) => onRemoveMeal(e.id)}
+                                onAddToCourse={(courseKey) => openAddForCourse(iso, group.mealType.key, courseKey)}
+                                onDeleteAll={(groupEntries) => onRemoveMeals(groupEntries.map((e) => e.id))}
+                              />
                             ))
                           : group.entries.map((entry) => (
                               <PlanningMealItem
                                 key={entry.id}
                                 entry={entry}
-                                course={null}
                                 label={labelForEntry(entry)}
                                 onEdit={setEditingEntry}
                                 onDelete={(e) => onRemoveMeal(e.id)}
@@ -261,6 +315,8 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
         <AddMealModal
           recipes={recipes}
           initialDate={addModalDate}
+          initialMealType={addModalMealType}
+          initialCourseType={addModalCourseType}
           onAdd={handleAdd}
           onClose={() => setShowAddModal(false)}
         />
