@@ -380,7 +380,15 @@ function SettingsSubPanel({ onBack, children }) {
         {...swipe.handlers}
       >
         <button className="modal-back" onClick={requestClose}><ChevronLeft size={20} /> {t("settings.back")}</button>
-        {children}
+        {/* contentStyle (pas swipe.style) : estompe le CONTENU sur le fond
+            plein de ce panneau (background: var(--parchment), toujours
+            opaque sur l'élément .modal parent, jamais touché ici), au lieu
+            de rendre toute la feuille translucide — donne la même sensation
+            de fondu au tirage que le panneau principal, sans laisser
+            transparaître celui-ci à travers (voir useSwipeToDismiss.js). */}
+        <div style={swipe.contentStyle}>
+          {children}
+        </div>
       </div>
     </div>
   );

@@ -154,6 +154,17 @@ export default function useSwipeToDismiss(onDismiss, { scrollRef, disabled = fal
       opacity: fade && translateY > 0 ? Math.max(1 - translateY / 300, 0.4) : 1,
       transition: isDragging ? "none" : `transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)${fade ? ", opacity 0.25s ease" : ""}`,
     },
+    // Variante sûre pour une feuille empilée sur une autre modale déjà
+    // affichée (voir le pavé ci-dessus) : à poser sur un DIV ENVELOPPANT
+    // le contenu, PAS sur l'élément .modal lui-même (qui garde alors son
+    // propre fond opaque `background: var(--parchment)` intact, voir
+    // modalsBase.css.js). Le contenu s'estompe donc sur son propre fond
+    // plein, jamais sur ce qu'il y a derrière — même formule que
+    // `style.opacity` ci-dessus, disponible que `fade` soit actif ou non.
+    contentStyle: {
+      opacity: translateY > 0 ? Math.max(1 - translateY / 300, 0.4) : 1,
+      transition: isDragging ? "none" : "opacity 0.25s ease",
+    },
     isDragging,
   };
 }
