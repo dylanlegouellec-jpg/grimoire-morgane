@@ -23,6 +23,23 @@ export function mealTypeInfo(key) {
   return MEAL_TYPE_BY_KEY[key] || MEAL_TYPES[0];
 }
 
+// TYPE DE PLAT — dimension distincte du MOMENT du repas ci-dessus (on peut
+// avoir une "Entrée" comme un "Plat" au Dîner) : sélectionnée séparément,
+// à l'étape recette de AddMealModal.jsx, une fois le moment déjà choisi.
+// "plat" par défaut (DEFAULT_COURSE_TYPE) — le cas le plus courant, pour
+// ne pas obliger à changer le sélecteur à chaque ajout.
+export const COURSE_TYPES = [
+  { key: "aperitif", label: "Apéro", icon: "🍸" },
+  { key: "entree", label: "Entrée", icon: "🥗" },
+  { key: "plat", label: "Plat", icon: "🍲" },
+  { key: "dessert", label: "Dessert", icon: "🍰" },
+];
+export const DEFAULT_COURSE_TYPE = "plat";
+const COURSE_TYPE_BY_KEY = COURSE_TYPES.reduce((acc, c) => { acc[c.key] = c; return acc; }, {});
+export function courseTypeInfo(key) {
+  return COURSE_TYPE_BY_KEY[key] || COURSE_TYPE_BY_KEY[DEFAULT_COURSE_TYPE];
+}
+
 // Lundi 00:00 de la semaine contenant `date`.
 export function getWeekStart(date = new Date()) {
   const d = new Date(date);
