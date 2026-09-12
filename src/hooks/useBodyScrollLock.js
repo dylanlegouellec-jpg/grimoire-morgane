@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 /* ------------------------------------------------------------------ */
 /*  VERROU DE SCROLL DU FOND (fiable sur iOS Safari)                   */
@@ -26,6 +26,23 @@ let lockCount = 0;
 let savedBodyStyle = null;
 let savedScrollY = 0;
 
+// Abonnés à useIsAnyModalOpen ci-dessous — notifiés à chaque franchissement
+// de lockCount (pas à chaque appel de lockBody/unlockBody : plusieurs
+// modales peuvent rester empilées sans que "au moins une modale est
+// ouverte" ne change). Sert par exemple à couper le swipe de semaine du
+// Planning tant qu'une modale/feuille est affichée par-dessus (voir
+// PlanningView.jsx) — plutôt qu'un état remonté manuellement depuis
+// chacune des modales imbriquées à plusieurs niveaux (PlanningMealGroup ->
+// PlanningCourseGroup -> PlanningMealItem), ce compteur déjà partagé par
+// TOUTES les modales de l'app (voir plus haut) donne directement ce
+// signal "au moins une modale ouverte" sans plomberie supplémentaire.
+const listeners = new Set();
+
+function notifyListeners() {
+  const open = lockCount > 0;
+  listeners.forEach((fn) => fn(open));
+}
+
 function lockBody() {
   if (lockCount === 0) {
     savedScrollY = window.scrollY || window.pageYOffset || 0;
@@ -46,6 +63,7 @@ function lockBody() {
     body.style.overscrollBehavior = "contain";
   }
   lockCount += 1;
+  if (lockCount === 1) notifyListeners();
 }
 
 function unlockBody() {
@@ -60,6 +78,7 @@ function unlockBody() {
     body.style.overscrollBehavior = savedBodyStyle.overscrollBehavior;
     window.scrollTo(0, savedScrollY);
     savedBodyStyle = null;
+    notifyListeners();
   }
 }
 
@@ -69,4 +88,23 @@ export default function useBodyScrollLock(active = true) {
     lockBody();
     return () => { unlockBody(); };
   }, [active]);
+}
+
+// À utiliser quand un geste doit se couper tant qu'une modale/feuille
+// quelconque est ouverte quelque part dans l'app (ex. le swipe de semaine
+// du Planning, voir PlanningView.jsx) — reflète le MÊME compteur partagé
+// que useBodyScrollLock ci-dessus, donc toujours cohérent avec le verrou de
+// scroll du fond déjà en place : si le fond est gelé, ce booléen vaut déjà
+// `true`, sans readjustement séparé à maintenir.
+export function useIsAnyModalOpen() {
+  const [open, setOpen] = useState(() => lockCount > 0);
+  useEffect(() => {
+    // Resynchronise au montage : lockCount a pu changer entre le rendu de
+    // cet appelant et l'exécution de cet effet (ex. une modale déjà montée
+    // ailleurs dans le même lot de rendus).
+    setOpen(lockCount > 0);
+    listeners.add(setOpen);
+    return () => { listeners.delete(setOpen); };
+  }, []);
+  return open;
 }

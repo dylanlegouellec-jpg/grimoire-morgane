@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import { useTranslation } from "../../contexts/LanguageContext";
+import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
 import Flourish from "../common/Flourish";
@@ -16,6 +17,10 @@ export default function DeleteMealSectionConfirmModal({ mealLabel, onConfirm, on
   const { t } = useTranslation();
   const modalRef = useFocusTrap(onCancel);
   const swipe = useSwipeToDismiss(onCancel, { scrollRef: modalRef });
+  // Manquait ici (contrairement à toutes les autres modales du planning) :
+  // sans lui, le fond défilait toujours derrière cette confirmation
+  // précise, y compris pendant le tirage pour la fermer.
+  useBodyScrollLock(true);
   return (
     <div className="modal-backdrop" onClick={onCancel}>
       <div
