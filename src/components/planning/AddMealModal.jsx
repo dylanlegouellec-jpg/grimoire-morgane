@@ -12,35 +12,51 @@ import CalendarPicker from "./CalendarPicker";
 
 /* ------------------------------------------------------------------ */
 /*  AJOUTER UN REPAS — assistant en couches (même principe de navigation   */
-/*  que SecretSettingsModal.jsx). Deux points d'entrée :                    */
+/*  que SecretSettingsModal.jsx). Trois points d'entrée :                   */
 /*   - le "+" d'un jour précis (voir PlanningView.jsx) fournit `initialDate` */
 /*     : l'étape date est alors sautée, on commence directement au type      */
 /*     de repas.                                                             */
 /*   - le bouton flottant "+" (FAB) n'a pas de date pré-choisie : la          */
 /*     première étape est un calendrier mensuel complet (voir                 */
 /*     CalendarPicker.jsx), pour choisir n'importe quel jour de l'année.      */
+/*   - le menu "Modifier" d'une ligne existante (voir PlanningMealItem.jsx/    */
+/*     MealOptionsModal.jsx) fournit `editEntry` : date et moment sont alors   */
+/*     entièrement figés (aucune des deux premières étapes n'a de sens ici,    */
+/*     on ne modifie qu'un plat déjà planifié à une date/un moment donnés),     */
+/*     l'assistant s'ouvre DIRECTEMENT sur l'étape recette pour choisir une     */
+/*     nouvelle recette et/ou un nouveau type de plat ; `onSave` remplace       */
+/*     alors `onAdd`, rien n'est ajouté en double.                              */
 /*  Rien n'est enregistré tant que la recette finale n'est pas choisie —      */
-/*  fermer la feuille à n'importe quelle étape n'ajoute rien.                 */
+/*  fermer la feuille à n'importe quelle étape n'ajoute/ne modifie rien.       */
 /* ------------------------------------------------------------------ */
-export default function AddMealModal({ recipes, initialDate, onAdd, onClose }) {
+export default function AddMealModal({ recipes, initialDate, editEntry = null, onAdd, onSave, onClose }) {
   useBodyScrollLock(true);
   const modalRef = useFocusTrap(onClose);
   const swipe = useSwipeToDismiss(onClose, { scrollRef: modalRef });
   const { t, dict, language } = useTranslation();
   const hasDateStep = !initialDate;
-  const [selectedDate, setSelectedDate] = useState(() => (initialDate ? new Date(initialDate) : null));
+  const [selectedDate, setSelectedDate] = useState(() => {
+    if (editEntry) return new Date(editEntry.date);
+    return initialDate ? new Date(initialDate) : null;
+  });
   const [viewMonth, setViewMonth] = useState(() => (initialDate ? new Date(initialDate) : new Date()));
-  const [mealType, setMealType] = useState(null);
+  const [mealType, setMealType] = useState(() => (editEntry ? editEntry.mealType : null));
   // Type de plat (Apéro/Entrée/Plat/Dessert) — dimension INDÉPENDANTE du
   // moment (mealType) ci-dessus, choisie à côté de lui sur cette même étape
   // (voir le sélecteur à droite de la date plus bas) : "Plat" par défaut,
   // le cas le plus fréquent. N'a de sens que pour Déjeuner/Dîner (voir
   // mealTypeHasCourse) — ignoré à l'enregistrement pour les autres moments,
   // qu'il ait été changé ou non.
-  const [courseType, setCourseType] = useState(DEFAULT_COURSE_TYPE);
-  const [search, setSearch] = useState("");
+  const [courseType, setCourseType] = useState(() => {
+    if (editEntry && mealTypeHasCourse(editEntry.mealType)) return editEntry.courseType || DEFAULT_COURSE_TYPE;
+    return DEFAULT_COURSE_TYPE;
+  });
+  // En édition d'un repas personnalisé, préremplit le champ avec son nom
+  // actuel : un simple changement de type de plat n'oblige alors pas à
+  // retaper le nom pour "confirmer" (voir addCustomMeal plus bas).
+  const [search, setSearch] = useState(() => (editEntry && editEntry.customTitle ? editEntry.customTitle : ""));
 
-  const step = !selectedDate ? "date" : !mealType ? "meal" : "recipe";
+  const step = editEntry ? "recipe" : (!selectedDate ? "date" : !mealType ? "meal" : "recipe");
   const isFirstStep = hasDateStep ? step === "date" : step === "meal";
 
   const goBack = () => {
@@ -56,7 +72,9 @@ export default function AddMealModal({ recipes, initialDate, onAdd, onClose }) {
 
   const pickRecipe = (recipeId) => {
     triggerHaptic(15);
-    onAdd(toISODate(selectedDate), mealType, recipeId, null, mealTypeHasCourse(mealType) ? courseType : null);
+    const course = mealTypeHasCourse(mealType) ? courseType : null;
+    if (editEntry) onSave(editEntry.id, recipeId, null, course);
+    else onAdd(toISODate(selectedDate), mealType, recipeId, null, course);
     onClose();
   };
 
@@ -67,7 +85,9 @@ export default function AddMealModal({ recipes, initialDate, onAdd, onClose }) {
     const title = search.trim();
     if (!title) return;
     triggerHaptic(15);
-    onAdd(toISODate(selectedDate), mealType, null, title, mealTypeHasCourse(mealType) ? courseType : null);
+    const course = mealTypeHasCourse(mealType) ? courseType : null;
+    if (editEntry) onSave(editEntry.id, null, title, course);
+    else onAdd(toISODate(selectedDate), mealType, null, title, course);
     onClose();
   };
 
@@ -76,7 +96,11 @@ export default function AddMealModal({ recipes, initialDate, onAdd, onClose }) {
     .filter((r) => !q || r.title.toLowerCase().includes(q))
     .sort((a, b) => a.title.localeCompare(b.title, "fr"));
 
-  const titles = { date: t("planning.dateStepTitle"), meal: t("planning.mealStepTitle"), recipe: t("planning.recipeStepTitle") };
+  const titles = {
+    date: t("planning.dateStepTitle"),
+    meal: t("planning.mealStepTitle"),
+    recipe: editEntry ? t("planning.editMealStepTitle") : t("planning.recipeStepTitle"),
+  };
   const backLabels = { meal: t("planning.backToDate"), recipe: t("planning.backToMealType") };
 
   return (
@@ -90,7 +114,14 @@ export default function AddMealModal({ recipes, initialDate, onAdd, onClose }) {
         style={swipe.style}
         {...swipe.handlers}
       >
-        {!isFirstStep ? (
+        {editEntry ? (
+          // Pas de "retour" en édition : date et moment sont figés, cette
+          // étape recette est la seule — juste fermer, dans le coin GAUCHE
+          // (voir .meal-course-select ci-dessous, qui garde le droit).
+          <button className="modal-back" onClick={onClose} aria-label="Fermer">
+            <X size={20} />
+          </button>
+        ) : !isFirstStep ? (
           <button className="modal-back" onClick={goBack}>
             <ChevronLeft size={20} /> {backLabels[step]}
           </button>
@@ -154,7 +185,9 @@ export default function AddMealModal({ recipes, initialDate, onAdd, onClose }) {
               />
             </div>
             <button type="button" className="link-btn add-custom-meal-btn" onClick={addCustomMeal} disabled={!search.trim()}>
-              <PenLine size={14} /> {search.trim() ? t("planning.addCustomMealWithText", { text: search.trim() }) : t("planning.addCustomMeal")}
+              <PenLine size={14} /> {search.trim()
+                ? t(editEntry ? "planning.saveCustomMealWithText" : "planning.addCustomMealWithText", { text: search.trim() })
+                : t("planning.addCustomMeal")}
             </button>
             {filtered.length === 0 ? (
               <p className="hint">{t("planning.noRecipeMatch")}</p>
