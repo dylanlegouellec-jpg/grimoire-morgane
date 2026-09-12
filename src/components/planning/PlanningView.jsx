@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, Send, User, Users, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Send, User, Users } from "lucide-react";
 import { getWeekStart, addWeeks, getWeekDays, toISODate, isSameDay, formatWeekRange, formatDayLabel, MEAL_TYPES, mealTypeInfo, courseTypeInfo, courseTypeOrder, mealTypeHasCourse } from "../../utils/planning";
 import { triggerHaptic } from "../../utils/haptics";
 import { getStoredPlanningScope, storePlanningScope } from "../../utils/localSettings";
@@ -8,6 +8,7 @@ import useHorizontalSwipe from "../../hooks/useHorizontalSwipe";
 import Seal from "../common/Seal";
 import SegmentedControl from "../common/SegmentedControl";
 import AddMealModal from "./AddMealModal";
+import PlanningMealItem from "./PlanningMealItem";
 
 /* ------------------------------------------------------------------ */
 /*  PLANIFICATION — vue chronologique par semaine, un jour par bloc,      */
@@ -25,11 +26,16 @@ import AddMealModal from "./AddMealModal";
 /*  quel jour de l'année est possible, pas seulement ceux de la semaine        */
 /*  actuellement affichée.                                                     */
 /* ------------------------------------------------------------------ */
-export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMeal, onSendToShoppingList, showToast, user }) {
+export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMeal, onUpdateMeal, onSendToShoppingList, showToast, user }) {
   const { t, language } = useTranslation();
   const [weekStart, setWeekStart] = useState(() => getWeekStart());
   const [showAddModal, setShowAddModal] = useState(false);
   const [addModalDate, setAddModalDate] = useState(null); // date ISO pré-remplie ("YYYY-MM-DD") | null (FAB, calendrier libre)
+  // Entrée en cours de modification (menu "Modifier", voir
+  // PlanningMealItem.jsx/MealOptionsModal.jsx) — sa date et son moment
+  // restent fixes, seuls la recette/le type de plat peuvent changer (voir
+  // AddMealModal.jsx, prop `editEntry`).
+  const [editingEntry, setEditingEntry] = useState(null);
   // Portée affichée ("household" | "personal") — préférence locale à
   // l'appareil (voir utils/localSettings.js), pas une donnée de foyer :
   // chaque membre peut avoir son propre onglet de départ.
@@ -86,6 +92,15 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
     onAddMeal(dateISO, mealType, recipeId, customTitle, scope, user && user.id, courseType);
     setShowAddModal(false);
     setWeekStart(getWeekStart(new Date(dateISO)));
+  };
+
+  const handleSaveEdit = (entryId, recipeId, customTitle, courseType) => {
+    onUpdateMeal(entryId, {
+      recipeId: recipeId || null,
+      customTitle: customTitle || null,
+      courseType,
+    });
+    setEditingEntry(null);
   };
 
   const handleSend = () => {
@@ -180,25 +195,14 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
                           // une VRAIE recette depuis effacée).
                           const label = entry.customTitle || (recipe ? recipe.title : t("planning.recipeDeletedLabel"));
                           return (
-                            <div className="planning-meal-item" key={entry.id}>
-                              {course && (
-                                <span className="planning-meal-course-icon" aria-hidden="true">{course.icon}</span>
-                              )}
-                              <span className="planning-meal-item-info">
-                                {course && (
-                                  <span className="planning-meal-course-label">{t(`courseTypes.${course.key}`)}</span>
-                                )}
-                                <span className="planning-meal-recipe">{label}</span>
-                              </span>
-                              <button
-                                type="button"
-                                className="planning-meal-remove"
-                                onClick={() => onRemoveMeal(entry.id)}
-                                aria-label={t("planning.removeMeal")}
-                              >
-                                <X size={14} />
-                              </button>
-                            </div>
+                            <PlanningMealItem
+                              key={entry.id}
+                              entry={entry}
+                              course={course}
+                              label={label}
+                              onEdit={setEditingEntry}
+                              onDelete={(e) => onRemoveMeal(e.id)}
+                            />
                           );
                         })}
                       </div>
@@ -227,6 +231,15 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
           initialDate={addModalDate}
           onAdd={handleAdd}
           onClose={() => setShowAddModal(false)}
+        />
+      )}
+
+      {editingEntry && (
+        <AddMealModal
+          recipes={recipes}
+          editEntry={editingEntry}
+          onSave={handleSaveEdit}
+          onClose={() => setEditingEntry(null)}
         />
       )}
     </div>

@@ -66,7 +66,12 @@ export const PLANNING_CSS = `
   font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.5px; text-transform: uppercase; color: var(--ink-soft);
 }
 .planning-meal-group-items { display: flex; flex-direction: column; gap: 5px; margin-top: 6px; }
-.planning-meal-item { display: flex; align-items: center; gap: 8px; }
+/* Appui long -> menu Modifier/Supprimer (voir PlanningMealItem.jsx,
+   MealOptionsModal.jsx) : plus de croix de suppression sur la ligne, le
+   padding/border-radius sert de zone tactile et de forme au léger
+   enfoncement (.press-anim, partagé avec RecipeCard/NavButton/les rangées
+   du foyer — voir hooks/useLongPress.js) déclenché pendant l'appui. */
+.planning-meal-item { display: flex; align-items: center; gap: 8px; padding: 3px 2px; border-radius: 6px; }
 /* Icône du TYPE DE PLAT (Apéro/Entrée/Plat/Dessert) — absente du DOM pour
    petit-déjeuner/en-cas (voir mealTypeHasCourse), la ligne se réduit alors à
    son nom de recette sans indentation ni étiquette. */
@@ -80,12 +85,6 @@ export const PLANNING_CSS = `
   font-family: 'EB Garamond', serif; font-size: 0.9rem; color: var(--ink);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
 }
-.planning-meal-remove {
-  flex-shrink: 0; background: none; border: none; color: var(--ink-soft); opacity: 0.6; cursor: pointer;
-  display: flex; align-items: center; padding: 4px;
-}
-.planning-meal-remove:active { opacity: 1; }
-
 .planning-send-wrap { margin: 8px 0 100px; display: flex; justify-content: center; }
 
 /* --- Sélecteur de type de plat (AddMealModal.jsx, étape recette) ---

@@ -63,10 +63,20 @@ export default function useMealPlan({ initialMealPlan = [] }) {
     setMealPlan((prev) => prev.filter((e) => e.id !== id));
   }, []);
 
+  // Modifie la recette/le type de plat d'une entrée existante (voir menu
+  // "Modifier" ouvert par l'appui long sur une ligne, PlanningMealItem.jsx)
+  // sans toucher à sa date ni à son moment — ceux-là restent fixes, seul
+  // le contenu du plat change.
+  const updateMealPlanEntry = useCallback((id, updates) => {
+    triggerHaptic(15);
+    setMealPlan((prev) => prev.map((e) => (e.id === id ? { ...e, ...updates } : e)));
+  }, []);
+
   return {
     mealPlan,
     setMealPlan,
     addMealPlanEntry,
     removeMealPlanEntry,
+    updateMealPlanEntry,
   };
 }
