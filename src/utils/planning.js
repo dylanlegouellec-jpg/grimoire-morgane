@@ -46,6 +46,16 @@ export function mealTypeHasCourse(mealTypeKey) {
   return COURSE_TYPE_MEAL_KEYS.includes(mealTypeKey);
 }
 
+// Rang gastronomique (Apéro -> Entrée -> Plat -> Dessert), pour trier les
+// plats d'un même moment dans cet ordre plutôt que dans leur ordre d'ajout
+// (voir PlanningView.jsx, qui regroupe les entrées d'un jour par moment).
+// Une valeur inconnue/absente (repas sans type de plat, ex. petit-déjeuner)
+// est classée en dernier plutôt que de faire échouer le tri.
+export function courseTypeOrder(key) {
+  const idx = COURSE_TYPES.findIndex((c) => c.key === key);
+  return idx === -1 ? COURSE_TYPES.length : idx;
+}
+
 // Lundi 00:00 de la semaine contenant `date`.
 export function getWeekStart(date = new Date()) {
   const d = new Date(date);

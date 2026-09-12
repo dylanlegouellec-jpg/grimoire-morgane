@@ -52,18 +52,33 @@ export const PLANNING_CSS = `
 }
 .planning-add-btn:active { background: rgba(179,135,42,0.12); }
 .planning-meals { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
-.planning-meal-row {
-  display: flex; align-items: center; gap: 10px;
+/* Un bloc par MOMENT (Petit-déjeuner/Déjeuner/Dîner/En-cas) plutôt qu'une
+   carte par plat — voir PlanningView.jsx (groupEntriesByMealType) : le
+   titre du moment ne s'affiche qu'une fois dans .planning-meal-group-header,
+   les plats de ce moment (triés dans l'ordre gastronomique, voir
+   courseTypeOrder) s'empilent en-dessous dans .planning-meal-group-items. */
+.planning-meal-group {
   background: var(--surface-strong); border-radius: 8px; padding: 7px 10px;
 }
+.planning-meal-group-header { display: flex; align-items: center; gap: 10px; }
 .planning-meal-icon { font-size: 1.1rem; flex-shrink: 0; line-height: 1; }
-.planning-meal-info { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .planning-meal-type {
   font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.5px; text-transform: uppercase; color: var(--ink-soft);
 }
+.planning-meal-group-items { display: flex; flex-direction: column; gap: 5px; margin-top: 6px; }
+.planning-meal-item { display: flex; align-items: center; gap: 8px; }
+/* Icône du TYPE DE PLAT (Apéro/Entrée/Plat/Dessert) — absente du DOM pour
+   petit-déjeuner/en-cas (voir mealTypeHasCourse), la ligne se réduit alors à
+   son nom de recette sans indentation ni étiquette. */
+.planning-meal-course-icon { font-size: 0.95rem; flex-shrink: 0; line-height: 1; width: 16px; text-align: center; }
+.planning-meal-item-info { flex: 1; display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.planning-meal-course-label {
+  font-family: 'Cinzel', serif; font-size: 0.55rem; letter-spacing: 0.4px; text-transform: uppercase; color: var(--ink-soft);
+  flex-shrink: 0;
+}
 .planning-meal-recipe {
   font-family: 'EB Garamond', serif; font-size: 0.9rem; color: var(--ink);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
 }
 .planning-meal-remove {
   flex-shrink: 0; background: none; border: none; color: var(--ink-soft); opacity: 0.6; cursor: pointer;

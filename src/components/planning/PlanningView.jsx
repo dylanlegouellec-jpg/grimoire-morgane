@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, Send, User, Users, X } from "lucide-react";
-import { getWeekStart, addWeeks, getWeekDays, toISODate, isSameDay, formatWeekRange, formatDayLabel, mealTypeInfo, courseTypeInfo, mealTypeHasCourse } from "../../utils/planning";
+import { getWeekStart, addWeeks, getWeekDays, toISODate, isSameDay, formatWeekRange, formatDayLabel, MEAL_TYPES, mealTypeInfo, courseTypeInfo, courseTypeOrder, mealTypeHasCourse } from "../../utils/planning";
 import { triggerHaptic } from "../../utils/haptics";
 import { getStoredPlanningScope, storePlanningScope } from "../../utils/localSettings";
 import { useTranslation } from "../../contexts/LanguageContext";
@@ -55,6 +55,19 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
   ));
   const entriesForDay = (isoDate) => scopedMealPlan.filter((e) => e.date === isoDate);
   const weekEntries = days.flatMap((d) => entriesForDay(toISODate(d)));
+  // Regroupe les entrées d'un jour par moment (un seul bloc "DÉJEUNER" plutôt
+  // qu'une carte par plat) et trie chaque groupe dans l'ordre gastronomique
+  // (voir courseTypeOrder) plutôt que dans l'ordre d'ajout au planning.
+  const groupEntriesByMealType = (dayEntries) =>
+    MEAL_TYPES
+      .map((m) => ({
+        mealType: m,
+        entries: dayEntries
+          .filter((e) => e.mealType === m.key)
+          .slice()
+          .sort((a, b) => courseTypeOrder(a.courseType) - courseTypeOrder(b.courseType)),
+      }))
+      .filter((g) => g.entries.length > 0);
 
   const goPrevWeek = () => { triggerHaptic(10); setWeekStart((w) => addWeeks(w, -1)); };
   const goNextWeek = () => { triggerHaptic(10); setWeekStart((w) => addWeeks(w, 1)); };
@@ -141,43 +154,56 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
               </div>
               {dayEntries.length > 0 && (
                 <div className="planning-meals">
-                  {dayEntries.map((entry) => {
-                    const recipe = entry.recipeId ? recipeById.get(entry.recipeId) : null;
-                    const meal = mealTypeInfo(entry.mealType);
-                    // Aucun type de plat pour petit-déjeuner/en-cas (voir
-                    // mealTypeHasCourse) — jamais affiché pour ces moments,
-                    // même sur une entrée qui en aurait une valeur stockée
-                    // (ex. changement rétroactif du moment sur une entrée
-                    // existante). `courseType` absent sur une entrée
-                    // déjeuner/dîner (créée avant ce champ) : repli "plat"
-                    // via courseTypeInfo, voir useMealPlan.js.
-                    const hasCourse = mealTypeHasCourse(entry.mealType);
-                    const course = hasCourse ? courseTypeInfo(entry.courseType) : null;
-                    // Repas personnalisé (texte libre, pas de fiche recette,
-                    // voir AddMealModal.jsx) : affiche directement le nom
-                    // saisi, jamais "Recette supprimée" (réservé aux repas
-                    // qui référençaient une VRAIE recette depuis effacée).
-                    const label = entry.customTitle || (recipe ? recipe.title : t("planning.recipeDeletedLabel"));
-                    return (
-                      <div className="planning-meal-row" key={entry.id}>
-                        <span className="planning-meal-icon" aria-hidden="true">{meal.icon}{course ? ` ${course.icon}` : ""}</span>
-                        <span className="planning-meal-info">
-                          <span className="planning-meal-type">
-                            {t(`mealTypes.${entry.mealType}`)}{course ? ` · ${t(`courseTypes.${course.key}`)}` : ""}
-                          </span>
-                          <span className="planning-meal-recipe">{label}</span>
-                        </span>
-                        <button
-                          type="button"
-                          className="planning-meal-remove"
-                          onClick={() => onRemoveMeal(entry.id)}
-                          aria-label={t("planning.removeMeal")}
-                        >
-                          <X size={14} />
-                        </button>
+                  {groupEntriesByMealType(dayEntries).map((group) => (
+                    <div className="planning-meal-group" key={group.mealType.key}>
+                      <div className="planning-meal-group-header">
+                        <span className="planning-meal-icon" aria-hidden="true">{group.mealType.icon}</span>
+                        <span className="planning-meal-type">{t(`mealTypes.${group.mealType.key}`)}</span>
                       </div>
-                    );
-                  })}
+                      <div className="planning-meal-group-items">
+                        {group.entries.map((entry) => {
+                          const recipe = entry.recipeId ? recipeById.get(entry.recipeId) : null;
+                          // Aucun type de plat pour petit-déjeuner/en-cas (voir
+                          // mealTypeHasCourse) — jamais affiché pour ces
+                          // moments, même sur une entrée qui en aurait une
+                          // valeur stockée (ex. changement rétroactif du
+                          // moment sur une entrée existante). `courseType`
+                          // absent sur une entrée déjeuner/dîner (créée avant
+                          // ce champ) : repli "plat" via courseTypeInfo, voir
+                          // useMealPlan.js.
+                          const hasCourse = mealTypeHasCourse(entry.mealType);
+                          const course = hasCourse ? courseTypeInfo(entry.courseType) : null;
+                          // Repas personnalisé (texte libre, pas de fiche
+                          // recette, voir AddMealModal.jsx) : affiche
+                          // directement le nom saisi, jamais "Recette
+                          // supprimée" (réservé aux repas qui référençaient
+                          // une VRAIE recette depuis effacée).
+                          const label = entry.customTitle || (recipe ? recipe.title : t("planning.recipeDeletedLabel"));
+                          return (
+                            <div className="planning-meal-item" key={entry.id}>
+                              {course && (
+                                <span className="planning-meal-course-icon" aria-hidden="true">{course.icon}</span>
+                              )}
+                              <span className="planning-meal-item-info">
+                                {course && (
+                                  <span className="planning-meal-course-label">{t(`courseTypes.${course.key}`)}</span>
+                                )}
+                                <span className="planning-meal-recipe">{label}</span>
+                              </span>
+                              <button
+                                type="button"
+                                className="planning-meal-remove"
+                                onClick={() => onRemoveMeal(entry.id)}
+                                aria-label={t("planning.removeMeal")}
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
