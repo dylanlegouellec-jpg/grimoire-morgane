@@ -165,6 +165,20 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
     setAddModalCourseType(courseKey);
     setShowAddModal(true);
   };
+  // "Ajouter un plat" du menu d'un en-tête de MOMENT complet (voir
+  // PlanningMealGroup.jsx/MealSectionOptionsModal.jsx) — même assistant que
+  // ci-dessus, mais sans présélectionner de type de plat précis :
+  // AddMealModal.jsx retombe alors sur son propre défaut ("Plat",
+  // DEFAULT_COURSE_TYPE) pour Déjeuner/Dîner, tout en laissant son
+  // sélecteur d'en-tête (Apéro/Entrée/Plat/Dessert) accessible pour le
+  // changer avant de choisir la recette.
+  const openAddForMealSection = (iso, mealTypeKey) => {
+    triggerHaptic(15);
+    setAddModalDate(iso);
+    setAddModalMealType(mealTypeKey);
+    setAddModalCourseType(null);
+    setShowAddModal(true);
+  };
 
   const handleAdd = (dateISO, mealType, recipeId, customTitle, courseType) => {
     // Le nouveau repas hérite automatiquement de la portée actuellement
@@ -311,6 +325,7 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
                       onReorder={onReorderMeals}
                       onEdit={setEditingEntry}
                       onDelete={(e) => onRemoveMeal(e.id)}
+                      onAddMeal={() => openAddForMealSection(iso, group.mealType.key)}
                       onMoveSection={handleMoveSection}
                       onDeleteSection={handleDeleteSection}
                       onAddToCourse={(courseKey) => openAddForCourse(iso, group.mealType.key, courseKey)}

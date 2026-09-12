@@ -17,15 +17,19 @@ const LONG_PRESS_DURATION_MS = 500;
 /*  pas être appelé un nombre de fois variable dans une boucle (même          */
 /*  raison que PlanningCourseGroup.jsx/PlanningMealItem.jsx).                  */
 /*  Un appui long sur le TITRE du moment ("DÉJEUNER") ouvre un menu avec         */
-/*  trois options : basculer le mode réorganisation (poignée ⋮⋮, voir           */
-/*  PlanningMealItem.jsx — pas de bouton permanent en haut de la vue, ce         */
-/*  menu EST le point d'entrée), changer le moment de TOUTE la section d'un      */
-/*  coup (voir MoveMealSectionModal.jsx — une éventuelle collision avec des       */
-/*  plats déjà présents sous le moment cible se résout d'elle-même via le          */
-/*  regroupement par type de plat déjà en place, sans code de fusion dédié),        */
-/*  et vider toute la section d'un coup, avec une confirmation intermédiaire        */
-/*  (voir MealSectionOptionsModal.jsx/DeleteMealSectionConfirmModal.jsx) pour        */
-/*  éviter les suppressions accidentelles d'un repas entier.                          */
+/*  quatre options : ajouter directement un plat à ce moment (voir                */
+/*  MealSectionOptionsModal.jsx/PlanningView.jsx, `openAddForMealSection` —          */
+/*  moment présélectionné, type de plat par défaut sur "Plat" pour                     */
+/*  Déjeuner/Dîner, modifiable via le sélecteur de l'assistant), basculer le              */
+/*  mode réorganisation (poignée ⋮⋮, voir PlanningMealItem.jsx — pas de                    */
+/*  bouton permanent en haut de la vue, ce menu EST le point d'entrée),                       */
+/*  changer le moment de TOUTE la section d'un coup (voir                                        */
+/*  MoveMealSectionModal.jsx — une éventuelle collision avec des plats déjà                          */
+/*  présents sous le moment cible se résout d'elle-même via le regroupement                             */
+/*  par type de plat déjà en place, sans code de fusion dédié), et vider toute                              */
+/*  la section d'un coup, avec une confirmation intermédiaire (voir                                            */
+/*  MealSectionOptionsModal.jsx/DeleteMealSectionConfirmModal.jsx) pour éviter                                    */
+/*  les suppressions accidentelles d'un repas entier.                                                                */
 /* ------------------------------------------------------------------ */
 export default function PlanningMealGroup({
   mealType,
@@ -37,6 +41,7 @@ export default function PlanningMealGroup({
   onReorder,
   onEdit,
   onDelete,
+  onAddMeal,
   onMoveSection,
   onDeleteSection,
   onAddToCourse,
@@ -106,6 +111,15 @@ export default function PlanningMealGroup({
           reorderMode={reorderMode}
           onToggleReorder={onToggleReorder}
           onClose={closeOptions}
+          onAddMeal={() => {
+            closeOptions();
+            // Même délai que pour les autres actions de ce menu (voir plus
+            // bas, onMoveSection/onDeleteSection) : laisse la fermeture
+            // asynchrone de ce menu se dérouler avant d'ouvrir l'assistant
+            // d'ajout, pour ne pas fausser l'historique (voir
+            // hooks/useFocusTrap.js).
+            setTimeout(() => onAddMeal(), 0);
+          }}
           onMoveSection={() => {
             closeOptions();
             // Même délai que pour Modifier/Ajouter un plat/Supprimer la

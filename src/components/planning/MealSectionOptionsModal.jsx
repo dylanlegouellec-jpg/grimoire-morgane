@@ -1,5 +1,5 @@
 import { createPortal } from "react-dom";
-import { ArrowUpDown, RefreshCw, Trash2, X } from "lucide-react";
+import { ArrowUpDown, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { triggerHaptic } from "../../utils/haptics";
 import { useTranslation } from "../../contexts/LanguageContext";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
@@ -14,15 +14,27 @@ import Flourish from "../common/Flourish";
 /*  .jsx. Le mode réorganisation (poignée ⋮⋮, voir PlanningMealItem.jsx) se     */
 /*  bascule ICI plutôt que via un bouton permanent en haut de la vue — reste   */
 /*  découvrable au même endroit que "Supprimer", sans rien ajouter à           */
-/*  l'affichage normal tant qu'on n'a pas fait un appui long. "Changer le       */
-/*  moment du repas" ouvre un sélecteur (voir MoveMealSectionModal.jsx) pour     */
-/*  reclasser toute la section vers un autre moment de la journée.               */
+/*  l'affichage normal tant qu'on n'a pas fait un appui long. "Ajouter un        */
+/*  plat" ouvre directement l'assistant recette avec ce moment déjà              */
+/*  présélectionné (voir AddMealModal.jsx/PlanningView.jsx,                       */
+/*  `openAddForMealSection`) — même principe que "Ajouter un plat" d'un            */
+/*  en-tête de sous-catégorie (CourseOptionsModal.jsx), mais sans figer le           */
+/*  type de plat sur une catégorie précise : AddMealModal retombe sur son             */
+/*  propre défaut ("Plat") pour Déjeuner/Dîner, modifiable via son sélecteur            */
+/*  d'en-tête. "Changer le moment du repas" ouvre un sélecteur (voir                    */
+/*  MoveMealSectionModal.jsx) pour reclasser toute la section vers un autre               */
+/*  moment de la journée.                                                                  */
 /* ------------------------------------------------------------------ */
-export default function MealSectionOptionsModal({ mealLabel, reorderMode, onToggleReorder, onClose, onMoveSection, onDeleteSection }) {
+export default function MealSectionOptionsModal({ mealLabel, reorderMode, onToggleReorder, onClose, onAddMeal, onMoveSection, onDeleteSection }) {
   const { t } = useTranslation();
   const modalRef = useFocusTrap(onClose);
   const swipe = useSwipeToDismiss(onClose, { scrollRef: modalRef });
   useBodyScrollLock(true);
+
+  const handleAddMeal = () => {
+    triggerHaptic(15);
+    onAddMeal();
+  };
 
   const handleToggleReorder = () => {
     triggerHaptic(15);
@@ -56,6 +68,11 @@ export default function MealSectionOptionsModal({ mealLabel, reorderMode, onTogg
         <Flourish />
 
         <div className="recipe-options-list">
+          <button type="button" className="recipe-option-row" onClick={handleAddMeal}>
+            <Plus size={18} />
+            <span>{t("planning.addMealSectionOption")}</span>
+          </button>
+
           <button type="button" className="recipe-option-row" onClick={handleToggleReorder}>
             <ArrowUpDown size={18} />
             <span>{t(reorderMode ? "planning.reorderModeOff" : "planning.reorderModeOn")}</span>
