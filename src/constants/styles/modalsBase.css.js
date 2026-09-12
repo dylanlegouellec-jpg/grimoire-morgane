@@ -7,56 +7,89 @@
 /* ------------------------------------------------------------------ */
 
 export const MODALS_BASE_CSS = `
-/* --- Navigation basse --- */
+/* --- Navigation basse : dock flottant façon iOS --------------------------
+   Ne colle plus aux bords (avant : pleine largeur, voir l'historique git de
+   ce fichier) — centrée avec une marge de chaque côté ET par rapport au bas
+   de l'écran, coins entièrement arrondis, verre dépoli plus prononcé et une
+   ombre portée pour bien la détacher du contenu qui défile derrière, plutôt
+   qu'un bandeau soudé au bord de l'écran. "position: fixed" (jamais
+   "absolute" — testé, cassé : voir git log de ce fichier). Rendue
+   directement dans le flux du DOM (AppShell.jsx), comme enfant de
+   .grimoire-app : nécessaire pour que la mise en page paysage ci-dessous
+   (grid-area: nav) s'applique — un portail vers <body> la sort de la grille
+   et la fait disparaître entièrement sur PC/tablette. */
 .bottom-nav {
-  /* "position: fixed" (pas "absolute" — testé, cassé : voir git log de ce
-     fichier). Rendue directement dans le flux du DOM (AppShell.jsx), comme
-     enfant de .grimoire-app : nécessaire pour que la mise en page paysage
-     ci-dessous (grid-area: nav) s'applique — un portail vers <body> la sort
-     de la grille et la fait disparaître entièrement sur PC/tablette. */
-  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-  width: 100%; max-width: 480px;
-  display: flex; justify-content: space-around;
-  /* Verre dépoli : le contenu qui défile en dessous reste visible (flouté)
-     à travers la barre plutôt que masqué par un bandeau opaque. Le taux
-     d'opacité du fond posé PAR-DESSUS ce flou est réglable par
-     l'utilisateur (Réglages > Apparence) — 0 = verre dépoli seul,
-     1 = bandeau plein. Voir --nav-bg-rgb/--nav-opacity dans theme.css.js.
-     Les couleurs d'icônes/texte ci-dessous (--ink-soft/--gold) sont pensées
-     pour ce fond clair, à toutes les opacités. */
+  position: fixed; left: 50%; transform: translateX(-50%);
+  /* "max(20px, …)" et non juste env(safe-area-inset-bottom) seul (qui vaut
+     0 sur la plupart des appareils, sans encoche ni barre de geste) : sans
+     ce plancher, le dock collerait quand même au bord sur un appareil sans
+     zone de sécurité, perdant tout l'effet "flottant" recherché. */
+  bottom: max(20px, calc(env(safe-area-inset-bottom) + 10px));
+  width: calc(100% - 48px); max-width: 400px;
+  display: flex; justify-content: space-around; gap: 2px;
+  padding: 8px;
+  border-radius: 999px;
+  /* Flou plus marqué qu'avant (20px, contre 8px sur l'ancien bandeau plein
+     largeur) : un dock qui flotte a besoin d'un contour visible sur ses
+     QUATRE côtés pour se détacher du contenu, pas seulement en haut comme
+     l'ancien "border-top" doré suffisait à le suggérer. Le taux d'opacité
+     posé PAR-DESSUS ce flou reste réglable par l'utilisateur (Réglages >
+     Apparence, 0 = verre dépoli seul, 1 = fond plein) — comportement de
+     --nav-bg-rgb/--nav-opacity inchangé, voir theme.css.js. */
   background: rgba(var(--nav-bg-rgb), var(--nav-opacity, 0));
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-top: 2px solid var(--gold);
-  padding: 10px 0 max(10px, env(safe-area-inset-bottom));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(var(--nav-bg-rgb), 0.5);
+  box-shadow: 0 10px 30px rgba(20,14,4,0.22), 0 2px 8px rgba(20,14,4,0.12);
+  z-index: 40;
 }
 .nav-btn {
+  /* Bloc conteneur positionné pour .nav-pill ci-dessous (la pastille active
+     de Framer Motion, voir NavButton.jsx) — "z-index: 0" (pas juste
+     "position: relative" seul) : ÉTABLIT une nouvelle zone d'empilement
+     propre à ce bouton, pour que le "z-index: -1" de .nav-pill reste
+     confiné à L'INTÉRIEUR de ce bouton (donc bien au-dessus du fond en
+     verre de .bottom-nav) plutôt que de s'échapper vers le niveau
+     d'empilement du dock entier, où il se retrouverait cette fois DERRIÈRE
+     son fond flouté — invisible. */
+  position: relative; z-index: 0;
+  flex: 1;
   background: none; border: none; color: var(--ink-soft);
   display: flex; flex-direction: column; align-items: center; gap: 3px;
   font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.5px;
-  cursor: pointer; padding: 4px 10px;
+  cursor: pointer; padding: 8px 10px;
+  border-radius: 999px;
 }
-.nav-btn.active { color: var(--gold); }
-/* --- Pastille dorée glissante --------------------------------------------
-   Mesurée en JS (voir AppShell.jsx, updateNavIndicator) et positionnée via
-   transform/width, jamais via left/right — un changement de "transform" est
-   composé sur son propre calque par le navigateur (jamais de recalcul de
-   mise en page pour les éléments voisins), contrairement à "left" qui
-   forcerait un rendu de mise en page à chaque frame de la glissade. Posée
-   directement sur .bottom-nav (déjà "position: fixed", donc déjà le bloc
-   conteneur de ses enfants absolus) au-dessus de la ligne dorée existante
-   (border-top) plutôt qu'un second indicateur séparé plus bas : la portion
-   sous l'onglet actif devient une courte section plus épaisse/lumineuse de
-   cette même ligne, sans ajouter d'élément visuel supplémentaire au design. */
-.nav-indicator {
-  position: absolute; top: 0; left: 0; height: 3px;
-  border-radius: 0 0 3px 3px;
-  background: var(--gold-light);
-  box-shadow: 0 0 8px rgba(179,135,42,0.7);
-  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), width 0.32s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease;
-  pointer-events: none;
+/* Le fond de l'onglet actif est désormais porté par .nav-pill (Framer
+   Motion) juste en dessous — seule la couleur du texte change encore ici.
+   "--gold-light" (pas "--gold") : contraste sur le fond sombre --chrome de
+   la pastille, même choix déjà fait pour le bouton "+" flottant
+   (recipeCards.css.js) et pour cette même nav en colonne latérale paysage
+   (voir responsive.css.js, qui n'a plus besoin de redéfinir "background"
+   pour son propre onglet actif — seule .nav-pill le fait désormais, dans
+   les deux mises en page). */
+.nav-btn.active { color: var(--gold-light); }
+/* --- Pastille active — Framer Motion (layoutId="nav-pill") ---------------
+   Un seul <motion.span> existe à la fois dans le DOM (voir NavButton.jsx,
+   rendu seulement par le bouton actif) : Framer repère qu'un autre élément
+   portait déjà ce layoutId juste avant le changement d'onglet et anime le
+   passage de l'un à l'autre (position ET taille) avec une physique de
+   ressort, sans le moindre calcul de position manuel côté React (contraste
+   avec .filter-indicator un peu plus bas dans ce fichier, qui lui reste
+   mesuré à la main — voir son commentaire, AppShell.jsx, pour la raison).
+   "inset: 0" + "border-radius: inherit" : épouse exactement la forme et la
+   taille du bouton qui la porte, qu'il soit rond (dock flottant en
+   portrait) ou en rectangle arrondi (colonne latérale en paysage, voir
+   responsive.css.js) — jamais besoin de dupliquer cette règle pour les deux
+   mises en page. "z-index: -1" : reste sous l'icône/le texte du bouton
+   (contenu normal, non positionné — voir le commentaire de .nav-btn
+   ci-dessus pour pourquoi ça reste bien confiné À CE bouton). */
+.nav-pill {
+  position: absolute; inset: 0; z-index: -1;
+  border-radius: inherit;
+  background: var(--chrome);
 }
-/* Barre un peu plus haute, mais SEULEMENT dans l'app installée (PWA) — pas
+/* Dock un peu plus haut, mais SEULEMENT dans l'app installée (PWA) — pas
    dans un onglet de navigateur normal, ni sur PC/Android en mode web.
    html[data-standalone="true"] (posé par main.jsx), pas
    "@media (display-mode: standalone)" : ce média CSS existe bel et bien,
@@ -64,17 +97,16 @@ export const MODALS_BASE_CSS = `
    été ajoutée à l'écran d'accueil — confirmé sur appareil réel ("aucune
    différence" alors que ce bloc ciblait très exactement ce mode).
    ":where(html[data-standalone])" plutôt que "html[data-standalone] " tout
-   court : :where() ramène la spécificité à zéro, donc ces deux règles
-   pèsent exactement comme ".bottom-nav"/".nav-btn" seuls — sans ça, la
-   règle paysage plus bas (responsive.css.js, qui repasse .bottom-nav en
-   colonne latérale statique avec padding:0) perdrait la bataille de
-   spécificité et resterait bloquée sur ce padding, même sur une tablette en
-   PWA installée. Voir .fab (recipeCards.css.js) et .grimoire-app
+   court : :where() ramène la spécificité à zéro, donc cette règle pèse
+   exactement comme ".bottom-nav" seul — sans ça, la règle paysage plus bas
+   (responsive.css.js, qui repasse .bottom-nav en colonne latérale statique
+   avec "position: static") perdrait la bataille de spécificité et
+   resterait bloquée sur ce "bottom", même sur une tablette en PWA
+   installée. Voir .fab (recipeCards.css.js) et .grimoire-app
    (theme.css.js), ajustés à l'identique pour garder le même espace de
    respiration au-dessus du FAB et au-dessus du contenu, mais eux aussi
    seulement en standalone. */
-:where(html[data-standalone="true"]) .bottom-nav { padding: 16px 0 max(16px, env(safe-area-inset-bottom)); }
-:where(html[data-standalone="true"]) .nav-btn { padding: 6px 10px; }
+:where(html[data-standalone="true"]) .bottom-nav { bottom: max(28px, calc(env(safe-area-inset-bottom) + 16px)); }
 
 /* --- Modales / page de grimoire --- */
 .modal-backdrop {

@@ -234,45 +234,15 @@ export default function AppShell({
     });
   }, []);
 
-  // --- Pastille dorée glissante de la nav basse (voir .nav-indicator,
-  // modalsBase.css.js) — mesurée en JS plutôt que calculée en CSS pur
-  // (ex. 100%/3 * index) car la largeur des boutons dépend du texte traduit
-  // (langue), de la taille de texte (Réglages > Accessibilité) et du mode
-  // PWA installée (padding différent, voir modalsBase.css.js) : aucune
-  // formule fixe ne couvrirait ces trois sources de variation à la fois.
-  // Masquée en paysage (voir responsive.css.js) où la nav bascule en colonne
-  // latérale avec son propre indicateur (fond plein sur l'onglet actif) —
-  // les mesures ci-dessous y seraient de toute façon dénuées de sens
-  // (position horizontale sur une nav devenue verticale).
-  const navRef = useRef(null);
-  const navBtnRefs = useRef([]);
-  const [navIndicator, setNavIndicator] = useState(null);
-  const updateNavIndicator = useCallback(() => {
-    const nav = navRef.current;
-    const activeIndex = TABS.findIndex((tb) => tb.key === tab);
-    const btn = navBtnRefs.current[activeIndex];
-    if (!nav || !btn) return;
-    const navRect = nav.getBoundingClientRect();
-    const btnRect = btn.getBoundingClientRect();
-    setNavIndicator({ left: btnRect.left - navRect.left, width: btnRect.width });
-  }, [tab]);
-  useLayoutEffect(() => { updateNavIndicator(); }, [updateNavIndicator, language]);
-  useEffect(() => {
-    const nav = navRef.current;
-    if (!nav || typeof ResizeObserver === "undefined") return undefined;
-    const ro = new ResizeObserver(() => updateNavIndicator());
-    ro.observe(nav);
-    return () => ro.disconnect();
-  }, [updateNavIndicator]);
-
-  // --- Pastille dorée glissante des filtres (Tout/Salé/Sucré) — même
-  // principe que .nav-indicator ci-dessus, mais mesurée via offsetLeft/
-  // offsetWidth plutôt que getBoundingClientRect : .filter-bar défile
-  // horizontalement (overflow-x: auto), et offsetLeft (relatif au bloc
-  // conteneur positionné le plus proche, ici .filter-bar lui-même — voir
-  // ".filter-bar { position: relative }", shell.css.js) reste correct quelle
-  // que soit la position de défilement, contrairement à getBoundingClientRect
-  // (relatif au viewport, donc faux dès que la rangée est scrollée). N'inclut
+  // --- Pastille dorée glissante des filtres (Tout/Salé/Sucré) — mesurée à
+  // la main (offsetLeft/offsetWidth), PAS via Framer Motion/layoutId comme
+  // la nav basse (voir NavButton.jsx) : .filter-bar défile horizontalement
+  // (overflow-x: auto), et offsetLeft (relatif au bloc conteneur positionné
+  // le plus proche, ici .filter-bar lui-même — voir ".filter-bar {
+  // position: relative }", shell.css.js) reste correct quelle que soit la
+  // position de défilement, contrairement à getBoundingClientRect (relatif
+  // au viewport, donc faux dès que la rangée est scrollée) qu'utilise en
+  // interne l'animation de mise en page de Framer Motion. N'inclut
   // QUE les trois filtres exclusifs (jamais la puce Favoris juste à côté,
   // qui reste un bouton bascule indépendant, pas un choix exclusif du même
   // groupe). N'existe que sous l'onglet Recettes (voir dépendance `tab`
@@ -572,20 +542,10 @@ export default function AppShell({
         </ErrorBoundary>
       </main>
 
-      <nav className="bottom-nav" ref={navRef}>
-        <span
-          className="nav-indicator"
-          aria-hidden="true"
-          style={
-            navIndicator
-              ? { transform: `translateX(${navIndicator.left}px)`, width: `${navIndicator.width}px` }
-              : { opacity: 0 }
-          }
-        />
-        {TABS.map(({ key, icon: Icon }, i) => (
+      <nav className="bottom-nav">
+        {TABS.map(({ key, icon: Icon }) => (
           <NavButton
             key={key}
-            ref={(node) => { navBtnRefs.current[i] = node; }}
             label={t(`nav.${key}`)}
             Icon={Icon}
             active={tab === key}

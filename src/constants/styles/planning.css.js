@@ -152,12 +152,13 @@ export const PLANNING_CSS = `
 .planning-send-wrap { margin: 8px 0 100px; display: flex; justify-content: center; }
 
 /* Bannière fixe de validation du mode réorganisation (voir PlanningView.jsx,
-   "reorderMode") — même ancrage bas que .toast (misc.css.js, bottom: 78px)
-   pour rester juste au-dessus de .bottom-nav sans la chevaucher. Plus large
-   qu'un toast (contenu + bouton "Terminer" côte à côte, pas un simple
-   message), donc son propre style plutôt qu'une réutilisation de .toast. */
+   "reorderMode") — même ancrage bas que .toast (misc.css.js, bottom: 112px)
+   pour rester juste au-dessus de .bottom-nav (désormais un dock flottant,
+   voir modalsBase.css.js) sans la chevaucher. Plus large qu'un toast
+   (contenu + bouton "Terminer" côte à côte, pas un simple message), donc
+   son propre style plutôt qu'une réutilisation de .toast. */
 .planning-reorder-banner {
-  position: fixed; bottom: 78px; left: 50%; transform: translateX(-50%);
+  position: fixed; bottom: 112px; left: 50%; transform: translateX(-50%);
   width: calc(100% - 32px); max-width: 448px; box-sizing: border-box;
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   background: var(--chrome); border: 1px solid var(--gold); border-radius: 16px;

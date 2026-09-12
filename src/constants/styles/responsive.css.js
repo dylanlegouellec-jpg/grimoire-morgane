@@ -88,12 +88,20 @@ export const RESPONSIVE_CSS = `
   }
   .filter-pill { text-align: center; }
 
-  /* Navigation basse -> menu latéral vertical, sous les filtres */
+  /* Navigation basse -> menu latéral vertical, sous les filtres. Redevient
+     un panneau intégré à la sidebar plutôt qu'un dock flottant (voir
+     modalsBase.css.js) : "position: static" retire tout le traitement
+     "flottant" (fond verre/flou, bordure, ombre, coins en pilule) qui n'a
+     de sens que posé PAR-DESSUS un contenu qui défile derrière — ici, la
+     sidebar paysage est un panneau fixe de la mise en page elle-même, pas
+     un élément superposé. */
   .bottom-nav {
     grid-area: nav;
     position: static; left: auto; transform: none; max-width: none; width: auto;
     flex-direction: column; align-items: stretch; gap: 4px;
-    background: transparent; border-top: none;
+    background: transparent; border: none; box-shadow: none;
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+    border-radius: 0;
     margin: auto 20px 20px; padding: 0;
   }
   .nav-btn {
@@ -101,12 +109,11 @@ export const RESPONSIVE_CSS = `
     width: 100%; padding: 10px 14px; border-radius: 10px;
     color: var(--ink-soft); font-size: 0.78rem;
   }
-  .nav-btn.active { background: var(--chrome); color: var(--gold-light); }
-  /* La pastille glissante (modalsBase.css.js) n'a de sens que sur une nav
-     horizontale : ses mesures (gauche/largeur) deviendraient incohérentes
-     une fois .bottom-nav repassée en colonne verticale ci-dessus — l'onglet
-     actif garde ici son propre traitement (fond plein, juste au-dessus). */
-  .nav-indicator { display: none; }
+  /* Pas de "background" ici (retiré) : .nav-pill (modalsBase.css.js,
+     Framer Motion) le fournit déjà, avec "border-radius: inherit" qui
+     épouse ici le rectangle de .nav-btn ci-dessus plutôt que la pilule du
+     dock flottant en portrait — aucune règle à dupliquer pour ce mode. */
+  .nav-btn.active { color: var(--gold-light); }
 
   .app-content {
     grid-area: content;

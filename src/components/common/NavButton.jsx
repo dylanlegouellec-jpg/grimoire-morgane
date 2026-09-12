@@ -1,27 +1,14 @@
-import { forwardRef, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { motion } from "motion/react";
 import { triggerHaptic, triggerHapticFeedback } from "../../utils/haptics";
 // Le clic sonore est désormais joué par l'écouteur global délégué (voir
 // utils/audioUtils.js, initAudioOnFirstTouch) — plus besoin de l'appeler
 // ici, ça doublerait le son.
 
-// `forwardRef` : AppShell a besoin du vrai nœud DOM du bouton pour mesurer
-// sa position/largeur (voir .nav-indicator, la pastille dorée qui glisse
-// d'un onglet à l'autre dans modalsBase.css.js) — sans ça, aucun moyen
-// d'obtenir ces mesures depuis l'extérieur. Fusionnée avec btnRef ci-dessous
-// (déjà utilisée en interne pour le retour haptique), pas remplacée : les
-// deux doivent pointer vers le même bouton.
-const NavButton = forwardRef(function NavButton(
-  { label, Icon, active, onSelect, onLongPress, pressDuration = 750 },
-  forwardedRef
-) {
+export default function NavButton({ label, Icon, active, onSelect, onLongPress, pressDuration = 750 }) {
   const timer = useRef(null);
   const fired = useRef(false);
   const btnRef = useRef(null);
-  const setRefs = (node) => {
-    btnRef.current = node;
-    if (typeof forwardedRef === "function") forwardedRef(node);
-    else if (forwardedRef) forwardedRef.current = node;
-  };
   const [pressState, setPressState] = useState("idle");
   const start = () => {
     if (!onLongPress) return;
@@ -45,7 +32,7 @@ const NavButton = forwardRef(function NavButton(
   };
   return (
     <button
-      ref={setRefs}
+      ref={btnRef}
       className={`nav-btn press-anim press-${pressState} ${active ? "active" : ""}`}
       onClick={handleClick}
       onTouchStart={start}
@@ -56,10 +43,28 @@ const NavButton = forwardRef(function NavButton(
       onMouseLeave={cancel}
       onContextMenu={(e) => { if (onLongPress) e.preventDefault(); }}
     >
+      {/* Pastille active — Framer Motion (layoutId partagé "nav-pill") :
+          un seul <motion.span> existe à la fois dans le DOM (rendu
+          seulement par le NavButton actif), mais Framer repère qu'un autre
+          élément portait déjà ce layoutId juste avant et anime le
+          changement de position/taille entre les deux au lieu de faire
+          apparaître la pastille d'un coup sec à sa nouvelle place — c'est
+          ce qui donne l'effet de glissement d'un onglet à l'autre, sans
+          calcul de position manuel. "inset:0" + "borderRadius: inherit"
+          (voir modalsBase.css.js, .nav-pill) : la pastille épouse
+          exactement la forme du bouton, qu'il soit rond (dock flottant en
+          portrait) ou en rectangle arrondi (colonne latérale en paysage,
+          voir responsive.css.js) — sans avoir à dupliquer cette règle pour
+          les deux mises en page. */}
+      {active && (
+        <motion.span
+          layoutId="nav-pill"
+          className="nav-pill"
+          transition={{ type: "spring", stiffness: 400, damping: 32 }}
+        />
+      )}
       <Icon size={20} />
       <span>{label}</span>
     </button>
   );
-});
-
-export default NavButton;
+}
