@@ -73,15 +73,21 @@ export const PLANNING_CSS = `
 
 .planning-send-wrap { margin: 8px 0 100px; display: flex; justify-content: center; }
 
-/* --- Sélecteur de type de plat (AddMealModal.jsx, étape "Quel repas ?") ---
-   Sur la même ligne que la date du jour choisi, collé à droite — un
-   <select> natif plutôt qu'un contrôle personnalisé : le texte de
+/* --- Sélecteur de type de plat (AddMealModal.jsx, étape recette) ---
+   En haut à droite, exactement là où .modal-close (top:14px; right:14px)
+   se pose sur les autres étapes de cet assistant — cette étape-ci utilise
+   .modal-back (haut GAUCHE) à la place, laissant ce coin libre. N'existe
+   dans le DOM que pour Déjeuner/Dîner (voir mealTypeHasCourse) : masqué
+   entièrement plutôt que désactivé/ignoré pour Petit-déjeuner/En-cas, sans
+   quoi son intitulé ("Plat" par défaut) resterait visible sans jamais rien
+   changer à ce qui est enregistré, ce qui est trompeur pour l'utilisateur.
+   Un <select> natif plutôt qu'un contrôle personnalisé : le texte de
    l'option choisie (icône comprise) s'affiche déjà tel quel sans code
    supplémentaire pour synchroniser une icône séparée, et le clavier/
    lecteur d'écran du système gèrent son ouverture sans rien de plus ici. */
-.meal-step-subheader { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 4px 0 10px; }
 .meal-course-select {
-  flex-shrink: 0; max-width: 130px;
+  position: absolute; top: 12px; right: 14px; z-index: 5;
+  max-width: 130px;
   background: var(--modal-close-bg); border: 1px solid var(--line); border-radius: 999px;
   padding: 6px 10px;
   font-family: 'EB Garamond', serif; font-size: 0.82rem; color: var(--ink);
