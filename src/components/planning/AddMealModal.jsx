@@ -26,10 +26,25 @@ import CalendarPicker from "./CalendarPicker";
 /*     l'assistant s'ouvre DIRECTEMENT sur l'étape recette pour choisir une     */
 /*     nouvelle recette et/ou un nouveau type de plat ; `onSave` remplace       */
 /*     alors `onAdd`, rien n'est ajouté en double.                              */
+/*   - le menu "Ajouter un plat" d'un en-tête de sous-catégorie (voir           */
+/*     PlanningCourseGroup.jsx/CourseOptionsModal.jsx) fournit `initialDate`     */
+/*     ET `initialMealType`/`initialCourseType` : moment et type de plat         */
+/*     démarrent PRÉ-remplis (l'étape recette s'affiche donc directement,        */
+/*     comme pour `editEntry`) mais restent modifiables via "Retour" — un        */
+/*     NOUVEAU repas est ajouté (`onAdd`), pas une entrée existante modifiée.     */
 /*  Rien n'est enregistré tant que la recette finale n'est pas choisie —      */
 /*  fermer la feuille à n'importe quelle étape n'ajoute/ne modifie rien.       */
 /* ------------------------------------------------------------------ */
-export default function AddMealModal({ recipes, initialDate, editEntry = null, onAdd, onSave, onClose }) {
+export default function AddMealModal({
+  recipes,
+  initialDate,
+  initialMealType = null,
+  initialCourseType = null,
+  editEntry = null,
+  onAdd,
+  onSave,
+  onClose,
+}) {
   useBodyScrollLock(true);
   const modalRef = useFocusTrap(onClose);
   const swipe = useSwipeToDismiss(onClose, { scrollRef: modalRef });
@@ -40,7 +55,7 @@ export default function AddMealModal({ recipes, initialDate, editEntry = null, o
     return initialDate ? new Date(initialDate) : null;
   });
   const [viewMonth, setViewMonth] = useState(() => (initialDate ? new Date(initialDate) : new Date()));
-  const [mealType, setMealType] = useState(() => (editEntry ? editEntry.mealType : null));
+  const [mealType, setMealType] = useState(() => (editEntry ? editEntry.mealType : initialMealType));
   // Type de plat (Apéro/Entrée/Plat/Dessert) — dimension INDÉPENDANTE du
   // moment (mealType) ci-dessus, choisie à côté de lui sur cette même étape
   // (voir le sélecteur à droite de la date plus bas) : "Plat" par défaut,
@@ -49,6 +64,7 @@ export default function AddMealModal({ recipes, initialDate, editEntry = null, o
   // qu'il ait été changé ou non.
   const [courseType, setCourseType] = useState(() => {
     if (editEntry && mealTypeHasCourse(editEntry.mealType)) return editEntry.courseType || DEFAULT_COURSE_TYPE;
+    if (initialMealType && mealTypeHasCourse(initialMealType)) return initialCourseType || DEFAULT_COURSE_TYPE;
     return DEFAULT_COURSE_TYPE;
   });
   // En édition d'un repas personnalisé, préremplit le champ avec son nom
@@ -80,14 +96,22 @@ export default function AddMealModal({ recipes, initialDate, editEntry = null, o
 
   // Repas "personnalisé" : un simple nom (ex. "Restes", "McDo"), sans fiche
   // recette — réutilise le champ de recherche existant comme champ de
-  // saisie libre plutôt que d'ajouter un second input redondant.
+  // saisie libre plutôt que d'ajouter un second input redondant. "/" permet
+  // d'en saisir PLUSIEURS d'un coup (ex. "Salade de tomates / Velouté de
+  // courgettes") : chacun devient une entrée distincte, même repas/moment/
+  // type de plat — évite de rouvrir cet assistant depuis zéro pour chaque
+  // plat supplémentaire du même type. Non applicable en édition (`editEntry`
+  // ne porte qu'UNE entrée existante à modifier, pas plusieurs à créer).
+  const customTitles = editEntry
+    ? (search.trim() ? [search.trim()] : [])
+    : search.trim().split("/").map((part) => part.trim()).filter(Boolean);
+
   const addCustomMeal = () => {
-    const title = search.trim();
-    if (!title) return;
+    if (!customTitles.length) return;
     triggerHaptic(15);
     const course = mealTypeHasCourse(mealType) ? courseType : null;
-    if (editEntry) onSave(editEntry.id, null, title, course);
-    else onAdd(toISODate(selectedDate), mealType, null, title, course);
+    if (editEntry) onSave(editEntry.id, null, customTitles[0], course);
+    else customTitles.forEach((title) => onAdd(toISODate(selectedDate), mealType, null, title, course));
     onClose();
   };
 
@@ -180,14 +204,20 @@ export default function AddMealModal({ recipes, initialDate, editEntry = null, o
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomMeal(); } }}
                 placeholder={t("planning.searchRecipePlaceholder")}
                 autoFocus
               />
             </div>
-            <button type="button" className="link-btn add-custom-meal-btn" onClick={addCustomMeal} disabled={!search.trim()}>
-              <PenLine size={14} /> {search.trim()
-                ? t(editEntry ? "planning.saveCustomMealWithText" : "planning.addCustomMealWithText", { text: search.trim() })
-                : t("planning.addCustomMeal")}
+            {!editEntry && customTitles.length > 1 && (
+              <p className="hint" style={{ fontStyle: "normal" }}>{t("planning.multiMealHint")}</p>
+            )}
+            <button type="button" className="link-btn add-custom-meal-btn" onClick={addCustomMeal} disabled={!customTitles.length}>
+              <PenLine size={14} /> {!customTitles.length
+                ? t("planning.addCustomMeal")
+                : customTitles.length > 1
+                  ? t("planning.addMultipleCustomMeals", { count: customTitles.length })
+                  : t(editEntry ? "planning.saveCustomMealWithText" : "planning.addCustomMealWithText", { text: customTitles[0] })}
             </button>
             {filtered.length === 0 ? (
               <p className="hint">{t("planning.noRecipeMatch")}</p>
