@@ -261,6 +261,10 @@ export const translations = {
       dejeuner: "Déjeuner",
       diner: "Dîner",
       encas: "En-cas",
+      aperitif: "Apéro",
+      entree: "Entrée",
+      plat: "Plat",
+      dessert: "Dessert",
     },
     labels: {
       "Fruits & Légumes": "Fruits & Légumes",
@@ -526,6 +530,10 @@ export const translations = {
       dejeuner: "Lunch",
       diner: "Dinner",
       encas: "Snack",
+      aperitif: "Aperitif",
+      entree: "Starter",
+      plat: "Main course",
+      dessert: "Dessert",
     },
     labels: {
       "Fruits & Légumes": "Fruits & Vegetables",
