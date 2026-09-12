@@ -129,6 +129,24 @@ export default function AppShell({
   } = syncApi;
 
   const [tab, setTab] = useState("recettes");
+  // Sens du glissement entre onglets (voir .tab-transition, shell.css.js) —
+  // "avant" quand on va vers un onglet plus à droite dans la nav (Recettes
+  // -> Plan -> Mon Frigo -> Courses), "arrière" sinon. Recalculé à CHAQUE
+  // changement d'onglet (bouton de nav ou redirection programmatique comme
+  // "Envoyer vers la liste de courses" depuis Planification), jamais figé
+  // une fois pour toutes : `changeTab` est le seul point d'entrée qui
+  // touche `tab`, pour que ce calcul ne puisse pas être oublié à un
+  // endroit et pas un autre.
+  const [tabDirection, setTabDirection] = useState("forward");
+  const changeTab = useCallback((nextKey) => {
+    setTab((prevKey) => {
+      if (nextKey === prevKey) return prevKey;
+      const prevIndex = TABS.findIndex((tb) => tb.key === prevKey);
+      const nextIndex = TABS.findIndex((tb) => tb.key === nextKey);
+      setTabDirection(nextIndex >= prevIndex ? "forward" : "backward");
+      return nextKey;
+    });
+  }, []);
   const [filter, setFilter] = useState("tout");
   const [search, setSearch] = useState("");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
@@ -246,6 +264,41 @@ export default function AppShell({
     ro.observe(nav);
     return () => ro.disconnect();
   }, [updateNavIndicator]);
+
+  // --- Pastille dorée glissante des filtres (Tout/Salé/Sucré) — même
+  // principe que .nav-indicator ci-dessus, mais mesurée via offsetLeft/
+  // offsetWidth plutôt que getBoundingClientRect : .filter-bar défile
+  // horizontalement (overflow-x: auto), et offsetLeft (relatif au bloc
+  // conteneur positionné le plus proche, ici .filter-bar lui-même — voir
+  // ".filter-bar { position: relative }", shell.css.js) reste correct quelle
+  // que soit la position de défilement, contrairement à getBoundingClientRect
+  // (relatif au viewport, donc faux dès que la rangée est scrollée). N'inclut
+  // QUE les trois filtres exclusifs (jamais la puce Favoris juste à côté,
+  // qui reste un bouton bascule indépendant, pas un choix exclusif du même
+  // groupe). N'existe que sous l'onglet Recettes (voir dépendance `tab`
+  // ci-dessous) : .filter-bar est démonté ailleurs, ces refs redeviennent
+  // alors naturellement `null`.
+  const filterBarRef = useRef(null);
+  const filterBtnRefs = useRef([]);
+  const [filterIndicator, setFilterIndicator] = useState(null);
+  const updateFilterIndicator = useCallback(() => {
+    const bar = filterBarRef.current;
+    const activeIndex = FILTERS.findIndex((f) => f.key === filter);
+    const btn = filterBtnRefs.current[activeIndex];
+    if (!bar || !btn) return;
+    setFilterIndicator({ left: btn.offsetLeft, width: btn.offsetWidth });
+  }, [filter]);
+  useLayoutEffect(() => {
+    if (tab === "recettes") updateFilterIndicator();
+  }, [updateFilterIndicator, tab, language]);
+  useEffect(() => {
+    if (tab !== "recettes") return undefined;
+    const bar = filterBarRef.current;
+    if (!bar || typeof ResizeObserver === "undefined") return undefined;
+    const ro = new ResizeObserver(() => updateFilterIndicator());
+    ro.observe(bar);
+    return () => ro.disconnect();
+  }, [tab, updateFilterIndicator]);
 
   const filterIndex = FILTERS.findIndex((f) => f.key === filter);
 
@@ -384,10 +437,20 @@ export default function AppShell({
               aria-label={t("app.searchRecipePlaceholder")}
             />
           </div>
-          <div className="filter-bar">
-            {FILTERS.map((f) => (
+          <div className="filter-bar" ref={filterBarRef}>
+            <span
+              className="filter-indicator"
+              aria-hidden="true"
+              style={
+                filterIndicator
+                  ? { transform: `translateX(${filterIndicator.left}px)`, width: `${filterIndicator.width}px` }
+                  : { opacity: 0 }
+              }
+            />
+            {FILTERS.map((f, i) => (
               <button
                 key={f.key}
+                ref={(node) => { filterBtnRefs.current[i] = node; }}
                 className={`filter-pill ${filter === f.key ? "active" : ""}`}
                 onClick={() => { triggerHaptic(10); setFilter(f.key); }}
               >
@@ -423,6 +486,15 @@ export default function AppShell({
             réinitialise l'erreur automatiquement plutôt que de rester
             bloqué sur le message d'erreur en revenant sur cet onglet. */}
         <ErrorBoundary compact key={tab}>
+        {/* Glissement horizontal léger entre onglets (voir .tab-transition,
+            shell.css.js) — "left"/opacity, jamais "transform" : plusieurs
+            onglets contiennent un élément position:fixed propre (.fab en
+            Recettes, .planning-reorder-banner en Planification) qui
+            deviendrait sinon ancré à CE calque le temps de l'animation
+            plutôt qu'au vrai viewport (même piège déjà documenté sur .view,
+            juste au-dessus dans le JSX d'origine — voir shell.css.js). Un
+            simple décalage "left" ne crée jamais ce problème. */}
+        <div className={`tab-transition tab-transition-${tabDirection}`}>
         {tab === "recettes" && (
           <RecipesView
             recipes={recipes}
@@ -454,7 +526,7 @@ export default function AppShell({
               onMoveMealSection={moveMealPlanSection}
               onSendToShoppingList={(ids) => {
                 generateShoppingList(recipes, ids);
-                setTab("courses");
+                changeTab("courses");
               }}
               showToast={showToast}
               user={user}
@@ -496,6 +568,7 @@ export default function AppShell({
             />
           </Suspense>
         )}
+        </div>
         </ErrorBoundary>
       </main>
 
@@ -516,7 +589,7 @@ export default function AppShell({
             label={t(`nav.${key}`)}
             Icon={Icon}
             active={tab === key}
-            onSelect={() => setTab(key)}
+            onSelect={() => changeTab(key)}
             onLongPress={key === "courses" && shoppingLists.length > 0 ? () => setShowListsManager(true) : null}
             pressDuration={pressDuration}
           />
