@@ -29,7 +29,15 @@ export default function DishArt({ recipe }) {
     retriedRef.current = false;
   }
   const handleImgError = () => {
-    if (!retriedRef.current) {
+    // Hors-ligne, cet échec signifie forcément que l'image n'est pas dans le
+    // cache du service worker (sinon CacheFirst l'aurait servie sans jamais
+    // déclencher onError, voir vite.config.js) — un retry avec un paramètre
+    // anti-cache est alors voué à l'échec à coup sûr (nouvelle URL, jamais
+    // vue par le cache) et ne fait que retarder l'affichage du placeholder.
+    // En ligne, on garde le comportement d'origine : un aller-retour raté
+    // n'est pas forcément définitif (Pollinations en retard, upload Supabase
+    // Storage interrompu...).
+    if (!retriedRef.current && navigator.onLine) {
       retriedRef.current = true;
       const sep = rawUrl.includes("?") ? "&" : "?";
       setImgSrc(`${rawUrl}${sep}retry=${Date.now()}`);
