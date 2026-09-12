@@ -72,9 +72,33 @@ if (window.navigator.standalone || window.matchMedia("(display-mode: standalone)
 // l'espace effectivement visible au-dessus du clavier.
 if (window.visualViewport) {
   const vv = window.visualViewport;
+  // Écart au-delà duquel on considère qu'un clavier est réellement ouvert,
+  // pas juste la barre d'adresse de Safari qui se rétracte/réapparaît (ce
+  // qu'un simple tirage tactile prolongé déclenche déjà, même sans aucun
+  // champ focus — repéré en tirant longuement une modale : tout le bloc
+  // Réglages/sous-vue dérivait vers le bas puis "sautait" en remontant à
+  // la fin, sans rapport avec le geste de fermeture lui-même). La barre
+  // d'adresse ne fait varier la hauteur visible que d'environ 50-100px sur
+  // iOS ; le clavier, lui, en prend 250-350px — marge large entre les deux
+  // pour ne jamais confondre l'un avec l'autre.
+  const KEYBOARD_GAP_THRESHOLD_PX = 150;
   const syncViewportVars = () => {
-    document.documentElement.style.setProperty("--app-vvh", `${vv.height}px`);
-    document.documentElement.style.setProperty("--app-vv-offset", `${vv.offsetTop}px`);
+    const gap = window.innerHeight - vv.height;
+    if (gap > KEYBOARD_GAP_THRESHOLD_PX) {
+      document.documentElement.style.setProperty("--app-vvh", `${vv.height}px`);
+      document.documentElement.style.setProperty("--app-vv-offset", `${vv.offsetTop}px`);
+    } else {
+      // Pas de clavier : on retire nos variables plutôt que de les figer à
+      // une valeur — le repli CSS ("100dvh"/"0px", voir modalsBase.css.js)
+      // reprend la main. "dvh" suit déjà nativement, en douceur, le
+      // rétractement de la barre d'adresse (c'est tout son rôle) ; le
+      // resynchroniser nous-mêmes ici en JS, avec le décalage d'une frame
+      // que ça implique, ne faisait que réintroduire un à-coup visible sur
+      // la modale pendant cette même animation, pour un cas déjà correct
+      // sans notre intervention.
+      document.documentElement.style.removeProperty("--app-vvh");
+      document.documentElement.style.removeProperty("--app-vv-offset");
+    }
   };
   syncViewportVars();
   vv.addEventListener("resize", syncViewportVars);
