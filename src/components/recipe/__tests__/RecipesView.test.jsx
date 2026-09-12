@@ -5,6 +5,21 @@ import userEvent from "@testing-library/user-event";
 import RecipesView from "../RecipesView";
 import { LanguageProvider } from "../../../contexts/LanguageContext";
 
+// L'animation d'entrée des cartes (RecipeCard.jsx) est désormais un
+// animate() Framer Motion impératif (useAnimate), pas un changement de
+// classe CSS observable dans le DOM — remplacer useAnimate par un espion
+// est le seul moyen de vérifier "l'animation a bien été (re)déclenchée" ici,
+// puisque jsdom n'expose de toute façon aucun état de lecture fiable pour
+// une Web Animation en cours. `() => [{ current: null }, animateSpy]` :
+// chaque appel crée un NOUVEAU scope (une carte = un noeud DOM propre),
+// mais partage le MÊME espion, pour pouvoir filtrer ses appels par carte
+// (son premier argument, le noeud DOM ciblé) après coup.
+const animateSpy = vi.fn();
+vi.mock("motion/react", async () => {
+  const actual = await vi.importActual("motion/react");
+  return { ...actual, useAnimate: () => [{ current: null }, animateSpy] };
+});
+
 /* ------------------------------------------------------------------ */
 /*  Verrouille le contrat pénible à retrouver "à la main" cette session : */
 /*  changer de filtre (Tout/Salé/Sucré/Favoris) ne doit JAMAIS démonter    */
@@ -76,7 +91,10 @@ function Harness({ initialFilter = "tout" }) {
   );
 }
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  animateSpy.mockClear();
+});
 
 describe("RecipesView — filtrage sans démontage", () => {
   it("garde toutes les cartes montées dans le DOM, y compris celles hors du filtre actif", () => {
@@ -119,12 +137,12 @@ describe("RecipesView — filtrage sans démontage", () => {
     // réorganisait quand même sous les yeux de l'utilisateur.
     const user = userEvent.setup();
     render(<Harness initialFilter="tout" />);
-    const card = () => screen.getByText("Fondant au chocolat").closest(".recipe-card");
-    const classBefore = card().className;
+    const cardNode = screen.getByText("Fondant au chocolat").closest(".recipe-card");
+    animateSpy.mockClear(); // ignore l'appel du montage initial
 
     await user.click(screen.getByText("go-sucre"));
 
-    expect(card().className).not.toBe(classBefore);
+    expect(animateSpy.mock.calls.some(([node]) => node === cardNode)).toBe(true);
   });
 
   it("remet le défilement en haut sur un changement de filtre, mais pas sur une recherche", async () => {

@@ -12,7 +12,7 @@ export default function RecipesView({
   onToggleFavorite,
   onAddRequest,
   onOpen,
-  transitionPhotoId,
+  openRecipeId,
   onRequestDelete,
   onUpdateRecipe,
   pressDuration,
@@ -134,7 +134,7 @@ export default function RecipesView({
             hidden={!visibleIds.has(r.id)}
             filterGeneration={filterGeneration}
             onOpen={onOpen}
-            isTransitionSource={transitionPhotoId === r.id}
+            isOpenRecipe={openRecipeId === r.id}
             onToggleFavorite={onToggleFavorite}
             onRequestDelete={onRequestDelete}
             onUpdateRecipe={onUpdateRecipe}

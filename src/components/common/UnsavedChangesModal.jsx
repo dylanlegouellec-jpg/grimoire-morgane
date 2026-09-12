@@ -1,8 +1,10 @@
 import { X } from "lucide-react";
+import { motion } from "motion/react";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
+import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
 import useFocusTrap from "../../hooks/useFocusTrap";
-import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
+import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 
 /* ------------------------------------------------------------------ */
 /*  MODIFICATIONS NON ENREGISTRÉES — 3 choix, jamais de fermeture         */
@@ -13,17 +15,17 @@ import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
 /* ------------------------------------------------------------------ */
 export default function UnsavedChangesModal({ onSave, onDiscard, onCancel }) {
   const modalRef = useFocusTrap(onCancel);
-  const swipe = useSwipeToDismiss(onCancel, { scrollRef: modalRef });
+  const sheet = useDismissibleSheet(onCancel, { scrollRef: modalRef });
   return (
-    <div className="modal-backdrop" onClick={onCancel}>
-      <div
+    <motion.div className="modal-backdrop" onClick={onCancel} {...MODAL_BACKDROP_MOTION}>
+      <motion.div
         className="modal grimoire-page modal-swipeable"
         ref={modalRef}
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
-        style={swipe.style}
-        {...swipe.handlers}
+        {...MODAL_SHEET_MOTION}
+        {...sheet.panHandlers}
       >
         <button className="modal-close" onClick={onCancel} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">Modifications non enregistrées</h2>
@@ -38,7 +40,7 @@ export default function UnsavedChangesModal({ onSave, onDiscard, onCancel }) {
         <button type="button" className="link-btn" onClick={onCancel} style={{ display: "block", margin: "12px auto 0" }}>
           Annuler
         </button>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

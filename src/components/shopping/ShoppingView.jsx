@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { AnimatePresence } from "motion/react";
 import { ChevronDown, Plus, ShoppingBasket, User, Users } from "lucide-react";
 import { aisleIcon, copyText } from "../../utils/helpers";
 import { triggerHaptic } from "../../utils/haptics";
@@ -226,21 +227,25 @@ export default function ShoppingView({
         </p>
       )}
 
-      {showRecipePicker && (
-        <RecipePickerModal
-          recipes={recipes}
-          onGenerate={(ids) => onGenerateFromRecipes(ids)}
-          onClose={() => setShowRecipePicker(false)}
-        />
-      )}
+      <AnimatePresence>
+        {showRecipePicker && (
+          <RecipePickerModal
+            recipes={recipes}
+            onGenerate={(ids) => onGenerateFromRecipes(ids)}
+            onClose={() => setShowRecipePicker(false)}
+          />
+        )}
+      </AnimatePresence>
 
-      {wheelItem && (
-        <QuantitySheet
-          item={wheelItem}
-          onChange={(value, unit) => onSetItemQty(wheelItem.id, value, unit)}
-          onClose={() => setWheelItem(null)}
-        />
-      )}
+      <AnimatePresence>
+        {wheelItem && (
+          <QuantitySheet
+            item={wheelItem}
+            onChange={(value, unit) => onSetItemQty(wheelItem.id, value, unit)}
+            onClose={() => setWheelItem(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

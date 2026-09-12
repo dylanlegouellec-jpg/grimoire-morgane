@@ -66,7 +66,7 @@ export default function AppearanceSettingsModal({
             onChange={(e) => onSetNavOpacity(Number(e.target.value))}
             aria-label={t("settings.navOpacityTitle")}
             // La modale des Réglages se ferme sur un tirage vers le bas
-            // (useSwipeToDismiss, posé sur son conteneur) : sans ça, la
+            // (useDismissibleSheet, posé sur son conteneur) : sans ça, la
             // moindre dérive verticale en traînant le curseur remonterait
             // jusqu'à ce geste et refermerait le panneau en plein réglage.
             onTouchStart={(e) => e.stopPropagation()}

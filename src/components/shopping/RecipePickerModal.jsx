@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { motion } from "motion/react";
 import { CheckSquare, ShoppingBasket, Square, X } from "lucide-react";
 import { FILTERS } from "../../constants";
 import { normalize, categoryClass, categoryLabel } from "../../utils/helpers";
 import { triggerHaptic } from "../../utils/haptics";
+import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
-import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
+import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import Flourish from "../common/Flourish";
 import Seal from "../common/Seal";
 
@@ -27,33 +29,9 @@ export default function RecipePickerModal({ recipes, onGenerate, onClose }) {
   // dans la liste — même en plein milieu d'un défilement normal — en
   // fermeture involontaire.
   const bodyRef = useRef(null);
-  const swipe = useSwipeToDismiss(onClose, { scrollRef: bodyRef });
+  const sheet = useDismissibleSheet(onClose, { scrollRef: bodyRef });
   const [selected, setSelected] = useState([]);
   const [filter, setFilter] = useState("tout");
-
-  // Pastille dorée glissante derrière le filtre actif — même mécanisme que
-  // AppShell.jsx (voir son commentaire) : dupliqué ici plutôt que partagé,
-  // ce filtre-ci vit dans une modale distincte avec son propre état "filter"
-  // local (jamais celui des Recettes), pas de composant commun existant à
-  // ce jour pour un si petit bloc.
-  const filterBarRef = useRef(null);
-  const filterBtnRefs = useRef([]);
-  const [filterIndicator, setFilterIndicator] = useState(null);
-  const updateFilterIndicator = useCallback(() => {
-    const bar = filterBarRef.current;
-    const activeIndex = FILTERS.findIndex((f) => f.key === filter);
-    const btn = filterBtnRefs.current[activeIndex];
-    if (!bar || !btn) return;
-    setFilterIndicator({ left: btn.offsetLeft, width: btn.offsetWidth });
-  }, [filter]);
-  useLayoutEffect(() => { updateFilterIndicator(); }, [updateFilterIndicator]);
-  useEffect(() => {
-    const bar = filterBarRef.current;
-    if (!bar || typeof ResizeObserver === "undefined") return undefined;
-    const ro = new ResizeObserver(() => updateFilterIndicator());
-    ro.observe(bar);
-    return () => ro.disconnect();
-  }, [updateFilterIndicator]);
 
   const toggleRecipe = (id) => {
     triggerHaptic(10);
@@ -73,15 +51,15 @@ export default function RecipePickerModal({ recipes, onGenerate, onClose }) {
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
+    <motion.div className="modal-backdrop" onClick={onClose} {...MODAL_BACKDROP_MOTION}>
+      <motion.div
         className="modal grimoire-page recipe-picker-modal modal-swipeable"
         ref={modalRef}
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
-        style={swipe.style}
-        {...swipe.handlers}
+        {...MODAL_SHEET_MOTION}
+        {...sheet.panHandlers}
       >
         {/* En-tête fixe / corps scrollable (voir .recipe-picker-modal dans
             styles.css.js) — le corps est la SEULE zone qui défile ; le
@@ -92,26 +70,32 @@ export default function RecipePickerModal({ recipes, onGenerate, onClose }) {
           <h2 className="dropcap-title">Générer à partir de recettes</h2>
           <Flourish />
 
-          <div className="filter-bar recipe-picker-filters" ref={filterBarRef}>
-            <span
-              className="filter-indicator"
-              aria-hidden="true"
-              style={
-                filterIndicator
-                  ? { transform: `translateX(${filterIndicator.left}px)`, width: `${filterIndicator.width}px` }
-                  : { opacity: 0 }
-              }
-            />
-            {FILTERS.map((f, i) => (
-              <button
-                key={f.key}
-                ref={(node) => { filterBtnRefs.current[i] = node; }}
-                className={`filter-pill ${filter === f.key ? "active" : ""}`}
-                onClick={() => { triggerHaptic(10); setFilter(f.key); }}
-              >
-                {f.label}
-              </button>
-            ))}
+          <div className="filter-bar recipe-picker-filters">
+            {FILTERS.map((f) => {
+              const active = filter === f.key;
+              return (
+                <button
+                  key={f.key}
+                  className={`filter-pill ${active ? "active" : ""}`}
+                  onClick={() => { triggerHaptic(10); setFilter(f.key); }}
+                >
+                  {/* Pastille dorée glissante — Framer Motion (layoutId
+                      "recipe-picker-filter-pill", propre à CETTE modale : un
+                      autre layoutId que celui des filtres Recettes
+                      d'AppShell.jsx, chacun avec son propre état "filter"
+                      local, jamais les deux montés à la fois de toute façon
+                      mais autant éviter tout risque de collision). */}
+                  {active && (
+                    <motion.span
+                      layoutId="recipe-picker-filter-pill"
+                      className="filter-indicator"
+                      transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                    />
+                  )}
+                  {f.label}
+                </button>
+              );
+            })}
           </div>
 
           <div className="shopping-actions">
@@ -152,7 +136,7 @@ export default function RecipePickerModal({ recipes, onGenerate, onClose }) {
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

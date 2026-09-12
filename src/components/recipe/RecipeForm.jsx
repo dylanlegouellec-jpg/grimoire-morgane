@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { ChevronDown, Sparkles, Wand2, X } from "lucide-react";
 import { nextId, extractCodeFromInput, decodeRecipeCode, triggerHaptic, formatDurationMinutes } from "../../utils/helpers";
 import { normalizeIngredientList } from "../../utils/ingredients";
@@ -7,9 +8,10 @@ import { estimateNutritionOnline } from "../../utils/nutritionClient";
 import { playSuccessSound } from "../../utils/audioUtils";
 import { formatPressDuration } from "../common/pressDuration";
 import { resolveIllustrationKey } from "../art/illustrations";
+import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
 import useSecretTrigger from "../../hooks/useSecretTrigger";
 import useDragReorder from "../../hooks/useDragReorder";
-import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
+import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import Flourish from "../common/Flourish";
@@ -119,7 +121,7 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
   // raison que dans SecretSettingsModal.jsx (évite qu'un tirage à
   // l'intérieur de ce sous-composant ne remonte jusqu'ici).
   const formRef = useRef(null);
-  const swipe = useSwipeToDismiss(attemptClose, {
+  const sheet = useDismissibleSheet(attemptClose, {
     scrollRef: formRef,
     disabled: showUnsavedConfirm || showTimeWheel || showServingsWheel,
   });
@@ -309,16 +311,16 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
 
   return (
     <>
-    <div className="modal-backdrop" onClick={attemptClose}>
-      <form
+    <motion.div className="modal-backdrop" onClick={attemptClose} {...MODAL_BACKDROP_MOTION}>
+      <motion.form
         ref={setFormRef}
         className="modal grimoire-page form-clean modal-swipeable"
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
-        style={swipe.style}
-        {...swipe.handlers}
+        {...MODAL_SHEET_MOTION}
+        {...sheet.panHandlers}
       >
         <button type="button" className="modal-close" onClick={attemptClose} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title" {...(isEdit ? {} : secretImport)}>
@@ -589,37 +591,43 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
             </button>
           )}
         </div>
-      </form>
-    </div>
+      </motion.form>
+    </motion.div>
 
-    {showTimeWheel && (
-      <WheelPickerModal
-        title="Temps de préparation"
-        hint="Fais glisser les roues pour ajuster la durée."
-        columns={[
-          { key: "h", initialValue: Math.floor((Number(time) || 0) / 60), min: 0, max: 23, suffix: "h" },
-          { key: "m", initialValue: (Number(time) || 0) % 60, min: 0, max: 59, suffix: "min" },
-        ]}
-        onSave={({ h, m }) => setTime(h * 60 + m)}
-        onClose={() => setShowTimeWheel(false)}
-      />
-    )}
-    {showServingsWheel && (
-      <WheelPickerModal
-        title="Portions"
-        hint="Fais glisser la roue pour ajuster le nombre de portions."
-        columns={[{ key: "servings", initialValue: Number(servings) || 1, min: 1, max: 24, suffix: "pers." }]}
-        onSave={({ servings: s }) => setServings(s)}
-        onClose={() => setShowServingsWheel(false)}
-      />
-    )}
-    {showUnsavedConfirm && (
-      <UnsavedChangesModal
-        onSave={async () => { setShowUnsavedConfirm(false); await submit({ preventDefault: () => {} }); }}
-        onDiscard={() => { setShowUnsavedConfirm(false); onClose(); }}
-        onCancel={() => setShowUnsavedConfirm(false)}
-      />
-    )}
+    <AnimatePresence>
+      {showTimeWheel && (
+        <WheelPickerModal
+          title="Temps de préparation"
+          hint="Fais glisser les roues pour ajuster la durée."
+          columns={[
+            { key: "h", initialValue: Math.floor((Number(time) || 0) / 60), min: 0, max: 23, suffix: "h" },
+            { key: "m", initialValue: (Number(time) || 0) % 60, min: 0, max: 59, suffix: "min" },
+          ]}
+          onSave={({ h, m }) => setTime(h * 60 + m)}
+          onClose={() => setShowTimeWheel(false)}
+        />
+      )}
+    </AnimatePresence>
+    <AnimatePresence>
+      {showServingsWheel && (
+        <WheelPickerModal
+          title="Portions"
+          hint="Fais glisser la roue pour ajuster le nombre de portions."
+          columns={[{ key: "servings", initialValue: Number(servings) || 1, min: 1, max: 24, suffix: "pers." }]}
+          onSave={({ servings: s }) => setServings(s)}
+          onClose={() => setShowServingsWheel(false)}
+        />
+      )}
+    </AnimatePresence>
+    <AnimatePresence>
+      {showUnsavedConfirm && (
+        <UnsavedChangesModal
+          onSave={async () => { setShowUnsavedConfirm(false); await submit({ preventDefault: () => {} }); }}
+          onDiscard={() => { setShowUnsavedConfirm(false); onClose(); }}
+          onCancel={() => setShowUnsavedConfirm(false)}
+        />
+      )}
+    </AnimatePresence>
     </>
   );
 }

@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
+import { motion } from "motion/react";
+import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import PortionWheel from "../recipe/PortionWheel";
@@ -18,13 +20,14 @@ import Seal from "./Seal";
 /*  `columns`: [{ key, initialValue, min, max, step?, suffix }]            */
 /*  `onSave(values)`: values = { [key]: nombre final de chaque roue }      */
 /*                                                                          */
-/*  Volontairement SANS le geste "tirer pour fermer" (voir modal-swipeable */
-/*  sur les autres modales) : cette modale n'est qu'une ou plusieurs        */
+/*  Volontairement SANS le geste "tirer pour fermer" (voir useDismissibleSheet, */
+/*  utilisé par les autres modales) : cette modale n'est qu'une ou plusieurs    */
 /*  roues défilantes (PortionWheel, overflow-y: scroll) — un tirage vers    */
 /*  le bas pour faire tourner une roue déclencherait aussi, à tort, la      */
-/*  fermeture de la modale (useSwipeToDismiss ne connaît que le scrollTop   */
-/*  de la modale elle-même, jamais à 0 quand on manipule une roue). La      */
-/*  fermeture reste possible via le bouton "X" ou "Enregistrer".           */
+/*  fermeture de la modale (le hook ne connaît que le scrollTop de la       */
+/*  modale elle-même, jamais à 0 quand on manipule une roue). La           */
+/*  fermeture reste possible via le bouton "X" ou "Enregistrer" — l'entrée/ */
+/*  sortie anime tout de même avec Framer Motion (MODAL_SHEET_MOTION).     */
 /* ------------------------------------------------------------------ */
 export default function WheelPickerModal({ title, hint, columns, onSave, onClose }) {
   useBodyScrollLock(true);
@@ -39,8 +42,15 @@ export default function WheelPickerModal({ title, hint, columns, onSave, onClose
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal grimoire-page qty-wheel-modal" ref={modalRef} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+    <motion.div className="modal-backdrop" onClick={onClose} {...MODAL_BACKDROP_MOTION}>
+      <motion.div
+        className="modal grimoire-page qty-wheel-modal"
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+        {...MODAL_SHEET_MOTION}
+      >
         <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">{title}</h2>
         <Flourish />
@@ -62,7 +72,7 @@ export default function WheelPickerModal({ title, hint, columns, onSave, onClose
         <div className="cookmode-nav" style={{ marginTop: 18 }}>
           <Seal tone="gold" onClick={handleSave}>Enregistrer</Seal>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

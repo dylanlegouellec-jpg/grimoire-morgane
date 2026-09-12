@@ -1,8 +1,10 @@
 import { X } from "lucide-react";
+import { motion } from "motion/react";
 import { useTranslation } from "../../contexts/LanguageContext";
+import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
-import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
+import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import Flourish from "../common/Flourish";
 import Seal from "../common/Seal";
 
@@ -16,21 +18,21 @@ import Seal from "../common/Seal";
 export default function DeleteMealSectionConfirmModal({ mealLabel, onConfirm, onCancel }) {
   const { t } = useTranslation();
   const modalRef = useFocusTrap(onCancel);
-  const swipe = useSwipeToDismiss(onCancel, { scrollRef: modalRef });
+  const sheet = useDismissibleSheet(onCancel, { scrollRef: modalRef });
   // Manquait ici (contrairement à toutes les autres modales du planning) :
   // sans lui, le fond défilait toujours derrière cette confirmation
   // précise, y compris pendant le tirage pour la fermer.
   useBodyScrollLock(true);
   return (
-    <div className="modal-backdrop" onClick={onCancel}>
-      <div
+    <motion.div className="modal-backdrop" onClick={onCancel} {...MODAL_BACKDROP_MOTION}>
+      <motion.div
         className="modal grimoire-page modal-swipeable"
         ref={modalRef}
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
-        style={swipe.style}
-        {...swipe.handlers}
+        {...MODAL_SHEET_MOTION}
+        {...sheet.panHandlers}
       >
         <button className="modal-close" onClick={onCancel} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">{t("planning.deleteSectionConfirmTitle")}</h2>
@@ -42,7 +44,7 @@ export default function DeleteMealSectionConfirmModal({ mealLabel, onConfirm, on
           <Seal tone="gold" onClick={onCancel}>{t("planning.deleteSectionCancel")}</Seal>
           <Seal tone="gold" onClick={onConfirm} haptic={30}>{t("planning.deleteSectionConfirm")}</Seal>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

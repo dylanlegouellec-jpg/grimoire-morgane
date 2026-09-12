@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AnimatePresence } from "motion/react";
 import { GripVertical } from "lucide-react";
 import useLongPress from "../../hooks/useLongPress";
 import MealOptionsModal from "./MealOptionsModal";
@@ -54,31 +55,33 @@ export default function PlanningMealItem({ entry, label, reorderMode, dragHandle
         </div>
       </div>
 
-      {showOptions && (
-        <MealOptionsModal
-          label={label}
-          onClose={closeOptions}
-          onEdit={() => {
-            closeOptions();
-            // Contrairement à "Supprimer" ci-dessous (qui ne rouvre rien),
-            // "Modifier" referme ce menu ET ouvre AUSSITÔT l'assistant en
-            // mode édition (voir AddMealModal.jsx, prop `editEntry`) — deux
-            // modales synchrones, l'une remplaçant l'autre plutôt que
-            // s'empilant. Chacune pousse/dépile sa propre entrée d'historique
-            // (voir hooks/useFocusTrap.js) : fermer celle-ci appelle
-            // history.back() de façon ASYNCHRONE (le popstate ne part qu'au
-            // tick suivant), alors qu'ouvrir la suivante dans la MÊME passe
-            // synchrone appellerait history.pushState() AVANT que ce retour
-            // n'ait eu lieu — la nouvelle entrée s'empile alors sur l'ancienne
-            // position au lieu de la remplacer, ce qui finit par faire
-            // remonter une fermeture ultérieure trop loin dans l'historique
-            // (jusqu'à quitter l'app). Un setTimeout(0) laisse ce retour se
-            // dérouler avant de pousser la nouvelle entrée.
-            setTimeout(() => onEdit(entry), 0);
-          }}
-          onDelete={() => { closeOptions(); onDelete(entry); }}
-        />
-      )}
+      <AnimatePresence>
+        {showOptions && (
+          <MealOptionsModal
+            label={label}
+            onClose={closeOptions}
+            onEdit={() => {
+              closeOptions();
+              // Contrairement à "Supprimer" ci-dessous (qui ne rouvre rien),
+              // "Modifier" referme ce menu ET ouvre AUSSITÔT l'assistant en
+              // mode édition (voir AddMealModal.jsx, prop `editEntry`) — deux
+              // modales synchrones, l'une remplaçant l'autre plutôt que
+              // s'empilant. Chacune pousse/dépile sa propre entrée d'historique
+              // (voir hooks/useFocusTrap.js) : fermer celle-ci appelle
+              // history.back() de façon ASYNCHRONE (le popstate ne part qu'au
+              // tick suivant), alors qu'ouvrir la suivante dans la MÊME passe
+              // synchrone appellerait history.pushState() AVANT que ce retour
+              // n'ait eu lieu — la nouvelle entrée s'empile alors sur l'ancienne
+              // position au lieu de la remplacer, ce qui finit par faire
+              // remonter une fermeture ultérieure trop loin dans l'historique
+              // (jusqu'à quitter l'app). Un setTimeout(0) laisse ce retour se
+              // dérouler avant de pousser la nouvelle entrée.
+              setTimeout(() => onEdit(entry), 0);
+            }}
+            onDelete={() => { closeOptions(); onDelete(entry); }}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

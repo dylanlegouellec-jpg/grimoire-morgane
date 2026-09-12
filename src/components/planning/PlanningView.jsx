@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AnimatePresence } from "motion/react";
 import { ChevronDown, ChevronLeft, ChevronRight, Plus, Send, User, Users } from "lucide-react";
 import { getWeekStart, addWeeks, getWeekDays, toISODate, isSameDay, formatWeekRange, formatDayLabel, MEAL_TYPES, COURSE_TYPES, courseTypeInfo, courseTypeOrder } from "../../utils/planning";
 import { triggerHaptic } from "../../utils/haptics";
@@ -366,25 +367,29 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
         </div>
       )}
 
-      {showAddModal && (
-        <AddMealModal
-          recipes={recipes}
-          initialDate={addModalDate}
-          initialMealType={addModalMealType}
-          initialCourseType={addModalCourseType}
-          onAdd={handleAdd}
-          onClose={() => setShowAddModal(false)}
-        />
-      )}
+      <AnimatePresence>
+        {showAddModal && (
+          <AddMealModal
+            recipes={recipes}
+            initialDate={addModalDate}
+            initialMealType={addModalMealType}
+            initialCourseType={addModalCourseType}
+            onAdd={handleAdd}
+            onClose={() => setShowAddModal(false)}
+          />
+        )}
+      </AnimatePresence>
 
-      {editingEntry && (
-        <AddMealModal
-          recipes={recipes}
-          editEntry={editingEntry}
-          onSave={handleSaveEdit}
-          onClose={() => setEditingEntry(null)}
-        />
-      )}
+      <AnimatePresence>
+        {editingEntry && (
+          <AddMealModal
+            recipes={recipes}
+            editEntry={editingEntry}
+            onSave={handleSaveEdit}
+            onClose={() => setEditingEntry(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -121,16 +121,12 @@ export const MODALS_BASE_CSS = `
   z-index: 55;
   padding: 0;
   touch-action: none; overscroll-behavior: contain;
-  /* Fondu de fermeture — voir hooks/useAnimatedClose.js : ".closing" n'est
-     posée que le temps de l'animation de sortie (ne change rien tant
-     qu'elle n'est pas ajoutée, "opacity" vaut déjà 1 par défaut). Courbe
-     "ease-out" (décélère en douceur) plutôt que "ease" générique, pour
-     rester cohérente avec cardEnter/slideUp ci-dessous — tout ce qui entre
-     ou sort de l'écran dans ce projet partage désormais la même sensation
-     de ralenti final, pas juste une vitesse linéaire perceptible. */
-  transition: opacity 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  /* Le fondu d'entrée/sortie est désormais porté par Framer Motion
+     (MODAL_BACKDROP_MOTION, src/constants/motion.js — chaque modale rend
+     cet élément en <motion.div>) : plus de transition CSS ni de classe
+     ".closing" à poser/retirer ici (ancien hooks/useAnimatedClose.js,
+     retiré). */
 }
-.modal-backdrop.closing { opacity: 0; }
 /* "top"/"height" pilotés par --app-vv-offset/--app-vvh (posés par
    main.jsx depuis window.visualViewport), pas "inset: 0; height: 100dvh" :
    "dvh" ne suit que le rétractement de la barre d'adresse, jamais le
@@ -175,13 +171,6 @@ export const MODALS_BASE_CSS = `
   padding: 22px 20px calc(30px + env(safe-area-inset-bottom));
   position: relative;
   border-top: 3px solid var(--gold);
-  /* Léger dépassement ("overshoot") sur l'arrivée — même courbe que
-     .card-enter (recipeCards.css.js) : la feuille "dépasse" d'un cheveu sa
-     position finale avant de s'y stabiliser, plutôt qu'un simple
-     ralentissement monotone. Cohérent avec le reste des entrées de l'app,
-     donne un peu plus de "poids" perçu à l'ouverture d'une page de grimoire
-     qu'un fondu-glissement neutre. */
-  animation: slideUp 0.32s cubic-bezier(0.22, 1, 0.36, 1);
   /* "Cadre doré" — même esprit que .seal/.gilt-frame (voir plus bas) :
      un fin liseré lumineux tout autour de la feuille, en plus du bandeau
      doré du haut déjà présent, pour qu'elle se détache un peu plus du fond
@@ -210,33 +199,6 @@ export const MODALS_BASE_CSS = `
   z-index: 4;
 }
 .form-clean { max-width: 100%; overflow-x: hidden; }
-/* "scale(0.98)" au départ, en plus du glissement — un très léger effet de
-   "pop" à l'ouverture (la feuille se déploie plutôt que de simplement
-   translater), inspiré du ressort à peine perceptible des modales du projet
-   v0 "grimoire" (Framer Motion, scale 0.98 -> 1 côté leur code). Pas de
-   nouveau risque ici : .modal utilise déjà "transform" pour translateY
-   (donc devient déjà, le temps de l'animation, le bloc conteneur de ses
-   éventuels descendants position:fixed) — ajouter scale() au même transform
-   ne change rien à cette réalité déjà acceptée, contrairement à .view/
-   .tab-transition (shell.css.js) qui n'ont, eux, jamais eu ce transform du
-   tout et devaient donc l'éviter. */
-@keyframes slideUp { from { transform: translateY(30px) scale(0.98); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
-/* Symétrique de slideUp, pour la fermeture (voir hooks/useAnimatedClose.js) —
-   auparavant inexistante : le clic sur "Fermer"/"Retour" démontait la
-   modale au rendu React suivant, donc instantanément (pas de transition à
-   interrompre), ce qui découvrait d'un coup sec la nav basse et la vue
-   derrière — repéré en particulier quand deux fermetures s'enchaînent vite
-   (ex. Accessibilité -> Réglages -> fermé), chacune étant un "pop" figé.
-   ".closing" n'est posée qu'au moment de fermer (voir le hook), donc sans
-   effet sur l'animation d'entrée ci-dessus. Durée alignée sur la
-   transition d'opacité de .modal-backdrop.closing ci-dessus, pour que le
-   fond et la feuille disparaissent ensemble. */
-/* "ease-in" (accélère vers la sortie) — même courbe que la fermeture par
-   glissement de RecipeDetail.jsx (SWIPE_CLOSE_ANIMATION_MS), pour que les
-   deux façons de fermer une fiche/modale (bouton "Fermer" ici, tirage là-bas)
-   se ressentent de la même manière, jamais un ralenti en sortie. */
-.modal.closing, .grimoire-page.closing { animation: slideDown 0.22s cubic-bezier(0.4, 0, 1, 1) forwards; }
-@keyframes slideDown { from { transform: translateY(0) scale(1); opacity: 1; } to { transform: translateY(30px) scale(0.98); opacity: 0; } }
 .modal-close {
   position: absolute; top: 14px; right: 14px; z-index: 5;
   background: var(--modal-close-bg); border: none; border-radius: 50%;
@@ -292,42 +254,9 @@ export const MODALS_BASE_CSS = `
 .recipe-option-row.danger { color: #B33A2E; border-color: rgba(179,58,46,0.35); }
 .recipe-options-error { color: #B33A2E; margin-top: 10px; text-align: center; }
 
-/* --- Morphing "carte -> fiche recette" (View Transition API) -------------
-   Ces pseudo-éléments ne vivent pas dans l'arbre DOM normal (ils sont créés
-   par le navigateur, ancrés au document entier, jamais imbriqués dans un
-   sélecteur ordinaire) — voir AppShell.jsx (openRecipeWithTransition) pour
-   le déclenchement, RecipeCard.jsx/RecipeDetail.jsx pour le nom partagé
-   "rgm-recipe-photo" posé sur la photo. Sans ces règles, le navigateur
-   utilise ses valeurs par défaut (~0,25s, "ease") — cohérentes mais un peu
-   ternes comparées aux courbes "rebond léger" déjà utilisées ailleurs dans
-   ce fichier (cardEnter, slideUp) ; celles-ci les alignent. Cette API est
-   ignorée sans le moindre avertissement par tout navigateur qui ne la
-   connaît pas (repli déjà géré en JS) : ces règles n'ont donc aucun effet
-   ailleurs qu'où elle est réellement supportée. */
-::view-transition-group(rgm-recipe-photo) {
-  animation-duration: 0.45s;
-  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-}
-::view-transition-old(rgm-recipe-photo),
-::view-transition-new(rgm-recipe-photo) {
-  animation-duration: 0.45s;
-  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-}
-/* Fondu du reste de l'écran (nav basse, en-tête...) pendant le morphing —
-   un peu plus court que la photo elle-même pour que le décor "s'efface" en
-   douceur pendant que l'œil suit surtout la photo qui grandit. */
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation-duration: 0.28s;
-}
-/* Filet de sécurité : si un appel futur à startViewTransition() oubliait de
-   revérifier prefers-reduced-motion (voir AppShell.jsx, qui le fait déjà
-   avant de déclencher quoi que ce soit), ces animations restent tout de
-   même désactivées ici. */
-@media (prefers-reduced-motion: reduce) {
-  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) {
-    animation: none !important;
-  }
-}
+/* Morphing "carte -> fiche recette" : ex-View Transition API du navigateur,
+   remplacée par un layoutId Framer Motion (voir RecipeCard.jsx/
+   RecipeDetail.jsx) — la transition elle-même (spring) est configurée
+   directement en JS sur ces éléments, plus aucune règle CSS dédiée ici. */
 
 `;

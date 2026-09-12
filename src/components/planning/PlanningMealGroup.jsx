@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AnimatePresence } from "motion/react";
 import { useTranslation } from "../../contexts/LanguageContext";
 import useLongPress from "../../hooks/useLongPress";
 import { mealTypeHasCourse } from "../../utils/planning";
@@ -105,56 +106,62 @@ export default function PlanningMealGroup({
             )}
       </div>
 
-      {showOptions && (
-        <MealSectionOptionsModal
-          mealLabel={mealLabel}
-          reorderMode={reorderMode}
-          onToggleReorder={onToggleReorder}
-          onClose={closeOptions}
-          onAddMeal={() => {
-            closeOptions();
-            // Même délai que pour les autres actions de ce menu (voir plus
-            // bas, onMoveSection/onDeleteSection) : laisse la fermeture
-            // asynchrone de ce menu se dérouler avant d'ouvrir l'assistant
-            // d'ajout, pour ne pas fausser l'historique (voir
-            // hooks/useFocusTrap.js).
-            setTimeout(() => onAddMeal(), 0);
-          }}
-          onMoveSection={() => {
-            closeOptions();
-            // Même délai que pour Modifier/Ajouter un plat/Supprimer la
-            // section ailleurs dans ce dossier (voir PlanningMealItem.jsx/
-            // PlanningCourseGroup.jsx) : laisse la fermeture asynchrone de ce
-            // menu se dérouler avant d'ouvrir le sélecteur de moment, pour ne
-            // pas fausser l'historique (voir hooks/useFocusTrap.js).
-            setTimeout(() => setShowMoveModal(true), 0);
-          }}
-          onDeleteSection={() => {
-            closeOptions();
-            setTimeout(() => setShowConfirm(true), 0);
-          }}
-        />
-      )}
-      {showMoveModal && (
-        <MoveMealSectionModal
-          currentMealTypeKey={mealType.key}
-          onClose={() => setShowMoveModal(false)}
-          onSelect={(newMealTypeKey) => {
-            onMoveSection(entries, newMealTypeKey);
-            setShowMoveModal(false);
-          }}
-        />
-      )}
-      {showConfirm && (
-        <DeleteMealSectionConfirmModal
-          mealLabel={mealLabel}
-          onCancel={() => setShowConfirm(false)}
-          onConfirm={() => {
-            onDeleteSection(entries);
-            setShowConfirm(false);
-          }}
-        />
-      )}
+      <AnimatePresence>
+        {showOptions && (
+          <MealSectionOptionsModal
+            mealLabel={mealLabel}
+            reorderMode={reorderMode}
+            onToggleReorder={onToggleReorder}
+            onClose={closeOptions}
+            onAddMeal={() => {
+              closeOptions();
+              // Même délai que pour les autres actions de ce menu (voir plus
+              // bas, onMoveSection/onDeleteSection) : laisse la fermeture
+              // asynchrone de ce menu se dérouler avant d'ouvrir l'assistant
+              // d'ajout, pour ne pas fausser l'historique (voir
+              // hooks/useFocusTrap.js).
+              setTimeout(() => onAddMeal(), 0);
+            }}
+            onMoveSection={() => {
+              closeOptions();
+              // Même délai que pour Modifier/Ajouter un plat/Supprimer la
+              // section ailleurs dans ce dossier (voir PlanningMealItem.jsx/
+              // PlanningCourseGroup.jsx) : laisse la fermeture asynchrone de ce
+              // menu se dérouler avant d'ouvrir le sélecteur de moment, pour ne
+              // pas fausser l'historique (voir hooks/useFocusTrap.js).
+              setTimeout(() => setShowMoveModal(true), 0);
+            }}
+            onDeleteSection={() => {
+              closeOptions();
+              setTimeout(() => setShowConfirm(true), 0);
+            }}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showMoveModal && (
+          <MoveMealSectionModal
+            currentMealTypeKey={mealType.key}
+            onClose={() => setShowMoveModal(false)}
+            onSelect={(newMealTypeKey) => {
+              onMoveSection(entries, newMealTypeKey);
+              setShowMoveModal(false);
+            }}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showConfirm && (
+          <DeleteMealSectionConfirmModal
+            mealLabel={mealLabel}
+            onCancel={() => setShowConfirm(false)}
+            onConfirm={() => {
+              onDeleteSection(entries);
+              setShowConfirm(false);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

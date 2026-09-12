@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { X } from "lucide-react";
+import { motion } from "motion/react";
 import { useTranslation } from "../../contexts/LanguageContext";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
+import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
-import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
+import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 
 /* ------------------------------------------------------------------ */
 /*  CONFIRMATION D'ADHÉSION À UN FOYER — ouverte automatiquement quand      */
@@ -23,7 +25,7 @@ export default function JoinHouseholdConfirmModal({ householdId, onRequestJoin, 
   const { t } = useTranslation();
   useBodyScrollLock(true);
   const modalRef = useFocusTrap(onClose);
-  const swipe = useSwipeToDismiss(onClose, { scrollRef: modalRef });
+  const sheet = useDismissibleSheet(onClose, { scrollRef: modalRef });
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
 
@@ -43,15 +45,15 @@ export default function JoinHouseholdConfirmModal({ householdId, onRequestJoin, 
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
+    <motion.div className="modal-backdrop" onClick={onClose} {...MODAL_BACKDROP_MOTION}>
+      <motion.div
         className="modal grimoire-page modal-swipeable"
         ref={modalRef}
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
-        style={swipe.style}
-        {...swipe.handlers}
+        {...MODAL_SHEET_MOTION}
+        {...sheet.panHandlers}
       >
         <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">{t("household.joinInviteTitle")}</h2>
@@ -66,7 +68,7 @@ export default function JoinHouseholdConfirmModal({ householdId, onRequestJoin, 
             {sending ? t("household.joinRequestSending") : t("household.joinRequestSend")}
           </Seal>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
