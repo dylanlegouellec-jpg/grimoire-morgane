@@ -4,6 +4,7 @@ import { getWeekStart, addWeeks, getWeekDays, toISODate, isSameDay, formatWeekRa
 import { triggerHaptic } from "../../utils/haptics";
 import { getStoredPlanningScope, storePlanningScope } from "../../utils/localSettings";
 import { useTranslation } from "../../contexts/LanguageContext";
+import { useIsAnyModalOpen } from "../../hooks/useBodyScrollLock";
 import useHorizontalSwipe from "../../hooks/useHorizontalSwipe";
 import Seal from "../common/Seal";
 import SegmentedControl from "../common/SegmentedControl";
@@ -123,6 +124,20 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
   // que le swipe de filtres déjà en place ailleurs dans l'app, jamais de
   // preventDefault() donc aucun risque pour le défilement vertical.
   const weekSwipe = useHorizontalSwipe(goNextWeek, goPrevWeek);
+  // Coupé tant qu'une modale/feuille est ouverte (voir useIsAnyModalOpen,
+  // hooks/useBodyScrollLock.js — un seul compteur partagé par TOUTES les
+  // modales de l'app, y compris celles ouvertes plusieurs niveaux plus bas
+  // dans l'arbre comme les menus d'options de PlanningMealItem.jsx) OU en
+  // mode réorganisation (voir `reorderMode` — le glissement d'un plat pour
+  // le réordonner ne doit jamais être interprété comme un changement de
+  // semaine, les deux gestes partageant le même axe horizontal). Ne pas
+  // attacher les gestionnaires du tout dans ces cas plutôt que les laisser
+  // en place et les neutraliser à l'intérieur : plus sûr vis-à-vis des
+  // événements tactiles synthétiques de React, qui suivent l'arbre de
+  // composants JSX (donc "traversent" un portail comme si la modale restait
+  // nichée dans .planning-days) plutôt que la vraie position DOM.
+  const anyModalOpen = useIsAnyModalOpen();
+  const weekSwipeActive = !anyModalOpen && !reorderMode;
 
   const openAddForDay = (iso) => {
     triggerHaptic(15);
@@ -242,7 +257,7 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
         </div>
       </div>
 
-      <div className="planning-days" {...weekSwipe}>
+      <div className="planning-days" {...(weekSwipeActive ? weekSwipe : {})}>
         {days.map((d) => {
           const iso = toISODate(d);
           const dayEntries = entriesForDay(iso);
