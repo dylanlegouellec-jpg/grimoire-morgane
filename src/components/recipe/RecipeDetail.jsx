@@ -1,4 +1,4 @@
-import { useState, useRef, lazy, Suspense } from "react";
+import { useState, useRef, useEffect, lazy, Suspense } from "react";
 import { ChefHat, Clock, Minus, Plus, Share2, Users, X } from "lucide-react";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
 import { categoryLabel, categoryClass, groupSteps, triggerHaptic } from "../../utils/helpers";
@@ -15,6 +15,16 @@ import Seal from "../common/Seal";
 // d'autres sur cet écran — pas besoin d'alourdir le bundle initial pour un
 // panneau que la plupart des visites n'ouvriront jamais.
 const ShareRecipeModal = lazy(() => import("../common/ShareRecipeModal"));
+
+// Doit rester cohérente avec la courbe de transition CSS plus bas (cas
+// `isClosingSheet`) : le vrai `onClose` — qui démonte ce panneau et débloque
+// donc le scroll du fond via useBodyScrollLock — n'est appelé qu'UNE FOIS
+// cette animation de sortie terminée, jamais au relâchement du doigt (voir
+// hooks/useSwipeToDismiss.js, qui a le même correctif pour la même raison :
+// sans ce délai, le nœud DOM suivi par le doigt disparaît en plein geste, et
+// le navigateur reporte la fin du geste sur le <body> tout juste redevenu
+// scrollable — un sursaut de scroll brutal de l'arrière-plan à la fermeture).
+const SWIPE_CLOSE_ANIMATION_MS = 200;
 
 export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareText, showToast, showNutriscore = true }) {
   // Sécurisation du nombre de portions initiales
@@ -35,6 +45,16 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
   const touchYRef = useRef(null);
   const closeStartYRef = useRef(null);
   const [closeDragY, setCloseDragY] = useState(0);
+  // true dès que le seuil de fermeture est franchi au relâchement : plus
+  // aucun nouveau geste n'est pris en compte pendant que le panneau achève
+  // sa sortie (voir handleTouchStart/handleTouchMove/handleTouchEnd).
+  const closingSheetRef = useRef(false);
+  const [isClosingSheet, setIsClosingSheet] = useState(false);
+  const closeTimerRef = useRef(null);
+
+  useEffect(() => () => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+  }, []);
 
   // Garantit qu'ingredients est toujours un tableau
   const rawIngredients = Array.isArray(recipe?.ingredients) ? recipe.ingredients : [];
@@ -84,11 +104,13 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
   };
 
   const handleTouchStart = (e) => {
+    if (closingSheetRef.current) return;
     touchYRef.current = e.touches[0].clientY;
     closeStartYRef.current = e.touches[0].clientY;
   };
 
   const handleTouchMove = (e) => {
+    if (closingSheetRef.current) return;
     const el = scrollRef.current;
     if (!el) return;
     const currentY = e.touches[0].clientY;
@@ -123,9 +145,20 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
     }
   };
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = (e) => {
+    if (closingSheetRef.current) return;
     if (closeDragY > 110) {
-      onClose();
+      // Geste de fermeture confirmé : on empêche tout traitement natif
+      // résiduel de CE relâchement et on termine l'animation de sortie AVANT
+      // d'appeler le vrai onClose — voir SWIPE_CLOSE_ANIMATION_MS plus haut.
+      if (e && e.cancelable) e.preventDefault();
+      closingSheetRef.current = true;
+      setIsClosingSheet(true);
+      // Grande valeur volontairement générique (pas besoin de mesurer le
+      // panneau) : le pousse hors de n'importe quel écran, portrait ou
+      // paysage.
+      setCloseDragY(Math.max(window.innerHeight || 0, 800) + 200);
+      closeTimerRef.current = setTimeout(() => { onClose(); }, SWIPE_CLOSE_ANIMATION_MS);
       return;
     }
     setCloseDragY(0);
@@ -149,8 +182,19 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
         onTouchCancel={handleTouchEnd}
         style={{
           transform: closeDragY ? `translateY(${closeDragY}px)` : undefined,
-          transition: closeDragY ? "none" : "transform 0.2s ease",
+          // Courbe "ease" douce uniquement pour le retour à la position de
+          // repos (tirage relâché sous le seuil) — une fermeture confirmée
+          // (`isClosingSheet`) accélère au contraire vers la sortie
+          // (ease-in), jamais de rebond une fois la décision de fermer prise.
+          transition: closeDragY
+            ? (isClosingSheet ? `transform ${SWIPE_CLOSE_ANIMATION_MS}ms cubic-bezier(0.4, 0, 1, 1)` : "none")
+            : "transform 0.2s ease",
           opacity: closeDragY ? Math.max(1 - closeDragY / 300, 0.4) : 1,
+          // Bloque toute reconnaissance de geste native (scroll, rebond
+          // élastique) tant qu'un tirage ou l'animation de fermeture est en
+          // cours — en complément de preventDefault()/stopPropagation() déjà
+          // appelés ci-dessus, jamais un substitut.
+          touchAction: closeDragY ? "none" : undefined,
         }}
       >
         <div className="detail-drag-handle" aria-hidden="true" />

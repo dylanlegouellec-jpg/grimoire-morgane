@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DEFAULT_BASICS, SUPABASE_READY, demoRecipes } from "../constants";
 import { decodeRecipeCode, isShoppingListInScope } from "../utils/helpers";
 import {
@@ -30,6 +30,7 @@ export default function useOfflineSync({
   user,
   householdId,
   localCache,
+  connectionStatus,
   recipes,
   setRecipes,
   pantry,
@@ -80,6 +81,12 @@ export default function useOfflineSync({
   const pantrySaveTimerRef = useRef(null);
   const basicsSaveTimerRef = useRef(null);
   const mealPlanSaveTimerRef = useRef(null);
+
+  // Cadence du filet de sécurité périodique de rejeu de la file hors-ligne
+  // (voir l'effet plus bas) — alignée sur PING_INTERVAL_MS de
+  // useConnectionStatus.js : inutile de retenter plus souvent que la
+  // fréquence à laquelle ce hook lui-même revérifie Supabase.
+  const PENDING_QUEUE_RETRY_MS = 30000;
 
   // Chargement initial : cache local en priorité (offline-first), puis
   // rafraîchissement Supabase en tâche de fond dès que la session/le
@@ -254,50 +261,95 @@ export default function useOfflineSync({
     return () => clearTimeout(mealPlanSaveTimerRef.current);
   }, [mealPlan, ready, householdId, showToast]);
 
-  // Retour du réseau : rejoue la file d'attente hors-ligne, puis
-  // rafraîchit depuis Supabase.
+  // Rejoue la file d'attente hors-ligne, puis rafraîchit depuis Supabase —
+  // no-op immédiat si la file est déjà vide (appelé aussi bien à chaque
+  // reconnexion détectée qu'en filet de sécurité périodique ci-dessous,
+  // la plupart de ces appels ne trouvent donc rien à faire).
+  const attemptFlush = useCallback(async () => {
+    if (getOfflineQueueSize() === 0) return;
+    const { flushed, dropped } = await flushOfflineQueue();
+    // Fait immédiatement disparaître le bandeau "N modification(s) en
+    // attente" (voir AppShell.jsx) dès que la file est vide — jamais
+    // laissé en l'état tant qu'un signal de reconnexion fiable est arrivé
+    // jusqu'ici, que la tentative ait réussi, échoué, ou abandonné
+    // certaines actions (voir dropped ci-dessous et MAX_ACTION_RETRIES
+    // dans utils/supabase.js : une action qui échoue sans cesse ne peut
+    // plus bloquer indéfiniment tout le reste derrière elle).
+    setOfflineQueueSize(getOfflineQueueSize());
+    // Un seul appel à showToast : useToast.js n'affiche qu'un message à la
+    // fois (pas de file d'attente) — appeler showToast deux fois de suite
+    // ici aurait fait disparaître le premier message avant même qu'il ait
+    // pu s'afficher, jamais vu par l'utilisateur.
+    if (flushed > 0 || dropped > 0) {
+      const parts = [];
+      if (flushed > 0) parts.push(`${flushed} modification(s) resynchronisée(s)`);
+      if (dropped > 0) {
+        parts.push(
+          dropped > 1
+            ? `${dropped} abandonnées après plusieurs échecs`
+            : "1 abandonnée après plusieurs échecs"
+        );
+      }
+      showToast(`${parts.join(", ")}.`);
+    }
+    if (!householdId) return;
+    try {
+      const [rows, listRows] = await Promise.all([
+        fetchTable("recipes", `select=${RECIPE_COLUMNS}&household_id=eq.${householdId}&order=created_at.desc`),
+        fetchTable("shopping_lists", `select=${SHOPPING_LIST_COLUMNS}&household_id=eq.${householdId}&order=created_at.asc`),
+      ]);
+      setRecipes((rows || []).map(mapRowToRecipe));
+      setShoppingLists((listRows || []).map(mapRowToShoppingList));
+    } catch (err) {
+      console.error("Rafraîchissement après reconnexion impossible :", err);
+    }
+  }, [householdId, showToast, setRecipes, setShoppingLists]);
+
+  // Réaction à un changement de statut de connexion RÉEL (voir
+  // `connectionStatus`, hooks/useConnectionStatus.js — un vrai ping
+  // Supabase à intervalle régulier, pas seulement l'événement natif
+  // "online"/navigator.onLine du navigateur). Remplace l'ancienne version
+  // de cet effet, qui n'écoutait QUE cet événement natif : il ne se
+  // déclenche qu'au moment précis d'une bascule matérielle détectée par le
+  // NAVIGATEUR, jamais si l'appareil se croyait déjà "en ligne" pendant que
+  // Supabase restait injoignable pour une tout autre raison (panne
+  // ponctuelle, faux positif navigator.onLine notoire sur Android — voir le
+  // commentaire de fichier de useConnectionStatus.js) — dans ce cas précis,
+  // la file restait bloquée et le bandeau "N modification(s) en attente"
+  // ne disparaissait jamais, même une fois Supabase réellement de nouveau
+  // joignable.
+  const prevConnectionStatusRef = useRef(connectionStatus);
   useEffect(() => {
-    if (!SUPABASE_READY) return undefined;
-    const handleOnline = async () => {
-      const { flushed, dropped } = await flushOfflineQueue();
-      setOfflineQueueSize(getOfflineQueueSize());
-      // Un seul appel à showToast : useToast.js n'affiche qu'un message à
-      // la fois (pas de file d'attente) — appeler showToast deux fois de
-      // suite ici aurait fait disparaître le premier message avant même
-      // qu'il ait pu s'afficher, jamais vu par l'utilisateur.
-      if (flushed > 0 || dropped > 0) {
-        const parts = [];
-        if (flushed > 0) parts.push(`${flushed} modification(s) resynchronisée(s)`);
-        if (dropped > 0) {
-          parts.push(
-            dropped > 1
-              ? `${dropped} abandonnées après plusieurs échecs`
-              : "1 abandonnée après plusieurs échecs"
-          );
-        }
-        showToast(`${parts.join(", ")}.`);
+    const prevStatus = prevConnectionStatusRef.current;
+    prevConnectionStatusRef.current = connectionStatus;
+    if (!SUPABASE_READY) return;
+    if (connectionStatus === "offline") {
+      // Annoncé une seule fois PAR coupure (pas à chaque ping raté déjà
+      // comptabilisé dans la même coupure) — voir useConnectionStatus.js,
+      // qui ne passe déjà lui-même à "offline" qu'après deux échecs
+      // consécutifs, jamais sur un simple aléa réseau isolé.
+      if (prevStatus !== "offline") {
+        showToast("Connexion perdue — les modifications seront synchronisées au retour du réseau.");
       }
-      if (!householdId) return;
-      try {
-        const [rows, listRows] = await Promise.all([
-          fetchTable("recipes", `select=${RECIPE_COLUMNS}&household_id=eq.${householdId}&order=created_at.desc`),
-          fetchTable("shopping_lists", `select=${SHOPPING_LIST_COLUMNS}&household_id=eq.${householdId}&order=created_at.asc`),
-        ]);
-        setRecipes((rows || []).map(mapRowToRecipe));
-        setShoppingLists((listRows || []).map(mapRowToShoppingList));
-      } catch (err) {
-        console.error("Rafraîchissement après reconnexion impossible :", err);
-      }
-    };
-    const handleOffline = () => showToast("Connexion perdue — les modifications seront synchronisées au retour du réseau.");
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [householdId]);
+      return;
+    }
+    if (connectionStatus !== "online") return; // "checking" : rien à faire tant que non conclu
+    attemptFlush();
+  }, [connectionStatus, attemptFlush, showToast]);
+
+  // Filet de sécurité périodique, tant que le statut reste "online" : au
+  // cas où la toute première tentative ci-dessus échoue pour une raison
+  // NON réseau (ex. un conflit Supabase transitoire déjà résolu depuis),
+  // rien d'autre ne la relancerait tant que `connectionStatus` ne change
+  // pas de valeur (React ne redéclenche pas un effet dont la dépendance
+  // est retombée sur la même valeur). `attemptFlush` ne fait rien tant que
+  // la file est vide, donc ce filet est un no-op la quasi-totalité du
+  // temps.
+  useEffect(() => {
+    if (!SUPABASE_READY || connectionStatus !== "online") return undefined;
+    const interval = setInterval(attemptFlush, PENDING_QUEUE_RETRY_MS);
+    return () => clearInterval(interval);
+  }, [connectionStatus, attemptFlush]);
 
   // Supabase Realtime : synchronise en direct les changements faits
   // depuis un autre appareil connecté au même grimoire.
