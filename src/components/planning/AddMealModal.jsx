@@ -1,12 +1,14 @@
 import { useState } from "react";
+import { motion } from "motion/react";
 import { ChevronLeft, PenLine, Search, X } from "lucide-react";
 import { MEAL_TYPES, COURSE_TYPES, DEFAULT_COURSE_TYPE, mealTypeHasCourse, toISODate, formatDayLabel } from "../../utils/planning";
 import { categoryClass, categoryLabel } from "../../utils/helpers";
 import { triggerHaptic } from "../../utils/haptics";
 import { useTranslation } from "../../contexts/LanguageContext";
+import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
-import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
+import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import Flourish from "../common/Flourish";
 import CalendarPicker from "./CalendarPicker";
 
@@ -47,7 +49,7 @@ export default function AddMealModal({
 }) {
   useBodyScrollLock(true);
   const modalRef = useFocusTrap(onClose);
-  const swipe = useSwipeToDismiss(onClose, { scrollRef: modalRef });
+  const sheet = useDismissibleSheet(onClose, { scrollRef: modalRef });
   const { t, dict, language } = useTranslation();
   const hasDateStep = !initialDate;
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -128,15 +130,15 @@ export default function AddMealModal({
   const backLabels = { meal: t("planning.backToDate"), recipe: t("planning.backToMealType") };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
+    <motion.div className="modal-backdrop" onClick={onClose} {...MODAL_BACKDROP_MOTION}>
+      <motion.div
         className="modal grimoire-page planning-step-modal modal-swipeable"
         ref={modalRef}
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
-        style={swipe.style}
-        {...swipe.handlers}
+        {...MODAL_SHEET_MOTION}
+        {...sheet.panHandlers}
       >
         {editEntry ? (
           // Pas de "retour" en édition : date et moment sont figés, cette
@@ -238,7 +240,7 @@ export default function AddMealModal({
             )}
           </>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

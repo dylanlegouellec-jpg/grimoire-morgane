@@ -148,17 +148,19 @@ export const SHELL_CSS = `
 .filter-pill.active { color: var(--chrome-text); }
 .heart-pill { display: inline-flex; align-items: center; gap: 5px; }
 .heart-pill.active { color: #e8607a; border-color: #e8607a; background: rgba(232,96,122,0.12); }
-/* --- Pastille glissante --- Mesurée en JS (voir AppShell.jsx) plutôt que
-   via Framer Motion/layoutId comme .nav-pill (modalsBase.css.js) — voir le
-   commentaire d'AppShell.jsx pour pourquoi (.filter-bar défile
-   horizontalement). Positionnée via transform/width pour rester composée
-   sur son propre calque plutôt que de déclencher un calcul de mise en page
-   à chaque frame de la glissade. */
+/* --- Pastille glissante — Framer Motion (layoutId, voir AppShell.jsx et
+   RecipePickerModal.jsx) --------------------------------------------------
+   Rendue à l'INTÉRIEUR du bouton actif (contrairement à .nav-pill,
+   modalsBase.css.js, même principe sinon) : "position: absolute; inset: 0"
+   épouse tout le bouton, "z-index: -1" la garde sous son texte (contenu
+   normal, non positionné) — confinée à CE bouton grâce à ".filter-pill"
+   ci-dessus, déjà "position: relative; z-index: 1" (établit sa propre zone
+   d'empilement). "border-radius: inherit" reprend la pilule du bouton sans
+   dupliquer la valeur. */
 .filter-indicator {
-  position: absolute; top: 0; left: 0; height: 100%; z-index: 0;
-  border-radius: 999px;
+  position: absolute; inset: 0; z-index: -1;
+  border-radius: inherit;
   background: var(--chrome);
-  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), width 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease;
   pointer-events: none;
 }
 

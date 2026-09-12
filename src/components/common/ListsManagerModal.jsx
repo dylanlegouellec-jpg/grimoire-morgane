@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { Plus, X } from "lucide-react";
+import { motion } from "motion/react";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
+import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
-import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
+import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 
 // `scope` optionnel : quand fourni (voir AppShell.jsx, listes de courses),
 // `lists` n'est déjà qu'un sous-ensemble filtré par portée (household/
@@ -20,7 +22,7 @@ const SCOPE_TITLES = {
 export default function ListsManagerModal({ lists, activeListId, scope, onOpen, onCreate, onRename, onDelete, onClose }) {
   useBodyScrollLock(true);
   const modalRef = useFocusTrap(onClose);
-  const swipe = useSwipeToDismiss(onClose, { scrollRef: modalRef });
+  const sheet = useDismissibleSheet(onClose, { scrollRef: modalRef });
   const [renamingId, setRenamingId] = useState(null);
   const [renameValue, setRenameValue] = useState("");
 
@@ -34,15 +36,15 @@ export default function ListsManagerModal({ lists, activeListId, scope, onOpen, 
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
+    <motion.div className="modal-backdrop" onClick={onClose} {...MODAL_BACKDROP_MOTION}>
+      <motion.div
         className="modal grimoire-page modal-swipeable"
         ref={modalRef}
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
-        style={swipe.style}
-        {...swipe.handlers}
+        {...MODAL_SHEET_MOTION}
+        {...sheet.panHandlers}
       >
         <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">{scope ? SCOPE_TITLES[scope] : "Mes listes de courses"}</h2>
@@ -84,8 +86,8 @@ export default function ListsManagerModal({ lists, activeListId, scope, onOpen, 
         <Seal tone="gold" onClick={() => { onCreate(); onClose(); }} style={{ marginTop: 16 }}>
           <Plus size={16} /> Nouvelle liste
         </Seal>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 

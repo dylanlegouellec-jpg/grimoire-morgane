@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, lazy, Suspense } from "react";
-import { flushSync } from "react-dom";
+import { useCallback, useEffect, useRef, useState, lazy, Suspense } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { Heart, Search, Settings, Wand2 } from "lucide-react";
 
 import { FILTERS, TABS } from "../constants";
@@ -153,11 +153,6 @@ export default function AppShell({
   const [fridgeSearch, setFridgeSearch] = useState("");
   const [formTarget, setFormTarget] = useState(null); // null | 'new' | recipe object
   const [openRecipe, setOpenRecipe] = useState(null);
-  // Id de la recette dont la photo de carte doit porter temporairement le
-  // même `view-transition-name` que la photo hero de RecipeDetail (voir
-  // openRecipeWithTransition ci-dessous) — jamais les deux montées avec ce
-  // nom en même temps une fois la recette ouverte (voir son commentaire).
-  const [transitionPhotoId, setTransitionPhotoId] = useState(null);
   const [cookingRecipe, setCookingRecipe] = useState(null);
   const [textModal, setTextModal] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -198,77 +193,17 @@ export default function AppShell({
   };
 
   // --- Ouverture d'une recette : la photo de la carte "grandit" jusqu'à
-  // devenir la photo hero de la fiche (View Transition API du navigateur —
-  // aucune lib d'animation dans ce projet, voir useAnimatedClose.js). Repli
-  // total et silencieux sur l'ouverture instantanée d'avant (aucun visuel
-  // manquant, juste sans le morphing) sur tout navigateur qui ne supporte
-  // pas encore l'API, ou si l'utilisateur a demandé "Réduire les animations"
-  // au niveau système (prefers-reduced-motion).
-  //
-  // Séquence, pour que la même photo ne porte JAMAIS ce nom sur deux
-  // éléments montés en même temps (règle stricte de l'API — sinon la
-  // transition entière est silencieusement annulée par le navigateur) :
-  // 1) on marque D'ABORD (flushSync, donc peint avant la suite) la carte de
-  //    CETTE recette comme "source" de la transition à venir — c'est l'état
-  //    "avant" que le navigateur va capturer en photo.
-  // 2) DANS le callback de startViewTransition (exécuté de façon synchrone
-  //    par le navigateur juste avant de capturer l'état "après") : on ouvre
-  //    la fiche recette ET on retire ce marquage de la carte dans le MÊME
-  //    flushSync — la carte perd le nom pile au moment où la fiche
-  //    (nouvelle porteuse du même nom, voir RecipeDetail.jsx) apparaît.
-  const openRecipeWithTransition = useCallback((recipe) => {
-    const supportsViewTransition =
-      typeof document !== "undefined" &&
-      typeof document.startViewTransition === "function" &&
-      !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-    if (!supportsViewTransition) {
-      setOpenRecipe(recipe);
-      return;
-    }
-    flushSync(() => setTransitionPhotoId(recipe.id));
-    document.startViewTransition(() => {
-      flushSync(() => {
-        setOpenRecipe(recipe);
-        setTransitionPhotoId(null);
-      });
-    });
-  }, []);
-
-  // --- Pastille dorée glissante des filtres (Tout/Salé/Sucré) — mesurée à
-  // la main (offsetLeft/offsetWidth), PAS via Framer Motion/layoutId comme
-  // la nav basse (voir NavButton.jsx) : .filter-bar défile horizontalement
-  // (overflow-x: auto), et offsetLeft (relatif au bloc conteneur positionné
-  // le plus proche, ici .filter-bar lui-même — voir ".filter-bar {
-  // position: relative }", shell.css.js) reste correct quelle que soit la
-  // position de défilement, contrairement à getBoundingClientRect (relatif
-  // au viewport, donc faux dès que la rangée est scrollée) qu'utilise en
-  // interne l'animation de mise en page de Framer Motion. N'inclut
-  // QUE les trois filtres exclusifs (jamais la puce Favoris juste à côté,
-  // qui reste un bouton bascule indépendant, pas un choix exclusif du même
-  // groupe). N'existe que sous l'onglet Recettes (voir dépendance `tab`
-  // ci-dessous) : .filter-bar est démonté ailleurs, ces refs redeviennent
-  // alors naturellement `null`.
-  const filterBarRef = useRef(null);
-  const filterBtnRefs = useRef([]);
-  const [filterIndicator, setFilterIndicator] = useState(null);
-  const updateFilterIndicator = useCallback(() => {
-    const bar = filterBarRef.current;
-    const activeIndex = FILTERS.findIndex((f) => f.key === filter);
-    const btn = filterBtnRefs.current[activeIndex];
-    if (!bar || !btn) return;
-    setFilterIndicator({ left: btn.offsetLeft, width: btn.offsetWidth });
-  }, [filter]);
-  useLayoutEffect(() => {
-    if (tab === "recettes") updateFilterIndicator();
-  }, [updateFilterIndicator, tab, language]);
-  useEffect(() => {
-    if (tab !== "recettes") return undefined;
-    const bar = filterBarRef.current;
-    if (!bar || typeof ResizeObserver === "undefined") return undefined;
-    const ro = new ResizeObserver(() => updateFilterIndicator());
-    ro.observe(bar);
-    return () => ro.disconnect();
-  }, [tab, updateFilterIndicator]);
+  // devenir la photo hero de la fiche. Anciennement la View Transition API
+  // du navigateur (flushSync + document.startViewTransition, un seul
+  // `view-transition-name` global qui ne devait jamais se retrouver sur
+  // deux éléments montés en même temps) — remplacée par un layoutId Framer
+  // Motion PAR RECETTE (voir RecipeCard.jsx/RecipeDetail.jsx,
+  // `recipe-photo-${id}`) : plus besoin de cette danse en deux temps ici,
+  // Framer détecte lui-même le passage de témoin entre la carte (qui perd
+  // son layoutId dès que `openRecipe` désigne cette recette, voir
+  // RecipeCard.jsx) et la fiche (qui le récupère en montant). Ouvrir une
+  // recette est donc redevenu un simple setOpenRecipe direct — passé tel
+  // quel comme `onOpen` à RecipesView/FridgeView plus bas.
 
   const filterIndex = FILTERS.findIndex((f) => f.key === filter);
 
@@ -407,26 +342,32 @@ export default function AppShell({
               aria-label={t("app.searchRecipePlaceholder")}
             />
           </div>
-          <div className="filter-bar" ref={filterBarRef}>
-            <span
-              className="filter-indicator"
-              aria-hidden="true"
-              style={
-                filterIndicator
-                  ? { transform: `translateX(${filterIndicator.left}px)`, width: `${filterIndicator.width}px` }
-                  : { opacity: 0 }
-              }
-            />
-            {FILTERS.map((f, i) => (
-              <button
-                key={f.key}
-                ref={(node) => { filterBtnRefs.current[i] = node; }}
-                className={`filter-pill ${filter === f.key ? "active" : ""}`}
-                onClick={() => { triggerHaptic(10); setFilter(f.key); }}
-              >
-                {t(`filters.${f.key}`)}
-              </button>
-            ))}
+          <div className="filter-bar">
+            {FILTERS.map((f) => {
+              const active = filter === f.key;
+              return (
+                <button
+                  key={f.key}
+                  className={`filter-pill ${active ? "active" : ""}`}
+                  onClick={() => { triggerHaptic(10); setFilter(f.key); }}
+                >
+                  {/* Pastille dorée glissante — Framer Motion (layoutId
+                      "recettes-filter-pill", propre à cette barre : un autre
+                      layoutId que celui de RecipePickerModal.jsx, chacun
+                      avec son propre état "filter" local, jamais les deux
+                      montés à la fois de toute façon mais autant éviter tout
+                      risque de collision). */}
+                  {active && (
+                    <motion.span
+                      layoutId="recettes-filter-pill"
+                      className="filter-indicator"
+                      transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                    />
+                  )}
+                  {t(`filters.${f.key}`)}
+                </button>
+              );
+            })}
             <button
               className={`filter-pill heart-pill ${favoritesOnly ? "active" : ""}`}
               onClick={() => { triggerHaptic(10); setFavoritesOnly((v) => !v); }}
@@ -473,8 +414,8 @@ export default function AppShell({
             favoritesOnly={favoritesOnly}
             onToggleFavorite={toggleFavorite}
             onAddRequest={() => setFormTarget("new")}
-            onOpen={openRecipeWithTransition}
-            transitionPhotoId={transitionPhotoId}
+            onOpen={setOpenRecipe}
+            openRecipeId={openRecipe ? openRecipe.id : null}
             onRequestDelete={setDeleteTarget}
             onUpdateRecipe={saveRecipe}
             pressDuration={pressDuration}
@@ -514,7 +455,7 @@ export default function AppShell({
               onMoveBasicToVariable={moveBasicToVariable}
               onRemoveBasic={removeBasic}
               onResetPantry={resetPantry}
-              onOpen={openRecipeWithTransition}
+              onOpen={setOpenRecipe}
             />
           </Suspense>
         )}
@@ -556,18 +497,20 @@ export default function AppShell({
         ))}
       </nav>
 
-      {openRecipe && (
-        <RecipeDetail
-          key={openRecipe.id}
-          recipe={recipes.find((r) => r.id === openRecipe.id) || openRecipe}
-          onClose={() => setOpenRecipe(null)}
-          onCook={(r) => setCookingRecipe(r)}
-          onEdit={(r) => setFormTarget(r)}
-          shareText={shareText}
-          showToast={showToast}
-          showNutriscore={showNutriscore}
-        />
-      )}
+      <AnimatePresence>
+        {openRecipe && (
+          <RecipeDetail
+            key={openRecipe.id}
+            recipe={recipes.find((r) => r.id === openRecipe.id) || openRecipe}
+            onClose={() => setOpenRecipe(null)}
+            onCook={(r) => setCookingRecipe(r)}
+            onEdit={(r) => setFormTarget(r)}
+            shareText={shareText}
+            showToast={showToast}
+            showNutriscore={showNutriscore}
+          />
+        )}
+      </AnimatePresence>
       {/* Rendu APRÈS RecipeDetail (pas avant) : pour une édition, les deux
           restent montés en même temps (voir onEdit ci-dessus, qui ne referme
           plus la fiche recette) — l'ordre du DOM tranche les égalités de
@@ -576,72 +519,87 @@ export default function AppShell({
           formulaire (sauvegarde ou annulation) ne fait alors que révéler à
           nouveau la fiche recette déjà ouverte en dessous, à jour, plutôt
           que de retomber sur la grille. */}
-      {formTarget && (
-        <RecipeForm
-          onClose={() => setFormTarget(null)}
-          onSave={saveRecipe}
-          onDelete={(id) => { deleteRecipe(id); setOpenRecipe(null); }}
-          initialRecipe={formTarget === "new" ? null : formTarget}
-          pressDuration={pressDuration}
-        />
-      )}
+      <AnimatePresence>
+        {formTarget && (
+          <RecipeForm
+            onClose={() => setFormTarget(null)}
+            onSave={saveRecipe}
+            onDelete={(id) => { deleteRecipe(id); setOpenRecipe(null); }}
+            initialRecipe={formTarget === "new" ? null : formTarget}
+            pressDuration={pressDuration}
+          />
+        )}
+      </AnimatePresence>
       {cookingRecipe && (
         <CookMode recipe={cookingRecipe} onClose={() => setCookingRecipe(null)} pressDuration={pressDuration} />
       )}
-      {textModal && (
-        <Suspense fallback={null}>
-          <TextShareModal title={textModal.title} text={textModal.text} onClose={() => setTextModal(null)} />
-        </Suspense>
-      )}
-      {pendingImport && (
-        <Suspense fallback={null}>
-          <ImportConfirmModal
-            recipe={pendingImport}
-            onConfirm={confirmPendingImport}
-            onCancel={() => setPendingImport(null)}
-          />
-        </Suspense>
-      )}
-      {pendingHouseholdJoin && (
-        <Suspense fallback={null}>
-          <JoinHouseholdConfirmModal
-            householdId={pendingHouseholdJoin}
-            onRequestJoin={onRequestJoinHousehold}
-            onClose={() => setPendingHouseholdJoin(null)}
-            showToast={showToast}
-          />
-        </Suspense>
-      )}
-      {deleteTarget && (
-        <Suspense fallback={null}>
-          <DeleteConfirmModal
-            recipe={deleteTarget}
-            onConfirm={() => {
-              deleteRecipe(deleteTarget.id);
-              showToast(t("app.recipeDeleted"));
-              setDeleteTarget(null);
-            }}
-            onCancel={() => setDeleteTarget(null)}
-          />
-        </Suspense>
-      )}
-      {showTemplateImport && (
-        <Suspense fallback={null}>
-          <TextTemplateImportModal
-            onClose={() => setShowTemplateImport(false)}
-            onImport={(parsed) => importRecipe(parsed, t("app.sheetImported"))}
-          />
-        </Suspense>
-      )}
-      {showLinkImport && (
-        <Suspense fallback={null}>
-          <RecipeLinkImportModal
-            onClose={() => setShowLinkImport(false)}
-            onCreateRecipe={() => setFormTarget("new")}
-          />
-        </Suspense>
-      )}
-      {showSecretSettings && (
+      <AnimatePresence>
+        {textModal && (
+          <Suspense fallback={null}>
+            <TextShareModal title={textModal.title} text={textModal.text} onClose={() => setTextModal(null)} />
+          </Suspense>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {pendingImport && (
+          <Suspense fallback={null}>
+            <ImportConfirmModal
+              recipe={pendingImport}
+              onConfirm={confirmPendingImport}
+              onCancel={() => setPendingImport(null)}
+            />
+          </Suspense>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {pendingHouseholdJoin && (
+          <Suspense fallback={null}>
+            <JoinHouseholdConfirmModal
+              householdId={pendingHouseholdJoin}
+              onRequestJoin={onRequestJoinHousehold}
+              onClose={() => setPendingHouseholdJoin(null)}
+              showToast={showToast}
+            />
+          </Suspense>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {deleteTarget && (
+          <Suspense fallback={null}>
+            <DeleteConfirmModal
+              recipe={deleteTarget}
+              onConfirm={() => {
+                deleteRecipe(deleteTarget.id);
+                showToast(t("app.recipeDeleted"));
+                setDeleteTarget(null);
+              }}
+              onCancel={() => setDeleteTarget(null)}
+            />
+          </Suspense>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showTemplateImport && (
+          <Suspense fallback={null}>
+            <TextTemplateImportModal
+              onClose={() => setShowTemplateImport(false)}
+              onImport={(parsed) => importRecipe(parsed, t("app.sheetImported"))}
+            />
+          </Suspense>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showLinkImport && (
+          <Suspense fallback={null}>
+            <RecipeLinkImportModal
+              onClose={() => setShowLinkImport(false)}
+              onCreateRecipe={() => setFormTarget("new")}
+            />
+          </Suspense>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showSecretSettings && (
         <Suspense fallback={null}>
           <SecretSettingsModal
             onClose={() => setShowSecretSettings(false)}
@@ -678,21 +636,24 @@ export default function AppShell({
             onSignOut={signOut}
           />
         </Suspense>
-      )}
-      {showListsManager && (
-        <Suspense fallback={null}>
-          <ListsManagerModal
-            lists={visibleShoppingLists}
-            activeListId={activeListId}
-            scope={shoppingScope}
-            onOpen={openShoppingList}
-            onCreate={createShoppingList}
-            onRename={renameShoppingList}
-            onDelete={deleteShoppingList}
-            onClose={() => setShowListsManager(false)}
-          />
-        </Suspense>
-      )}
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showListsManager && (
+          <Suspense fallback={null}>
+            <ListsManagerModal
+              lists={visibleShoppingLists}
+              activeListId={activeListId}
+              scope={shoppingScope}
+              onOpen={openShoppingList}
+              onCreate={createShoppingList}
+              onRename={renameShoppingList}
+              onDelete={deleteShoppingList}
+              onClose={() => setShowListsManager(false)}
+            />
+          </Suspense>
+        )}
+      </AnimatePresence>
       {toast && <div className="toast">{toast}</div>}
     </div>
   );

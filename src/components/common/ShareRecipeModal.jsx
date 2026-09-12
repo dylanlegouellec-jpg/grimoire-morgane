@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { motion } from "motion/react";
 import { AlignLeft, Copy, Download, FileText, Image as ImageIcon, X } from "lucide-react";
+import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
 import {
   encodeRecipeCode,
   buildImportLink,
@@ -216,7 +218,7 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
 
   return (
     <>
-      <div
+      <motion.div
         className="modal-backdrop"
         onClick={(e) => {
           // Empêche le clic de remonter jusqu'au modal-backdrop de RecipeDetail
@@ -225,8 +227,16 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
           e.stopPropagation();
           onClose();
         }}
+        {...MODAL_BACKDROP_MOTION}
       >
-        <div className="modal grimoire-page" ref={modalRef} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+        <motion.div
+          className="modal grimoire-page"
+          ref={modalRef}
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => e.stopPropagation()}
+          {...MODAL_SHEET_MOTION}
+        >
           <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
           <h2 className="dropcap-title">{t("share.title", { title: recipe.title })}</h2>
           <Flourish />
@@ -278,8 +288,8 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
             <Seal tone="gold" onClick={doCopyCode}><Copy size={16} /> {t("share.copyCode")}</Seal>
             <Seal tone="gold" onClick={doDownloadFile}><Download size={16} /> {t("share.downloadFile")}</Seal>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* Fiche imprimable — invisible à l'écran (.print-sheet { display: none })
           n'apparaît que dans le rendu d'impression déclenché par window.print(). */}

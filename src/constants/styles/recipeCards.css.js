@@ -34,43 +34,10 @@ export const RECIPE_CARDS_CSS = `
      uniquement sous Chromium (Chrome/Edge desktop, Android Chrome) —
      jamais sous Safari iOS. */
 }
-/* "backwards" et non "both" : "both" retenait le "transform: none" du
-   dernier keyframe indéfiniment après la fin de l'animation (une
-   animation CSS garde la main sur la propriété qu'elle anime tant qu'elle
-   reste "en vigueur" — y compris son état figé post-animation en mode
-   forwards/both — quelle que soit la spécificité d'une autre règle). Ça
-   empêchait silencieusement TOUT autre transform sur .recipe-card de
-   jamais s'appliquer une fois l'entrée jouée : ni :active (voir plus haut),
-   ni l'ancien .press-pressing avant lui — seul .press-fired s'en sortait
-   car il redéfinit sa propre "animation", remplaçant entièrement celle de
-   .card-enter plutôt que d'entrer en concurrence avec elle. "backwards"
-   seul garde l'utilité recherchée (éviter un flash à taille normale
-   pendant le délai décalé de chaque carte, voir animationDelay) SANS
-   garder la main sur transform après la fin des 0.42s. */
-.card-enter { animation: cardEnter 0.42s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
-@keyframes cardEnter {
-  from { opacity: 0; transform: translateY(14px) scale(0.97); }
-  to { opacity: 1; transform: none; }
-}
-/* Clone visuellement identique de .card-enter/cardEnter, sous un autre nom
-   — voir RecipeCard.jsx : pour rejouer l'entrée d'une carte qui redevient
-   visible après un changement de filtre SANS la démonter (son <img> ne
-   doit jamais recharger), il fallait relancer l'animation "à la main".
-   Retirer puis remettre la MÊME classe forçait un recalcul de style
-   synchrone par carte pour que le navigateur veuille bien la relancer —
-   avec beaucoup de cartes révélées d'un coup (ex. le filtre "Salé" s'il
-   contient plus de recettes que "Sucré"), ça enchaînait autant de
-   recalculs complets de la page ("thrashing"), assez pour ralentir le
-   changement de filtre et faire perdre des frames à l'animation elle-même.
-   Alterner entre .card-enter et .card-enter-alt à chaque réapparition,
-   c'est un simple changement de valeur CSS (le nom de classe change
-   réellement) : le navigateur redémarre l'animation de lui-même, sans
-   qu'aucun recalcul de mise en page forcé ne soit nécessaire. */
-.card-enter-alt { animation: cardEnterAlt 0.42s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
-@keyframes cardEnterAlt {
-  from { opacity: 0; transform: translateY(14px) scale(0.97); }
-  to { opacity: 1; transform: none; }
-}
+/* Fondu/zoom d'entrée : ex-.card-enter/.card-enter-alt (CSS), désormais un
+   animate() Framer Motion impératif (useAnimate) posé directement sur cette
+   carte — voir RecipeCard.jsx. Plus aucune classe CSS dédiée ici : Framer
+   pilote directement opacity/transform sur le noeud DOM. */
 .recipe-card {
   overflow: hidden; cursor: pointer;
   /* Historique : "pan-y" explicite avait été ajouté ici parce que laisser
@@ -103,9 +70,9 @@ export const RECIPE_CARDS_CSS = `
      fois définitivement) — troisième épisode de cette propriété cette
      session, cette fois avec une cause confirmée par mesure directe (pas
      une suspicion) : depuis que les cartes restent montées en permanence
-     et rejouent leur animation d'entrée via un changement de classe au
-     lieu d'un démontage/remontage (voir RecipeCard.jsx, card-enter /
-     card-enter-alt), une carte qui repasse de display:none à visible
+     et rejouent leur animation d'entrée via un mécanisme qui ne les
+     démonte/remonte jamais (voir RecipeCard.jsx, l'effet useLayoutEffect
+     posé sur useAnimate), une carte qui repasse de display:none à visible
      porte encore content-visibility: auto au moment exact où la nouvelle
      animation démarre — Chromium peut alors ne jamais la faire progresser
      tant qu'il n'a pas confirmé la "pertinence" de l'élément pour

@@ -84,7 +84,7 @@ function ShoppingItemRow({ item, checked, onToggle, onAdjust, onDelete, onOpenWh
             // .bottom-nav (position: fixed + backdrop-filter, ailleurs sur
             // la page) sur iOS Safari : la nav apparaissait plus haute et
             // opaque spécifiquement sur l'onglet Courses. Même principe déjà
-            // appliqué dans useSwipeToDismiss.js.
+            // appliqué dans hooks/useDismissibleSheet.js.
             transform: dragX !== 0 ? `translateX(${dragX}px)` : undefined,
             transition: dragging ? "none" : "transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
           }}

@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { ChevronLeft, ChevronRight, Home, LogOut, Palette, Pencil, Save, SlidersHorizontal, UserCircle2, X } from "lucide-react";
 import { triggerHaptic } from "../../utils/helpers";
 import { getCachedProfile, getProfile } from "../../utils/profile";
 import { useTranslation } from "../../contexts/LanguageContext";
-import useAnimatedClose from "../../hooks/useAnimatedClose";
+import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useLongPress from "../../hooks/useLongPress";
-import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
+import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
 import ProfileEditor from "./ProfileEditor";
@@ -92,7 +93,7 @@ export default function SecretSettingsModal({
 
   // "Tirer pour fermer" du panneau principal — celui de la sous-vue vit
   // dans SettingsSubPanel (composant à part, voir plus bas dans ce
-  // fichier) : useFocusTrap/useSwipeToDismiss s'initialisent une seule
+  // fichier) : useFocusTrap/useDismissibleSheet s'initialisent une seule
   // fois, AU MONTAGE du composant qui les appelle (effet à deps `[]`) —
   // les appeler ICI pour la sous-vue n'aurait fonctionné qu'à l'ouverture
   // de la toute première sous-vue jamais visitée : ce composant-ci reste
@@ -105,28 +106,19 @@ export default function SecretSettingsModal({
   // chaque nouvelle ouverture (comme RecipeForm dans AppShell.jsx), refait
   // tourner ces effets à chaque fois, au bon moment.
   //
-  // Ferme tout le module. Désactivé pendant que ProfileEditor (une autre
-  // feuille, rendue comme descendant DOM de ce panneau) est ouvert
-  // par-dessus, pour ne pas lui voler le geste — et de toute façon hors de
-  // portée du doigt dès qu'une sous-vue est empilée dessus (son propre
-  // fond opaque intercepte alors le geste en premier).
-  // Anime la fermeture (bouton/fond/Échap/retour Android) au lieu de
-  // démonter instantanément — voir hooks/useAnimatedClose.js. PAS branché
-  // sur mainSwipe juste en dessous : le geste de tirage anime déjà lui-même
-  // sa sortie via sa propre position suivie au doigt, le mélanger à
-  // l'animation CSS ci-dessous la ferait repartir de zéro plutôt que de la
-  // position réelle du doigt au relâché.
-  const { closing, requestClose } = useAnimatedClose(onClose);
+  // Fermeture animée nativement par AnimatePresence (voir son appelant,
+  // AppShell.jsx) — plus besoin de retarder le démontage à la main comme
+  // l'ancien hooks/useAnimatedClose.js (retiré) : `onClose` peut être
+  // appelé directement, l'exit (MODAL_SHEET_MOTION) joue avant le vrai
+  // démontage. Désactivé pendant que ProfileEditor (une autre feuille,
+  // rendue comme descendant DOM de ce panneau) est ouvert par-dessus, pour
+  // ne pas lui voler le geste.
   const mainPanelRef = useRef(null);
-  // fade: true — seul cas vérifié sûr : rien de chargé/lisible n'est
-  // affiché derrière ce panneau (l'onglet courant de l'appli), comme pour
-  // RecipeDetail.jsx (voir useSwipeToDismiss.js).
-  const mainSwipe = useSwipeToDismiss(onClose, {
+  const mainSheet = useDismissibleSheet(onClose, {
     scrollRef: mainPanelRef,
     disabled: showProfileEditor,
-    fade: true,
   });
-  const mainFocusTrapRef = useFocusTrap(requestClose);
+  const mainFocusTrapRef = useFocusTrap(onClose);
   const setMainPanelRef = (node) => {
     mainPanelRef.current = node;
     mainFocusTrapRef.current = node;
@@ -167,18 +159,23 @@ export default function SecretSettingsModal({
 
   return (
     <>
-      <div className={`modal-backdrop ${closing ? "closing" : ""}`} onClick={requestClose}>
-        <div
+      <motion.div className="modal-backdrop" onClick={onClose} {...MODAL_BACKDROP_MOTION}>
+        <motion.div
           ref={setMainPanelRef}
-          className={`modal grimoire-page ios-settings-modal modal-swipeable ${closing ? "closing" : ""}`}
+          className="modal grimoire-page ios-settings-modal modal-swipeable"
           role="dialog"
           aria-modal="true"
           onClick={(e) => e.stopPropagation()}
-          style={mainSwipe.style}
-          {...mainSwipe.handlers}
+          {...MODAL_SHEET_MOTION}
+          {...mainSheet.panHandlers}
         >
-          <button className="modal-close" onClick={requestClose} aria-label="Fermer"><X size={20} /></button>
+          <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
 
+          {/* Estompe tout le contenu (pas la feuille/son fond) pendant le
+              tirage — voir useDismissibleSheet.js pour pourquoi la feuille
+              entière ne peut plus le faire elle-même comme avant
+              (fade: true, ancien hook). */}
+          <motion.div style={mainSheet.contentStyle}>
           <h2 className="dropcap-title">{t("settings.title")}</h2>
           <Flourish />
 
@@ -273,19 +270,23 @@ export default function SecretSettingsModal({
               </div>
             </>
           )}
+          </motion.div>
 
-          {showProfileEditor && user && (
-            <ProfileEditor
-              user={user}
-              profile={profile}
-              onClose={() => setShowProfileEditor(false)}
-              onSaved={(patch) => setProfile((prev) => ({ ...(prev || {}), ...patch }))}
-              showToast={showToast}
-            />
-          )}
-        </div>
-      </div>
+          <AnimatePresence>
+            {showProfileEditor && user && (
+              <ProfileEditor
+                user={user}
+                profile={profile}
+                onClose={() => setShowProfileEditor(false)}
+                onSaved={(patch) => setProfile((prev) => ({ ...(prev || {}), ...patch }))}
+                showToast={showToast}
+              />
+            )}
+          </AnimatePresence>
+        </motion.div>
+      </motion.div>
 
+      <AnimatePresence>
       {activeView !== "main" && (
         <SettingsSubPanel onBack={goToMain}>
           {activeView === "appearance" && (
@@ -336,6 +337,7 @@ export default function SecretSettingsModal({
           )}
         </SettingsSubPanel>
       )}
+      </AnimatePresence>
     </>
   );
 }
@@ -343,7 +345,7 @@ export default function SecretSettingsModal({
 /* ------------------------------------------------------------------ */
 /*  SOUS-VUE EMPILÉE — vrai composant à part (comme RecipeForm dans        */
 /*  AppShell.jsx), PAS des hooks appelés depuis SecretSettingsModal :       */
-/*  useFocusTrap/useSwipeToDismiss ne s'initialisent qu'UNE FOIS, au         */
+/*  useFocusTrap/useDismissibleSheet ne s'initialisent qu'UNE FOIS, au       */
 /*  montage du composant qui les appelle (effet à deps `[]`) — appelés       */
 /*  depuis SecretSettingsModal, qui reste monté en permanence tant que les    */
 /*  Réglages sont ouverts, cet effet se serait consommé avant même qu'une      */
@@ -355,41 +357,40 @@ export default function SecretSettingsModal({
 function SettingsSubPanel({ onBack, children }) {
   const { t } = useTranslation();
   const panelRef = useRef(null);
-  // Voir le commentaire équivalent sur le panneau principal ci-dessus :
-  // animé sur les déclencheurs "tap", pas sur le geste de tirage.
-  const { closing, requestClose } = useAnimatedClose(onBack);
-  // Pas de fade ici (défaut) : cette feuille est toujours empilée
-  // par-dessus le panneau principal des Réglages, laissé visible derrière
-  // — voir le commentaire de useSwipeToDismiss.js.
-  const swipe = useSwipeToDismiss(onBack, { scrollRef: panelRef });
-  const focusTrapRef = useFocusTrap(requestClose);
+  // Fermeture (retour au panneau principal) animée nativement par
+  // AnimatePresence (voir son appelant, SecretSettingsModal ci-dessus) —
+  // `onBack` peut être appelé directement, plus besoin de l'ancien
+  // hooks/useAnimatedClose.js.
+  const sheet = useDismissibleSheet(onBack, { scrollRef: panelRef });
+  const focusTrapRef = useFocusTrap(onBack);
   const setPanelRef = (node) => {
     panelRef.current = node;
     focusTrapRef.current = node;
   };
 
   return (
-    <div className={`modal-backdrop ${closing ? "closing" : ""}`} onClick={requestClose}>
-      <div
+    <motion.div className="modal-backdrop" onClick={onBack} {...MODAL_BACKDROP_MOTION}>
+      <motion.div
         ref={setPanelRef}
-        className={`modal grimoire-page ios-settings-modal modal-swipeable ${closing ? "closing" : ""}`}
+        className="modal grimoire-page ios-settings-modal modal-swipeable"
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
-        style={swipe.style}
-        {...swipe.handlers}
+        {...MODAL_SHEET_MOTION}
+        {...sheet.panHandlers}
       >
-        <button className="modal-back" onClick={requestClose}><ChevronLeft size={20} /> {t("settings.back")}</button>
-        {/* contentStyle (pas swipe.style) : estompe le CONTENU sur le fond
-            plein de ce panneau (background: var(--parchment), toujours
-            opaque sur l'élément .modal parent, jamais touché ici), au lieu
-            de rendre toute la feuille translucide — donne la même sensation
-            de fondu au tirage que le panneau principal, sans laisser
-            transparaître celui-ci à travers (voir useSwipeToDismiss.js). */}
-        <div style={swipe.contentStyle}>
+        <button className="modal-back" onClick={onBack}><ChevronLeft size={20} /> {t("settings.back")}</button>
+        {/* contentStyle (pas sheet.panHandlers.style, qui ne porte que la
+            position "y") : estompe le CONTENU sur le fond plein de ce
+            panneau (background: var(--parchment), toujours opaque sur
+            l'élément .modal parent, jamais touché ici), au lieu de rendre
+            toute la feuille translucide — donne la même sensation de fondu
+            au tirage que le panneau principal, sans laisser transparaître
+            celui-ci à travers (voir useDismissibleSheet.js). */}
+        <motion.div style={sheet.contentStyle}>
           {children}
-        </div>
-      </div>
-    </div>
+        </motion.div>
+      </motion.div>
+    </motion.div>
   );
 }

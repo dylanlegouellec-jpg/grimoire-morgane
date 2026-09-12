@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AnimatePresence } from "motion/react";
 import { Check, Copy, Home, Plus, Share2, UserPlus, Users, X } from "lucide-react";
 import { getHouseholdMembers, addUserToHousehold, leaveHousehold } from "../../utils/auth";
 import { getCachedMembers, setCachedMembers } from "../../utils/householdCache";
@@ -447,32 +448,36 @@ export default function HouseholdManagerModal({
           </p>
         )}
 
-        {optionsTarget && (
-          <HouseholdOptionsModal
-            household={optionsTarget}
-            isOnlyHousehold={(households || []).length <= 1}
-            onRename={onRenameHousehold}
-            onDelete={onDeleteHousehold}
-            onClose={() => setOptionsTarget(null)}
-          />
-        )}
+        <AnimatePresence>
+          {optionsTarget && (
+            <HouseholdOptionsModal
+              household={optionsTarget}
+              isOnlyHousehold={(households || []).length <= 1}
+              onRename={onRenameHousehold}
+              onDelete={onDeleteHousehold}
+              onClose={() => setOptionsTarget(null)}
+            />
+          )}
+        </AnimatePresence>
 
-        {memberOptionsTarget && (
-          isSelfTarget ? (
-            <LeaveHouseholdConfirmModal
-              householdName={activeHousehold ? activeHousehold.name : ""}
-              onConfirm={handleLeaveHousehold}
-              onClose={() => setMemberOptionsTarget(null)}
-            />
-          ) : (
-            <HouseholdMemberOptionsModal
-              member={memberOptionsTarget}
-              householdId={householdId}
-              onChanged={refreshMembers}
-              onClose={() => setMemberOptionsTarget(null)}
-            />
-          )
-        )}
+        <AnimatePresence>
+          {memberOptionsTarget && (
+            isSelfTarget ? (
+              <LeaveHouseholdConfirmModal
+                householdName={activeHousehold ? activeHousehold.name : ""}
+                onConfirm={handleLeaveHousehold}
+                onClose={() => setMemberOptionsTarget(null)}
+              />
+            ) : (
+              <HouseholdMemberOptionsModal
+                member={memberOptionsTarget}
+                householdId={householdId}
+                onChanged={refreshMembers}
+                onClose={() => setMemberOptionsTarget(null)}
+              />
+            )
+          )}
+        </AnimatePresence>
     </>
   );
 }

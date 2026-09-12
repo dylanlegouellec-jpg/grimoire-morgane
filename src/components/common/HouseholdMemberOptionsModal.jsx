@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { AlertTriangle, Shield, User, X } from "lucide-react";
+import { motion } from "motion/react";
 import { triggerHaptic } from "../../utils/helpers";
 import { changeHouseholdMemberRole, removeHouseholdMember } from "../../utils/auth";
 import { useTranslation } from "../../contexts/LanguageContext";
+import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
-import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
+import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
 
@@ -22,7 +24,7 @@ export default function HouseholdMemberOptionsModal({ member, householdId, onClo
   const { t } = useTranslation();
   useBodyScrollLock(true);
   const modalRef = useFocusTrap(onClose);
-  const swipe = useSwipeToDismiss(onClose, { scrollRef: modalRef });
+  const sheet = useDismissibleSheet(onClose, { scrollRef: modalRef });
   const [busy, setBusy] = useState(false);
   const [confirmingRemove, setConfirmingRemove] = useState(false);
   const [error, setError] = useState("");
@@ -60,15 +62,15 @@ export default function HouseholdMemberOptionsModal({ member, householdId, onClo
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
+    <motion.div className="modal-backdrop" onClick={onClose} {...MODAL_BACKDROP_MOTION}>
+      <motion.div
         className="modal grimoire-page recipe-options-modal modal-swipeable"
         ref={modalRef}
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
-        style={swipe.style}
-        {...swipe.handlers}
+        {...MODAL_SHEET_MOTION}
+        {...sheet.panHandlers}
       >
         <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">{name}</h2>
@@ -107,7 +109,7 @@ export default function HouseholdMemberOptionsModal({ member, householdId, onClo
         </div>
 
         {error && <p className="hint recipe-options-error">{error}</p>}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

@@ -1,16 +1,22 @@
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { motion } from "motion/react";
 import { Camera, ImageOff, Sparkles, Trash2, X } from "lucide-react";
 import { triggerHaptic } from "../../utils/helpers";
 import { generateAIIllustration } from "../../utils/aiIllustration";
 import { uploadRecipeImage } from "../../utils/imageUpload";
+import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
-import useSwipeToDismiss from "../../hooks/useSwipeToDismiss";
+import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import Flourish from "./Flourish";
 
 /* ------------------------------------------------------------------ */
 /*  MENU D'ACTIONS SUR UNE RECETTE (déclenché par l'appui long)        */
+/*  Rendu à l'intérieur d'un <AnimatePresence> côté appelant            */
+/*  (RecipeCard.jsx) — nécessaire pour que son animation de SORTIE      */
+/*  (voir MODAL_SHEET_MOTION.exit) ait le temps de jouer avant le vrai   */
+/*  démontage.                                                          */
 /* ------------------------------------------------------------------ */
 export default function RecipeOptionsModal({ recipe, onClose, onUpdateRecipe, onRequestDelete, householdId, showToast }) {
   const fileInputRef = useRef(null);
@@ -18,7 +24,7 @@ export default function RecipeOptionsModal({ recipe, onClose, onUpdateRecipe, on
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const modalRef = useFocusTrap(onClose);
-  const swipe = useSwipeToDismiss(onClose, { scrollRef: modalRef });
+  const sheet = useDismissibleSheet(onClose, { scrollRef: modalRef });
 
   // Fige le <body> tant que ce menu est ouvert (même hook que RecipeDetail.jsx).
   useBodyScrollLock(true);
@@ -94,15 +100,15 @@ export default function RecipeOptionsModal({ recipe, onClose, onUpdateRecipe, on
   // signalé sur cette modale précisément. Le portail sort la modale de cet
   // ancêtre scrollable une bonne fois pour toutes, quel que soit le moteur.
   return createPortal(
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
+    <motion.div className="modal-backdrop" onClick={onClose} {...MODAL_BACKDROP_MOTION}>
+      <motion.div
         className="modal grimoire-page recipe-options-modal modal-swipeable"
         ref={modalRef}
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
-        style={swipe.style}
-        {...swipe.handlers}
+        {...MODAL_SHEET_MOTION}
+        {...sheet.panHandlers}
       >
         <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">{recipe.title}</h2>
@@ -141,8 +147,8 @@ export default function RecipeOptionsModal({ recipe, onClose, onUpdateRecipe, on
           style={{ display: "none" }}
           onChange={handleFileChange}
         />
-      </div>
-    </div>,
+      </motion.div>
+    </motion.div>,
     document.body
   );
 }
