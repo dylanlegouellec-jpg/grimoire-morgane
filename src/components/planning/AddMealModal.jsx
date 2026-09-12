@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChevronLeft, PenLine, Search, X } from "lucide-react";
-import { MEAL_TYPES, COURSE_TYPES, DEFAULT_COURSE_TYPE, toISODate, formatDayLabel } from "../../utils/planning";
+import { MEAL_TYPES, COURSE_TYPES, DEFAULT_COURSE_TYPE, mealTypeHasCourse, toISODate, formatDayLabel } from "../../utils/planning";
 import { categoryClass, categoryLabel } from "../../utils/helpers";
 import { triggerHaptic } from "../../utils/haptics";
 import { useTranslation } from "../../contexts/LanguageContext";
@@ -32,9 +32,11 @@ export default function AddMealModal({ recipes, initialDate, onAdd, onClose }) {
   const [viewMonth, setViewMonth] = useState(() => (initialDate ? new Date(initialDate) : new Date()));
   const [mealType, setMealType] = useState(null);
   // Type de plat (Apéro/Entrée/Plat/Dessert) — dimension INDÉPENDANTE du
-  // moment (mealType) ci-dessus, choisie séparément à l'étape recette (voir
-  // le sélecteur en haut à droite plus bas) : "Plat" par défaut, le cas le
-  // plus fréquent, pour ne pas alourdir l'ajout le plus courant.
+  // moment (mealType) ci-dessus, choisie à côté de lui sur cette même étape
+  // (voir le sélecteur à droite de la date plus bas) : "Plat" par défaut,
+  // le cas le plus fréquent. N'a de sens que pour Déjeuner/Dîner (voir
+  // mealTypeHasCourse) — ignoré à l'enregistrement pour les autres moments,
+  // qu'il ait été changé ou non.
   const [courseType, setCourseType] = useState(DEFAULT_COURSE_TYPE);
   const [search, setSearch] = useState("");
 
@@ -54,7 +56,7 @@ export default function AddMealModal({ recipes, initialDate, onAdd, onClose }) {
 
   const pickRecipe = (recipeId) => {
     triggerHaptic(15);
-    onAdd(toISODate(selectedDate), mealType, recipeId, null, courseType);
+    onAdd(toISODate(selectedDate), mealType, recipeId, null, mealTypeHasCourse(mealType) ? courseType : null);
     onClose();
   };
 
@@ -65,7 +67,7 @@ export default function AddMealModal({ recipes, initialDate, onAdd, onClose }) {
     const title = search.trim();
     if (!title) return;
     triggerHaptic(15);
-    onAdd(toISODate(selectedDate), mealType, null, title, courseType);
+    onAdd(toISODate(selectedDate), mealType, null, title, mealTypeHasCourse(mealType) ? courseType : null);
     onClose();
   };
 
@@ -95,24 +97,24 @@ export default function AddMealModal({ recipes, initialDate, onAdd, onClose }) {
         ) : (
           <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         )}
-        {step === "recipe" && (
-          <select
-            className="meal-course-select"
-            value={courseType}
-            onChange={(e) => { triggerHaptic(10); setCourseType(e.target.value); }}
-            aria-label={t("planning.courseTypeLabel")}
-          >
-            {COURSE_TYPES.map((c) => (
-              <option key={c.key} value={c.key}>{c.icon} {t(`courseTypes.${c.key}`)}</option>
-            ))}
-          </select>
-        )}
         <h2 className="dropcap-title" style={!isFirstStep ? { marginTop: 34 } : undefined}>
           {titles[step]}
         </h2>
         <Flourish />
         {step === "meal" && selectedDate && (
-          <p className="hint" style={{ fontStyle: "normal" }}>{formatDayLabel(selectedDate, language)}</p>
+          <div className="meal-step-subheader">
+            <p className="hint" style={{ fontStyle: "normal", margin: 0 }}>{formatDayLabel(selectedDate, language)}</p>
+            <select
+              className="meal-course-select"
+              value={courseType}
+              onChange={(e) => { triggerHaptic(10); setCourseType(e.target.value); }}
+              aria-label={t("planning.courseTypeLabel")}
+            >
+              {COURSE_TYPES.map((c) => (
+                <option key={c.key} value={c.key}>{c.icon} {t(`courseTypes.${c.key}`)}</option>
+              ))}
+            </select>
+          </div>
         )}
 
         {step === "date" && (

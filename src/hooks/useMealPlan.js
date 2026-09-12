@@ -17,9 +17,12 @@ import { DEFAULT_COURSE_TYPE } from "../utils/planning";
 /*  un repas normal. `mealType` (moment de la journée) et `courseType`       */
 /*  (type de plat — Apéro/Entrée/Plat/Dessert, voir utils/planning.js)       */
 /*  sont deux dimensions indépendantes, jamais mélangées dans la même        */
-/*  liste de choix (voir AddMealModal.jsx) : `courseType` absent (entrées    */
-/*  créées avant ce champ) est traité comme "plat" à l'affichage, même       */
-/*  logique de rétrocompatibilité sans migration que `scope` ci-dessous.     */
+/*  liste de choix (voir AddMealModal.jsx). `courseType` vaut explicitement  */
+/*  `null` pour les moments où il n'a pas de sens (petit-déjeuner, en-cas —  */
+/*  voir mealTypeHasCourse) : ce `null` est VOLONTAIRE, à distinguer d'un    */
+/*  simple champ absent (entrées créées avant ce champ), traité comme        */
+/*  "plat" à l'affichage pour déjeuner/dîner — même logique de               */
+/*  rétrocompatibilité sans migration que `scope` ci-dessous.                */
 /*  `scope` ("household" | "personal") + `userId` : voir PlanningView.jsx,   */
 /*  qui filtre l'affichage selon la portée active. Reste stocké dans le       */
 /*  MÊME tableau partagé de foyer plutôt qu'une colonne séparée — donc         */
@@ -41,7 +44,12 @@ export default function useMealPlan({ initialMealPlan = [] }) {
         id: nextId(),
         date,
         mealType,
-        courseType: courseType || DEFAULT_COURSE_TYPE,
+        // Pas de repli "|| DEFAULT_COURSE_TYPE" ici : `null` explicite
+        // (moment sans type de plat, voir le commentaire de fichier
+        // ci-dessus) doit rester `null`, pas redevenir "plat". Le
+        // paramètre par défaut ci-dessus ne couvre que l'appel qui omet
+        // carrément cet argument (undefined), pas un null volontaire.
+        courseType,
         recipeId: recipeId || null,
         customTitle: customTitle || null,
         scope: scope === "personal" ? "personal" : "household",
