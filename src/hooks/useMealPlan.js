@@ -81,6 +81,26 @@ export default function useMealPlan({ initialMealPlan = [] }) {
     setMealPlan((prev) => prev.map((e) => (e.id === id ? { ...e, ...updates } : e)));
   }, []);
 
+  // Réordonne un SOUS-ENSEMBLE d'entrées les unes par rapport aux autres
+  // (glisser-déposer d'un même sous-groupe — voir PlanningMealItemsList.jsx,
+  // hooks/useDragReorder.js) sans toucher à leur position relative au reste
+  // du plan : l'ordre d'affichage d'un groupe (voir groupEntriesByCourse
+  // dans PlanningView.jsx) suit l'ordre de CE tableau pour les entrées de
+  // même type de plat/moment (tri stable), donc réordonner ici les entrées
+  // concernées suffit à changer leur ordre affiché, sans rien déplacer
+  // d'autre. `orderedIds` doit contenir exactement les ids d'un même
+  // sous-groupe, dans le nouvel ordre voulu.
+  const reorderMealPlanEntries = useCallback((orderedIds) => {
+    triggerHaptic(12);
+    setMealPlan((prev) => {
+      const idSet = new Set(orderedIds);
+      const byId = new Map(prev.map((e) => [e.id, e]));
+      const reordered = orderedIds.map((id) => byId.get(id)).filter(Boolean);
+      let cursor = 0;
+      return prev.map((e) => (idSet.has(e.id) ? reordered[cursor++] : e));
+    });
+  }, []);
+
   return {
     mealPlan,
     setMealPlan,
@@ -88,5 +108,6 @@ export default function useMealPlan({ initialMealPlan = [] }) {
     removeMealPlanEntry,
     removeMealPlanEntries,
     updateMealPlanEntry,
+    reorderMealPlanEntries,
   };
 }

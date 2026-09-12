@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "../../contexts/LanguageContext";
 import useLongPress from "../../hooks/useLongPress";
-import PlanningMealItem from "./PlanningMealItem";
+import PlanningMealItemsList from "./PlanningMealItemsList";
 import CourseOptionsModal from "./CourseOptionsModal";
 
 const LONG_PRESS_DURATION_MS = 500;
@@ -17,7 +17,7 @@ const LONG_PRESS_DURATION_MS = 500;
 /*  catégorie (date/moment/type de plat préremplis, voir AddMealModal.jsx,      */
 /*  props `initialMealType`/`initialCourseType`), ou tout supprimer d'un coup.  */
 /* ------------------------------------------------------------------ */
-export default function PlanningCourseGroup({ course, entries, labelForEntry, onEdit, onDelete, onAddToCourse, onDeleteAll }) {
+export default function PlanningCourseGroup({ course, entries, labelForEntry, reorderMode, onReorder, onEdit, onDelete, onAddToCourse, onDeleteAll }) {
   const { t } = useTranslation();
   const [showOptions, setShowOptions] = useState(false);
   const headerLongPress = useLongPress(() => setShowOptions(true), LONG_PRESS_DURATION_MS);
@@ -41,11 +41,15 @@ export default function PlanningCourseGroup({ course, entries, labelForEntry, on
         <span className="planning-course-label">{label}</span>
       </div>
       <ul className="planning-course-items">
-        {entries.map((entry) => (
-          <li className="planning-course-item" key={entry.id}>
-            <PlanningMealItem entry={entry} label={labelForEntry(entry)} onEdit={onEdit} onDelete={onDelete} />
-          </li>
-        ))}
+        <PlanningMealItemsList
+          entries={entries}
+          bulleted
+          reorderMode={reorderMode}
+          onReorder={onReorder}
+          labelForEntry={labelForEntry}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
       </ul>
 
       {showOptions && (
