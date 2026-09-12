@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { nextId, triggerHaptic } from "../utils/helpers";
-import { DEFAULT_COURSE_TYPE } from "../utils/planning";
+import { DEFAULT_COURSE_TYPE, mealTypeHasCourse } from "../utils/planning";
 
 /* ------------------------------------------------------------------ */
 /*  PLAN DE REPAS — état + actions.                                    */
@@ -101,6 +101,33 @@ export default function useMealPlan({ initialMealPlan = [] }) {
     });
   }, []);
 
+  // Reclassification rapide d'une section entière vers un autre moment (menu
+  // "Changer le moment du repas" d'un en-tête de moment, voir
+  // PlanningMealGroup.jsx/MoveMealSectionModal.jsx) : change le `mealType`
+  // de TOUTES les entrées listées vers `newMealType`, en ajustant leur
+  // `courseType` selon les mêmes règles que partout ailleurs dans ce fichier
+  // (voir le commentaire de fichier plus haut) — `null` si le moment
+  // d'arrivée n'a pas de type de plat, "plat" par défaut s'il en a un mais
+  // que l'entrée n'en avait pas encore (venant d'un moment sans type de
+  // plat). Les entrées DÉJÀ présentes sous le moment cible ne sont jamais
+  // touchées : elles se retrouvent simplement mélangées avec les entrées
+  // déplacées via le même regroupement par type de plat déjà appliqué à
+  // l'affichage (voir PlanningView.jsx, groupEntriesByCourse) — une
+  // "fusion" propre entre les deux sections, sans code de fusion dédié.
+  const moveMealPlanSection = useCallback((entryIds, newMealType) => {
+    triggerHaptic(15);
+    const idSet = new Set(entryIds);
+    const targetHasCourse = mealTypeHasCourse(newMealType);
+    setMealPlan((prev) => prev.map((e) => {
+      if (!idSet.has(e.id)) return e;
+      return {
+        ...e,
+        mealType: newMealType,
+        courseType: targetHasCourse ? (e.courseType || DEFAULT_COURSE_TYPE) : null,
+      };
+    }));
+  }, []);
+
   return {
     mealPlan,
     setMealPlan,
@@ -109,5 +136,6 @@ export default function useMealPlan({ initialMealPlan = [] }) {
     removeMealPlanEntries,
     updateMealPlanEntry,
     reorderMealPlanEntries,
+    moveMealPlanSection,
   };
 }

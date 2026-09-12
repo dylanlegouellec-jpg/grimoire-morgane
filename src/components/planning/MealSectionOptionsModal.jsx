@@ -1,5 +1,5 @@
 import { createPortal } from "react-dom";
-import { ArrowUpDown, Trash2, X } from "lucide-react";
+import { ArrowUpDown, RefreshCw, Trash2, X } from "lucide-react";
 import { triggerHaptic } from "../../utils/haptics";
 import { useTranslation } from "../../contexts/LanguageContext";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
@@ -14,9 +14,11 @@ import Flourish from "../common/Flourish";
 /*  .jsx. Le mode réorganisation (poignée ⋮⋮, voir PlanningMealItem.jsx) se     */
 /*  bascule ICI plutôt que via un bouton permanent en haut de la vue — reste   */
 /*  découvrable au même endroit que "Supprimer", sans rien ajouter à           */
-/*  l'affichage normal tant qu'on n'a pas fait un appui long.                    */
+/*  l'affichage normal tant qu'on n'a pas fait un appui long. "Changer le       */
+/*  moment du repas" ouvre un sélecteur (voir MoveMealSectionModal.jsx) pour     */
+/*  reclasser toute la section vers un autre moment de la journée.               */
 /* ------------------------------------------------------------------ */
-export default function MealSectionOptionsModal({ mealLabel, reorderMode, onToggleReorder, onClose, onDeleteSection }) {
+export default function MealSectionOptionsModal({ mealLabel, reorderMode, onToggleReorder, onClose, onMoveSection, onDeleteSection }) {
   const { t } = useTranslation();
   const modalRef = useFocusTrap(onClose);
   const swipe = useSwipeToDismiss(onClose, { scrollRef: modalRef });
@@ -26,6 +28,11 @@ export default function MealSectionOptionsModal({ mealLabel, reorderMode, onTogg
     triggerHaptic(15);
     onToggleReorder();
     onClose();
+  };
+
+  const handleMoveSection = () => {
+    triggerHaptic(15);
+    onMoveSection();
   };
 
   const handleDeleteSection = () => {
@@ -52,6 +59,11 @@ export default function MealSectionOptionsModal({ mealLabel, reorderMode, onTogg
           <button type="button" className="recipe-option-row" onClick={handleToggleReorder}>
             <ArrowUpDown size={18} />
             <span>{t(reorderMode ? "planning.reorderModeOff" : "planning.reorderModeOn")}</span>
+          </button>
+
+          <button type="button" className="recipe-option-row" onClick={handleMoveSection}>
+            <RefreshCw size={18} />
+            <span>{t("planning.moveSectionOption")}</span>
           </button>
 
           <button type="button" className="recipe-option-row danger" onClick={handleDeleteSection}>
