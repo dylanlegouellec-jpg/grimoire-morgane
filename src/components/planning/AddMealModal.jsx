@@ -97,24 +97,24 @@ export default function AddMealModal({ recipes, initialDate, onAdd, onClose }) {
         ) : (
           <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         )}
+        {step === "recipe" && mealTypeHasCourse(mealType) && (
+          <select
+            className="meal-course-select"
+            value={courseType}
+            onChange={(e) => { triggerHaptic(10); setCourseType(e.target.value); }}
+            aria-label={t("planning.courseTypeLabel")}
+          >
+            {COURSE_TYPES.map((c) => (
+              <option key={c.key} value={c.key}>{c.icon} {t(`courseTypes.${c.key}`)}</option>
+            ))}
+          </select>
+        )}
         <h2 className="dropcap-title" style={!isFirstStep ? { marginTop: 34 } : undefined}>
           {titles[step]}
         </h2>
         <Flourish />
         {step === "meal" && selectedDate && (
-          <div className="meal-step-subheader">
-            <p className="hint" style={{ fontStyle: "normal", margin: 0 }}>{formatDayLabel(selectedDate, language)}</p>
-            <select
-              className="meal-course-select"
-              value={courseType}
-              onChange={(e) => { triggerHaptic(10); setCourseType(e.target.value); }}
-              aria-label={t("planning.courseTypeLabel")}
-            >
-              {COURSE_TYPES.map((c) => (
-                <option key={c.key} value={c.key}>{c.icon} {t(`courseTypes.${c.key}`)}</option>
-              ))}
-            </select>
-          </div>
+          <p className="hint" style={{ fontStyle: "normal" }}>{formatDayLabel(selectedDate, language)}</p>
         )}
 
         {step === "date" && (
