@@ -14,6 +14,7 @@ import {
 import { getSupabaseClient } from "../utils/supabaseClient";
 import { getOfflineQueueSize } from "../utils/offlineQueue";
 import { saveLocalCache } from "../utils/localCache";
+import { prefetchRecipeImages } from "../utils/imageCache";
 
 /* ------------------------------------------------------------------ */
 /*  SYNCHRONISATION — hors-ligne, chargement initial, Realtime          */
@@ -187,6 +188,17 @@ export default function useOfflineSync({
       /* pas d'URL exploitable, tant pis */
     }
   }, []);
+
+  // Précharge les photos de recettes dans le cache du service worker (voir
+  // utils/imageCache.js) dès que la liste de recettes est connue — sans
+  // attendre qu'une carte particulière soit scrollée à l'écran (voir
+  // DishArt.jsx, `loading="lazy"`). Sans ça, une recette jamais affichée
+  // pendant qu'on était en ligne perdait sa photo dès le premier passage
+  // hors-ligne, alors que l'image existait bel et bien côté serveur.
+  useEffect(() => {
+    if (!ready || !SUPABASE_READY) return;
+    prefetchRecipeImages(recipes);
+  }, [ready, recipes]);
 
   // Miroir local (offline-first) : recopié dans localStorage à chaque
   // changement significatif — relu au prochain lancement, avec ou sans
