@@ -151,6 +151,26 @@ export const PLANNING_CSS = `
 .planning-meal-flat-item { display: flex; }
 .planning-send-wrap { margin: 8px 0 100px; display: flex; justify-content: center; }
 
+/* Bannière fixe de validation du mode réorganisation (voir PlanningView.jsx,
+   "reorderMode") — même ancrage bas que .toast (misc.css.js, bottom: 78px)
+   pour rester juste au-dessus de .bottom-nav sans la chevaucher. Plus large
+   qu'un toast (contenu + bouton "Terminer" côte à côte, pas un simple
+   message), donc son propre style plutôt qu'une réutilisation de .toast. */
+.planning-reorder-banner {
+  position: fixed; bottom: 78px; left: 50%; transform: translateX(-50%);
+  width: calc(100% - 32px); max-width: 448px; box-sizing: border-box;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: var(--chrome); border: 1px solid var(--gold); border-radius: 16px;
+  padding: 10px 10px 10px 16px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.3); z-index: 50;
+  animation: fadeIn 0.25s ease;
+}
+.planning-reorder-banner-label {
+  color: var(--gold-light);
+  font-family: 'EB Garamond', serif; font-style: italic; font-size: 0.82rem;
+  min-width: 0;
+}
+
 /* --- Sélecteur de type de plat (AddMealModal.jsx, étape recette) ---
    En haut à droite, exactement là où .modal-close (top:14px; right:14px)
    se pose sur les autres étapes de cet assistant — cette étape-ci utilise
