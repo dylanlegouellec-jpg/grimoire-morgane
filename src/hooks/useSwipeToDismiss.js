@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /* ------------------------------------------------------------------ */
 /*  "TIRER POUR FERMER" — geste générique pour feuilles/modales en bas   */
@@ -25,10 +25,25 @@ import { useRef, useState } from "react";
 const AXIS_LOCK_THRESHOLD_PX = 8;
 const DISMISS_DISTANCE_PX = 100;
 const DISMISS_VELOCITY_PX_PER_MS = 0.6;
+// Doit rester cohérente avec la courbe de transition CSS ci-dessous
+// (style.transition, cas `isClosing`) : le vrai `onDismiss` — qui démonte
+// la modale et débloque donc le scroll du fond via useBodyScrollLock — n'est
+// appelé qu'UNE FOIS cette animation de sortie terminée, jamais au moment du
+// relâchement du doigt. Sans ce délai, le nœud DOM que le doigt était en
+// train de suivre disparaît EN PLEIN GESTE : le navigateur reporte alors la
+// fin du geste (touchend/inertie résiduelle) sur ce qui se trouve maintenant
+// en dessous (le <body>, tout juste redevenu scrollable), provoquant un
+// sursaut de scroll brutal de l'arrière-plan pile au moment de la fermeture.
+const CLOSE_ANIMATION_MS = 250;
 
 export default function useSwipeToDismiss(onDismiss, { scrollRef, disabled = false, fade = false } = {}) {
   const startYRef = useRef(null);
   const draggingRef = useRef(false);
+  // true dès que le seuil de fermeture est franchi au relâchement : plus
+  // aucun nouveau geste n'est pris en compte pendant que la feuille achève
+  // sa sortie (voir onTouchStart/onTouchMove/onTouchEnd ci-dessous).
+  const closingRef = useRef(false);
+  const closeTimerRef = useRef(null);
   // Deux derniers échantillons (position + horodatage) : sert à calculer une
   // vitesse INSTANTANÉE au relâchement (celle du tout dernier mouvement),
   // pas une moyenne depuis le début du geste — un "flick" rapide doit
@@ -37,6 +52,11 @@ export default function useSwipeToDismiss(onDismiss, { scrollRef, disabled = fal
   const lastSampleRef = useRef({ y: 0, time: 0 });
   const [translateY, setTranslateY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+
+  useEffect(() => () => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+  }, []);
 
   const atScrollTop = () => {
     const el = scrollRef && scrollRef.current;
@@ -56,7 +76,7 @@ export default function useSwipeToDismiss(onDismiss, { scrollRef, disabled = fal
   };
 
   const onTouchStart = (e) => {
-    if (disabled) return;
+    if (disabled || closingRef.current) return;
     const t = e.touches && e.touches[0];
     if (!t) return;
     startYRef.current = t.clientY;
@@ -66,7 +86,7 @@ export default function useSwipeToDismiss(onDismiss, { scrollRef, disabled = fal
   };
 
   const onTouchMove = (e) => {
-    if (disabled || startYRef.current === null) return;
+    if (disabled || closingRef.current || startYRef.current === null) return;
     const t = e.touches && e.touches[0];
     if (!t) return;
     const dy = t.clientY - startYRef.current;
@@ -101,23 +121,48 @@ export default function useSwipeToDismiss(onDismiss, { scrollRef, disabled = fal
     // Tirage vers le bas confirmé depuis le sommet : on prend la main sur
     // CE geste précis (voir le commentaire de fichier ci-dessus).
     if (e.cancelable) e.preventDefault();
+    // Empêche aussi la remontée du geste vers un éventuel ancêtre React
+    // (ex. le swipe de semaine du Planning, voir PlanningView.jsx) : les
+    // modales sont montées via createPortal dans <body>, mais React fait
+    // bien remonter ses événements synthétiques le long de l'arbre REACT
+    // (pas de l'arbre DOM) à travers les portails.
+    e.stopPropagation();
     setTranslateY(dy);
   };
 
-  const onTouchEnd = () => {
-    if (disabled) return;
+  const onTouchEnd = (e) => {
+    if (disabled || closingRef.current) return;
     const wasDragging = draggingRef.current;
     const distance = translateY;
     const { y: prevY, time: prevTime } = prevSampleRef.current;
     const { y: lastY, time: lastTime } = lastSampleRef.current;
     const elapsed = Math.max(1, lastTime - prevTime);
     const velocity = Math.max(0, (lastY - prevY) / elapsed); // px/ms, vers le bas seulement
+    const shouldDismiss = wasDragging && (distance > DISMISS_DISTANCE_PX || velocity > DISMISS_VELOCITY_PX_PER_MS);
 
-    reset();
+    startYRef.current = null;
+    draggingRef.current = false;
+    setIsDragging(false);
 
-    if (wasDragging && (distance > DISMISS_DISTANCE_PX || velocity > DISMISS_VELOCITY_PX_PER_MS)) {
-      onDismiss();
+    if (!shouldDismiss) {
+      setTranslateY(0);
+      return;
     }
+
+    // Geste de fermeture confirmé : on empêche tout traitement natif résiduel
+    // de CE relâchement (inertie de défilement que le navigateur pourrait
+    // vouloir appliquer ensuite) et on termine l'animation de sortie AVANT
+    // d'appeler le vrai onDismiss — voir CLOSE_ANIMATION_MS ci-dessus.
+    if (e && e.cancelable) e.preventDefault();
+    closingRef.current = true;
+    setIsClosing(true);
+    // Grande valeur volontairement générique (pas besoin de mesurer la
+    // feuille) : pousse n'importe quelle modale hors de n'importe quel
+    // écran, portrait ou paysage.
+    setTranslateY(Math.max(window.innerHeight || 0, 800) + 200);
+    closeTimerRef.current = setTimeout(() => {
+      onDismiss();
+    }, CLOSE_ANIMATION_MS);
   };
 
   return {
@@ -152,7 +197,23 @@ export default function useSwipeToDismiss(onDismiss, { scrollRef, disabled = fal
       // trouve juste derrière (un simple onglet, une grille de recettes) —
       // à activer au cas par cas, pas par défaut.
       opacity: fade && translateY > 0 ? Math.max(1 - translateY / 300, 0.4) : 1,
-      transition: isDragging ? "none" : `transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)${fade ? ", opacity 0.25s ease" : ""}`,
+      // Courbe élastique UNIQUEMENT pour le retour à la position de repos
+      // (tirage relâché sous le seuil de fermeture) — une fermeture
+      // confirmée (`isClosing`) accélère au contraire vers la sortie
+      // (ease-in), comme une feuille qui tombe une fois lâchée : jamais de
+      // rebond une fois que la décision de fermer est prise.
+      transition: isDragging
+        ? "none"
+        : isClosing
+          ? `transform ${CLOSE_ANIMATION_MS}ms cubic-bezier(0.4, 0, 1, 1)${fade ? `, opacity ${CLOSE_ANIMATION_MS}ms ease` : ""}`
+          : `transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)${fade ? ", opacity 0.25s ease" : ""}`,
+      // Bloque toute reconnaissance de geste native (scroll, rebond
+      // élastique) tant qu'un tirage est en cours OU que l'animation de
+      // fermeture joue — en complément de preventDefault()/stopPropagation()
+      // ci-dessus, jamais un substitut : certains navigateurs entament leur
+      // propre traitement du geste avant même que le premier touchmove
+      // n'atteigne ce handler.
+      touchAction: translateY > 0 ? "none" : undefined,
     },
     // Variante sûre pour une feuille empilée sur une autre modale déjà
     // affichée (voir le pavé ci-dessus) : à poser sur un DIV ENVELOPPANT
@@ -163,8 +224,9 @@ export default function useSwipeToDismiss(onDismiss, { scrollRef, disabled = fal
     // `style.opacity` ci-dessus, disponible que `fade` soit actif ou non.
     contentStyle: {
       opacity: translateY > 0 ? Math.max(1 - translateY / 300, 0.4) : 1,
-      transition: isDragging ? "none" : "opacity 0.25s ease",
+      transition: isDragging ? "none" : `opacity ${isClosing ? CLOSE_ANIMATION_MS : 250}ms ease`,
     },
     isDragging,
+    isClosing,
   };
 }
