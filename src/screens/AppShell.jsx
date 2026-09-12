@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, lazy, Suspense } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, lazy, Suspense } from "react";
+import { flushSync } from "react-dom";
 import { Heart, Search, Settings, Wand2 } from "lucide-react";
 
 import { FILTERS, TABS } from "../constants";
@@ -134,6 +135,11 @@ export default function AppShell({
   const [fridgeSearch, setFridgeSearch] = useState("");
   const [formTarget, setFormTarget] = useState(null); // null | 'new' | recipe object
   const [openRecipe, setOpenRecipe] = useState(null);
+  // Id de la recette dont la photo de carte doit porter temporairement le
+  // même `view-transition-name` que la photo hero de RecipeDetail (voir
+  // openRecipeWithTransition ci-dessous) — jamais les deux montées avec ce
+  // nom en même temps une fois la recette ouverte (voir son commentaire).
+  const [transitionPhotoId, setTransitionPhotoId] = useState(null);
   const [cookingRecipe, setCookingRecipe] = useState(null);
   const [textModal, setTextModal] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -172,6 +178,74 @@ export default function AppShell({
     setPendingImport(null);
     showToast(t("app.recipeAdded"));
   };
+
+  // --- Ouverture d'une recette : la photo de la carte "grandit" jusqu'à
+  // devenir la photo hero de la fiche (View Transition API du navigateur —
+  // aucune lib d'animation dans ce projet, voir useAnimatedClose.js). Repli
+  // total et silencieux sur l'ouverture instantanée d'avant (aucun visuel
+  // manquant, juste sans le morphing) sur tout navigateur qui ne supporte
+  // pas encore l'API, ou si l'utilisateur a demandé "Réduire les animations"
+  // au niveau système (prefers-reduced-motion).
+  //
+  // Séquence, pour que la même photo ne porte JAMAIS ce nom sur deux
+  // éléments montés en même temps (règle stricte de l'API — sinon la
+  // transition entière est silencieusement annulée par le navigateur) :
+  // 1) on marque D'ABORD (flushSync, donc peint avant la suite) la carte de
+  //    CETTE recette comme "source" de la transition à venir — c'est l'état
+  //    "avant" que le navigateur va capturer en photo.
+  // 2) DANS le callback de startViewTransition (exécuté de façon synchrone
+  //    par le navigateur juste avant de capturer l'état "après") : on ouvre
+  //    la fiche recette ET on retire ce marquage de la carte dans le MÊME
+  //    flushSync — la carte perd le nom pile au moment où la fiche
+  //    (nouvelle porteuse du même nom, voir RecipeDetail.jsx) apparaît.
+  const openRecipeWithTransition = useCallback((recipe) => {
+    const supportsViewTransition =
+      typeof document !== "undefined" &&
+      typeof document.startViewTransition === "function" &&
+      !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    if (!supportsViewTransition) {
+      setOpenRecipe(recipe);
+      return;
+    }
+    flushSync(() => setTransitionPhotoId(recipe.id));
+    document.startViewTransition(() => {
+      flushSync(() => {
+        setOpenRecipe(recipe);
+        setTransitionPhotoId(null);
+      });
+    });
+  }, []);
+
+  // --- Pastille dorée glissante de la nav basse (voir .nav-indicator,
+  // modalsBase.css.js) — mesurée en JS plutôt que calculée en CSS pur
+  // (ex. 100%/3 * index) car la largeur des boutons dépend du texte traduit
+  // (langue), de la taille de texte (Réglages > Accessibilité) et du mode
+  // PWA installée (padding différent, voir modalsBase.css.js) : aucune
+  // formule fixe ne couvrirait ces trois sources de variation à la fois.
+  // Masquée en paysage (voir responsive.css.js) où la nav bascule en colonne
+  // latérale avec son propre indicateur (fond plein sur l'onglet actif) —
+  // les mesures ci-dessous y seraient de toute façon dénuées de sens
+  // (position horizontale sur une nav devenue verticale).
+  const navRef = useRef(null);
+  const navBtnRefs = useRef([]);
+  const [navIndicator, setNavIndicator] = useState(null);
+  const updateNavIndicator = useCallback(() => {
+    const nav = navRef.current;
+    const activeIndex = TABS.findIndex((tb) => tb.key === tab);
+    const btn = navBtnRefs.current[activeIndex];
+    if (!nav || !btn) return;
+    const navRect = nav.getBoundingClientRect();
+    const btnRect = btn.getBoundingClientRect();
+    setNavIndicator({ left: btnRect.left - navRect.left, width: btnRect.width });
+  }, [tab]);
+  useLayoutEffect(() => { updateNavIndicator(); }, [updateNavIndicator, language]);
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav || typeof ResizeObserver === "undefined") return undefined;
+    const ro = new ResizeObserver(() => updateNavIndicator());
+    ro.observe(nav);
+    return () => ro.disconnect();
+  }, [updateNavIndicator]);
 
   const filterIndex = FILTERS.findIndex((f) => f.key === filter);
 
@@ -357,7 +431,8 @@ export default function AppShell({
             favoritesOnly={favoritesOnly}
             onToggleFavorite={toggleFavorite}
             onAddRequest={() => setFormTarget("new")}
-            onOpen={setOpenRecipe}
+            onOpen={openRecipeWithTransition}
+            transitionPhotoId={transitionPhotoId}
             onRequestDelete={setDeleteTarget}
             onUpdateRecipe={saveRecipe}
             pressDuration={pressDuration}
@@ -397,7 +472,7 @@ export default function AppShell({
               onMoveBasicToVariable={moveBasicToVariable}
               onRemoveBasic={removeBasic}
               onResetPantry={resetPantry}
-              onOpen={setOpenRecipe}
+              onOpen={openRecipeWithTransition}
             />
           </Suspense>
         )}
@@ -424,10 +499,20 @@ export default function AppShell({
         </ErrorBoundary>
       </main>
 
-      <nav className="bottom-nav">
-        {TABS.map(({ key, icon: Icon }) => (
+      <nav className="bottom-nav" ref={navRef}>
+        <span
+          className="nav-indicator"
+          aria-hidden="true"
+          style={
+            navIndicator
+              ? { transform: `translateX(${navIndicator.left}px)`, width: `${navIndicator.width}px` }
+              : { opacity: 0 }
+          }
+        />
+        {TABS.map(({ key, icon: Icon }, i) => (
           <NavButton
             key={key}
+            ref={(node) => { navBtnRefs.current[i] = node; }}
             label={t(`nav.${key}`)}
             Icon={Icon}
             active={tab === key}

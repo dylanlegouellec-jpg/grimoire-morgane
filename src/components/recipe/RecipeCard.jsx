@@ -14,6 +14,7 @@ function RecipeCard({
   hidden = false,
   filterGeneration = 0,
   onOpen,
+  isTransitionSource = false,
   onToggleFavorite,
   onRequestDelete,
   onUpdateRecipe,
@@ -109,7 +110,15 @@ function RecipeCard({
         aria-label={translateRecipeText(recipe.title, language)}
         {...cardLongPress.handlers}
       >
-        <div className="illus-wrap">
+        <div
+          className="illus-wrap"
+          // `view-transition-name` posé UNIQUEMENT le temps du morphing vers
+          // la fiche recette (voir AppShell.jsx, openRecipeWithTransition) —
+          // jamais présent en dehors de cet instant précis, pour ne jamais se
+          // retrouver sur deux éléments à la fois (la photo hero de
+          // RecipeDetail porte le même nom, voir son commentaire).
+          style={isTransitionSource ? { viewTransitionName: "rgm-recipe-photo" } : undefined}
+        >
           <DishArt recipe={recipe} />
           <button
             type="button"

@@ -202,7 +202,13 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
 
         <div className="detail-columns">
           <div className="detail-info-col">
-            <div className="detail-hero">
+            {/* Même `view-transition-name` que la carte source le temps de
+                l'ouverture (voir RecipeCard.jsx/AppShell.jsx) — porté en
+                continu tant que la fiche reste montée : sans risque, la
+                carte correspondante dans la grille l'a déjà perdu au moment
+                où cette fiche apparaît (les deux ne sont jamais montés avec
+                ce nom en même temps, voir openRecipeWithTransition). */}
+            <div className="detail-hero" style={{ viewTransitionName: "rgm-recipe-photo" }}>
               <DishArt recipe={recipe} />
               <div className="detail-hero-fade" />
             </div>

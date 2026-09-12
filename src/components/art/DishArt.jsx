@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ILLUSTRATIONS, resolveIllustrationKey } from "./illustrations";
 
 let dishArtCounter = 0;
@@ -20,14 +20,32 @@ export default function DishArt({ recipe }) {
   // besoin d'en construire un second.
   const [imgSrc, setImgSrc] = useState(rawUrl);
   const [imgFailed, setImgFailed] = useState(false);
+  // Voile chatoyant (voir .illus-shimmer, recipeCards.css.js) affiché tant
+  // que la photo n'a pas fini de se décoder — évite le passage brutal
+  // "zone vide -> image nette" quand le réseau ou le cache sont lents.
+  const [photoLoaded, setPhotoLoaded] = useState(false);
   const retriedRef = useRef(false);
   const lastUrlRef = useRef(rawUrl);
   if (lastUrlRef.current !== rawUrl) {
     lastUrlRef.current = rawUrl;
     setImgSrc(rawUrl);
     setImgFailed(false);
+    setPhotoLoaded(false);
     retriedRef.current = false;
   }
+  // Une image déjà en cache HTTP peut être "complete" dès son tout premier
+  // rendu — avant même que le navigateur n'ait déclenché onLoad ci-dessous —
+  // ce qui laisserait le voile affiché indéfiniment par-dessus une image
+  // pourtant déjà nette. Contrôlé après CHAQUE changement de "imgSrc" (pas
+  // seulement au montage) : la même balise <img> est réutilisée d'un rendu à
+  // l'autre (jamais démontée/remontée, voir RecipeCard.jsx), un simple
+  // callback ref ne se redéclencherait donc pas au fil des changements de
+  // source (retry anti-cache, nouvelle photo choisie...).
+  const imgElRef = useRef(null);
+  useEffect(() => {
+    const node = imgElRef.current;
+    if (node && node.complete && node.naturalWidth > 0) setPhotoLoaded(true);
+  }, [imgSrc]);
   const handleImgError = () => {
     // Hors-ligne, cet échec signifie forcément que l'image n'est pas dans le
     // cache du service worker (sinon CacheFirst l'aurait servie sans jamais
@@ -78,6 +96,7 @@ export default function DishArt({ recipe }) {
         onContextMenu={(e) => e.preventDefault()}
       >
         <img
+          ref={imgElRef}
           src={imgSrc}
           alt={recipe.title || "Illustration de la recette"}
           className="illus-photo"
@@ -85,9 +104,11 @@ export default function DishArt({ recipe }) {
           loading="lazy"
           decoding="async"
           crossOrigin="anonymous"
+          onLoad={() => setPhotoLoaded(true)}
           onError={handleImgError}
         />
         <div className="illus-photo-guard" aria-hidden="true" />
+        {!photoLoaded && <div className="illus-shimmer" aria-hidden="true" />}
       </div>
     );
   }
