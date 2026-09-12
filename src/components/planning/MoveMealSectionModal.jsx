@@ -10,17 +10,21 @@ import Flourish from "../common/Flourish";
 
 /* ------------------------------------------------------------------ */
 /*  SÉLECTEUR DE MOMENT — "Changer le moment du repas" d'un en-tête de    */
-/*  moment (voir PlanningMealGroup.jsx/MealSectionOptionsModal.jsx).       */
-/*  Même liste ".ios-group"/".ios-row" que l'étape "Quel repas ?" de        */
-/*  AddMealModal.jsx, sans le moment ACTUEL (le déplacer vers lui-même       */
-/*  n'aurait aucun effet). Choisir une ligne agit immédiatement — pas de      */
-/*  confirmation supplémentaire : rien n'est supprimé, seulement reclassé,    */
-/*  et une éventuelle collision avec des plats déjà présents sous le           */
-/*  moment cible se résout d'elle-même à l'affichage (regroupement par         */
-/*  type de plat déjà en place, voir PlanningView.jsx/groupEntriesByCourse),    */
-/*  sans code de fusion dédié ici.                                              */
+/*  moment (voir PlanningMealGroup.jsx/MealSectionOptionsModal.jsx), OU      */
+/*  "Déplacer vers un autre repas" d'un en-tête de sous-catégorie de type     */
+/*  de plat (voir PlanningCourseGroup.jsx/CourseOptionsModal.jsx) — même       */
+/*  sélecteur pour les deux, seul `sourceLabel` change (précise QUOI se        */
+/*  déplace dans le titre quand ce n'est pas déjà tout le repas, ex.            */
+/*  "Déplacer Entrées vers…"). Même liste ".ios-group"/".ios-row" que           */
+/*  l'étape "Quel repas ?" de AddMealModal.jsx, sans le moment ACTUEL (le        */
+/*  déplacer vers lui-même n'aurait aucun effet). Choisir une ligne agit          */
+/*  immédiatement — pas de confirmation supplémentaire : rien n'est               */
+/*  supprimé, seulement reclassé, et une éventuelle collision avec des             */
+/*  plats déjà présents sous le moment cible se résout d'elle-même à                */
+/*  l'affichage (regroupement par type de plat déjà en place, voir                   */
+/*  PlanningView.jsx/groupEntriesByCourse), sans code de fusion dédié ici.             */
 /* ------------------------------------------------------------------ */
-export default function MoveMealSectionModal({ currentMealTypeKey, onClose, onSelect }) {
+export default function MoveMealSectionModal({ currentMealTypeKey, sourceLabel, onClose, onSelect }) {
   const { t } = useTranslation();
   const modalRef = useFocusTrap(onClose);
   const swipe = useSwipeToDismiss(onClose, { scrollRef: modalRef });
@@ -45,7 +49,9 @@ export default function MoveMealSectionModal({ currentMealTypeKey, onClose, onSe
         {...swipe.handlers}
       >
         <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
-        <h2 className="dropcap-title">{t("planning.moveSectionStepTitle")}</h2>
+        <h2 className="dropcap-title">
+          {sourceLabel ? t("planning.moveSectionStepTitleWithLabel", { label: sourceLabel }) : t("planning.moveSectionStepTitle")}
+        </h2>
         <Flourish />
         <div className="ios-group">
           {choices.map((m) => (

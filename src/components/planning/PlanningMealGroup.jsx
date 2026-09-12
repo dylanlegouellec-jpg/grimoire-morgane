@@ -73,6 +73,7 @@ export default function PlanningMealGroup({
           ? groupEntriesByCourse(entries).map((courseGroup) => (
               <PlanningCourseGroup
                 key={courseGroup.course.key}
+                mealTypeKey={mealType.key}
                 course={courseGroup.course}
                 entries={courseGroup.entries}
                 labelForEntry={labelForEntry}
@@ -82,6 +83,7 @@ export default function PlanningMealGroup({
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onAddToCourse={onAddToCourse}
+                onMoveToMeal={onMoveSection}
                 onDeleteAll={onDeleteAllCourse}
               />
             ))
