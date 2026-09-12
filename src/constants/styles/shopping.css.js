@@ -120,6 +120,20 @@ export const SHOPPING_CSS = `
   color: var(--ink-soft); background: rgba(179,135,42,0.1); border: 1px solid rgba(179,135,42,0.3);
   border-radius: 999px; padding: 8px 14px; margin-bottom: 10px;
 }
+/* --- Barre de progression (part des articles déjà cochés) ---------------
+   Purement visuelle (aria-hidden, le décompte texte de .parchment-recap
+   juste au-dessus porte déjà l'information pour les lecteurs d'écran) —
+   la largeur suit directement bought.length/items.length (ShoppingView.jsx),
+   la transition CSS anime le passage d'une valeur à l'autre à chaque
+   coche/décoche d'article. */
+.shopping-progress {
+  height: 5px; border-radius: 999px; overflow: hidden;
+  background: var(--line); margin: 0 0 14px;
+}
+.shopping-progress-fill {
+  height: 100%; border-radius: 999px; background: var(--gold);
+  transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
 .apple-bar {
   display: flex; align-items: center; justify-content: center;
   margin-bottom: 14px;

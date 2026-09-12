@@ -158,6 +158,12 @@ export default function ShoppingView({
               aislesPlural: aisleCount > 1 ? "s" : "",
             })}
           </div>
+          <div className="shopping-progress" aria-hidden="true">
+            <div
+              className="shopping-progress-fill"
+              style={{ width: `${items.length ? (bought.length / items.length) * 100 : 0}%` }}
+            />
+          </div>
           <div className="apple-bar">
             <SwipeFlourish onSwipeRight={handleAppleCopy} onSwipeLeft={handleAppleReset} onTap={handleAppleReset} />
           </div>

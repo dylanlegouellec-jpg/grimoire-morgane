@@ -178,7 +178,17 @@ export const MODALS_BASE_CSS = `
   z-index: 4;
 }
 .form-clean { max-width: 100%; overflow-x: hidden; }
-@keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+/* "scale(0.98)" au départ, en plus du glissement — un très léger effet de
+   "pop" à l'ouverture (la feuille se déploie plutôt que de simplement
+   translater), inspiré du ressort à peine perceptible des modales du projet
+   v0 "grimoire" (Framer Motion, scale 0.98 -> 1 côté leur code). Pas de
+   nouveau risque ici : .modal utilise déjà "transform" pour translateY
+   (donc devient déjà, le temps de l'animation, le bloc conteneur de ses
+   éventuels descendants position:fixed) — ajouter scale() au même transform
+   ne change rien à cette réalité déjà acceptée, contrairement à .view/
+   .tab-transition (shell.css.js) qui n'ont, eux, jamais eu ce transform du
+   tout et devaient donc l'éviter. */
+@keyframes slideUp { from { transform: translateY(30px) scale(0.98); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
 /* Symétrique de slideUp, pour la fermeture (voir hooks/useAnimatedClose.js) —
    auparavant inexistante : le clic sur "Fermer"/"Retour" démontait la
    modale au rendu React suivant, donc instantanément (pas de transition à
@@ -194,7 +204,7 @@ export const MODALS_BASE_CSS = `
    deux façons de fermer une fiche/modale (bouton "Fermer" ici, tirage là-bas)
    se ressentent de la même manière, jamais un ralenti en sortie. */
 .modal.closing, .grimoire-page.closing { animation: slideDown 0.22s cubic-bezier(0.4, 0, 1, 1) forwards; }
-@keyframes slideDown { from { transform: translateY(0); opacity: 1; } to { transform: translateY(30px); opacity: 0; } }
+@keyframes slideDown { from { transform: translateY(0) scale(1); opacity: 1; } to { transform: translateY(30px) scale(0.98); opacity: 0; } }
 .modal-close {
   position: absolute; top: 14px; right: 14px; z-index: 5;
   background: var(--modal-close-bg); border: none; border-radius: 50%;

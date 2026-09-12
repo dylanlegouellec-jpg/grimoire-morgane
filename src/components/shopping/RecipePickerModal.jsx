@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { CheckSquare, ShoppingBasket, Square, X } from "lucide-react";
 import { FILTERS } from "../../constants";
 import { normalize, categoryClass, categoryLabel } from "../../utils/helpers";
@@ -30,6 +30,30 @@ export default function RecipePickerModal({ recipes, onGenerate, onClose }) {
   const swipe = useSwipeToDismiss(onClose, { scrollRef: bodyRef });
   const [selected, setSelected] = useState([]);
   const [filter, setFilter] = useState("tout");
+
+  // Pastille dorée glissante derrière le filtre actif — même mécanisme que
+  // AppShell.jsx (voir son commentaire) : dupliqué ici plutôt que partagé,
+  // ce filtre-ci vit dans une modale distincte avec son propre état "filter"
+  // local (jamais celui des Recettes), pas de composant commun existant à
+  // ce jour pour un si petit bloc.
+  const filterBarRef = useRef(null);
+  const filterBtnRefs = useRef([]);
+  const [filterIndicator, setFilterIndicator] = useState(null);
+  const updateFilterIndicator = useCallback(() => {
+    const bar = filterBarRef.current;
+    const activeIndex = FILTERS.findIndex((f) => f.key === filter);
+    const btn = filterBtnRefs.current[activeIndex];
+    if (!bar || !btn) return;
+    setFilterIndicator({ left: btn.offsetLeft, width: btn.offsetWidth });
+  }, [filter]);
+  useLayoutEffect(() => { updateFilterIndicator(); }, [updateFilterIndicator]);
+  useEffect(() => {
+    const bar = filterBarRef.current;
+    if (!bar || typeof ResizeObserver === "undefined") return undefined;
+    const ro = new ResizeObserver(() => updateFilterIndicator());
+    ro.observe(bar);
+    return () => ro.disconnect();
+  }, [updateFilterIndicator]);
 
   const toggleRecipe = (id) => {
     triggerHaptic(10);
@@ -68,10 +92,20 @@ export default function RecipePickerModal({ recipes, onGenerate, onClose }) {
           <h2 className="dropcap-title">Générer à partir de recettes</h2>
           <Flourish />
 
-          <div className="filter-bar recipe-picker-filters">
-            {FILTERS.map((f) => (
+          <div className="filter-bar recipe-picker-filters" ref={filterBarRef}>
+            <span
+              className="filter-indicator"
+              aria-hidden="true"
+              style={
+                filterIndicator
+                  ? { transform: `translateX(${filterIndicator.left}px)`, width: `${filterIndicator.width}px` }
+                  : { opacity: 0 }
+              }
+            />
+            {FILTERS.map((f, i) => (
               <button
                 key={f.key}
+                ref={(node) => { filterBtnRefs.current[i] = node; }}
                 className={`filter-pill ${filter === f.key ? "active" : ""}`}
                 onClick={() => { triggerHaptic(10); setFilter(f.key); }}
               >
