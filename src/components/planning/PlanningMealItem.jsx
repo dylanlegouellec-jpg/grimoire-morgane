@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useTranslation } from "../../contexts/LanguageContext";
 import useLongPress from "../../hooks/useLongPress";
 import MealOptionsModal from "./MealOptionsModal";
 
@@ -14,9 +13,12 @@ const LONG_PRESS_DURATION_MS = 500;
 /*  Plus de croix de suppression sur la ligne elle-même : l'appui long      */
 /*  ouvre un menu (Modifier/Supprimer, voir MealOptionsModal.jsx) — geste    */
 /*  déjà utilisé pour les recettes/membres du foyer ailleurs dans l'app.     */
+/*  Le type de plat (icône + libellé) ne s'affiche plus ici : il est          */
+/*  maintenant porté par l'en-tête du sous-groupe qui entoure ces lignes       */
+/*  (voir PlanningView.jsx, groupEntriesByCourse) — cette ligne ne montre     */
+/*  plus que le nom de la recette.                                            */
 /* ------------------------------------------------------------------ */
-export default function PlanningMealItem({ entry, course, label, onEdit, onDelete }) {
-  const { t } = useTranslation();
+export default function PlanningMealItem({ entry, label, onEdit, onDelete }) {
   const [showOptions, setShowOptions] = useState(false);
   const itemLongPress = useLongPress(() => setShowOptions(true), LONG_PRESS_DURATION_MS);
 
@@ -33,15 +35,7 @@ export default function PlanningMealItem({ entry, course, label, onEdit, onDelet
         onClick={() => { itemLongPress.wasLongPress(); }}
         {...itemLongPress.handlers}
       >
-        {course && (
-          <span className="planning-meal-course-icon" aria-hidden="true">{course.icon}</span>
-        )}
-        <span className="planning-meal-item-info">
-          {course && (
-            <span className="planning-meal-course-label">{t(`courseTypes.${course.key}`)}</span>
-          )}
-          <span className="planning-meal-recipe">{label}</span>
-        </span>
+        <span className="planning-meal-recipe">{label}</span>
       </div>
 
       {showOptions && (

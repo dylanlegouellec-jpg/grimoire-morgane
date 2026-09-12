@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, Send, User, Users } from "lucide-react";
-import { getWeekStart, addWeeks, getWeekDays, toISODate, isSameDay, formatWeekRange, formatDayLabel, MEAL_TYPES, mealTypeInfo, courseTypeInfo, courseTypeOrder, mealTypeHasCourse } from "../../utils/planning";
+import { getWeekStart, addWeeks, getWeekDays, toISODate, isSameDay, formatWeekRange, formatDayLabel, MEAL_TYPES, COURSE_TYPES, courseTypeInfo, courseTypeOrder, mealTypeHasCourse } from "../../utils/planning";
 import { triggerHaptic } from "../../utils/haptics";
 import { getStoredPlanningScope, storePlanningScope } from "../../utils/localSettings";
 import { useTranslation } from "../../contexts/LanguageContext";
@@ -74,6 +74,27 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
           .sort((a, b) => courseTypeOrder(a.courseType) - courseTypeOrder(b.courseType)),
       }))
       .filter((g) => g.entries.length > 0);
+  // Sous-regroupe les plats d'un même moment par TYPE DE PLAT (Apéro/Entrée/
+  // Plat/Dessert) — un seul en-tête "Entrées" plutôt qu'une ligne "Entrée"
+  // répétée pour chaque recette de ce type. `entries` (celles d'un groupe
+  // ci-dessus) est déjà trié dans l'ordre gastronomique, donc les entrées
+  // d'un même type y sont déjà contiguës : un simple filtre par type, dans
+  // l'ordre de COURSE_TYPES, suffit à les répartir sans perdre cet ordre.
+  const groupEntriesByCourse = (entries) =>
+    COURSE_TYPES
+      .map((c) => ({
+        course: c,
+        entries: entries.filter((e) => courseTypeInfo(e.courseType).key === c.key),
+      }))
+      .filter((g) => g.entries.length > 0);
+  // Recette liée, repas personnalisé (texte libre, voir AddMealModal.jsx) ou
+  // recette depuis effacée : voir le commentaire détaillé plus bas où cette
+  // même logique était répétée pour chaque entrée avant l'ajout du sous-
+  // regroupement par type de plat.
+  const labelForEntry = (entry) => {
+    const recipe = entry.recipeId ? recipeById.get(entry.recipeId) : null;
+    return entry.customTitle || (recipe ? recipe.title : t("planning.recipeDeletedLabel"));
+  };
 
   const goPrevWeek = () => { triggerHaptic(10); setWeekStart((w) => addWeeks(w, -1)); };
   const goNextWeek = () => { triggerHaptic(10); setWeekStart((w) => addWeeks(w, 1)); };
@@ -176,35 +197,46 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
                         <span className="planning-meal-type">{t(`mealTypes.${group.mealType.key}`)}</span>
                       </div>
                       <div className="planning-meal-group-items">
-                        {group.entries.map((entry) => {
-                          const recipe = entry.recipeId ? recipeById.get(entry.recipeId) : null;
-                          // Aucun type de plat pour petit-déjeuner/en-cas (voir
-                          // mealTypeHasCourse) — jamais affiché pour ces
-                          // moments, même sur une entrée qui en aurait une
-                          // valeur stockée (ex. changement rétroactif du
-                          // moment sur une entrée existante). `courseType`
-                          // absent sur une entrée déjeuner/dîner (créée avant
-                          // ce champ) : repli "plat" via courseTypeInfo, voir
-                          // useMealPlan.js.
-                          const hasCourse = mealTypeHasCourse(entry.mealType);
-                          const course = hasCourse ? courseTypeInfo(entry.courseType) : null;
-                          // Repas personnalisé (texte libre, pas de fiche
-                          // recette, voir AddMealModal.jsx) : affiche
-                          // directement le nom saisi, jamais "Recette
-                          // supprimée" (réservé aux repas qui référençaient
-                          // une VRAIE recette depuis effacée).
-                          const label = entry.customTitle || (recipe ? recipe.title : t("planning.recipeDeletedLabel"));
-                          return (
-                            <PlanningMealItem
-                              key={entry.id}
-                              entry={entry}
-                              course={course}
-                              label={label}
-                              onEdit={setEditingEntry}
-                              onDelete={(e) => onRemoveMeal(e.id)}
-                            />
-                          );
-                        })}
+                        {/* Aucun type de plat pour petit-déjeuner/en-cas (voir
+                            mealTypeHasCourse) — jamais de sous-groupe pour ces
+                            moments, juste la liste des entrées comme avant. */}
+                        {mealTypeHasCourse(group.mealType.key)
+                          ? groupEntriesByCourse(group.entries).map((courseGroup) => (
+                              <div className="planning-course-group" key={courseGroup.course.key}>
+                                <div className="planning-course-header">
+                                  <span className="planning-meal-course-icon" aria-hidden="true">{courseGroup.course.icon}</span>
+                                  <span className="planning-course-label">
+                                    {/* Singulier pour un seul plat de ce type, pluriel
+                                        dès qu'il y en a plusieurs (voir
+                                        translations.js, courseTypes/courseTypesPlural). */}
+                                    {t(`courseTypes${courseGroup.entries.length > 1 ? "Plural" : ""}.${courseGroup.course.key}`)}
+                                  </span>
+                                </div>
+                                <ul className="planning-course-items">
+                                  {courseGroup.entries.map((entry) => (
+                                    <li className="planning-course-item" key={entry.id}>
+                                      <PlanningMealItem
+                                        entry={entry}
+                                        course={null}
+                                        label={labelForEntry(entry)}
+                                        onEdit={setEditingEntry}
+                                        onDelete={(e) => onRemoveMeal(e.id)}
+                                      />
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ))
+                          : group.entries.map((entry) => (
+                              <PlanningMealItem
+                                key={entry.id}
+                                entry={entry}
+                                course={null}
+                                label={labelForEntry(entry)}
+                                onEdit={setEditingEntry}
+                                onDelete={(e) => onRemoveMeal(e.id)}
+                              />
+                            ))}
                       </div>
                     </div>
                   ))}
