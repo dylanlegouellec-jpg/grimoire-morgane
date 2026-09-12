@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight, Plus, Send, User, Users } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Plus, Send, User, Users } from "lucide-react";
 import { getWeekStart, addWeeks, getWeekDays, toISODate, isSameDay, formatWeekRange, formatDayLabel, MEAL_TYPES, COURSE_TYPES, courseTypeInfo, courseTypeOrder } from "../../utils/planning";
 import { triggerHaptic } from "../../utils/haptics";
 import { getStoredPlanningScope, storePlanningScope } from "../../utils/localSettings";
@@ -32,7 +32,11 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
   // Mode réorganisation (voir PlanningMealItem.jsx, poignée ⋮⋮) : masqué par
   // défaut pour ne pas encombrer la vue normale, affiché sur tous les jours
   // à la fois une fois activé plutôt que par jour — une seule bascule
-  // globale, plus simple à retenir qu'un état par jour.
+  // globale, plus simple à retenir qu'un état par jour. Se bascule depuis le
+  // menu d'appui long d'un titre de moment/sous-catégorie (voir
+  // MealSectionOptionsModal.jsx/CourseOptionsModal.jsx) plutôt que via un
+  // bouton permanent dans l'en-tête de la vue, pour ne rien ajouter à
+  // l'affichage tant qu'on n'a pas fait ce geste.
   const [reorderMode, setReorderMode] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [addModalDate, setAddModalDate] = useState(null); // date ISO pré-remplie ("YYYY-MM-DD") | null (FAB, calendrier libre)
@@ -204,16 +208,6 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
     <div className="view">
       <div className="planning-header">
         <h2 className="dropcap-title" style={{ margin: 0, textAlign: "center" }}>{t("planning.title")}</h2>
-        <div style={{ textAlign: "center" }}>
-          <button
-            type="button"
-            className="link-btn"
-            onClick={toggleReorderMode}
-            aria-pressed={reorderMode}
-          >
-            <ArrowUpDown size={13} /> {t(reorderMode ? "planning.reorderModeOff" : "planning.reorderModeOn")}
-          </button>
-        </div>
         {/* Semaine + portée sur une seule ligne : le toggle reste collé au
             bord droit (flex-shrink: 0), tout le reste de la largeur va au
             groupe flèches+date (.planning-week-date-group, flex: 1) — les
@@ -293,6 +287,7 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
                       groupEntriesByCourse={groupEntriesByCourse}
                       labelForEntry={labelForEntry}
                       reorderMode={reorderMode}
+                      onToggleReorder={toggleReorderMode}
                       onReorder={onReorderMeals}
                       onEdit={setEditingEntry}
                       onDelete={(e) => onRemoveMeal(e.id)}

@@ -1,5 +1,5 @@
 import { createPortal } from "react-dom";
-import { Plus, Trash2, X } from "lucide-react";
+import { ArrowUpDown, Plus, Trash2, X } from "lucide-react";
 import { triggerHaptic } from "../../utils/haptics";
 import { useTranslation } from "../../contexts/LanguageContext";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
@@ -13,9 +13,11 @@ import Flourish from "../common/Flourish";
 /*  gabarit que MealOptionsModal.jsx/RecipeOptionsModal.jsx (portail vers   */
 /*  <body>, focus trap, swipe pour fermer, classes .recipe-options-modal/    */
 /*  .recipe-option-row déjà partagées par plusieurs menus sans lien avec     */
-/*  les recettes).                                                           */
+/*  les recettes). Le mode réorganisation (poignée ⋮⋮, voir                   */
+/*  PlanningMealItem.jsx) se bascule ICI plutôt que via un bouton permanent    */
+/*  en haut de la vue — voir MealSectionOptionsModal.jsx, même choix.          */
 /* ------------------------------------------------------------------ */
-export default function CourseOptionsModal({ label, onClose, onAdd, onDeleteAll }) {
+export default function CourseOptionsModal({ label, reorderMode, onToggleReorder, onClose, onAdd, onDeleteAll }) {
   const { t } = useTranslation();
   const modalRef = useFocusTrap(onClose);
   const swipe = useSwipeToDismiss(onClose, { scrollRef: modalRef });
@@ -24,6 +26,12 @@ export default function CourseOptionsModal({ label, onClose, onAdd, onDeleteAll 
   const handleAdd = () => {
     triggerHaptic(15);
     onAdd();
+  };
+
+  const handleToggleReorder = () => {
+    triggerHaptic(15);
+    onToggleReorder();
+    onClose();
   };
 
   const handleDeleteAll = () => {
@@ -50,6 +58,11 @@ export default function CourseOptionsModal({ label, onClose, onAdd, onDeleteAll 
           <button type="button" className="recipe-option-row" onClick={handleAdd}>
             <Plus size={18} />
             <span>{t("planning.addCourseOption")}</span>
+          </button>
+
+          <button type="button" className="recipe-option-row" onClick={handleToggleReorder}>
+            <ArrowUpDown size={18} />
+            <span>{t(reorderMode ? "planning.reorderModeOff" : "planning.reorderModeOn")}</span>
           </button>
 
           <button type="button" className="recipe-option-row danger" onClick={handleDeleteAll}>

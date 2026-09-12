@@ -1,5 +1,5 @@
 import { createPortal } from "react-dom";
-import { Trash2, X } from "lucide-react";
+import { ArrowUpDown, Trash2, X } from "lucide-react";
 import { triggerHaptic } from "../../utils/haptics";
 import { useTranslation } from "../../contexts/LanguageContext";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
@@ -9,18 +9,24 @@ import Flourish from "../common/Flourish";
 
 /* ------------------------------------------------------------------ */
 /*  MENU D'ACTIONS SUR UN EN-TÊTE DE MOMENT ("DÉJEUNER", "DÎNER"…),       */
-/*  déclenché par l'appui long — voir PlanningMealGroup.jsx. Une seule     */
-/*  option pour l'instant (supprimer toute la section), mais garde le      */
-/*  même gabarit de feuille d'actions que MealOptionsModal.jsx/              */
-/*  CourseOptionsModal.jsx plutôt qu'un raccourci direct vers la               */
-/*  confirmation — cohérent avec le reste de l'app, et laisse la place        */
-/*  pour d'éventuelles options futures sans tout restructurer.                 */
+/*  déclenché par l'appui long — voir PlanningMealGroup.jsx. Même            */
+/*  gabarit de feuille d'actions que MealOptionsModal.jsx/CourseOptionsModal  */
+/*  .jsx. Le mode réorganisation (poignée ⋮⋮, voir PlanningMealItem.jsx) se     */
+/*  bascule ICI plutôt que via un bouton permanent en haut de la vue — reste   */
+/*  découvrable au même endroit que "Supprimer", sans rien ajouter à           */
+/*  l'affichage normal tant qu'on n'a pas fait un appui long.                    */
 /* ------------------------------------------------------------------ */
-export default function MealSectionOptionsModal({ mealLabel, onClose, onDeleteSection }) {
+export default function MealSectionOptionsModal({ mealLabel, reorderMode, onToggleReorder, onClose, onDeleteSection }) {
   const { t } = useTranslation();
   const modalRef = useFocusTrap(onClose);
   const swipe = useSwipeToDismiss(onClose, { scrollRef: modalRef });
   useBodyScrollLock(true);
+
+  const handleToggleReorder = () => {
+    triggerHaptic(15);
+    onToggleReorder();
+    onClose();
+  };
 
   const handleDeleteSection = () => {
     triggerHaptic(15);
@@ -43,6 +49,11 @@ export default function MealSectionOptionsModal({ mealLabel, onClose, onDeleteSe
         <Flourish />
 
         <div className="recipe-options-list">
+          <button type="button" className="recipe-option-row" onClick={handleToggleReorder}>
+            <ArrowUpDown size={18} />
+            <span>{t(reorderMode ? "planning.reorderModeOff" : "planning.reorderModeOn")}</span>
+          </button>
+
           <button type="button" className="recipe-option-row danger" onClick={handleDeleteSection}>
             <Trash2 size={18} />
             <span>{t("planning.deleteSectionOption", { meal: mealLabel })}</span>

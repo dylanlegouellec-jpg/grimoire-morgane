@@ -17,7 +17,7 @@ const LONG_PRESS_DURATION_MS = 500;
 /*  catégorie (date/moment/type de plat préremplis, voir AddMealModal.jsx,      */
 /*  props `initialMealType`/`initialCourseType`), ou tout supprimer d'un coup.  */
 /* ------------------------------------------------------------------ */
-export default function PlanningCourseGroup({ course, entries, labelForEntry, reorderMode, onReorder, onEdit, onDelete, onAddToCourse, onDeleteAll }) {
+export default function PlanningCourseGroup({ course, entries, labelForEntry, reorderMode, onToggleReorder, onReorder, onEdit, onDelete, onAddToCourse, onDeleteAll }) {
   const { t } = useTranslation();
   const [showOptions, setShowOptions] = useState(false);
   const headerLongPress = useLongPress(() => setShowOptions(true), LONG_PRESS_DURATION_MS);
@@ -55,6 +55,8 @@ export default function PlanningCourseGroup({ course, entries, labelForEntry, re
       {showOptions && (
         <CourseOptionsModal
           label={label}
+          reorderMode={reorderMode}
+          onToggleReorder={onToggleReorder}
           onClose={closeOptions}
           onAdd={() => {
             closeOptions();
