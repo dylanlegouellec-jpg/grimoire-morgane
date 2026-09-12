@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { DEFAULT_BASICS, SUPABASE_READY, demoRecipes } from "../constants";
-import { decodeRecipeCode } from "../utils/helpers";
+import { decodeRecipeCode, isShoppingListInScope } from "../utils/helpers";
 import {
   fetchTable,
   loadAppState,
@@ -42,6 +42,7 @@ export default function useOfflineSync({
   setShoppingLists,
   activeListId,
   setActiveListId,
+  shoppingScope,
   showToast,
 }) {
   const [ready, setReady] = useState(false);
@@ -131,7 +132,14 @@ export default function useOfflineSync({
         lastSyncedMealPlanRef.current = JSON.stringify(loadedMealPlan);
         const mappedLists = (listRows || []).map(mapRowToShoppingList);
         setShoppingLists(mappedLists);
-        setActiveListId(mappedLists.length ? mappedLists[mappedLists.length - 1].id : null);
+        // Filtrée par la portée AFFICHÉE (préférence locale à l'appareil,
+        // voir useShoppingLists.js) avant de choisir la dernière créée —
+        // sans ça, la dernière liste créée tous scopes confondus pouvait
+        // être personnelle alors que l'onglet "Foyer" restait sélectionné,
+        // affichant son contenu sous le mauvais bouton de portée au tout
+        // premier chargement.
+        const listsInScope = mappedLists.filter((l) => isShoppingListInScope(l, shoppingScope, user && user.id));
+        setActiveListId(listsInScope.length ? listsInScope[listsInScope.length - 1].id : null);
       } catch (err) {
         console.error(err);
         if (hasCache) {

@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { SUPABASE_READY } from "../constants";
-import { nextId, guessAisle, ingredientKey, triggerHaptic } from "../utils/helpers";
+import { nextId, guessAisle, ingredientKey, isShoppingListInScope, triggerHaptic } from "../utils/helpers";
 import { insertRow, updateRow, deleteRow, mapShoppingListToRow } from "../utils/supabase";
 import { getStoredShoppingScope, storeShoppingScope, getStoredActiveShoppingListId, storeActiveShoppingListId } from "../utils/localSettings";
 
@@ -27,7 +27,7 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
   userIdRef.current = userId;
 
   const isListInScope = useCallback((list, scope) => (
-    scope === "personal" ? list.scope === "personal" && list.userId === userIdRef.current : list.scope !== "personal"
+    isShoppingListInScope(list, scope, userIdRef.current)
   ), []);
 
   const visibleShoppingLists = shoppingLists.filter((l) => isListInScope(l, shoppingScope));
