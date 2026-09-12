@@ -79,7 +79,18 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
   // implicite (withActiveList ci-dessous, quand on ajoute un article sans
   // liste active : sinon elle serait TOUJOURS créée en "household", même
   // si l'onglet "personal" est actif).
-  const createShoppingList = useCallback(async (scopeArg, ownerIdArg) => {
+  // SYNCHRONE à dessein (pas de `await` sur l'écriture Supabase, "tirée et
+  // oubliée" comme le `updateRow(...).catch(...)` de withActiveList
+  // ci-dessous) : ce hook attendait auparavant la fin de cette écriture
+  // réseau avant de renvoyer le nouvel id, ce que withActiveList attendait
+  // À SON TOUR avant d'ajouter le premier article — sur une connexion lente
+  // ou coupée, ce premier ajout restait bloqué indéfiniment (silencieusement,
+  // sans le moindre message d'erreur), alors que la création de liste ET
+  // l'ajout d'article suivant fonctionnaient déjà, eux, de façon 100%
+  // optimiste (état local d'abord, réseau en tâche de fond ensuite). Renvoyer
+  // l'id immédiatement aligne cette fonction sur ce même principe déjà
+  // appliqué partout ailleurs dans ce hook.
+  const createShoppingList = useCallback((scopeArg, ownerIdArg) => {
     const scope = (scopeArg || shoppingScopeRef.current) === "personal" ? "personal" : "household";
     const ownerId = scope === "personal" ? (ownerIdArg || userIdRef.current) : null;
     const id = nextId();
@@ -90,12 +101,10 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
     storeActiveShoppingListId(scope, id);
     triggerHaptic(15);
     if (SUPABASE_READY) {
-      try {
-        await insertRow("shopping_lists", mapShoppingListToRow(newList, householdId));
-      } catch (err) {
+      insertRow("shopping_lists", mapShoppingListToRow(newList, householdId)).catch((err) => {
         console.error(err);
         showToast("Échec de la création de la liste.");
-      }
+      });
     }
     return id;
   }, [householdId, nextListName, showToast]);
@@ -130,9 +139,9 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
   // besoin — c'est le point de passage commun de toutes les actions
   // ci-dessous, ce qui garantit qu'aucune ne peut désynchroniser l'état
   // local de ce qui part vers Supabase.
-  const withActiveList = useCallback(async (mutateFn) => {
+  const withActiveList = useCallback((mutateFn) => {
     let listId = activeListIdRef.current;
-    if (!listId) listId = await createShoppingList();
+    if (!listId) listId = createShoppingList();
     setShoppingLists((prev) => {
       const next = prev.map((l) => (l.id === listId ? { ...l, items: mutateFn(l.items) } : l));
       const target = next.find((l) => l.id === listId);
