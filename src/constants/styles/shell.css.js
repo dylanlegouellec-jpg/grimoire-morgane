@@ -119,9 +119,14 @@ export const SHELL_CSS = `
      sans cette règle — visible comme un liseré indésirable sous les puces
      de filtre. Même correctif déjà appliqué à .portion-wheel plus bas. */
   scrollbar-width: none;
+  /* Bloc conteneur positionné pour .filter-indicator ci-dessous (voir son
+     commentaire, AppShell.jsx) — sans effet sur la mise en page ("relative"
+     sans décalage top/left/etc. équivaut visuellement à "static"). */
+  position: relative;
 }
 .filter-bar::-webkit-scrollbar { display: none; }
 .filter-pill {
+  position: relative; z-index: 1;
   font-family: 'Cinzel', serif;
   font-size: 0.7rem;
   letter-spacing: 1px;
@@ -134,9 +139,26 @@ export const SHELL_CSS = `
   white-space: nowrap;
   transition: all 0.2s ease;
 }
-.filter-pill.active { background: var(--chrome); color: var(--chrome-text); border-color: var(--chrome); }
+/* Le fond de l'onglet actif (Tout/Salé/Sucré) est désormais porté par
+   .filter-indicator, une pastille qui GLISSE d'un filtre à l'autre plutôt
+   que de basculer instantanément — seule la couleur du texte change encore
+   ici. Pas de "background"/"border-color" ici (retirés) : les garder aurait
+   fait apparaître ce même fond deux fois - une fois ici (instantané), une
+   fois via l'indicateur (glissé) - décalés le temps de la transition. */
+.filter-pill.active { color: var(--chrome-text); }
 .heart-pill { display: inline-flex; align-items: center; gap: 5px; }
 .heart-pill.active { color: #e8607a; border-color: #e8607a; background: rgba(232,96,122,0.12); }
+/* --- Pastille glissante --- Mesurée en JS (voir AppShell.jsx), même
+   principe que .nav-indicator (modalsBase.css.js) : positionnée via
+   transform/width pour rester composée sur son propre calque plutôt que de
+   déclencher un calcul de mise en page à chaque frame de la glissade. */
+.filter-indicator {
+  position: absolute; top: 0; left: 0; height: 100%; z-index: 0;
+  border-radius: 999px;
+  background: var(--chrome);
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), width 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease;
+  pointer-events: none;
+}
 
 .app-content {
   padding: 16px; min-height: 50vh; overflow-x: hidden;
@@ -175,6 +197,24 @@ export const SHELL_CSS = `
    transform retiré. Un fondu à l'opacité seule ne crée aucun containing
    block, donc plus aucun saut. */
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* --- Glissement entre onglets (Recettes/Plan/Mon Frigo/Courses) ----------
+   Enveloppe .view (voir AppShell.jsx, où chaque onglet remonte entièrement
+   à chaque changement via key={tab} sur ErrorBoundary — cette animation
+   d'entrée n'a donc besoin de jouer qu'une fois par montage, jamais de
+   transition d'état à gérer). Anime "left" plutôt que "transform", pour
+   EXACTEMENT la même raison que le commentaire ci-dessus sur .view : cette
+   enveloppe est un ancêtre de plus au-dessus de .fab/.planning-reorder-banner
+   (tous deux position: fixed), donc tout aussi concernée par le piège du
+   "containing block" si elle utilisait "transform". "left" (avec
+   "position: relative" ci-dessous, sans effet sur la mise en page tant
+   qu'aucun décalage n'est appliqué) ne crée jamais ce piège : seuls
+   transform/filter/perspective le font. Sens ("forward"/"backward") posé
+   par AppShell.jsx selon qu'on avance ou recule dans l'ordre des onglets. */
+.tab-transition { position: relative; animation: tabSlideForward 0.32s cubic-bezier(0.22, 1, 0.36, 1); }
+.tab-transition-backward { animation-name: tabSlideBackward; }
+@keyframes tabSlideForward { from { opacity: 0; left: 18px; } to { opacity: 1; left: 0; } }
+@keyframes tabSlideBackward { from { opacity: 0; left: -18px; } to { opacity: 1; left: 0; } }
 
 .hint { color: var(--ink-soft); font-style: italic; font-size: 0.92rem; margin: 4px 0 14px; }
 
