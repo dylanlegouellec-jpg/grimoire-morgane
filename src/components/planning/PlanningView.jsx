@@ -309,9 +309,26 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
         </Seal>
       </div>
 
-      <button type="button" className="fab" onClick={openAddFab} aria-label={t("planning.addMealFab")}>
-        <Plus size={22} />
-      </button>
+      {/* Masqué en mode réorganisation (voir bannière ci-dessous) : ajouter un
+          repas n'a pas de sens pendant qu'on réordonne, et son coin bas-droit
+          chevaucherait de toute façon la bannière. */}
+      {!reorderMode && (
+        <button type="button" className="fab" onClick={openAddFab} aria-label={t("planning.addMealFab")}>
+          <Plus size={22} />
+        </button>
+      )}
+
+      {/* Bannière fixe de validation du mode réorganisation (voir
+          `reorderMode`/`toggleReorderMode` plus haut) — "Terminer" valide le
+          nouvel ordre (déjà appliqué au fil du glissement, voir
+          hooks/useDragReorder.js/useMealPlan.js) et referme simplement ce
+          mode, rien à enregistrer en plus à ce moment précis. */}
+      {reorderMode && (
+        <div className="planning-reorder-banner">
+          <span className="planning-reorder-banner-label">{t("planning.reorderBannerLabel")}</span>
+          <Seal tone="gold" onClick={toggleReorderMode}>{t("planning.reorderBannerConfirm")}</Seal>
+        </div>
+      )}
 
       {showAddModal && (
         <AddMealModal

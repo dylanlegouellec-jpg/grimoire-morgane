@@ -23,7 +23,9 @@ const LONG_PRESS_DURATION_MS = 500;
 /*  PART de la ligne à appui long ci-dessous (pas nichée dedans), puisque       */
 /*  le glissement se pilote via ses propres gestionnaires pointer (voir         */
 /*  `dragHandleProps`, hooks/useDragReorder.js), indépendants du minuteur        */
-/*  d'appui long de la ligne.                                                    */
+/*  d'appui long de la ligne. Placée à GAUCHE du nom du plat (pas à droite) :    */
+/*  plus lisible, et cohérent avec la convention "poignée avant contenu" des      */
+/*  listes réordonnables (ex. Réglages iOS, Reminders).                          */
 /* ------------------------------------------------------------------ */
 export default function PlanningMealItem({ entry, label, reorderMode, dragHandleProps, onEdit, onDelete }) {
   const [showOptions, setShowOptions] = useState(false);
@@ -37,6 +39,11 @@ export default function PlanningMealItem({ entry, label, reorderMode, dragHandle
   return (
     <>
       <div className="planning-meal-item-row">
+        {reorderMode && (
+          <button type="button" className="planning-meal-drag-handle" aria-label="Glisser pour réordonner" {...dragHandleProps}>
+            <GripVertical size={16} />
+          </button>
+        )}
         <div
           ref={itemLongPress.ref}
           className={`planning-meal-item press-anim press-${itemLongPress.pressState}`}
@@ -45,11 +52,6 @@ export default function PlanningMealItem({ entry, label, reorderMode, dragHandle
         >
           <span className="planning-meal-recipe">{label}</span>
         </div>
-        {reorderMode && (
-          <button type="button" className="planning-meal-drag-handle" aria-label="Glisser pour réordonner" {...dragHandleProps}>
-            <GripVertical size={16} />
-          </button>
-        )}
       </div>
 
       {showOptions && (
