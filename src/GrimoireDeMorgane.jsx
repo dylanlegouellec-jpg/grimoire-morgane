@@ -193,6 +193,7 @@ export default function GrimoireDeMorgane() {
     setShoppingLists: shoppingApi.setShoppingLists,
     activeListId: shoppingApi.activeListId,
     setActiveListId: shoppingApi.setActiveListId,
+    shoppingScope: shoppingApi.shoppingScope,
     showToast,
   });
 

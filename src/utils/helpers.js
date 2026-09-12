@@ -246,6 +246,17 @@ export function singularizeFr(word) {
 export function ingredientKey(name) {
   return normalize(singularizeFr(name));
 }
+// Partagé entre useShoppingLists.js (filtrage à l'affichage) et
+// useOfflineSync.js (choix de la liste active au chargement initial) —
+// dupliquer cette règle a justement produit un bug : le second endroit
+// choisissait la dernière liste créée TOUS SCOPES CONFONDUS, sans jamais
+// vérifier qu'elle correspondait à la portée (foyer/personnel) affichée à
+// l'écran.
+export function isShoppingListInScope(list, scope, userId) {
+  return scope === "personal"
+    ? list.scope === "personal" && list.userId === userId
+    : list.scope !== "personal";
+}
 export function isSucre(recipe) {
   return normalize(recipe && recipe.category) === "sucre";
 }
