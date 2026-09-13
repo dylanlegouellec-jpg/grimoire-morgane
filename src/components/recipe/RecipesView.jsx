@@ -73,6 +73,30 @@ export default function RecipesView({
 
   const hasVisible = visibleIds.size > 0;
 
+  // Compteur incrémenté à chaque VRAI changement de filtre/favoris (jamais à
+  // la recherche texte, ni au premier rendu) — passé à chaque carte pour
+  // qu'elle rejoue son fondu/zoom d'entrée dès que ce compteur bouge, tant
+  // qu'elle est visible après le changement (voir RecipeCard.jsx). Sans lui,
+  // une carte déjà visible avant ET après un changement de filtre (ex. Tout
+  // -> Salé : les cartes salées étaient déjà affichées sous "Tout") ne
+  // rejoue rien du tout — juste un saut instantané à sa nouvelle position,
+  // perçu comme une absence totale d'animation (signalé par l'utilisateur).
+  // Un aller-retour avait déjà eu lieu sur ce compteur : retiré une première
+  // fois en pensant qu'un burst de fondus simultanés causait le rendu
+  // saccadé initialement signalé — mesuré depuis (voir RecipeCard.jsx) que
+  // ce burst ne coûte au contraire RIEN en performance (0 frame perdue,
+  // même 20 cartes à la fois) : le vrai coupable du rendu saccadé ET du
+  // chevauchement visuel qui a suivi était le `layout`/`layoutId` Framer
+  // ajouté puis retiré séparément (voir #50/#51), pas ce fondu d'entrée.
+  const filterGenerationRef = useRef(0);
+  const prevFilterKeyRef = useRef(`${filter}|${favoritesOnly}`);
+  const filterKey = `${filter}|${favoritesOnly}`;
+  if (filterKey !== prevFilterKeyRef.current) {
+    prevFilterKeyRef.current = filterKey;
+    filterGenerationRef.current += 1;
+  }
+  const filterGeneration = filterGenerationRef.current;
+
   // Remonte en haut de page à chaque changement de filtre catégorie/favoris
   // (pas à la recherche texte, ni au tout premier montage). Toutes les
   // recettes restent montées en permanence désormais (voir visibleIds
@@ -106,6 +130,7 @@ export default function RecipesView({
             key={r.id}
             recipe={r}
             hidden={!visibleIds.has(r.id)}
+            filterGeneration={filterGeneration}
             onOpen={onOpen}
             isOpenRecipe={openRecipeId === r.id}
             onToggleFavorite={onToggleFavorite}

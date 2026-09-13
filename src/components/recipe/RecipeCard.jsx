@@ -23,6 +23,7 @@ const MORPH_DISARM_DELAY_MS = 500;
 function RecipeCard({
   recipe,
   hidden = false,
+  filterGeneration = 0,
   onOpen,
   isOpenRecipe = false,
   onToggleFavorite,
@@ -86,28 +87,23 @@ function RecipeCard({
 
   // Fondu/zoom d'entrée — Framer Motion, animate() impératif via useAnimate,
   // posé sur un ENFANT dédié (`.card-fade-wrap`, voir plus bas), jamais sur
-  // la carte elle-même (voir son historique dans git log : un `layout`
-  // Framer y a été tenté puis retiré, voir plus bas).
+  // la carte elle-même : celle-ci ne porte ni `layout` ni `layoutId` (voir
+  // `.illus-wrap` plus bas pour l'historique des deux bugs distincts que ces
+  // props y ont causés) — ce fondu-ci, purement opacity/transform via WAAPI,
+  // n'a jamais été en cause dans ni l'un ni l'autre et reste totalement
+  // indépendant du système de layout de Framer.
   //
-  // Rejoué UNIQUEMENT quand la carte passe de masquée à visible (recherche
-  // texte OU changement de filtre) — PAS à chaque changement de filtre pour
-  // les cartes qui restaient déjà affichées (ex. Tout -> Sucré ne masque
-  // aucune carte sucrée) : rejouer l'entrée de TOUTE la grille à chaque
-  // bascule créait un burst de dizaines d'animations simultanées qui
-  // parasitait le glissement de la pastille de filtre (AppShell.jsx), cause
-  // du rendu saccadé signalé. Les cartes qui restent visibles se contentent
-  // maintenant de sauter DIRECTEMENT à leur nouvelle place dans la grille
-  // (comportement natif de CSS Grid quand des cartes voisines passent en
-  // display:none) — SANS animation de réagencement : un `layout` Framer
-  // avait été ajouté ici pour glisser en douceur plutôt que sauter, mais
-  // provoquait un chevauchement visuel (une carte se retrouvant un instant
-  // au-dessus d'une autre, décalée) sur de vraies photos réseau — jamais
-  // reproduit avec les illustrations SVG de la démo, seulement avec de
-  // vraies recettes utilisateur (voir la vidéo du rapport de bug) — signe
-  // probable d'une interaction entre la mesure de mise en page de Framer et
-  // le décodage d'image encore en cours au moment de la capture "avant/
-  // après" du FLIP. Retiré : un saut net et fiable vaut mieux qu'un
-  // glissement séduisant mais parfois cassé.
+  // Rejoué à chaque fois que la carte (re)devient visible (recherche texte
+  // OU changement de filtre) OU que `filterGeneration` change alors qu'elle
+  // restait déjà affichée (ex. Tout -> Salé ne masque aucune carte salée,
+  // déjà visibles sous "Tout" : sans ce second déclencheur, la seule chose
+  // qui se produit pour elles est un saut instantané de position — perçu
+  // comme une absence totale d'animation, signalé par l'utilisateur).
+  // `filterGeneration` (fourni par RecipesView, incrémenté à chaque
+  // changement de filtre/favoris réel — jamais à la recherche texte) porte
+  // ce second cas. Mesuré (voir git log) qu'un burst de dizaines de ces
+  // fondus déclenchés en même temps ne coûte rien en performance (0 frame
+  // perdue) : rien n'empêche de les rejouer largement.
   //
   // La carte n'est jamais démontée/remontée pour ça (voir `hidden` ->
   // display:none plus bas) : son <img> ne bouge jamais, donc jamais
@@ -116,17 +112,20 @@ function RecipeCard({
   // 0, léger décalage vers le bas) soit posé sans qu'un flash de la carte
   // déjà pleinement visible ne soit jamais peint entre-temps.
   const prevHiddenRef = useRef(true); // "true" au tout premier rendu : force l'entrée si la carte démarre visible
+  const prevGenerationRef = useRef(filterGeneration);
   const [scope, animate] = useAnimate();
   useLayoutEffect(() => {
     const becameVisible = prevHiddenRef.current && !hidden;
+    const generationChanged = filterGeneration !== prevGenerationRef.current;
     prevHiddenRef.current = hidden;
-    if (hidden || !becameVisible) return;
+    prevGenerationRef.current = filterGeneration;
+    if (hidden || (!becameVisible && !generationChanged)) return;
     animate(
       scope.current,
       { opacity: [0, 1], y: [14, 0], scale: [0.97, 1] },
       { duration: CARD_ENTER_DURATION_S, ease: CARD_ENTER_EASE, delay: enterDelay / 1000 }
     );
-  }, [hidden, enterDelay, animate, scope]);
+  }, [hidden, filterGeneration, enterDelay, animate, scope]);
 
   // Désarme le morph (voir `handleClick`/`.illus-wrap`) un court instant
   // après la fermeture de la fiche — assez tard pour laisser le morphing de
@@ -153,12 +152,14 @@ function RecipeCard({
         className={`card recipe-card press-anim press-${cardLongPress.pressState}`}
         // display: none (pas un retrait du DOM) quand la carte ne correspond
         // plus au filtre actif — voir RecipesView.jsx : elle reste montée,
-        // son <img> déjà chargée n'est jamais redémontée/redécodée. Le
-        // fondu/zoom d'entrée, lui, est relancé plus haut (voir l'effet
-        // useLayoutEffect ci-dessus) uniquement quand elle (re)devient
-        // visible ; les cartes qui restent visibles sautent directement à
-        // leur nouvelle place dans la grille (voir le commentaire de
-        // l'effet ci-dessus pour le pourquoi de l'absence d'animation ici).
+        // son <img> déjà chargée n'est jamais redémontée/redécodée. Cette
+        // carte elle-même n'anime jamais sa POSITION (aucun `layout` Framer,
+        // voir l'effet ci-dessus pour l'historique) : elle saute
+        // instantanément à sa nouvelle place dans la grille, mais son
+        // CONTENU (voir `.card-fade-wrap` plus bas) rejoue un fondu/zoom
+        // d'entrée à ce moment précis — assez pour signaler visuellement le
+        // changement sans jamais risquer de rejouer les bugs de
+        // repositionnement animé rencontrés précédemment.
         style={hidden ? { display: "none" } : undefined}
         onClick={handleClick}
         onKeyDown={handleKeyDown}
