@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import { normalize, triggerHaptic } from "../../utils/helpers";
 import { useTranslation } from "../../contexts/LanguageContext";
@@ -97,6 +97,49 @@ export default function RecipesView({
   }
   const filterGeneration = filterGenerationRef.current;
 
+  // Vrai pendant une courte fenêtre juste après un changement de filtre
+  // réel — passé à chaque carte pour qu'elle retire TEMPORAIREMENT le
+  // layoutId de morphing de sa photo (voir RecipeCard.jsx, `.illus-wrap`)
+  // pendant ce court instant précis. Ce layoutId doit rester présent EN
+  // CONTINU le reste du temps pour que le morphing carte -> fiche
+  // fonctionne (testé : l'armer seulement au moment du clic empêche Framer
+  // de jouer le morphing du tout, voir RecipeCard.jsx) — mais une présence
+  // continue sur une carte qui se déplace dans la grille (ex. Tout -> Salé)
+  // faisait traîner sa photo loin derrière elle pendant le déplacement
+  // (signalé avec vidéo à l'appui, voir historique). Couper le layoutId
+  // PILE pendant que les cartes sautent à leur nouvelle place, puis le
+  // remettre aussitôt après : Framer ne voit alors plus aucun "avant" à
+  // interpoler pour ce court instant (donc plus de traîne), et la présence
+  // continue reprend ensuite normalement pour le prochain clic éventuel.
+  //
+  // Le "on" DOIT s'appliquer au MÊME rendu que celui où `hidden` change pour
+  // chaque carte (celui qui fait sauter les cartes à leur nouvelle place) —
+  // un simple useEffect/useLayoutEffect arrive TOUJOURS un commit trop tard
+  // (React ne les exécute qu'APRÈS avoir déjà validé/peint ce rendu-là,
+  // laissant passer exactement l'instant que ce mécanisme cherche à éviter
+  // — vérifié, la traîne revenait malgré un useLayoutEffect). Setter l'état
+  // PENDANT le rendu, protégé par la comparaison à une ref pour ne le faire
+  // qu'une fois par changement réel : le pattern "ajuster un état en
+  // réaction à une prop" documenté par React, qui relance immédiatement le
+  // rendu AVANT tout commit/peinture — le tout premier rendu commité pour ce
+  // changement de filtre porte donc déjà `suppressMorph = true`.
+  const [suppressMorph, setSuppressMorph] = useState(false);
+  const prevGenerationForSuppressRef = useRef(filterGeneration);
+  if (filterGeneration !== prevGenerationForSuppressRef.current) {
+    prevGenerationForSuppressRef.current = filterGeneration;
+    if (!suppressMorph) setSuppressMorph(true);
+  }
+  // Remet le layoutId en place peu après — la grille a déjà fini de se
+  // réorganiser (instantané, CSS Grid) dès le rendu ci-dessus ; ce délai
+  // n'existe que pour laisser passer d'éventuels rendus en cascade
+  // (React effects, mesures Framer...) avant de redonner la main au
+  // morphing normal.
+  useEffect(() => {
+    if (!suppressMorph) return undefined;
+    const timer = setTimeout(() => setSuppressMorph(false), 60);
+    return () => clearTimeout(timer);
+  }, [suppressMorph]);
+
   // Remonte en haut de page à chaque changement de filtre catégorie/favoris
   // (pas à la recherche texte, ni au tout premier montage). Toutes les
   // recettes restent montées en permanence désormais (voir visibleIds
@@ -131,6 +174,7 @@ export default function RecipesView({
             recipe={r}
             hidden={!visibleIds.has(r.id)}
             filterGeneration={filterGeneration}
+            suppressMorph={suppressMorph}
             onOpen={onOpen}
             isOpenRecipe={openRecipeId === r.id}
             onToggleFavorite={onToggleFavorite}
