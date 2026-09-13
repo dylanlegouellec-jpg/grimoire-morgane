@@ -70,21 +70,28 @@ function RecipeCard({
 
   // Fondu/zoom d'entrée — Framer Motion, animate() impératif via useAnimate,
   // posé sur un ENFANT dédié (`.card-fade-wrap`, voir plus bas), jamais sur
-  // la carte elle-même : celle-ci porte maintenant `layout` (voir plus bas,
-  // pour le réagencement fluide de la grille) qui pilote lui aussi
-  // `transform` par projection — les deux se battraient pour la même
-  // propriété sur le même noeud sinon (même principe déjà rencontré cette
-  // session entre `y` et une valeur dérivée dans useDismissibleSheet.js).
+  // la carte elle-même (voir son historique dans git log : un `layout`
+  // Framer y a été tenté puis retiré, voir plus bas).
   //
   // Rejoué UNIQUEMENT quand la carte passe de masquée à visible (recherche
   // texte OU changement de filtre) — PAS à chaque changement de filtre pour
   // les cartes qui restaient déjà affichées (ex. Tout -> Sucré ne masque
-  // aucune carte sucrée) : celles-là se contentent maintenant de GLISSER
-  // jusqu'à leur nouvelle place dans la grille (voir `layout` plus bas), un
-  // réagencement bien plus lisible qu'un fondu répété sur toute la grille à
-  // chaque bascule — et surtout, sans un burst de dizaines d'animations
-  // simultanées venant parasiter le glissement de la pastille de filtre
-  // (AppShell.jsx) au même instant, cause du rendu saccadé signalé.
+  // aucune carte sucrée) : rejouer l'entrée de TOUTE la grille à chaque
+  // bascule créait un burst de dizaines d'animations simultanées qui
+  // parasitait le glissement de la pastille de filtre (AppShell.jsx), cause
+  // du rendu saccadé signalé. Les cartes qui restent visibles se contentent
+  // maintenant de sauter DIRECTEMENT à leur nouvelle place dans la grille
+  // (comportement natif de CSS Grid quand des cartes voisines passent en
+  // display:none) — SANS animation de réagencement : un `layout` Framer
+  // avait été ajouté ici pour glisser en douceur plutôt que sauter, mais
+  // provoquait un chevauchement visuel (une carte se retrouvant un instant
+  // au-dessus d'une autre, décalée) sur de vraies photos réseau — jamais
+  // reproduit avec les illustrations SVG de la démo, seulement avec de
+  // vraies recettes utilisateur (voir la vidéo du rapport de bug) — signe
+  // probable d'une interaction entre la mesure de mise en page de Framer et
+  // le décodage d'image encore en cours au moment de la capture "avant/
+  // après" du FLIP. Retiré : un saut net et fiable vaut mieux qu'un
+  // glissement séduisant mais parfois cassé.
   //
   // La carte n'est jamais démontée/remontée pour ça (voir `hidden` ->
   // display:none plus bas) : son <img> ne bouge jamais, donc jamais
@@ -105,34 +112,19 @@ function RecipeCard({
     );
   }, [hidden, enterDelay, animate, scope]);
 
-  // `layout` (réagencement fluide, voir juste au-dessus) désactivé PILE sur
-  // le rendu où `hidden` bascule : à cet instant précis, la carte passe
-  // d'une boîte 0×0 (display:none) à sa taille normale — Framer y verrait un
-  // changement de TAILLE massif et tenterait de l'animer par projection, en
-  // plein sur le fondu/zoom d'entrée ci-dessus, sur le même genre de conflit
-  // que documenté plus haut. Comparaison faite PENDANT le rendu (pas dans un
-  // effet), même mécanisme déjà utilisé ailleurs dans ce fichier avant cette
-  // passe (l'ancien `enterVariant`/`prevGeneration`) : réagir à un
-  // changement de prop sans laisser passer une frame avec la mauvaise valeur
-  // de `layout`.
-  const prevHiddenForLayoutRef = useRef(hidden);
-  const justToggledVisibility = prevHiddenForLayoutRef.current !== hidden;
-  prevHiddenForLayoutRef.current = hidden;
-
   return (
     <>
-      <motion.div
+      <div
         ref={cardLongPress.ref}
-        layout={!justToggledVisibility}
-        transition={{ layout: { type: "spring", stiffness: 400, damping: 38 } }}
         className={`card recipe-card press-anim press-${cardLongPress.pressState}`}
         // display: none (pas un retrait du DOM) quand la carte ne correspond
         // plus au filtre actif — voir RecipesView.jsx : elle reste montée,
         // son <img> déjà chargée n'est jamais redémontée/redécodée. Le
         // fondu/zoom d'entrée, lui, est relancé plus haut (voir l'effet
         // useLayoutEffect ci-dessus) uniquement quand elle (re)devient
-        // visible ; les autres cartes se contentent de GLISSER jusqu'à leur
-        // nouvelle place (voir `layout` ci-dessus).
+        // visible ; les cartes qui restent visibles sautent directement à
+        // leur nouvelle place dans la grille (voir le commentaire de
+        // l'effet ci-dessus pour le pourquoi de l'absence d'animation ici).
         style={hidden ? { display: "none" } : undefined}
         onClick={handleClick}
         onKeyDown={handleKeyDown}
@@ -142,11 +134,9 @@ function RecipeCard({
         {...cardLongPress.handlers}
       >
         {/* Enveloppe dédiée au fondu/zoom d'entrée (voir useAnimate plus
-            haut) — jamais la carte elle-même, qui porte `layout` (juste
-            au-dessus) : les deux animeraient sinon `transform` sur le même
-            noeud, en concurrence directe. Un simple <div>, sans incidence
-            sur la mise en page (aucun style propre : .illus-wrap/.card-body
-            s'empilaient déjà normalement l'un sous l'autre). */}
+            haut), jamais la carte elle-même — un simple <div>, sans
+            incidence sur la mise en page (aucun style propre : .illus-wrap/
+            .card-body s'empilaient déjà normalement l'un sous l'autre). */}
         <div ref={scope} className="card-fade-wrap">
           <motion.div
             className="illus-wrap"
@@ -193,7 +183,7 @@ function RecipeCard({
             </div>
           </div>
         </div>
-      </motion.div>
+      </div>
 
       <AnimatePresence>
         {showOptions && (
