@@ -27,7 +27,15 @@ import { initAudioOnFirstTouch } from './utils/audioUtils'
 // controllerchange à ce moment-là est juste la prise de contrôle
 // initiale (clientsClaim), pas une mise à jour, et n'a donc rien à
 // recharger.
-if ("serviceWorker" in navigator) {
+//
+// Désactivé sur Android, à la demande — même détection UA que
+// data-platform plus bas (Android est la seule des deux plateformes à
+// s'annoncer sans ambiguïté dans navigator.userAgent). Un onglet Android
+// resté ouvert après un déploiement continuera donc de tourner sur le JS
+// déjà chargé jusqu'à la prochaine fermeture/réouverture manuelle — avec
+// le risque de 404 décrit ci-dessus si un chargement lazy réclame entre-
+// temps un fichier d'un ancien build déjà supprimé du serveur.
+if ("serviceWorker" in navigator && !/Android/i.test(navigator.userAgent)) {
   const hadController = Boolean(navigator.serviceWorker.controller);
   let reloaded = false;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
