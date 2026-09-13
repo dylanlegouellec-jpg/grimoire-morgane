@@ -16,8 +16,11 @@ import {
   applyNavOpacity,
   getStoredLanguage,
   storeLanguage,
+  getStoredOnboardingCompleted,
+  storeOnboardingCompleted,
 } from "./utils/localSettings";
 import { getProfile, saveProfile, pressDurationFromDb } from "./utils/profile";
+import { getOnboardingCompletedFromProfile, saveOnboardingCompletedToProfile } from "./utils/onboarding";
 
 import useSupabaseAuth from "./hooks/useSupabaseAuth";
 import useToast from "./hooks/useToast";
@@ -152,6 +155,26 @@ export default function GrimoireDeMorgane() {
     if (user) saveProfile(user.id, { textSize: size }).catch((err) => console.error("Sync taille de texte impossible :", err));
   };
 
+  // Statut du tutoriel guidé (onboarding) — même principe que le thème/
+  // l'appui long ci-dessus (local d'abord, puis synchronisé par compte),
+  // mais via utils/onboarding.js plutôt que utils/profile.js : voir son
+  // commentaire de fichier pour pourquoi cette synchronisation reste
+  // délibérément isolée (colonne `profiles.has_completed_onboarding` à
+  // ajouter à la main, pas encore garantie sur toute installation).
+  // `onboardingResolved` distingue "pas encore terminé" de "on ne sait pas
+  // encore si un autre appareil l'a déjà terminé" : sans lui, AppShell.jsx
+  // lancerait le tuto pour un utilisateur qui l'a déjà vu sur un autre
+  // appareil, le temps que cette valeur "vraie" arrive du réseau — un
+  // clignotement (tuto qui s'ouvre puis se referme tout seul) plutôt qu'une
+  // vraie absence d'affichage.
+  const [hasCompletedOnboarding, setHasCompletedOnboardingState] = useState(() => getStoredOnboardingCompleted());
+  const [onboardingResolved, setOnboardingResolved] = useState(false);
+  const setHasCompletedOnboarding = (value) => {
+    storeOnboardingCompleted(value);
+    setHasCompletedOnboardingState(value);
+    if (user) saveOnboardingCompletedToProfile(user.id, value).catch((err) => console.error("Sync statut de tutoriel impossible :", err));
+  };
+
   const recipesApi = useRecipes({
     householdId,
     initialRecipes: Array.isArray(localCache.recipes) && localCache.recipes.length
@@ -272,6 +295,31 @@ export default function GrimoireDeMorgane() {
     });
   }, [user]);
 
+  // Résolution du statut de tutoriel — effet séparé de celui ci-dessus
+  // (utils/onboarding.js, volontairement isolé de utils/profile.js, voir
+  // son commentaire de fichier). Gaté sur `authLoading` (pas `user` seul) :
+  // sans ça, une session en cours de restauration passerait un bref
+  // instant par `user === null`, marquant `onboardingResolved` à tort
+  // avant même de savoir si un compte va finalement se connecter. Pas de
+  // ref anti-répétition ici (contrairement à `syncedUserIdRef` ci-dessus) :
+  // un rafraîchissement de token peut sans risque redéclencher cette
+  // lecture, purement idempotente, qui ne fait jamais que CONFIRMER une
+  // valeur déjà vraie — jamais régresser un état local plus frais.
+  useEffect(() => {
+    if (authLoading) return undefined;
+    if (!user) { setOnboardingResolved(true); return undefined; }
+    let cancelled = false;
+    getOnboardingCompletedFromProfile(user.id).then((remote) => {
+      if (cancelled) return;
+      if (remote === true) {
+        storeOnboardingCompleted(true);
+        setHasCompletedOnboardingState(true);
+      }
+      setOnboardingResolved(true);
+    });
+    return () => { cancelled = true; };
+  }, [authLoading, user]);
+
   // --- Écran à afficher --------------------------------------------------
   // Priorité absolue au cache local : si on a déjà des recettes en
   // mémoire (donc un grimoire déjà ouvert sur cet appareil), on ouvre
@@ -330,6 +378,9 @@ export default function GrimoireDeMorgane() {
     setTextSize,
     language,
     setLanguage,
+    hasCompletedOnboarding,
+    setHasCompletedOnboarding,
+    onboardingResolved,
   };
   const householdApi = {
     user,
