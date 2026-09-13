@@ -71,40 +71,47 @@ export default function PlanningMealGroup({
         <span className="planning-meal-icon" aria-hidden="true">{mealType.icon}</span>
         <span className="planning-meal-type">{mealLabel}</span>
       </div>
-      <div className="planning-meal-group-items">
-        {/* Aucun type de plat pour petit-déjeuner/en-cas (voir
-            mealTypeHasCourse) — jamais de sous-groupe pour ces moments,
-            juste la liste des entrées, réordonnable comme les autres. */}
-        {hasCourse
-          ? groupEntriesByCourse(entries).map((courseGroup) => (
-              <PlanningCourseGroup
-                key={courseGroup.course.key}
-                mealTypeKey={mealType.key}
-                course={courseGroup.course}
-                entries={courseGroup.entries}
-                labelForEntry={labelForEntry}
-                reorderMode={reorderMode}
-                onToggleReorder={onToggleReorder}
-                onReorder={onReorder}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onAddToCourse={onAddToCourse}
-                onMoveToMeal={onMoveSection}
-                onDeleteAll={onDeleteAllCourse}
-              />
-            ))
-          : (
-              <PlanningMealItemsList
-                entries={entries}
-                bulleted={false}
-                reorderMode={reorderMode}
-                onReorder={onReorder}
-                labelForEntry={labelForEntry}
-                onEdit={onEdit}
-                onDelete={onDelete}
-              />
-            )}
-      </div>
+      {/* Aucun type de plat pour petit-déjeuner/en-cas (voir
+          mealTypeHasCourse) — jamais de sous-groupe pour ces moments, juste
+          la liste des entrées, réordonnable comme les autres. Dans ce cas,
+          PlanningMealItemsList rend LUI-MÊME le conteneur
+          ".planning-meal-group-items" (voir son commentaire de fichier :
+          <Reorder.Group> doit être le parent DOM direct de chaque ligne) —
+          il ne reçoit donc PAS de wrapper séparé ici, contrairement au cas
+          "plusieurs sous-groupes" ci-dessous, qui lui reste un simple
+          conteneur d'affichage sans rôle dans le glissement. */}
+      {hasCourse ? (
+        <div className="planning-meal-group-items">
+          {groupEntriesByCourse(entries).map((courseGroup) => (
+            <PlanningCourseGroup
+              key={courseGroup.course.key}
+              mealTypeKey={mealType.key}
+              course={courseGroup.course}
+              entries={courseGroup.entries}
+              labelForEntry={labelForEntry}
+              reorderMode={reorderMode}
+              onToggleReorder={onToggleReorder}
+              onReorder={onReorder}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onAddToCourse={onAddToCourse}
+              onMoveToMeal={onMoveSection}
+              onDeleteAll={onDeleteAllCourse}
+            />
+          ))}
+        </div>
+      ) : (
+        <PlanningMealItemsList
+          entries={entries}
+          bulleted={false}
+          wrapperClassName="planning-meal-group-items"
+          reorderMode={reorderMode}
+          onReorder={onReorder}
+          labelForEntry={labelForEntry}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
+      )}
 
       <AnimatePresence>
         {showOptions && (
