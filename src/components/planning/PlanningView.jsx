@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AnimatePresence } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ChevronDown, ChevronLeft, ChevronRight, Plus, Send, User, Users } from "lucide-react";
 import { getWeekStart, addWeeks, getWeekDays, toISODate, isSameDay, formatWeekRange, formatDayLabel, MEAL_TYPES, COURSE_TYPES, courseTypeInfo, courseTypeOrder } from "../../utils/planning";
 import { triggerHaptic } from "../../utils/haptics";
@@ -28,8 +28,17 @@ import PlanningMealGroup from "./PlanningMealGroup";
 /*  quel jour de l'année est possible, pas seulement ceux de la semaine        */
 /*  actuellement affichée.                                                     */
 /* ------------------------------------------------------------------ */
+// Même transition (durée/easing) que le glissement entre onglets principaux
+// (.tab-transition, shell.css.js) — juste jouée via Framer Motion plutôt
+// qu'un @keyframes CSS, pour pouvoir la piloter par React state (`scope`) au
+// lieu d'un changement de `key` sur tout un onglet.
+const SCOPE_SWITCH_DURATION_S = 0.24;
+const SCOPE_SWITCH_EASE = [0.22, 1, 0.36, 1];
+const SCOPE_SWITCH_SLIDE_PX = 14;
+
 export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMeal, onRemoveMeals, onUpdateMeal, onReorderMeals, onMoveMealSection, onSendToShoppingList, showToast, user }) {
   const { t, language } = useTranslation();
+  const prefersReducedMotion = useReducedMotion();
   const [weekStart, setWeekStart] = useState(() => getWeekStart());
   // Mode réorganisation (voir PlanningMealItem.jsx, poignée ⋮⋮) : masqué par
   // défaut pour ne pas encombrer la vue normale, affiché sur tous les jours
@@ -273,71 +282,99 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
       </div>
 
       <div className="planning-days" {...(weekSwipeActive ? weekSwipe : {})}>
-        {days.map((d) => {
-          const iso = toISODate(d);
-          const dayEntries = entriesForDay(iso);
-          const todayFlag = isSameDay(d, today);
-          const dayLabel = formatDayLabel(d, language);
-          const expanded = isDayExpanded(iso, todayFlag);
-          return (
-            <div className={`planning-day ${todayFlag ? "today" : ""}`} key={iso}>
-              <div className="planning-day-header">
-                <button
-                  type="button"
-                  className="planning-day-toggle"
-                  onClick={() => toggleDay(iso, todayFlag)}
-                  aria-expanded={expanded}
-                  aria-label={t(expanded ? "planning.collapseDay" : "planning.expandDay", { day: dayLabel })}
-                >
-                  <ChevronDown size={16} className={`planning-day-chevron ${expanded ? "expanded" : ""}`} aria-hidden="true" />
-                  <span className="planning-day-label">
-                    {todayFlag && <span className="planning-today-badge">{t("planning.today")}</span>}
-                    {dayLabel}
-                  </span>
-                  {/* Nombre de repas visible même replié : garde le jour
-                      "scannable" d'un coup d'œil sans avoir à le déplier
-                      juste pour savoir s'il contient déjà quelque chose. */}
-                  {!expanded && dayEntries.length > 0 && (
-                    <span className="planning-day-count" aria-label={t("planning.dayMealCountLabel", { count: dayEntries.length })}>
-                      {dayEntries.length}
-                    </span>
+        {/* Fondu/glissement léger à chaque bascule Foyer <-> Personnel (voir
+            `scope` plus haut) — avant, le contenu changeait instantanément
+            d'un état à l'autre (signalé comme trop sec). `mode="wait"` :
+            l'ancienne portée finit de sortir avant que la nouvelle ne
+            commence à entrer, pour éviter tout chevauchement/saut de mise en
+            page pendant la transition (le nombre de jours dépliés/de repas
+            affichés diffère souvent d'une portée à l'autre, donc leurs
+            hauteurs aussi). `key={scope}` (pas la semaine ni les entrées) :
+            seule cette bascule précise doit rejouer l'animation, jamais un
+            simple changement de semaine ou l'ajout/suppression d'un repas
+            dans la portée déjà affichée. */}
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={scope}
+            // Même display:flex column + gap que .planning-days (voir
+            // planning.css.js), SANS sa marge (déjà portée par le
+            // conteneur parent ci-dessus, elle doublerait sinon) : ce
+            // wrapper devient le nouveau parent direct des blocs
+            // `.planning-day`, qui perdraient sinon leur espacement (`gap`
+            // ne s'applique qu'aux enfants DIRECTS d'un conteneur flex/grid).
+            className="planning-days-scope"
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: scope === "personal" ? SCOPE_SWITCH_SLIDE_PX : -SCOPE_SWITCH_SLIDE_PX }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: scope === "personal" ? -SCOPE_SWITCH_SLIDE_PX : SCOPE_SWITCH_SLIDE_PX }}
+            transition={{ duration: SCOPE_SWITCH_DURATION_S, ease: SCOPE_SWITCH_EASE }}
+          >
+            {days.map((d) => {
+              const iso = toISODate(d);
+              const dayEntries = entriesForDay(iso);
+              const todayFlag = isSameDay(d, today);
+              const dayLabel = formatDayLabel(d, language);
+              const expanded = isDayExpanded(iso, todayFlag);
+              return (
+                <div className={`planning-day ${todayFlag ? "today" : ""}`} key={iso}>
+                  <div className="planning-day-header">
+                    <button
+                      type="button"
+                      className="planning-day-toggle"
+                      onClick={() => toggleDay(iso, todayFlag)}
+                      aria-expanded={expanded}
+                      aria-label={t(expanded ? "planning.collapseDay" : "planning.expandDay", { day: dayLabel })}
+                    >
+                      <ChevronDown size={16} className={`planning-day-chevron ${expanded ? "expanded" : ""}`} aria-hidden="true" />
+                      <span className="planning-day-label">
+                        {todayFlag && <span className="planning-today-badge">{t("planning.today")}</span>}
+                        {dayLabel}
+                      </span>
+                      {/* Nombre de repas visible même replié : garde le jour
+                          "scannable" d'un coup d'œil sans avoir à le déplier
+                          juste pour savoir s'il contient déjà quelque chose. */}
+                      {!expanded && dayEntries.length > 0 && (
+                        <span className="planning-day-count" aria-label={t("planning.dayMealCountLabel", { count: dayEntries.length })}>
+                          {dayEntries.length}
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      className="planning-add-btn"
+                      onClick={(e) => { e.stopPropagation(); openAddForDay(iso); }}
+                      aria-label={t("planning.addMealLabel", { day: dayLabel })}
+                    >
+                      <Plus size={16} />
+                    </button>
+                  </div>
+                  {expanded && dayEntries.length > 0 && (
+                    <div className="planning-meals">
+                      {groupEntriesByMealType(dayEntries).map((group) => (
+                        <PlanningMealGroup
+                          key={group.mealType.key}
+                          mealType={group.mealType}
+                          entries={group.entries}
+                          groupEntriesByCourse={groupEntriesByCourse}
+                          labelForEntry={labelForEntry}
+                          reorderMode={reorderMode}
+                          onToggleReorder={toggleReorderMode}
+                          onReorder={onReorderMeals}
+                          onEdit={setEditingEntry}
+                          onDelete={(e) => onRemoveMeal(e.id)}
+                          onAddMeal={() => openAddForMealSection(iso, group.mealType.key)}
+                          onMoveSection={handleMoveSection}
+                          onDeleteSection={handleDeleteSection}
+                          onAddToCourse={(courseKey) => openAddForCourse(iso, group.mealType.key, courseKey)}
+                          onDeleteAllCourse={(groupEntries) => onRemoveMeals(groupEntries.map((e) => e.id))}
+                        />
+                      ))}
+                    </div>
                   )}
-                </button>
-                <button
-                  type="button"
-                  className="planning-add-btn"
-                  onClick={(e) => { e.stopPropagation(); openAddForDay(iso); }}
-                  aria-label={t("planning.addMealLabel", { day: dayLabel })}
-                >
-                  <Plus size={16} />
-                </button>
-              </div>
-              {expanded && dayEntries.length > 0 && (
-                <div className="planning-meals">
-                  {groupEntriesByMealType(dayEntries).map((group) => (
-                    <PlanningMealGroup
-                      key={group.mealType.key}
-                      mealType={group.mealType}
-                      entries={group.entries}
-                      groupEntriesByCourse={groupEntriesByCourse}
-                      labelForEntry={labelForEntry}
-                      reorderMode={reorderMode}
-                      onToggleReorder={toggleReorderMode}
-                      onReorder={onReorderMeals}
-                      onEdit={setEditingEntry}
-                      onDelete={(e) => onRemoveMeal(e.id)}
-                      onAddMeal={() => openAddForMealSection(iso, group.mealType.key)}
-                      onMoveSection={handleMoveSection}
-                      onDeleteSection={handleDeleteSection}
-                      onAddToCourse={(courseKey) => openAddForCourse(iso, group.mealType.key, courseKey)}
-                      onDeleteAllCourse={(groupEntries) => onRemoveMeals(groupEntries.map((e) => e.id))}
-                    />
-                  ))}
                 </div>
-              )}
-            </div>
-          );
-        })}
+              );
+            })}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       <div className="planning-send-wrap">
