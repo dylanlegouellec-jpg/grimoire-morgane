@@ -76,10 +76,24 @@ export default function useFocusTrap(onClose) {
     modalStack.push(modalId);
     window.history.pushState({ grimoireModal: true }, "");
     const handlePopState = () => {
-      if (suppressNextPopstate) {
-        suppressNextPopstate = false;
-        return;
-      }
+      // NE PAS remettre `suppressNextPopstate` à false ici (voir sa
+      // déclaration plus haut) : popstate est un événement UNIQUE livré à
+      // TOUS les écouteurs encore montés d'un coup, dans leur ordre
+      // d'ajout — avec 3 modales empilées (ex. Réglages -> Gestion des
+      // foyers -> options d'un foyer), fermer la plus interne (croix)
+      // laisse les DEUX autres écouteurs (Réglages et Gestion des foyers)
+      // recevoir ce même popstate. Le remettre à false ICI ne protège que
+      // le PREMIER des deux à s'exécuter (Réglages, ajouté en premier) —
+      // le second (Gestion des foyers) le retrouvait déjà à false et
+      // prenait à tort ce popstate pour un vrai retour utilisateur,
+      // refermant en cascade une modale qu'on ne voulait pourtant PAS
+      // toucher (bug signalé : fermer la sous-modale "Test" refermait
+      // aussi "Gestion des foyers" juste derrière). Laisser UNIQUEMENT le
+      // setTimeout ci-dessous le remettre à false : le temps que ce
+      // popstate unique finisse de traverser tous les écouteurs encore
+      // montés, aucun d'eux ne le verra jamais passer à false en cours de
+      // route.
+      if (suppressNextPopstate) return;
       // Seule la modale la plus récemment ouverte (sommet de la pile) doit
       // répondre à ce retour — voir la déclaration de modalStack plus haut.
       if (modalStack[modalStack.length - 1] !== modalId) return;
