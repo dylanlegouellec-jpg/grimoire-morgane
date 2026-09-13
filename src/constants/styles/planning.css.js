@@ -34,6 +34,13 @@ export const PLANNING_CSS = `
 }
 
 .planning-days { display: flex; flex-direction: column; gap: 10px; margin: 18px 0 20px; }
+/* Enfant direct de .planning-days une fois la bascule Foyer/Personnel animée
+   (voir PlanningView.jsx, motion.div key={scope}) : mêmes display:flex
+   column + gap pour que les blocs .planning-day gardent leur espacement
+   ("gap" ne s'applique qu'aux enfants DIRECTS d'un conteneur flex/grid),
+   mais SANS la marge de .planning-days ci-dessus, déjà portée par le
+   conteneur parent — la dupliquer ici l'aurait ajoutée deux fois. */
+.planning-days-scope { display: flex; flex-direction: column; gap: 10px; }
 .planning-day { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 12px 14px; }
 .planning-day.today { border-color: var(--gold); background: rgba(179,135,42,0.08); }
 .planning-day-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }

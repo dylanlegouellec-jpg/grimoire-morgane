@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { AnimatePresence } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ChevronDown, Plus, ShoppingBasket, User, Users } from "lucide-react";
 import { aisleIcon, copyText } from "../../utils/helpers";
 import { triggerHaptic } from "../../utils/haptics";
@@ -23,6 +23,15 @@ import ShoppingItemRow from "./ShoppingItemRow";
 /*  partir des articles NON cochés (`unchecked`) — ceux-ci rejoignent la    */
 /*  section "Articles achetés" repliable tout en bas.                       */
 /* ------------------------------------------------------------------ */
+// Même transition que la bascule Foyer/Personnel du Planning (voir
+// PlanningView.jsx, SCOPE_SWITCH_*) — copiée ici plutôt que partagée : les
+// deux vues n'ont d'autre lien qu'une coïncidence de nom de prop, un import
+// croisé entre elles pour trois constantes serait plus de bruit que
+// d'économie.
+const SCOPE_SWITCH_DURATION_S = 0.24;
+const SCOPE_SWITCH_EASE = [0.22, 1, 0.36, 1];
+const SCOPE_SWITCH_SLIDE_PX = 14;
+
 export default function ShoppingView({
   recipes,
   activeList,
@@ -40,6 +49,7 @@ export default function ShoppingView({
   pressDuration,
 }) {
   const { t, dict, language } = useTranslation();
+  const prefersReducedMotion = useReducedMotion();
   const [manualInput, setManualInput] = useState("");
   const [wheelItem, setWheelItem] = useState(null);
   const [showRecipePicker, setShowRecipePicker] = useState(false);
@@ -148,84 +158,105 @@ export default function ShoppingView({
         </Seal>
       </div>
 
-      {items.length > 0 ? (
-        <div className="shopping-result">
-          <div className="parchment-recap">
-            {t("shopping.recap", {
-              bought: bought.length,
-              total: items.length,
-              plural: items.length > 1 ? "s" : "",
-              aisles: aisleCount,
-              aislesPlural: aisleCount > 1 ? "s" : "",
-            })}
-          </div>
-          <div className="shopping-progress" aria-hidden="true">
-            <div
-              className="shopping-progress-fill"
-              style={{ width: `${items.length ? (bought.length / items.length) * 100 : 0}%` }}
-            />
-          </div>
-          <div className="apple-bar">
-            <SwipeFlourish onSwipeRight={handleAppleCopy} onSwipeLeft={handleAppleReset} onTap={handleAppleReset} />
-          </div>
-
-          {Object.entries(grouped).map(([aisle, list]) => (
-            <div key={aisle} className="aisle-block">
-              <h4>
-                <span className="aisle-icon" aria-hidden="true">{aisleIcon(aisle)}</span>
-                {dict.labels[aisle] || aisle}
-                <span className="aisle-count">{list.length}</span>
-              </h4>
-              <ul className="shopping-list">
-                {list.map((it) => (
-                  <ShoppingItemRow
-                    key={it.id}
-                    item={it}
-                    checked={false}
-                    onToggle={onToggleItem}
-                    onAdjust={onAdjustQty}
-                    onDelete={onDeleteItem}
-                    onOpenWheel={setWheelItem}
-                    pressDuration={pressDuration}
-                  />
-                ))}
-              </ul>
+      {/* Fondu/glissement léger à chaque bascule Foyer <-> Personnel (voir
+          `scope`, prop reçue du parent) — avant, le contenu changeait
+          instantanément d'un état à l'autre (signalé comme trop sec).
+          `mode="wait"` : l'ancienne portée finit de sortir avant que la
+          nouvelle ne commence à entrer, pour éviter tout chevauchement/saut
+          de mise en page (la liste "personal" est souvent bien plus courte
+          que "household", donc leurs hauteurs diffèrent). `key={scope}`
+          (pas `activeList.id`) : changer de liste au sein d'une même portée
+          (voir "changer ▾", onOpenManager) ne doit jamais rejouer cette
+          animation, seule la bascule Foyer/Personnel elle-même le doit. */}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={scope}
+          className="shopping-scope-scroll"
+          initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: scope === "personal" ? SCOPE_SWITCH_SLIDE_PX : -SCOPE_SWITCH_SLIDE_PX }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: scope === "personal" ? -SCOPE_SWITCH_SLIDE_PX : SCOPE_SWITCH_SLIDE_PX }}
+          transition={{ duration: SCOPE_SWITCH_DURATION_S, ease: SCOPE_SWITCH_EASE }}
+        >
+        {items.length > 0 ? (
+          <div className="shopping-result">
+            <div className="parchment-recap">
+              {t("shopping.recap", {
+                bought: bought.length,
+                total: items.length,
+                plural: items.length > 1 ? "s" : "",
+                aisles: aisleCount,
+                aislesPlural: aisleCount > 1 ? "s" : "",
+              })}
             </div>
-          ))}
+            <div className="shopping-progress" aria-hidden="true">
+              <div
+                className="shopping-progress-fill"
+                style={{ width: `${items.length ? (bought.length / items.length) * 100 : 0}%` }}
+              />
+            </div>
+            <div className="apple-bar">
+              <SwipeFlourish onSwipeRight={handleAppleCopy} onSwipeLeft={handleAppleReset} onTap={handleAppleReset} />
+            </div>
 
-          {bought.length > 0 && (
-            <div className="aisle-block bought-block">
-              <button
-                type="button"
-                className="bought-toggle"
-                onClick={() => { triggerHaptic(10); setShowBought((v) => !v); }}
-              >
-                <h4>{t("shopping.boughtSection")} <span className="aisle-count">{bought.length}</span></h4>
-                <ChevronDown size={16} className={`bought-chevron ${showBought ? "open" : ""}`} />
-              </button>
-              {showBought && (
-                <ul className="shopping-list bought-list">
-                  {bought.map((it) => (
+            {Object.entries(grouped).map(([aisle, list]) => (
+              <div key={aisle} className="aisle-block">
+                <h4>
+                  <span className="aisle-icon" aria-hidden="true">{aisleIcon(aisle)}</span>
+                  {dict.labels[aisle] || aisle}
+                  <span className="aisle-count">{list.length}</span>
+                </h4>
+                <ul className="shopping-list">
+                  {list.map((it) => (
                     <ShoppingItemRow
                       key={it.id}
                       item={it}
-                      checked
+                      checked={false}
                       onToggle={onToggleItem}
+                      onAdjust={onAdjustQty}
                       onDelete={onDeleteItem}
                       onOpenWheel={setWheelItem}
                       pressDuration={pressDuration}
                     />
                   ))}
                 </ul>
-              )}
-            </div>
-          )}
-        </div>
-      ) : (
-        <p className="hint" style={{ textAlign: "center", marginTop: 24 }}>
-          {t("shopping.emptyList")}
-        </p>
-      )}
+              </div>
+            ))}
+
+            {bought.length > 0 && (
+              <div className="aisle-block bought-block">
+                <button
+                  type="button"
+                  className="bought-toggle"
+                  onClick={() => { triggerHaptic(10); setShowBought((v) => !v); }}
+                >
+                  <h4>{t("shopping.boughtSection")} <span className="aisle-count">{bought.length}</span></h4>
+                  <ChevronDown size={16} className={`bought-chevron ${showBought ? "open" : ""}`} />
+                </button>
+                {showBought && (
+                  <ul className="shopping-list bought-list">
+                    {bought.map((it) => (
+                      <ShoppingItemRow
+                        key={it.id}
+                        item={it}
+                        checked
+                        onToggle={onToggleItem}
+                        onDelete={onDeleteItem}
+                        onOpenWheel={setWheelItem}
+                        pressDuration={pressDuration}
+                      />
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="hint" style={{ textAlign: "center", marginTop: 24 }}>
+            {t("shopping.emptyList")}
+          </p>
+        )}
+        </motion.div>
+      </AnimatePresence>
 
       <AnimatePresence>
         {showRecipePicker && (
