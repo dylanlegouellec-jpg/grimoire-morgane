@@ -54,6 +54,19 @@ if (window.navigator.standalone || window.matchMedia("(display-mode: standalone)
   document.documentElement.setAttribute("data-standalone", "true");
 }
 
+// Détecte Android pour le CSS (voir .bottom-nav, modalsBase.css.js) : le
+// dock flottant du bas est descendu un peu plus près du bord sur cette
+// plateforme précise, à la demande — parfait tel quel sur iPhone, un peu
+// trop haut sur Android où env(safe-area-inset-bottom) vaut généralement 0
+// (pas de zone de sécurité équivalente à la barre d'accueil iOS). Simple
+// recherche de "Android" dans le user-agent : contrairement à iOS (qui n'a
+// aucune façon fiable de s'auto-identifier ainsi, d'où data-standalone
+// ci-dessus qui s'appuie sur autre chose), Android s'annonce toujours sans
+// ambiguïté de cette manière.
+if (/Android/i.test(navigator.userAgent)) {
+  document.documentElement.setAttribute("data-platform", "android");
+}
+
 // Hauteur/décalage RÉELS de la zone visible (--app-vvh/--app-vv-offset),
 // utilisés par .modal-backdrop (modalsBase.css.js) à la place de
 // "height: 100dvh" seul. Corrige un bug précis sur iOS : nos modales sont
