@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ChevronLeft, ChevronRight, Home, LogOut, Palette, Pencil, Save, SlidersHorizontal, UserCircle2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Compass, Home, LogOut, Palette, Pencil, Save, SlidersHorizontal, UserCircle2, X } from "lucide-react";
 import { triggerHaptic } from "../../utils/helpers";
 import { getCachedProfile, getProfile } from "../../utils/profile";
 import { useTranslation } from "../../contexts/LanguageContext";
@@ -71,6 +71,7 @@ export default function SecretSettingsModal({
   onRefreshHouseholds,
   showToast,
   onSignOut,
+  onReplayOnboarding,
 }) {
   const { t } = useTranslation();
   // 'main' | 'appearance' | 'accessibility' | 'backup' | 'household'
@@ -251,6 +252,20 @@ export default function SecretSettingsModal({
                 <ChevronRight size={18} className="ios-chevron" />
               </button>
             )}
+          </div>
+
+          <p className="ios-group-title">{t("settings.helpSection")}</p>
+          <div className="ios-group">
+            {/* N'ouvre pas de sous-vue (pas de ChevronRight, contrairement aux
+                rows ci-dessus) : ferme directement les Réglages et relance le
+                tuto par-dessus l'écran principal (voir AppShell.jsx,
+                replayOnboarding — le tuto a besoin des VRAIS boutons de nav
+                pour son spotlight, jamais accessibles depuis l'intérieur
+                d'une modale de Réglages empilée par-dessus). */}
+            <button type="button" className="ios-row" onClick={() => { triggerHaptic(15); onReplayOnboarding(); }}>
+              <span className="ios-row-icon" style={{ background: "var(--gold-light)" }}><Compass size={16} /></span>
+              <span className="ios-row-title">{t("settings.replayTutorial")}</span>
+            </button>
           </div>
 
           {user && (

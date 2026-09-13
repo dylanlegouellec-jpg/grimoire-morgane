@@ -31,6 +31,7 @@ import { COOKMODE_CSS } from "./styles/cookmode.css";
 import { RESPONSIVE_CSS } from "./styles/responsive.css";
 import { SETTINGS_IOS_CSS } from "./styles/settingsIos.css";
 import { PLANNING_CSS } from "./styles/planning.css";
+import { ONBOARDING_CSS } from "./styles/onboarding.css";
 
 export const CSS = [
   THEME_CSS,
@@ -46,4 +47,5 @@ export const CSS = [
   RESPONSIVE_CSS,
   SETTINGS_IOS_CSS,
   PLANNING_CSS,
+  ONBOARDING_CSS,
 ].join("\n");

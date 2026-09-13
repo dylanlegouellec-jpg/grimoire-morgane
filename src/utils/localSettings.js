@@ -233,6 +233,34 @@ export function storeShoppingScope(scope) {
   }
 }
 
+/* --- Tutoriel guidé (onboarding) terminé ? -----------------------------
+   Repli hors-ligne / avant résolution de session, comme les autres
+   réglages synchronisés par compte ci-dessus (voir utils/onboarding.js
+   pour la synchronisation Supabase, volontairement isolée de
+   utils/profile.js — colonne `profiles.has_completed_onboarding` pas
+   forcément migrée sur toutes les installations). Ce flag LOCAL, lui,
+   suffit à lui seul à ne jamais rejouer le tuto deux fois sur CET
+   appareil, même si la synchronisation compte échoue ou n'existe pas
+   encore. */
+const ONBOARDING_COMPLETED_KEY = "grimoire_onboarding_completed";
+
+export function getStoredOnboardingCompleted() {
+  try {
+    return localStorage.getItem(ONBOARDING_COMPLETED_KEY) === "1";
+  } catch {
+    /* repli ci-dessous */
+  }
+  return false;
+}
+
+export function storeOnboardingCompleted(value) {
+  try {
+    localStorage.setItem(ONBOARDING_COMPLETED_KEY, value ? "1" : "0");
+  } catch {
+    /* rien à faire si le stockage échoue */
+  }
+}
+
 // Mémorise, par portée, la dernière liste ouverte sur CET appareil — pour
 // qu'en rebasculant sur "personal" on retrouve la même liste perso plutôt
 // que la première de la liste à chaque fois.

@@ -31,6 +31,7 @@ const TextTemplateImportModal = lazy(() => import("../components/common/TextTemp
 const RecipeLinkImportModal = lazy(() => import("../components/common/RecipeLinkImportModal"));
 const SecretSettingsModal = lazy(() => import("../components/common/SecretSettingsModal"));
 const ListsManagerModal = lazy(() => import("../components/common/ListsManagerModal"));
+const OnboardingTour = lazy(() => import("../components/onboarding/OnboardingTour"));
 
 // Fallback minimal pour les onglets secondaires (Planning/Frigo/Courses) :
 // juste la baguette qui tourne déjà utilisée sur l'écran de chargement
@@ -102,6 +103,9 @@ export default function AppShell({
     setTextSize,
     language,
     setLanguage,
+    hasCompletedOnboarding,
+    setHasCompletedOnboarding,
+    onboardingResolved,
   } = settingsApi;
   const {
     user,
@@ -160,6 +164,38 @@ export default function AppShell({
   const [showLinkImport, setShowLinkImport] = useState(false);
   const [showSecretSettings, setShowSecretSettings] = useState(false);
   const [showListsManager, setShowListsManager] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  // Lance le tuto UNE SEULE FOIS, dès qu'on sait avec certitude que ce
+  // compte (ou cet appareil, en mode invité) ne l'a jamais terminé —
+  // jamais avant `onboardingResolved` (voir son commentaire,
+  // GrimoireDeMorgane.jsx) : sans cette garde, un compte qui a déjà
+  // terminé le tuto sur un AUTRE appareil verrait le tuto s'ouvrir puis se
+  // refermer tout seul ici, le temps que cette valeur "vraie" arrive du
+  // réseau.
+  const onboardingAutoShownRef = useRef(false);
+  useEffect(() => {
+    if (onboardingAutoShownRef.current) return;
+    if (!onboardingResolved || hasCompletedOnboarding) return;
+    onboardingAutoShownRef.current = true;
+    setShowOnboarding(true);
+  }, [onboardingResolved, hasCompletedOnboarding]);
+  // Fin normale OU "Passer le tuto" : dans les deux cas, marqué comme
+  // terminé — revoir le tuto ensuite ne repasse plus JAMAIS par cet
+  // affichage automatique, seulement par "Revoir le tutoriel" dans les
+  // Réglages (voir replayOnboarding ci-dessous, qui ne touche volontairement
+  // pas ce statut : le rejouer à la demande ne doit pas pouvoir le
+  // remarquer "non terminé" si l'utilisateur quitte l'app en plein milieu).
+  const closeOnboarding = () => {
+    setShowOnboarding(false);
+    setHasCompletedOnboarding(true);
+  };
+  // Ferme d'abord les Réglages (évite toute cohabitation avec la modale de
+  // Réglages encore montée, voir son animation de sortie) avant d'ouvrir le
+  // tuto par-dessus l'écran principal.
+  const replayOnboarding = () => {
+    setShowSecretSettings(false);
+    setShowOnboarding(true);
+  };
 
   const touchStart = useRef(null);
   const appContentRef = useRef(null);
@@ -487,6 +523,7 @@ export default function AppShell({
         {TABS.map(({ key, icon: Icon }) => (
           <NavButton
             key={key}
+            tabKey={key}
             label={t(`nav.${key}`)}
             Icon={Icon}
             active={tab === key}
@@ -496,6 +533,14 @@ export default function AppShell({
           />
         ))}
       </nav>
+
+      <AnimatePresence>
+        {showOnboarding && (
+          <Suspense fallback={null}>
+            <OnboardingTour currentTab={tab} changeTab={changeTab} onFinish={closeOnboarding} />
+          </Suspense>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {openRecipe && (
@@ -634,6 +679,7 @@ export default function AppShell({
             onRefreshHouseholds={onRefreshHouseholds}
             showToast={showToast}
             onSignOut={signOut}
+            onReplayOnboarding={replayOnboarding}
           />
         </Suspense>
         )}
