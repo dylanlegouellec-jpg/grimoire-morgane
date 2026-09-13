@@ -260,7 +260,10 @@ export const RECIPE_CARDS_CSS = `
 .detail-hero .illus { aspect-ratio: auto; height: 100%; }
 .detail-hero-fade {
   position: absolute; inset: 0;
-  background: linear-gradient(to bottom, transparent 55%, var(--parchment) 100%);
+  /* Fondu resserré en bas de la photo (75% -> 100%, contre 55% -> 100%
+     avant) : à la demande, pour laisser la photo bien visible plus
+     longtemps avant qu'elle ne s'estompe vers le fond de la page. */
+  background: linear-gradient(to bottom, transparent 75%, var(--parchment) 100%);
   pointer-events: none;
 }
 .detail-scroll { position: relative; overscroll-behavior: contain; touch-action: pan-y; }
