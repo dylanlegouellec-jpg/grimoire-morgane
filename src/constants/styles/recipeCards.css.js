@@ -258,6 +258,10 @@ export const RECIPE_CARDS_CSS = `
 }
 .detail-hero { position: relative; margin: -22px -20px 0; width: calc(100% + 40px); aspect-ratio: 16/10; overflow: hidden; }
 .detail-hero .illus { aspect-ratio: auto; height: 100%; }
+/* Habillage du parallax de la photo (voir RecipeDetail.jsx, heroImageY) :
+   surdimensionné de 12% en haut/bas pour que le léger décalage vertical
+   pendant le défilement ne découvre jamais de bord vide sous la photo. */
+.detail-hero-parallax { position: absolute; inset: -12% 0; }
 .detail-hero-fade {
   position: absolute; inset: 0;
   /* Fondu resserré en bas de la photo (75% -> 100%, contre 55% -> 100%
