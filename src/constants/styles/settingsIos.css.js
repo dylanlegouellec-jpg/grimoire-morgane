@@ -64,12 +64,22 @@ export const SETTINGS_IOS_CSS = `
 /* --- Contrôle segmenté (Thème, Langue, appui long, taille de texte) --- */
 .segmented { display: flex; background: var(--surface-strong); border-radius: 10px; padding: 3px; gap: 2px; }
 .segmented-btn {
+  position: relative; z-index: 0; /* confine .segmented-pill (z-index négatif, voir plus bas) à CE bouton */
   flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px;
   border: none; background: none; padding: 8px 4px; border-radius: 8px;
   font-family: 'EB Garamond', serif; font-size: 0.85rem; color: var(--ink-soft); cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+  transition: color 0.15s ease;
 }
-.segmented-btn.active { background: var(--parchment); color: var(--ink); box-shadow: 0 1px 3px var(--card-shadow); font-weight: 600; }
+.segmented-btn.active { color: var(--ink); font-weight: 600; }
+/* Fond glissant de l'option active — Framer Motion layoutId (voir
+   SegmentedControl.jsx) : un enfant plutôt qu'un ancien fond+ombre posés
+   directement sur .segmented-btn.active, pour que le MÊME élément anime sa
+   position d'une option à l'autre au lieu de simplement apparaître/
+   disparaître sur chacune. */
+.segmented-pill {
+  position: absolute; inset: 0; z-index: -1; border-radius: inherit;
+  background: var(--parchment); box-shadow: 0 1px 3px var(--card-shadow);
+}
 /* Variante compacte (voir SegmentedControl.jsx, prop "compact") : largeur
    au contenu plutôt qu'étirée sur toute la ligne — pour une variante
    uniquement iconographique à 2 options (ex. portée du plan de repas,

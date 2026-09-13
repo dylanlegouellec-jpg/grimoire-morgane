@@ -24,13 +24,18 @@ vi.mock("motion/react", async () => {
 /*  Verrouille le contrat pénible à retrouver "à la main" cette session : */
 /*  changer de filtre (Tout/Salé/Sucré/Favoris) ne doit JAMAIS démonter    */
 /*  une carte déjà rendue (sinon son <img> se recharge/redécode à chaque   */
-/*  passage — le bug d'origine), mais DOIT rejouer son animation d'entrée  */
-/*  à chaque changement, y compris pour une carte qui était déjà visible   */
-/*  avant le changement (le bug "Tout -> Sucré : aucune animation", trouvé */
-/*  après coup). Un futur retour en arrière vers un simple .filter() sur   */
-/*  le tableau de recettes — la solution la plus "naturelle" à laquelle on */
-/*  a explicitement renoncé — ferait échouer le test de non-démontage      */
-/*  ci-dessous plutôt que de laisser la régression passer inaperçue.       */
+/*  passage — le bug d'origine). Une carte qui PASSE de masquée à visible   */
+/*  (recherche ou changement de filtre) doit rejouer son fondu/zoom         */
+/*  d'entrée (useAnimate) ; une carte qui RESTAIT déjà visible ne doit PAS   */
+/*  le rejouer — elle se contente de glisser vers sa nouvelle place dans     */
+/*  la grille (`layout`, voir RecipeCard.jsx) : rejouer l'entrée sur TOUTE    */
+/*  la grille à chaque bascule de filtre créait un rendu perçu comme          */
+/*  saccadé (signalé par l'utilisateur), en plus de parasiter le glissement     */
+/*  de la pastille de filtre (AppShell.jsx) avec des dizaines d'animations       */
+/*  simultanées. Un futur retour en arrière vers un simple .filter() sur          */
+/*  le tableau de recettes — la solution la plus "naturelle" à laquelle on         */
+/*  a explicitement renoncé — ferait échouer le test de non-démontage             */
+/*  ci-dessous plutôt que de laisser la régression passer inaperçue.               */
 /* ------------------------------------------------------------------ */
 
 function makeRecipe(id, title, category, favorite = false) {
@@ -129,20 +134,36 @@ describe("RecipesView — filtrage sans démontage", () => {
     expect(cardVisibleAgain).toBe(cardBefore);
   });
 
-  it("rejoue l'animation d'entrée même pour une carte déjà visible avant le changement de filtre", async () => {
-    // Régression précise signalée par l'utilisateur : passer de "Tout" à
-    // "Sucré" ne fait JAMAIS passer une carte sucrée de masquée à visible
-    // (elle était déjà visible sous "Tout") — sans le correctif, rien ne
-    // rejouait sur ce changement de filtre précis alors que la grille se
-    // réorganisait quand même sous les yeux de l'utilisateur.
+  it("ne rejoue pas l'animation d'entrée pour une carte qui restait déjà visible avant le changement de filtre", async () => {
+    // Tout -> Sucré ne fait JAMAIS passer une carte sucrée de masquée à
+    // visible (elle était déjà visible sous "Tout") : elle doit se contenter
+    // de glisser vers sa nouvelle place (`layout`, RecipeCard.jsx) plutôt que
+    // de rejouer son fondu — sans quoi la grille entière rejoue son entrée à
+    // chaque bascule de filtre, perçu comme saccadé.
     const user = userEvent.setup();
     render(<Harness initialFilter="tout" />);
-    const cardNode = screen.getByText("Fondant au chocolat").closest(".recipe-card");
+    // .card-fade-wrap (pas .recipe-card lui-même) : c'est cet enfant dédié
+    // qui reçoit le fondu/zoom d'entrée (voir RecipeCard.jsx — la carte, elle,
+    // porte `layout` pour son propre réagencement, un noeud différent).
+    const fadeNode = screen.getByText("Crêpes bretonnes").closest(".recipe-card").querySelector(".card-fade-wrap");
     animateSpy.mockClear(); // ignore l'appel du montage initial
 
     await user.click(screen.getByText("go-sucre"));
 
-    expect(animateSpy.mock.calls.some(([node]) => node === cardNode)).toBe(true);
+    expect(animateSpy.mock.calls.some(([node]) => node === fadeNode)).toBe(false);
+  });
+
+  it("rejoue l'animation d'entrée pour une carte qui redevient visible après avoir été masquée", async () => {
+    const user = userEvent.setup();
+    render(<Harness initialFilter="tout" />);
+    const fadeNode = screen.getByText("Fondant au chocolat").closest(".recipe-card").querySelector(".card-fade-wrap");
+
+    await user.click(screen.getByText("go-sale")); // Fondant (Sucré) passe masqué
+    animateSpy.mockClear();
+
+    await user.click(screen.getByText("go-tout")); // redevient visible
+
+    expect(animateSpy.mock.calls.some(([node]) => node === fadeNode)).toBe(true);
   });
 
   it("remet le défilement en haut sur un changement de filtre, mais pas sur une recherche", async () => {

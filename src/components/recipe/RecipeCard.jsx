@@ -1,4 +1,4 @@
-import { memo, useCallback, useLayoutEffect, useRef, useState } from "react";
+import { memo, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useAnimate, useReducedMotion } from "motion/react";
 import { Clock, Heart, Users } from "lucide-react";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
@@ -19,7 +19,6 @@ const CARD_ENTER_DURATION_S = 0.42;
 function RecipeCard({
   recipe,
   hidden = false,
-  filterGeneration = 0,
   onOpen,
   isOpenRecipe = false,
   onToggleFavorite,
@@ -69,21 +68,23 @@ function RecipeCard({
     }
   };
 
-  // Fondu/zoom d'entrée — Framer Motion, animate() impératif via useAnimate
-  // (PAS motion.div : cet élément porte déjà ses propres écouteurs tactiles
-  // natifs posés par useLongPress, voir cardLongPress.ref/setCardNode plus
-  // bas ; useAnimate anime directement le noeud DOM qu'on lui désigne, sans
-  // rien exiger de plus sur le composant qui le porte). Rejoué à chaque fois
-  // que la carte (re)devient visible : soit qu'elle vienne de sortir de
-  // display:none (recherche texte OU changement de filtre — voir `hidden`
-  // plus bas), soit que `filterGeneration` ait changé alors qu'elle restait
-  // déjà affichée (ex. Tout -> Sucré ne masque aucune carte sucrée, donc
-  // aucune transition display:none->visible ne se produit sur elle, mais la
-  // grille se réorganise quand même sous ses yeux : sans ce second
-  // déclencheur, ce changement de filtre précis ne jouerait aucune
-  // animation du tout). `filterGeneration` (fourni par RecipesView,
-  // incrémenté à chaque changement de filtre/favoris réel — jamais à la
-  // recherche texte) porte ce second cas.
+  // Fondu/zoom d'entrée — Framer Motion, animate() impératif via useAnimate,
+  // posé sur un ENFANT dédié (`.card-fade-wrap`, voir plus bas), jamais sur
+  // la carte elle-même : celle-ci porte maintenant `layout` (voir plus bas,
+  // pour le réagencement fluide de la grille) qui pilote lui aussi
+  // `transform` par projection — les deux se battraient pour la même
+  // propriété sur le même noeud sinon (même principe déjà rencontré cette
+  // session entre `y` et une valeur dérivée dans useDismissibleSheet.js).
+  //
+  // Rejoué UNIQUEMENT quand la carte passe de masquée à visible (recherche
+  // texte OU changement de filtre) — PAS à chaque changement de filtre pour
+  // les cartes qui restaient déjà affichées (ex. Tout -> Sucré ne masque
+  // aucune carte sucrée) : celles-là se contentent maintenant de GLISSER
+  // jusqu'à leur nouvelle place dans la grille (voir `layout` plus bas), un
+  // réagencement bien plus lisible qu'un fondu répété sur toute la grille à
+  // chaque bascule — et surtout, sans un burst de dizaines d'animations
+  // simultanées venant parasiter le glissement de la pastille de filtre
+  // (AppShell.jsx) au même instant, cause du rendu saccadé signalé.
   //
   // La carte n'est jamais démontée/remontée pour ça (voir `hidden` ->
   // display:none plus bas) : son <img> ne bouge jamais, donc jamais
@@ -92,39 +93,46 @@ function RecipeCard({
   // 0, léger décalage vers le bas) soit posé sans qu'un flash de la carte
   // déjà pleinement visible ne soit jamais peint entre-temps.
   const prevHiddenRef = useRef(true); // "true" au tout premier rendu : force l'entrée si la carte démarre visible
-  const prevGenerationRef = useRef(null); // "null" : force aussi l'entrée au tout premier rendu
   const [scope, animate] = useAnimate();
   useLayoutEffect(() => {
     const becameVisible = prevHiddenRef.current && !hidden;
-    const generationChanged = filterGeneration !== prevGenerationRef.current;
     prevHiddenRef.current = hidden;
-    prevGenerationRef.current = filterGeneration;
-    if (hidden || (!becameVisible && !generationChanged)) return;
+    if (hidden || !becameVisible) return;
     animate(
       scope.current,
       { opacity: [0, 1], y: [14, 0], scale: [0.97, 1] },
       { duration: CARD_ENTER_DURATION_S, ease: CARD_ENTER_EASE, delay: enterDelay / 1000 }
     );
-  }, [hidden, filterGeneration, enterDelay, animate, scope]);
+  }, [hidden, enterDelay, animate, scope]);
 
-  // Fusionne la ref DOM de useLongPress (nodeRef, pour ses propres écouteurs
-  // tactiles natifs) et celle de useAnimate (scope, pour l'animation
-  // d'entrée ci-dessus) — deux refs indépendantes posées sur le MÊME noeud.
-  const setCardNode = useCallback((node) => {
-    cardLongPress.ref.current = node;
-    scope.current = node;
-  }, [cardLongPress.ref, scope]);
+  // `layout` (réagencement fluide, voir juste au-dessus) désactivé PILE sur
+  // le rendu où `hidden` bascule : à cet instant précis, la carte passe
+  // d'une boîte 0×0 (display:none) à sa taille normale — Framer y verrait un
+  // changement de TAILLE massif et tenterait de l'animer par projection, en
+  // plein sur le fondu/zoom d'entrée ci-dessus, sur le même genre de conflit
+  // que documenté plus haut. Comparaison faite PENDANT le rendu (pas dans un
+  // effet), même mécanisme déjà utilisé ailleurs dans ce fichier avant cette
+  // passe (l'ancien `enterVariant`/`prevGeneration`) : réagir à un
+  // changement de prop sans laisser passer une frame avec la mauvaise valeur
+  // de `layout`.
+  const prevHiddenForLayoutRef = useRef(hidden);
+  const justToggledVisibility = prevHiddenForLayoutRef.current !== hidden;
+  prevHiddenForLayoutRef.current = hidden;
 
   return (
     <>
-      <div
-        ref={setCardNode}
+      <motion.div
+        ref={cardLongPress.ref}
+        layout={!justToggledVisibility}
+        transition={{ layout: { type: "spring", stiffness: 400, damping: 38 } }}
         className={`card recipe-card press-anim press-${cardLongPress.pressState}`}
         // display: none (pas un retrait du DOM) quand la carte ne correspond
         // plus au filtre actif — voir RecipesView.jsx : elle reste montée,
         // son <img> déjà chargée n'est jamais redémontée/redécodée. Le
         // fondu/zoom d'entrée, lui, est relancé plus haut (voir l'effet
-        // useLayoutEffect ci-dessus) à chaque changement de filtre.
+        // useLayoutEffect ci-dessus) uniquement quand elle (re)devient
+        // visible ; les autres cartes se contentent de GLISSER jusqu'à leur
+        // nouvelle place (voir `layout` ci-dessus).
         style={hidden ? { display: "none" } : undefined}
         onClick={handleClick}
         onKeyDown={handleKeyDown}
@@ -133,50 +141,59 @@ function RecipeCard({
         aria-label={translateRecipeText(recipe.title, language)}
         {...cardLongPress.handlers}
       >
-        <motion.div
-          className="illus-wrap"
-          // layoutId Framer Motion (remplace l'ancien view-transition-name de
-          // l'API navigateur — voir AppShell.jsx pour l'historique) : présent
-          // tant que cette recette n'est PAS la fiche actuellement ouverte,
-          // absent dès qu'elle l'est (voir `isOpenRecipe`, fourni par
-          // AppShell.jsx via RecipesView.jsx) — jamais deux éléments montés
-          // avec le MÊME layoutId à la fois, la fiche (RecipeDetail.jsx) le
-          // récupère alors pile à cet instant, ce qui déclenche le morphing
-          // Framer entre les deux. `undefined` aussi avec "Réduire les
-          // animations" système (prefers-reduced-motion) : la fiche s'ouvre
-          // alors normalement, juste sans ce morphing précis.
-          layoutId={!isOpenRecipe && !prefersReducedMotion ? `recipe-photo-${recipe.id}` : undefined}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        >
-          <DishArt recipe={recipe} />
-          <button
-            type="button"
-            className={`fav-btn ${recipe.favorite ? "active" : ""}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleFavorite(recipe.id);
-              triggerHaptic(15);
-            }}
-            aria-label={recipe.favorite ? "Retirer des favoris" : "Ajouter aux favoris"}
-            aria-pressed={recipe.favorite}
+        {/* Enveloppe dédiée au fondu/zoom d'entrée (voir useAnimate plus
+            haut) — jamais la carte elle-même, qui porte `layout` (juste
+            au-dessus) : les deux animeraient sinon `transform` sur le même
+            noeud, en concurrence directe. Un simple <div>, sans incidence
+            sur la mise en page (aucun style propre : .illus-wrap/.card-body
+            s'empilaient déjà normalement l'un sous l'autre). */}
+        <div ref={scope} className="card-fade-wrap">
+          <motion.div
+            className="illus-wrap"
+            // layoutId Framer Motion (remplace l'ancien view-transition-name
+            // de l'API navigateur — voir AppShell.jsx pour l'historique) :
+            // présent tant que cette recette n'est PAS la fiche actuellement
+            // ouverte, absent dès qu'elle l'est (voir `isOpenRecipe`, fourni
+            // par AppShell.jsx via RecipesView.jsx) — jamais deux éléments
+            // montés avec le MÊME layoutId à la fois, la fiche
+            // (RecipeDetail.jsx) le récupère alors pile à cet instant, ce qui
+            // déclenche le morphing Framer entre les deux. `undefined` aussi
+            // avec "Réduire les animations" système (prefers-reduced-motion)
+            // : la fiche s'ouvre alors normalement, juste sans ce morphing
+            // précis.
+            layoutId={!isOpenRecipe && !prefersReducedMotion ? `recipe-photo-${recipe.id}` : undefined}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
           >
-            <Heart size={16} fill={recipe.favorite ? "currentColor" : "none"} />
-          </button>
-        </motion.div>
-        <div className="card-body">
-          <div className="card-top-row">
-            <span className={`chip ${categoryClass(recipe)}`}>{dict.labels[categoryLabel(recipe)] || categoryLabel(recipe)}</span>
-            {showNutriscore && (
-              <span className="nutri-badge" style={{ background: NUTRI_COLORS[nutri] }}>{nutri}</span>
-            )}
-          </div>
-          <h3>{translateRecipeText(recipe.title, language)}</h3>
-          <div className="card-meta">
-            <span><Clock size={13} /> {recipe.time} min</span>
-            <span><Users size={13} /> {recipe.servings}</span>
+            <DishArt recipe={recipe} />
+            <button
+              type="button"
+              className={`fav-btn ${recipe.favorite ? "active" : ""}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleFavorite(recipe.id);
+                triggerHaptic(15);
+              }}
+              aria-label={recipe.favorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+              aria-pressed={recipe.favorite}
+            >
+              <Heart size={16} fill={recipe.favorite ? "currentColor" : "none"} />
+            </button>
+          </motion.div>
+          <div className="card-body">
+            <div className="card-top-row">
+              <span className={`chip ${categoryClass(recipe)}`}>{dict.labels[categoryLabel(recipe)] || categoryLabel(recipe)}</span>
+              {showNutriscore && (
+                <span className="nutri-badge" style={{ background: NUTRI_COLORS[nutri] }}>{nutri}</span>
+              )}
+            </div>
+            <h3>{translateRecipeText(recipe.title, language)}</h3>
+            <div className="card-meta">
+              <span><Clock size={13} /> {recipe.time} min</span>
+              <span><Users size={13} /> {recipe.servings}</span>
+            </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       <AnimatePresence>
         {showOptions && (
