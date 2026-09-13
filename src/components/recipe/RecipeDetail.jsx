@@ -98,9 +98,14 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
   // l'édition) — le tirage vers le bas en haut de page (fermeture) est
   // désormais entièrement délégué à useDismissibleSheet.js (voir `sheet`
   // ci-dessus, étalé sur le même conteneur via `sheet.panHandlers`) :
-  // Framer reçoit ses propres événements en parallèle de ceux-ci (deux
-  // systèmes indépendants sur le même nœud, jamais en concurrence puisqu'ils
-  // suivent des bords opposés du contenu).
+  // deux systèmes indépendants sur le même nœud, jamais en concurrence
+  // puisqu'ils suivent des bords opposés du contenu — mais tous deux
+  // définissent onTouchStart/onTouchMove sur ce même <motion.div>. En JSX,
+  // un attribut répété plus loin écrase silencieusement le précédent : sans
+  // composition explicite (voir composedTouchStart/Move ci-dessous, posés
+  // sur l'élément plus bas), `{...sheet.panHandlers}` finissait par
+  // remplacer purement et simplement ces deux gestionnaires-ci, désactivant
+  // le "tirer pour éditer" en bas de page (régression signalée).
   const handleTouchStart = (e) => {
     touchYRef.current = e.touches[0].clientY;
   };
@@ -123,6 +128,19 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
 
   const safeSteps = Array.isArray(recipe.steps) ? recipe.steps : [];
 
+  // Fait tourner les deux systèmes de geste tactile en même temps sur ce
+  // même nœud (voir commentaire au-dessus de handleTouchStart) — sans ça,
+  // `{...sheet.panHandlers}` écrase silencieusement onTouchStart/onTouchMove
+  // ci-dessus rien qu'en étant étalé après eux dans le JSX.
+  const composedTouchStart = (e) => {
+    handleTouchStart(e);
+    sheet.panHandlers.onTouchStart(e);
+  };
+  const composedTouchMove = (e) => {
+    handleTouchMove(e);
+    sheet.panHandlers.onTouchMove(e);
+  };
+
   return (
     <motion.div className="modal-backdrop" onClick={onClose} {...MODAL_BACKDROP_MOTION}>
       <motion.div
@@ -132,10 +150,10 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
         onClick={(e) => e.stopPropagation()}
         ref={setScrollRef}
         onWheel={handleWheel}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
         {...MODAL_SHEET_MOTION}
         {...sheet.panHandlers}
+        onTouchStart={composedTouchStart}
+        onTouchMove={composedTouchMove}
       >
         <div className="detail-drag-handle" aria-hidden="true" />
         <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
