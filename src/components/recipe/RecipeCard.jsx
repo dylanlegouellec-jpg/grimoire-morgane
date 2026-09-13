@@ -1,5 +1,4 @@
-import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { flushSync } from "react-dom";
+import { memo, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useAnimate, useReducedMotion } from "motion/react";
 import { Clock, Heart, Users } from "lucide-react";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
@@ -16,14 +15,12 @@ import RecipeOptionsModal from "../common/RecipeOptionsModal";
 // juste avant l'effet ci-dessous pour le pourquoi de cette bascule.
 const CARD_ENTER_EASE = [0.22, 1, 0.36, 1];
 const CARD_ENTER_DURATION_S = 0.42;
-// Doit couvrir la durée du morphing de fermeture (spring 300/30, voir
-// .illus-wrap plus bas) avant de désarmer — voir son commentaire.
-const MORPH_DISARM_DELAY_MS = 500;
 
 function RecipeCard({
   recipe,
   hidden = false,
   filterGeneration = 0,
+  suppressMorph = false,
   onOpen,
   isOpenRecipe = false,
   onToggleFavorite,
@@ -55,20 +52,8 @@ function RecipeCard({
   const cardLongPress = useLongPress(() => setShowOptions(true), pressDuration);
   const prefersReducedMotion = useReducedMotion();
 
-  // Arme le layoutId du morph JUSTE avant d'ouvrir (voir `.illus-wrap` plus
-  // bas) — jamais en continu tant que la fiche n'est pas ouverte (voir le
-  // commentaire de l'effet ci-dessous pour le pourquoi de cet armement
-  // ponctuel plutôt que permanent). `flushSync` : force React à committer ce
-  // changement d'état AVANT d'appeler `onOpen` juste après, pour que Framer
-  // ait déjà enregistré la position de CETTE carte au moment précis où
-  // `onOpen` déclenche le montage de RecipeDetail.jsx (qui porte le même
-  // layoutId) — sans ce commit synchrone intermédiaire, les deux
-  // changements d'état arriveraient dans le même rendu et Framer ne verrait
-  // jamais l'état "avant" nécessaire au morphing.
-  const [morphArmed, setMorphArmed] = useState(false);
   const handleClick = () => {
     if (cardLongPress.wasLongPress()) return;
-    if (!prefersReducedMotion) flushSync(() => setMorphArmed(true));
     onOpen(recipe);
   };
 
@@ -127,24 +112,6 @@ function RecipeCard({
     );
   }, [hidden, filterGeneration, enterDelay, animate, scope]);
 
-  // Désarme le morph (voir `handleClick`/`.illus-wrap`) un court instant
-  // après la fermeture de la fiche — assez tard pour laisser le morphing de
-  // fermeture (retour de la photo dans la grille) se jouer jusqu'au bout,
-  // mais pas indéfiniment : sans ce désarmement, cette carte garderait son
-  // layoutId en permanence après un premier usage, la réexposant au bug de
-  // "photo qui traîne derrière sa carte" lors d'un futur changement de
-  // filtre qui la déplacerait dans la grille (voir le commentaire de
-  // l'effet précédent) — exactement le problème qu'un layoutId permanent
-  // causait pour TOUTES les cartes avant ce correctif.
-  const wasOpenRecipeRef = useRef(isOpenRecipe);
-  useEffect(() => {
-    const justClosed = wasOpenRecipeRef.current && !isOpenRecipe;
-    wasOpenRecipeRef.current = isOpenRecipe;
-    if (!justClosed) return undefined;
-    const timer = setTimeout(() => setMorphArmed(false), MORPH_DISARM_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [isOpenRecipe]);
-
   return (
     <>
       <div
@@ -176,33 +143,36 @@ function RecipeCard({
           <motion.div
             className="illus-wrap"
             // layoutId Framer Motion (remplace l'ancien view-transition-name
-            // de l'API navigateur — voir AppShell.jsx pour l'historique),
-            // ARMÉ PONCTUELLEMENT PAR CETTE CARTE (voir `morphArmed`,
-            // `handleClick`) plutôt que présent en continu tant que la fiche
-            // n'est pas ouverte : une première version le laissait actif en
-            // permanence sur les 24 cartes de la grille dès qu'aucune fiche
-            // n'était ouverte — pratique pour que le morphing puisse se
-            // déclencher à tout moment sur un simple tap, mais avec un effet
-            // de bord découvert après coup (signalé avec vidéo à l'appui) :
-            // Framer suit alors CE layoutId en continu, y compris pendant un
-            // changement de filtre qui ne fait que RÉORGANISER la grille
-            // (aucune fiche ne s'ouvre) — la carte elle-même saute alors
-            // instantanément à sa nouvelle place (voir plus haut, `layout`
-            // volontairement absent de la carte), mais Framer, lui, continue
-            // de vouloir animer EN DOUCEUR la position de cette photo vers
-            // sa nouvelle place réelle : elle se retrouve littéralement à
-            // traîner loin derrière sa propre carte pendant plusieurs
-            // centaines de ms ("les images viennent du bas"), le texte
-            // (non suivi par Framer) restant lui bien aligné sur la carte.
-            // `morphArmed` n'est vrai que juste avant l'ouverture (posé par
-            // `flushSync` dans `handleClick`) et jusqu'à peu après la
-            // fermeture (`MORPH_DISARM_DELAY_MS`, pour laisser le morphing
-            // de fermeture se jouer) : cette carte n'est donc suivie par
-            // Framer que pendant les quelques centaines de ms où un
-            // morphing réel est en cours, jamais pendant un simple
-            // changement de filtre. `undefined` aussi avec "Réduire les
+            // de l'API navigateur — voir AppShell.jsx pour l'historique) :
+            // présent tant que cette recette n'est PAS la fiche actuellement
+            // ouverte, absent dès qu'elle l'est — jamais deux éléments montés
+            // avec le MÊME layoutId à la fois, la fiche (RecipeDetail.jsx) le
+            // récupère alors pile à cet instant, ce qui déclenche le
+            // morphing Framer entre les deux (l'effet "aspiré" du clic).
+            //
+            // ESSAYÉ PUIS ABANDONNÉ : n'armer ce layoutId que ponctuellement,
+            // juste avant l'ouverture (via flushSync dans `handleClick`),
+            // plutôt qu'en continu — pour éviter que Framer ne suive cette
+            // photo pendant un simple changement de filtre qui réorganise la
+            // grille sans ouvrir aucune fiche (voir plus bas, `suppressMorph`,
+            // qui règle maintenant ce cas précis autrement). Mesuré (traceur
+            // de taille du hero pendant l'ouverture) que Framer ne réalise
+            // ALORS PLUS AUCUN morphing du tout — la fiche apparaît déjà à sa
+            // taille quasi finale dès la première frame, sans jamais grandir
+            // depuis la petite photo de la carte (l'effet "aspiré" disparu,
+            // signalé par l'utilisateur) — quel que soit le délai ajouté
+            // avant d'ouvrir (testé jusqu'à 50ms) : Framer ne semble tout
+            // simplement pas traiter un layoutId qui vient tout juste d'être
+            // assigné à un composant déjà monté comme une source valide pour
+            // un morphing. Une présence CONTINUE (comme ici) reste donc
+            // nécessaire au bon fonctionnement du morphing lui-même.
+            //
+            // Absent aussi pendant `suppressMorph` (voir son commentaire,
+            // RecipesView.jsx) — la fenêtre courte d'un changement de filtre
+            // réel, où cette carte peut changer de position dans la grille
+            // sans qu'aucune fiche ne s'ouvre — et avec "Réduire les
             // animations" système (prefers-reduced-motion).
-            layoutId={morphArmed && !prefersReducedMotion ? `recipe-photo-${recipe.id}` : undefined}
+            layoutId={!isOpenRecipe && !suppressMorph && !prefersReducedMotion ? `recipe-photo-${recipe.id}` : undefined}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
           >
             <DishArt recipe={recipe} />
