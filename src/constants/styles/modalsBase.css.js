@@ -108,6 +108,18 @@ export const MODALS_BASE_CSS = `
    seulement en standalone. */
 :where(html[data-standalone="true"]) .bottom-nav { bottom: max(28px, calc(env(safe-area-inset-bottom) + 16px)); }
 
+/* Android seulement (voir main.jsx, data-platform posé via navigator.
+   userAgent) : demandé tel quel — le dock est "parfait" sur iPhone (aucun
+   changement là-bas), mais un peu trop haut sur Android, où
+   env(safe-area-inset-bottom) vaut généralement 0 (pas de zone de sécurité
+   équivalente à l'encoche/barre d'accueil iOS) — les valeurs plancher
+   (20px/28px standalone) prennent donc systématiquement le dessus, plus
+   loin du bord qu'on ne le voudrait sur cette plateforme précise. Placée
+   APRÈS la règle standalone ci-dessus (même spécificité nulle via :where())
+   pour l'emporter aussi sur un Android installé en PWA — même position
+   basse recherchée, avec ou sans écran d'accueil. */
+:where(html[data-platform="android"]) .bottom-nav { bottom: max(10px, calc(env(safe-area-inset-bottom) + 6px)); }
+
 /* --- Modales / page de grimoire --- */
 .modal-backdrop {
   position: fixed; left: 0; right: 0;
