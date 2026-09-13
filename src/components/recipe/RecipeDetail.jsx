@@ -12,6 +12,7 @@ import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import DishArt from "../art/DishArt";
 import Flourish from "../common/Flourish";
 import Seal from "../common/Seal";
+import AnimatedNumber from "../common/AnimatedNumber";
 
 // Chargée à la demande : RecipeDetail est monté dès qu'on ouvre une seule
 // recette (voir AppShell.jsx), mais partager n'est qu'une action parmi
@@ -253,7 +254,7 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
               <span><Users size={14} /> Portions</span>
               <div className="portions-stepper">
                 <motion.button type="button" whileTap={{ scale: 0.85 }} onClick={() => { triggerHaptic(10); setServings((s) => Math.max(1, Number(s) - 1)); }} aria-label="Diminuer le nombre de portions"><Minus size={14} /></motion.button>
-                <span>{servings}</span>
+                <AnimatedNumber value={servings} />
                 <motion.button type="button" whileTap={{ scale: 0.85 }} onClick={() => { triggerHaptic(10); setServings((s) => Number(s) + 1); }} aria-label="Augmenter le nombre de portions"><Plus size={14} /></motion.button>
               </div>
             </div>
