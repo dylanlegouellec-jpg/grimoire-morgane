@@ -1,5 +1,5 @@
 import { useState, useRef, lazy, Suspense } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform, useInView } from "motion/react";
 import { ChefHat, Clock, Minus, Plus, Share2, Users, X } from "lucide-react";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
 import { categoryLabel, categoryClass, groupSteps, triggerHaptic } from "../../utils/helpers";
@@ -18,6 +18,45 @@ import Seal from "../common/Seal";
 // d'autres sur cet écran — pas besoin d'alourdir le bundle initial pour un
 // panneau que la plupart des visites n'ouvriront jamais.
 const ShareRecipeModal = lazy(() => import("../common/ShareRecipeModal"));
+
+// Décalage max (px) de la photo par rapport au défilement du panneau — voir
+// heroImageY plus bas. Doit rester sous la marge donnée à
+// .detail-hero-parallax (inset -12%, recipeCards.css.js) pour ne jamais
+// découvrir de bord vide de l'image pendant le glissement.
+const HERO_PARALLAX_RANGE_PX = 24;
+
+const FADE_ITEM_HIDDEN = { opacity: 0, y: 10 };
+const FADE_ITEM_VISIBLE = { opacity: 1, y: 0 };
+const FADE_ITEM_TRANSITION = { duration: 0.35, ease: [0.22, 1, 0.36, 1] };
+
+// Ingrédient/étape qui apparaît en fondu dès qu'il entre dans la zone
+// visible du panneau qui défile ("root", voir RecipeDetail -> scrollRef) —
+// useInView() gère lui-même l'IntersectionObserver correspondant, plus
+// besoin d'en réimplémenter un à la main comme l'ancien handleTouchMove/
+// handleWheel de ce fichier pour le tirage en bas de page. "once: true" :
+// l'apparition ne se rejoue pas en remontant, seul le premier passage
+// compte. Composant à part (pas inline dans le .map()) parce que
+// useInView() est un hook et ne peut pas être appelé un nombre variable de
+// fois à l'intérieur d'une boucle — même contrainte que useDragControls()
+// pour IngredientRow/StepRow (voir RecipeForm.jsx).
+function FadeInItem({ root, reducedMotion, className, children }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { root, once: true, margin: "0px 0px -60px 0px" });
+  if (reducedMotion) {
+    return <li className={className}>{children}</li>;
+  }
+  return (
+    <motion.li
+      ref={ref}
+      className={className}
+      initial={FADE_ITEM_HIDDEN}
+      animate={inView ? FADE_ITEM_VISIBLE : FADE_ITEM_HIDDEN}
+      transition={FADE_ITEM_TRANSITION}
+    >
+      {children}
+    </motion.li>
+  );
+}
 
 export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareText, showToast, showNutriscore = true }) {
   // Sécurisation du nombre de portions initiales
@@ -45,6 +84,22 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
   };
   const overscrollRef = useRef(0);
   const touchYRef = useRef(null);
+  // Parallax léger sur la photo pendant le défilement du panneau : la photo
+  // se déplace un peu MOINS vite que le contenu qui défile autour d'elle,
+  // donnant une impression de profondeur au lieu de suivre le scroll au
+  // pixel près. offset ["start start", "end start"] : la progression va de
+  // 0 (photo en haut du panneau, position de départ) à 1 (photo entièrement
+  // sortie par le haut) — tout l'effet se joue donc pendant que la photo
+  // quitte l'écran, jamais après. N'a d'effet que dans la mise en page
+  // mobile à une colonne (voir responsive.css.js) : en paysage/desktop, la
+  // colonne photo est fixe et ne défile pas, "scrollYProgress" reste à 0.
+  const heroRef = useRef(null);
+  const { scrollYProgress: heroScrollProgress } = useScroll({
+    container: scrollRef,
+    target: heroRef,
+    offset: ["start start", "end start"],
+  });
+  const heroImageY = useTransform(heroScrollProgress, [0, 1], [0, HERO_PARALLAX_RANGE_PX]);
 
   // Garantit qu'ingredients est toujours un tableau
   const rawIngredients = Array.isArray(recipe?.ingredients) ? recipe.ingredients : [];
@@ -168,11 +223,17 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
                 passage de témoin qui déclenche le morphing. Absent avec
                 "Réduire les animations" système, comme côté carte. */}
             <motion.div
+              ref={heroRef}
               className="detail-hero"
               layoutId={prefersReducedMotion ? undefined : `recipe-photo-${recipe.id}`}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
             >
-              <DishArt recipe={recipe} />
+              <motion.div
+                className="detail-hero-parallax"
+                style={prefersReducedMotion ? undefined : { y: heroImageY }}
+              >
+                <DishArt recipe={recipe} />
+              </motion.div>
               <div className="detail-hero-fade" />
             </motion.div>
             <div className="card-top-row" style={{ marginTop: 4 }}>
@@ -212,15 +273,23 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
             <ul className="ingredient-list">
               {scaledIngredients.map((ing, i) => {
                 if (typeof ing === "string") {
-                  return <li key={i}>{translateRecipeText(ing, language)}</li>;
+                  return (
+                    <FadeInItem key={i} root={scrollRef} reducedMotion={prefersReducedMotion}>
+                      {translateRecipeText(ing, language)}
+                    </FadeInItem>
+                  );
                 }
                 if (ing?.isSection) {
-                  return <li key={i} className="ingredient-section-title">{translateRecipeText(ing.title, language)}</li>;
+                  return (
+                    <FadeInItem key={i} root={scrollRef} reducedMotion={prefersReducedMotion} className="ingredient-section-title">
+                      {translateRecipeText(ing.title, language)}
+                    </FadeInItem>
+                  );
                 }
                 return (
-                  <li key={i}>
+                  <FadeInItem key={i} root={scrollRef} reducedMotion={prefersReducedMotion}>
                     {ing.qty ? `${ing.qty} ` : ""}{ing.unit || ""} {translateRecipeText(ing.name || ing.title || "", language)}
-                  </li>
+                  </FadeInItem>
                 );
               })}
             </ul>
@@ -230,7 +299,9 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
                 {group.title && <h5 className="steps-group-title">{translateRecipeText(group.title, language)}</h5>}
                 <ol className="steps-list">
                   {group.steps.map((s, si) => (
-                    <li key={si}>{translateRecipeText(typeof s === "string" ? s : s.text || s.title, language)}</li>
+                    <FadeInItem key={si} root={scrollRef} reducedMotion={prefersReducedMotion}>
+                      {translateRecipeText(typeof s === "string" ? s : s.text || s.title, language)}
+                    </FadeInItem>
                   ))}
                 </ol>
               </div>
