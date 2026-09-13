@@ -142,11 +142,11 @@ export const PLANNING_CSS = `
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 /* Ligne d'un plat + sa poignée de glisser-déposer (voir PlanningMealItem.jsx,
-   PlanningMealItemsList.jsx/hooks/useDragReorder.js) : deux gestes bien
-   séparés côte à côte plutôt qu'imbriqués — .planning-meal-item garde son
-   propre appui long (Modifier/Supprimer) inchangé, la poignée à droite
-   pilote uniquement le glissement, visible seulement en mode réorganisation
-   (voir "reorderMode", PlanningView.jsx). */
+   Reorder.Item de Framer Motion) : deux gestes bien séparés côte à côte
+   plutôt qu'imbriqués — .planning-meal-item garde son propre appui long
+   (Modifier/Supprimer) inchangé, la poignée à gauche pilote uniquement le
+   glissement, visible seulement en mode réorganisation (voir "reorderMode",
+   PlanningView.jsx). */
 .planning-meal-item-row { display: flex; align-items: center; gap: 4px; }
 .planning-meal-drag-handle {
   flex-shrink: 0; width: 26px; height: 26px; border-radius: 6px;

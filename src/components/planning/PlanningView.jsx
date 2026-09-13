@@ -394,9 +394,9 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
 
       {/* Bannière fixe de validation du mode réorganisation (voir
           `reorderMode`/`toggleReorderMode` plus haut) — "Terminer" valide le
-          nouvel ordre (déjà appliqué au fil du glissement, voir
-          hooks/useDragReorder.js/useMealPlan.js) et referme simplement ce
-          mode, rien à enregistrer en plus à ce moment précis. */}
+          nouvel ordre (déjà enregistré au relâchement de chaque glissement,
+          voir PlanningMealItem.jsx/hooks/useMealPlan.js) et referme
+          simplement ce mode, rien à enregistrer en plus à ce moment précis. */}
       {reorderMode && (
         <div className="planning-reorder-banner">
           <span className="planning-reorder-banner-label">{t("planning.reorderBannerLabel")}</span>

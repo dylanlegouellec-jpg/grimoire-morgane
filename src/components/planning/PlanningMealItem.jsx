@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { AnimatePresence } from "motion/react";
+import { AnimatePresence, Reorder, useDragControls } from "motion/react";
 import { GripVertical } from "lucide-react";
+import { triggerHaptic } from "../../utils/haptics";
 import useLongPress from "../../hooks/useLongPress";
 import MealOptionsModal from "./MealOptionsModal";
 
@@ -9,51 +10,79 @@ const LONG_PRESS_DURATION_MS = 500;
 /* ------------------------------------------------------------------ */
 /*  LIGNE D'UN PLAT DANS LE PLAN (voir PlanningView.jsx) — extraite en   */
 /*  composant séparé plutôt qu'inline dans le .map() du groupe :          */
-/*  useLongPress est un hook, il ne peut pas être appelé un nombre de      */
-/*  fois variable dans une boucle (même raison que MemberRow/HouseholdRow */
-/*  dans HouseholdManagerModal.jsx, même geste).                           */
-/*  Plus de croix de suppression sur la ligne elle-même : l'appui long      */
-/*  ouvre un menu (Modifier/Supprimer, voir MealOptionsModal.jsx) — geste    */
-/*  déjà utilisé pour les recettes/membres du foyer ailleurs dans l'app.     */
-/*  Le type de plat (icône + libellé) ne s'affiche plus ici : il est          */
-/*  maintenant porté par l'en-tête du sous-groupe qui entoure ces lignes       */
-/*  (voir PlanningView.jsx, groupEntriesByCourse) — cette ligne ne montre     */
-/*  plus que le nom de la recette.                                            */
-/*  Poignée de glisser-déposer (⋮⋮) : visible seulement en mode              */
-/*  réorganisation (voir `reorderMode`, PlanningView.jsx) — un élément à       */
-/*  PART de la ligne à appui long ci-dessous (pas nichée dedans), puisque       */
-/*  le glissement se pilote via ses propres gestionnaires pointer (voir         */
-/*  `dragHandleProps`, hooks/useDragReorder.js), indépendants du minuteur        */
-/*  d'appui long de la ligne. Placée à GAUCHE du nom du plat (pas à droite) :    */
-/*  plus lisible, et cohérent avec la convention "poignée avant contenu" des      */
-/*  listes réordonnables (ex. Réglages iOS, Reminders).                          */
+/*  useLongPress ET useDragControls sont des hooks, ils ne peuvent pas      */
+/*  être appelés un nombre de fois variable dans une boucle (même raison     */
+/*  que MemberRow/HouseholdRow dans HouseholdManagerModal.jsx, même geste).   */
+/*  Plus de croix de suppression sur la ligne elle-même : l'appui long        */
+/*  ouvre un menu (Modifier/Supprimer, voir MealOptionsModal.jsx) — geste      */
+/*  déjà utilisé pour les recettes/membres du foyer ailleurs dans l'app.       */
+/*  Le type de plat (icône + libellé) ne s'affiche plus ici : il est            */
+/*  maintenant porté par l'en-tête du sous-groupe qui entoure ces lignes         */
+/*  (voir PlanningView.jsx, groupEntriesByCourse) — cette ligne ne montre        */
+/*  plus que le nom de la recette.                                                */
+/*                                                                                  */
+/*  Cette ligne EST directement un <Reorder.Item> (voir PlanningMealItemsList.jsx, */
+/*  qui rend le <Reorder.Group> englobant) — pas un wrapper séparé autour d'un       */
+/*  contenu figé : Framer a besoin de mesurer CET élément précis pour animer            */
+/*  sa position (et celle de ses voisins) pendant le glissement.                          */
+/*  "dragListener={false}" + `dragControls` géré ici : seule la poignée (⋮⋮,               */
+/*  visible seulement en mode réorganisation, voir `reorderMode`) démarre un                 */
+/*  glissement via `dragControls.start(e)` — jamais un simple tap n'importe où sur             */
+/*  la ligne, qui doit rester libre pour l'appui long (menu Modifier/Supprimer) et               */
+/*  le clic normal, sans jamais déclencher de glissement par erreur.                               */
 /* ------------------------------------------------------------------ */
-export default function PlanningMealItem({ entry, label, reorderMode, dragHandleProps, onEdit, onDelete }) {
+export default function PlanningMealItem({ entry, bulleted, label, reorderMode, onCommitOrder, onEdit, onDelete }) {
   const [showOptions, setShowOptions] = useState(false);
   const itemLongPress = useLongPress(() => setShowOptions(true), LONG_PRESS_DURATION_MS);
+  const dragControls = useDragControls();
 
   const closeOptions = () => {
     setShowOptions(false);
     itemLongPress.resetPressState();
   };
 
+  const startDrag = (e) => {
+    triggerHaptic(15);
+    dragControls.start(e);
+  };
+
   return (
     <>
-      <div className="planning-meal-item-row">
-        {reorderMode && (
-          <button type="button" className="planning-meal-drag-handle" aria-label="Glisser pour réordonner" {...dragHandleProps}>
-            <GripVertical size={16} />
-          </button>
-        )}
-        <div
-          ref={itemLongPress.ref}
-          className={`planning-meal-item press-anim press-${itemLongPress.pressState}`}
-          onClick={() => { itemLongPress.wasLongPress(); }}
-          {...itemLongPress.handlers}
-        >
-          <span className="planning-meal-recipe">{label}</span>
+      <Reorder.Item
+        value={entry}
+        as={bulleted ? "li" : "div"}
+        className={bulleted ? "planning-course-item" : "planning-meal-flat-item"}
+        dragListener={false}
+        dragControls={dragControls}
+        // Un seul appel, au relâchement — voir le commentaire de fichier de
+        // PlanningMealItemsList.jsx pour pourquoi jamais pendant le
+        // glissement lui-même (retour haptique + écriture partagée du foyer
+        // à chaque appel de onReorder côté hooks/useMealPlan.js — dont le
+        // retour haptique côté "fin de glissement", pas besoin de le
+        // dupliquer ici).
+        onDragEnd={onCommitOrder}
+      >
+        <div className="planning-meal-item-row">
+          {reorderMode && (
+            <button
+              type="button"
+              className="planning-meal-drag-handle"
+              aria-label="Glisser pour réordonner"
+              onPointerDown={startDrag}
+            >
+              <GripVertical size={16} />
+            </button>
+          )}
+          <div
+            ref={itemLongPress.ref}
+            className={`planning-meal-item press-anim press-${itemLongPress.pressState}`}
+            onClick={() => { itemLongPress.wasLongPress(); }}
+            {...itemLongPress.handlers}
+          >
+            <span className="planning-meal-recipe">{label}</span>
+          </div>
         </div>
-      </div>
+      </Reorder.Item>
 
       <AnimatePresence>
         {showOptions && (

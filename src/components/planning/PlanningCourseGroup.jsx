@@ -50,17 +50,19 @@ export default function PlanningCourseGroup({ mealTypeKey, course, entries, labe
         <span className="planning-meal-course-icon" aria-hidden="true">{course.icon}</span>
         <span className="planning-course-label">{label}</span>
       </div>
-      <ul className="planning-course-items">
-        <PlanningMealItemsList
-          entries={entries}
-          bulleted
-          reorderMode={reorderMode}
-          onReorder={onReorder}
-          labelForEntry={labelForEntry}
-          onEdit={onEdit}
-          onDelete={onDelete}
-        />
-      </ul>
+      {/* Pas de <ul> séparé ici : PlanningMealItemsList rend lui-même son
+          conteneur (wrapperClassName) — voir son commentaire de fichier,
+          <Reorder.Group> doit être le parent DOM direct de chaque ligne. */}
+      <PlanningMealItemsList
+        entries={entries}
+        bulleted
+        wrapperClassName="planning-course-items"
+        reorderMode={reorderMode}
+        onReorder={onReorder}
+        labelForEntry={labelForEntry}
+        onEdit={onEdit}
+        onDelete={onDelete}
+      />
 
       <AnimatePresence>
         {showOptions && (

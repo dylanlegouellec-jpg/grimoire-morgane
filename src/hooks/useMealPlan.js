@@ -82,9 +82,10 @@ export default function useMealPlan({ initialMealPlan = [] }) {
   }, []);
 
   // Réordonne un SOUS-ENSEMBLE d'entrées les unes par rapport aux autres
-  // (glisser-déposer d'un même sous-groupe — voir PlanningMealItemsList.jsx,
-  // hooks/useDragReorder.js) sans toucher à leur position relative au reste
-  // du plan : l'ordre d'affichage d'un groupe (voir groupEntriesByCourse
+  // (glisser-déposer d'un même sous-groupe — voir PlanningMealItemsList.jsx/
+  // PlanningMealItem.jsx, <Reorder.Group>/<Reorder.Item> de Framer Motion)
+  // sans toucher à leur position relative au reste du plan : l'ordre
+  // d'affichage d'un groupe (voir groupEntriesByCourse
   // dans PlanningView.jsx) suit l'ordre de CE tableau pour les entrées de
   // même type de plat/moment (tri stable), donc réordonner ici les entrées
   // concernées suffit à changer leur ordre affiché, sans rien déplacer
