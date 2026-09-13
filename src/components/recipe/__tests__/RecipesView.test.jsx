@@ -26,16 +26,19 @@ vi.mock("motion/react", async () => {
 /*  une carte déjà rendue (sinon son <img> se recharge/redécode à chaque   */
 /*  passage — le bug d'origine). Une carte qui PASSE de masquée à visible   */
 /*  (recherche ou changement de filtre) doit rejouer son fondu/zoom         */
-/*  d'entrée (useAnimate) ; une carte qui RESTAIT déjà visible ne doit PAS   */
-/*  le rejouer — elle se contente de glisser vers sa nouvelle place dans     */
-/*  la grille (`layout`, voir RecipeCard.jsx) : rejouer l'entrée sur TOUTE    */
-/*  la grille à chaque bascule de filtre créait un rendu perçu comme          */
-/*  saccadé (signalé par l'utilisateur), en plus de parasiter le glissement     */
-/*  de la pastille de filtre (AppShell.jsx) avec des dizaines d'animations       */
-/*  simultanées. Un futur retour en arrière vers un simple .filter() sur          */
-/*  le tableau de recettes — la solution la plus "naturelle" à laquelle on         */
-/*  a explicitement renoncé — ferait échouer le test de non-démontage             */
-/*  ci-dessous plutôt que de laisser la régression passer inaperçue.               */
+/*  d'entrée (useAnimate) ; une carte qui RESTAIT déjà visible doit AUSSI    */
+/*  le rejouer dès que `filterGeneration` change (ex. Tout -> Salé : les      */
+/*  cartes salées étaient déjà visibles sous "Tout", donc jamais masquée->    */
+/*  visible) — sans quoi elle saute juste à sa nouvelle place sans aucune      */
+/*  animation, perçu comme une absence totale d'animation (signalé par         */
+/*  l'utilisateur). Un burst de dizaines de ces fondus déclenchés en même         */
+/*  temps a été mesuré comme gratuit en performance (0 frame perdue, voir          */
+/*  git log) : ce n'était PAS la cause du rendu saccadé initialement signalé —      */
+/*  celle-ci était un `layout`/`layoutId` Framer ajouté puis retiré séparément        */
+/*  (voir RecipeCard.jsx). Un futur retour en arrière vers un simple .filter()          */
+/*  sur le tableau de recettes — la solution la plus "naturelle" à laquelle on           */
+/*  a explicitement renoncé — ferait échouer le test de non-démontage ci-dessous          */
+/*  plutôt que de laisser la régression passer inaperçue.                                   */
 /* ------------------------------------------------------------------ */
 
 function makeRecipe(id, title, category, favorite = false) {
@@ -134,23 +137,22 @@ describe("RecipesView — filtrage sans démontage", () => {
     expect(cardVisibleAgain).toBe(cardBefore);
   });
 
-  it("ne rejoue pas l'animation d'entrée pour une carte qui restait déjà visible avant le changement de filtre", async () => {
+  it("rejoue l'animation d'entrée même pour une carte déjà visible avant le changement de filtre", async () => {
     // Tout -> Sucré ne fait JAMAIS passer une carte sucrée de masquée à
-    // visible (elle était déjà visible sous "Tout") : elle doit se contenter
-    // de glisser vers sa nouvelle place (`layout`, RecipeCard.jsx) plutôt que
-    // de rejouer son fondu — sans quoi la grille entière rejoue son entrée à
-    // chaque bascule de filtre, perçu comme saccadé.
+    // visible (elle était déjà visible sous "Tout") : sans `filterGeneration`
+    // (RecipesView.jsx), rien ne rejouerait sur ce changement de filtre
+    // précis, alors que la grille se réorganise quand même sous les yeux de
+    // l'utilisateur.
     const user = userEvent.setup();
     render(<Harness initialFilter="tout" />);
     // .card-fade-wrap (pas .recipe-card lui-même) : c'est cet enfant dédié
-    // qui reçoit le fondu/zoom d'entrée (voir RecipeCard.jsx — la carte, elle,
-    // porte `layout` pour son propre réagencement, un noeud différent).
+    // qui reçoit le fondu/zoom d'entrée (voir RecipeCard.jsx).
     const fadeNode = screen.getByText("Crêpes bretonnes").closest(".recipe-card").querySelector(".card-fade-wrap");
     animateSpy.mockClear(); // ignore l'appel du montage initial
 
     await user.click(screen.getByText("go-sucre"));
 
-    expect(animateSpy.mock.calls.some(([node]) => node === fadeNode)).toBe(false);
+    expect(animateSpy.mock.calls.some(([node]) => node === fadeNode)).toBe(true);
   });
 
   it("rejoue l'animation d'entrée pour une carte qui redevient visible après avoir été masquée", async () => {
