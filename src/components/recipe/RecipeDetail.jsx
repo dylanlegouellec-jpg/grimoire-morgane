@@ -252,9 +252,9 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
             <div className="portions-adjuster">
               <span><Users size={14} /> Portions</span>
               <div className="portions-stepper">
-                <button type="button" onClick={() => { triggerHaptic(10); setServings((s) => Math.max(1, Number(s) - 1)); }} aria-label="Diminuer le nombre de portions"><Minus size={14} /></button>
+                <motion.button type="button" whileTap={{ scale: 0.85 }} onClick={() => { triggerHaptic(10); setServings((s) => Math.max(1, Number(s) - 1)); }} aria-label="Diminuer le nombre de portions"><Minus size={14} /></motion.button>
                 <span>{servings}</span>
-                <button type="button" onClick={() => { triggerHaptic(10); setServings((s) => Number(s) + 1); }} aria-label="Augmenter le nombre de portions"><Plus size={14} /></button>
+                <motion.button type="button" whileTap={{ scale: 0.85 }} onClick={() => { triggerHaptic(10); setServings((s) => Number(s) + 1); }} aria-label="Augmenter le nombre de portions"><Plus size={14} /></motion.button>
               </div>
             </div>
             <div className="detail-actions">

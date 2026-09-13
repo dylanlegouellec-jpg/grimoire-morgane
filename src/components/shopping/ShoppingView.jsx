@@ -206,18 +206,26 @@ export default function ShoppingView({
                   <span className="aisle-count">{list.length}</span>
                 </h4>
                 <ul className="shopping-list">
-                  {list.map((it) => (
-                    <ShoppingItemRow
-                      key={it.id}
-                      item={it}
-                      checked={false}
-                      onToggle={onToggleItem}
-                      onAdjust={onAdjustQty}
-                      onDelete={onDeleteItem}
-                      onOpenWheel={setWheelItem}
-                      pressDuration={pressDuration}
-                    />
-                  ))}
+                  {/* mode="popLayout" : l'article qui sort (suppression ou
+                      coche, voir ShoppingItemRow.jsx) est retiré du flux DÈS
+                      le début de son fondu au lieu d'attendre sa fin — les
+                      articles suivants (qui ont "layout") glissent donc tout
+                      de suite pour combler l'espace, au lieu de sauter
+                      d'un coup une fois l'article disparu. */}
+                  <AnimatePresence mode="popLayout" initial={false}>
+                    {list.map((it) => (
+                      <ShoppingItemRow
+                        key={it.id}
+                        item={it}
+                        checked={false}
+                        onToggle={onToggleItem}
+                        onAdjust={onAdjustQty}
+                        onDelete={onDeleteItem}
+                        onOpenWheel={setWheelItem}
+                        pressDuration={pressDuration}
+                      />
+                    ))}
+                  </AnimatePresence>
                 </ul>
               </div>
             ))}
@@ -234,17 +242,19 @@ export default function ShoppingView({
                 </button>
                 {showBought && (
                   <ul className="shopping-list bought-list">
-                    {bought.map((it) => (
-                      <ShoppingItemRow
-                        key={it.id}
-                        item={it}
-                        checked
-                        onToggle={onToggleItem}
-                        onDelete={onDeleteItem}
-                        onOpenWheel={setWheelItem}
-                        pressDuration={pressDuration}
-                      />
-                    ))}
+                    <AnimatePresence mode="popLayout" initial={false}>
+                      {bought.map((it) => (
+                        <ShoppingItemRow
+                          key={it.id}
+                          item={it}
+                          checked
+                          onToggle={onToggleItem}
+                          onDelete={onDeleteItem}
+                          onOpenWheel={setWheelItem}
+                          pressDuration={pressDuration}
+                        />
+                      ))}
+                    </AnimatePresence>
                   </ul>
                 )}
               </div>

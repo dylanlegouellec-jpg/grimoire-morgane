@@ -1,5 +1,5 @@
 import { memo, useRef } from "react";
-import { motion, useMotionValue, animate } from "motion/react";
+import { motion, useMotionValue, animate, useReducedMotion } from "motion/react";
 import { Check, Minus, Plus, Trash2 } from "lucide-react";
 import { triggerHaptic } from "../../utils/haptics";
 import { useTranslation } from "../../contexts/LanguageContext";
@@ -37,10 +37,19 @@ import useLongPress from "../../hooks/useLongPress";
 /* ------------------------------------------------------------------ */
 const SWIPE_COMMIT_PX = 72;
 const RELEASE_SPRING = { type: "spring", stiffness: 500, damping: 30 };
+// Sortie de liste (suppression ou coche) : fondu + léger rétrécissement,
+// pas de translation — la remontée des articles suivants pour combler le
+// vide vient déjà de "layout" ci-dessous (voir <AnimatePresence
+// mode="popLayout"> dans ShoppingView.jsx, qui sort cet article du flux DÈS
+// le début de sa sortie pour que ses voisins glissent tout de suite, sans
+// attendre la fin de son fondu).
+const EXIT_VARIANT = { opacity: 0, scale: 0.92 };
+const EXIT_TRANSITION = { duration: 0.2, ease: [0.22, 1, 0.36, 1] };
 
 function ShoppingItemRow({ item, checked, onToggle, onAdjust, onDelete, onOpenWheel, pressDuration }) {
   const { language } = useTranslation();
   const x = useMotionValue(0);
+  const prefersReducedMotion = useReducedMotion();
   // useLongPress déclenche déjà lui-même un retour haptique à l'ouverture
   // (voir hooks/useLongPress.js, triggerHapticFeedback) — pas besoin de le
   // dupliquer ici comme le faisait l'ancien minuteur maison.
@@ -74,7 +83,13 @@ function ShoppingItemRow({ item, checked, onToggle, onAdjust, onDelete, onOpenWh
   };
 
   return (
-    <li className={checked ? "checked" : ""}>
+    <motion.li
+      layout={!prefersReducedMotion}
+      initial={false}
+      exit={prefersReducedMotion ? { opacity: 0 } : EXIT_VARIANT}
+      transition={prefersReducedMotion ? { duration: 0 } : EXIT_TRANSITION}
+      className={checked ? "checked" : ""}
+    >
       <div className="shopping-item-swipe">
         <div className="shopping-item-swipe-hint hint-check" aria-hidden="true"><Check size={16} /></div>
         {onDelete && <div className="shopping-item-swipe-hint hint-delete" aria-hidden="true"><Trash2 size={16} /></div>}
@@ -96,25 +111,27 @@ function ShoppingItemRow({ item, checked, onToggle, onAdjust, onDelete, onOpenWh
           </span>
           {!checked && onAdjust && (
             <span className="qty-stepper">
-              <button
+              <motion.button
                 type="button"
+                whileTap={{ scale: 0.82 }}
                 onClick={(e) => { e.stopPropagation(); onAdjust(item.id, -1); }}
                 aria-label={`Diminuer la quantité de ${translateRecipeText(item.name, language)}`}
               >
                 <Minus size={11} />
-              </button>
-              <button
+              </motion.button>
+              <motion.button
                 type="button"
+                whileTap={{ scale: 0.82 }}
                 onClick={(e) => { e.stopPropagation(); onAdjust(item.id, 1); }}
                 aria-label={`Augmenter la quantité de ${translateRecipeText(item.name, language)}`}
               >
                 <Plus size={11} />
-              </button>
+              </motion.button>
             </span>
           )}
         </motion.div>
       </div>
-    </li>
+    </motion.li>
   );
 }
 
