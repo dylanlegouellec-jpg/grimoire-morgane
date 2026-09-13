@@ -1,72 +1,76 @@
-import { memo, useRef, useState } from "react";
+import { memo, useRef } from "react";
+import { motion, useMotionValue, animate } from "motion/react";
 import { Check, Minus, Plus, Trash2 } from "lucide-react";
 import { triggerHaptic } from "../../utils/haptics";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { translateRecipeText } from "../../utils/recipeTranslation";
+import useLongPress from "../../hooks/useLongPress";
 
 /* ------------------------------------------------------------------ */
 /*  LIGNE D'ARTICLE — tap pour cocher, appui long pour la molette de     */
-/*  quantité (inchangé), + swipe tactile : à droite pour cocher/décocher, */
-/*  à gauche pour supprimer. Même principe que SwipeFlourish.jsx (drag    */
-/*  CSS pur, pas de librairie) mais avec un verrouillage d'axe : si le     */
-/*  geste est plutôt vertical, on annule tout de suite (appui long ET     */
-/*  suivi du glissement) pour ne jamais gêner le scroll natif de la        */
-/*  liste — jamais de preventDefault().                                    */
+/*  quantité, + swipe tactile : à droite pour cocher/décocher, à gauche   */
+/*  pour supprimer.                                                       */
+/*                                                                         */
+/*  MIGRATION vers Framer Motion `drag="x"` (même principe que               */
+/*  SwipeFlourish.jsx, déjà migré) — remplace le suivi maison               */
+/*  (onTouchMove + verrouillage d'axe calculé à la main). Vérifié               */
+/*  empiriquement AVANT cette migration que Framer laisse bien                   */
+/*  "transform: none" au repos (jamais "translateX(0px)") : le hand-rolled          */
+/*  d'origine évitait spécifiquement une transform TOUJOURS présente,                */
+/*  même à 0px, qui avait perturbé le rendu de .bottom-nav (position:                 */
+/*  fixed + backdrop-filter) sur iOS Safari avec plusieurs lignes de                    */
+/*  cette liste montées à la fois — Framer gère déjà ça correctement de                  */
+/*  lui-même, pas besoin de reproduire cette prudence à la main ici.                       */
+/*  Framer pose aussi lui-même "touch-action: pan-y" sur l'élément dès que                   */
+/*  "drag=\"x\"" est utilisé (vérifié) : le défilement vertical natif de la                    */
+/*  liste reste donc intact, sans avoir à verrouiller l'axe nous-mêmes.                          */
+/*                                                                                                   */
+/*  L'appui long (molette de quantité) reste géré par le hook partagé                                  */
+/*  useLongPress.js (déjà utilisé ailleurs dans l'app) plutôt qu'un minuteur                             */
+/*  maison : ses propres écouteurs tactiles NATIFS (pas des props JSX)                                     */
+/*  cohabitent sans le moindre conflit avec les écouteurs internes de                                        */
+/*  Framer sur ce même nœud — aucun des deux n'appelle jamais                                                  */
+/*  preventDefault()/stopPropagation() contre l'autre. Son propre                                                */
+/*  verrouillage sur le mouvement (voir son commentaire de fichier)                                                */
+/*  annule déjà l'appui long dès qu'un vrai geste (swipe OU défilement)                                             */
+/*  commence, exactement comme avant.                                                                                */
 /* ------------------------------------------------------------------ */
-const AXIS_LOCK_THRESHOLD_PX = 8;
 const SWIPE_COMMIT_PX = 72;
+const RELEASE_SPRING = { type: "spring", stiffness: 500, damping: 30 };
 
 function ShoppingItemRow({ item, checked, onToggle, onAdjust, onDelete, onOpenWheel, pressDuration }) {
   const { language } = useTranslation();
-  const timer = useRef(null);
-  const fired = useRef(false);
-  const startPos = useRef(null);
-  const axisRef = useRef(null); // null tant qu'indéterminé, puis "x" | "y"
-  const [dragX, setDragX] = useState(0);
-  const [dragging, setDragging] = useState(false);
+  const x = useMotionValue(0);
+  // useLongPress déclenche déjà lui-même un retour haptique à l'ouverture
+  // (voir hooks/useLongPress.js, triggerHapticFeedback) — pas besoin de le
+  // dupliquer ici comme le faisait l'ancien minuteur maison.
+  const itemLongPress = useLongPress(() => onOpenWheel(item), pressDuration);
+  // Le navigateur émet quand même un événement "click" natif juste après le
+  // relâchement d'un VRAI swipe (Framer ne le supprime pas lui-même, à la
+  // différence de son propre système de tap) — sans ce garde-fou, un swipe
+  // qui bascule déjà l'article via handleDragEnd se ferait annuler aussitôt
+  // par ce clic fantôme qui rebascule une seconde fois. Alimenté en direct
+  // par onDrag (pas seulement dans handleDragEnd) car ce clic fantôme peut
+  // arriver avant que handleDragEnd n'ait fini de s'exécuter.
+  const lastDragDxRef = useRef(0);
 
-  const startLongPress = () => {
-    fired.current = false;
-    timer.current = setTimeout(() => { fired.current = true; triggerHaptic(25); onOpenWheel(item); }, pressDuration);
-  };
-  const cancelLongPress = () => {
-    if (timer.current) { clearTimeout(timer.current); timer.current = null; }
-  };
+  const handleDrag = (_event, info) => { lastDragDxRef.current = info.offset.x; };
+
   const handleClick = () => {
-    if (fired.current) { fired.current = false; return; }
+    if (itemLongPress.wasLongPress()) return;
+    if (Math.abs(lastDragDxRef.current) > SWIPE_COMMIT_PX) {
+      lastDragDxRef.current = 0;
+      return;
+    }
     onToggle(item.id);
   };
 
-  const handleTouchStart = (e) => {
-    startLongPress();
-    const t = e.touches && e.touches[0];
-    startPos.current = t ? { x: t.clientX, y: t.clientY } : null;
-    axisRef.current = null;
-  };
-  const handleTouchMove = (e) => {
-    const t = e.touches && e.touches[0];
-    if (!t || !startPos.current) return;
-    const dx = t.clientX - startPos.current.x;
-    const dy = t.clientY - startPos.current.y;
-    if (axisRef.current == null) {
-      if (Math.abs(dx) < AXIS_LOCK_THRESHOLD_PX && Math.abs(dy) < AXIS_LOCK_THRESHOLD_PX) return;
-      axisRef.current = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
-      if (axisRef.current === "x") cancelLongPress(); // un vrai swipe annule l'appui long
-    }
-    if (axisRef.current !== "x") { cancelLongPress(); return; } // laisse le scroll vertical natif faire son travail
-    setDragging(true);
-    setDragX(dx);
-  };
-  const handleTouchEnd = () => {
-    cancelLongPress();
-    if (axisRef.current === "x" && Math.abs(dragX) > SWIPE_COMMIT_PX) {
-      if (dragX > 0) { triggerHaptic(15); onToggle(item.id); }
-      else if (onDelete) { triggerHaptic(20); onDelete(item.id); }
-    }
-    setDragging(false);
-    setDragX(0);
-    startPos.current = null;
-    axisRef.current = null;
+  const handleDragEnd = (_event, info) => {
+    animate(x, 0, RELEASE_SPRING);
+    const dx = info.offset.x;
+    if (Math.abs(dx) <= SWIPE_COMMIT_PX) return;
+    if (dx > 0) { triggerHaptic(15); onToggle(item.id); }
+    else if (onDelete) { triggerHaptic(20); onDelete(item.id); }
   };
 
   return (
@@ -74,27 +78,17 @@ function ShoppingItemRow({ item, checked, onToggle, onAdjust, onDelete, onOpenWh
       <div className="shopping-item-swipe">
         <div className="shopping-item-swipe-hint hint-check" aria-hidden="true"><Check size={16} /></div>
         {onDelete && <div className="shopping-item-swipe-hint hint-delete" aria-hidden="true"><Trash2 size={16} /></div>}
-        <div
+        <motion.div
+          ref={itemLongPress.ref}
           className="shopping-item-content"
-          style={{
-            // "undefined" au repos (dragX === 0), pas "translateX(0px)" : une
-            // transform non vide force sa propre couche de composition GPU
-            // même immobile — sur cette vue, avec potentiellement plusieurs
-            // lignes en même temps, ça a fini par perturber le rendu de
-            // .bottom-nav (position: fixed + backdrop-filter, ailleurs sur
-            // la page) sur iOS Safari : la nav apparaissait plus haute et
-            // opaque spécifiquement sur l'onglet Courses. Même principe déjà
-            // appliqué dans hooks/useDismissibleSheet.js.
-            transform: dragX !== 0 ? `translateX(${dragX}px)` : undefined,
-            transition: dragging ? "none" : "transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
-          }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-          onMouseDown={startLongPress}
-          onMouseUp={cancelLongPress}
-          onMouseLeave={cancelLongPress}
-          onContextMenu={(e) => e.preventDefault()}
+          style={{ x }}
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={1}
+          dragMomentum={false}
+          onDrag={handleDrag}
+          onDragEnd={handleDragEnd}
+          {...itemLongPress.handlers}
         >
           <span className="checkbox-row" onClick={handleClick}>
             <span className="checkbox">{checked && <Check size={11} />}</span>
@@ -118,7 +112,7 @@ function ShoppingItemRow({ item, checked, onToggle, onAdjust, onDelete, onOpenWh
               </button>
             </span>
           )}
-        </div>
+        </motion.div>
       </div>
     </li>
   );
