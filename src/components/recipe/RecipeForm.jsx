@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, Reorder, useDragControls } from "motion/react";
 import { ChevronDown, Sparkles, Wand2, X } from "lucide-react";
 import { nextId, extractCodeFromInput, decodeRecipeCode, triggerHaptic, formatDurationMinutes } from "../../utils/helpers";
 import { normalizeIngredientList } from "../../utils/ingredients";
@@ -10,7 +10,6 @@ import { formatPressDuration } from "../common/pressDuration";
 import { resolveIllustrationKey } from "../art/illustrations";
 import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
 import useSecretTrigger from "../../hooks/useSecretTrigger";
-import useDragReorder from "../../hooks/useDragReorder";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
@@ -36,6 +35,124 @@ export const UNIT_OPTIONS = [
   { value: "", label: "Sans unité" },
 ];
 
+
+/* ------------------------------------------------------------------ */
+/*  RANGÉE D'INGRÉDIENT/D'ÉTAPE RÉORDONNABLE — extraite en composant       */
+/*  séparé (comme PlanningMealItem.jsx pour le Planning, même geste) :      */
+/*  useDragControls est un hook, il ne peut pas être appelé un nombre de     */
+/*  fois variable dans le .map() de RecipeForm.jsx.                           */
+/*                                                                              */
+/*  MIGRATION depuis hooks/useDragReorder.js (déjà fait pour le Planning,        */
+/*  voir PlanningMealItemsList.jsx/PlanningMealItem.jsx) : <Reorder.Group>/         */
+/*  <Reorder.Item> de Framer Motion remplacent la mesure de hauteurs de              */
+/*  rangée et le calcul de décalages à la main. Contrairement au Planning,             */
+/*  `onReorder` peut ici mettre à jour l'état (ingredientRows/stepRows) EN               */
+/*  DIRECT, à chaque changement de position pendant le glissement, sans état                */
+/*  local intermédiaire à committer au relâchement : ce sont déjà de simples                  */
+/*  useState locaux à ce formulaire, sans retour haptique ni écriture réseau à                  */
+/*  chaque appel (contrairement à hooks/useMealPlan.js, reorderMealPlanEntries)                   */
+/*  — les rappeler en boucle pendant tout le glissement ne coûte rien.                               */
+/*                                                                                                      */
+/*  "dragListener={false}" + `dragControls` : seule la poignée (⠿) démarre un                          */
+/*  glissement via `dragControls.start(e)` — jamais un simple clic dans un champ                         */
+/*  texte/liste déroulante de la rangée, qui doit rester utilisable normalement.                           */
+/* ------------------------------------------------------------------ */
+function IngredientRow({ row, onUpdateRow, onRemoveRow, canRemove }) {
+  const dragControls = useDragControls();
+  const startDrag = (e) => { triggerHaptic(15); dragControls.start(e); };
+  const commitDrag = () => triggerHaptic(12);
+
+  if (row.isSection) {
+    return (
+      <Reorder.Item value={row} as="div" className="ingredient-section-row" dragListener={false} dragControls={dragControls} onDragEnd={commitDrag}>
+        <button type="button" className="row-drag-handle" onPointerDown={startDrag} aria-label="Glisser pour réordonner">⠿</button>
+        <input
+          type="text"
+          className="ing-section-title"
+          value={row.title}
+          onChange={(e) => onUpdateRow(row.id, "title", e.target.value)}
+          placeholder="Titre de la section (ex. Crème diplomate)"
+        />
+        {canRemove && (
+          <button type="button" className="ing-remove" onClick={() => onRemoveRow(row.id)} aria-label="Supprimer cette section">✕</button>
+        )}
+      </Reorder.Item>
+    );
+  }
+  return (
+    <Reorder.Item value={row} as="div" className="ingredient-row" dragListener={false} dragControls={dragControls} onDragEnd={commitDrag}>
+      <button type="button" className="row-drag-handle" onPointerDown={startDrag} aria-label="Glisser pour réordonner">⠿</button>
+      <input
+        type="number"
+        min="0"
+        step="any"
+        className="ing-qty"
+        value={row.qty}
+        onChange={(e) => onUpdateRow(row.id, "qty", e.target.value)}
+        placeholder="Qté"
+      />
+      <select
+        className="ing-unit"
+        value={row.unit}
+        onChange={(e) => onUpdateRow(row.id, "unit", e.target.value)}
+      >
+        {UNIT_OPTIONS.map((u) => (
+          <option key={u.label} value={u.value}>{u.label}</option>
+        ))}
+      </select>
+      <input
+        type="text"
+        className="ing-name"
+        value={row.name}
+        onChange={(e) => onUpdateRow(row.id, "name", e.target.value)}
+        placeholder="Nom de l'ingrédient"
+      />
+      {canRemove && (
+        <button type="button" className="ing-remove" onClick={() => onRemoveRow(row.id)} aria-label="Supprimer cet ingrédient">✕</button>
+      )}
+    </Reorder.Item>
+  );
+}
+
+function StepRow({ row, idx, onUpdateRow, onRemoveRow, canRemove }) {
+  const dragControls = useDragControls();
+  const startDrag = (e) => { triggerHaptic(15); dragControls.start(e); };
+  const commitDrag = () => triggerHaptic(12);
+
+  if (row.isSection) {
+    return (
+      <Reorder.Item value={row} as="div" className="step-section-row" dragListener={false} dragControls={dragControls} onDragEnd={commitDrag}>
+        <button type="button" className="row-drag-handle" onPointerDown={startDrag} aria-label="Glisser pour réordonner">⠿</button>
+        <input
+          type="text"
+          className="step-section-title"
+          value={row.title}
+          onChange={(e) => onUpdateRow(row.id, "title", e.target.value)}
+          placeholder="Titre de la section (ex. Garniture)"
+        />
+        {canRemove && (
+          <button type="button" className="step-remove" onClick={() => onRemoveRow(row.id)} aria-label="Supprimer cette section">✕</button>
+        )}
+      </Reorder.Item>
+    );
+  }
+  return (
+    <Reorder.Item value={row} as="div" className="step-row" dragListener={false} dragControls={dragControls} onDragEnd={commitDrag}>
+      <button type="button" className="row-drag-handle" onPointerDown={startDrag} aria-label="Glisser pour réordonner">⠿</button>
+      <span className="step-row-num">{idx + 1}</span>
+      <input
+        type="text"
+        className="step-text"
+        value={row.text}
+        onChange={(e) => onUpdateRow(row.id, "text", e.target.value)}
+        placeholder={`Étape ${idx + 1}`}
+      />
+      {canRemove && (
+        <button type="button" className="step-remove" onClick={() => onRemoveRow(row.id)} aria-label="Supprimer cette étape">✕</button>
+      )}
+    </Reorder.Item>
+  );
+}
 
 /* ------------------------------------------------------------------ */
 /*  FORMULAIRE DE RECETTE (création / édition)                         */
@@ -151,7 +268,6 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
   const updateIngredientRow = (id, field, value) => {
     setIngredientRows((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
   };
-  const ingredientDrag = useDragReorder(ingredientRows, setIngredientRows);
 
   const addStepRow = () => {
     triggerHaptic(15);
@@ -168,7 +284,6 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
   const updateStepRow = (id, field, value) => {
     setStepRows((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
   };
-  const stepDrag = useDragReorder(stepRows, setStepRows);
 
   // Maintenir "+ Ajouter…" pendant le temps d'appui configuré ajoute un titre de section.
   const useLongPressAdd = (onShortPress, onLongPress, duration) => {
@@ -422,81 +537,17 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
         <label className="field">
           <span>Ingrédients</span>
         </label>
-        <div className="ingredient-rows">
-          {ingredientRows.map((row, idx) =>
-            row.isSection ? (
-              <div
-                className="ingredient-section-row"
-                key={row.id}
-                ref={ingredientDrag.registerNode(row.id)}
-                style={ingredientDrag.getRowStyle(row.id, idx)}
-              >
-                <button type="button" className="row-drag-handle" {...ingredientDrag.dragHandleProps(row.id, idx)} aria-label="Glisser pour réordonner">⠿</button>
-                <input
-                  type="text"
-                  className="ing-section-title"
-                  value={row.title}
-                  onChange={(e) => updateIngredientRow(row.id, "title", e.target.value)}
-                  placeholder="Titre de la section (ex. Crème diplomate)"
-                />
-                {ingredientRows.length > 1 && (
-                  <button
-                    type="button"
-                    className="ing-remove"
-                    onClick={() => removeIngredientRow(row.id)}
-                    aria-label="Supprimer cette section"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div
-                className="ingredient-row"
-                key={row.id}
-                ref={ingredientDrag.registerNode(row.id)}
-                style={ingredientDrag.getRowStyle(row.id, idx)}
-              >
-                <button type="button" className="row-drag-handle" {...ingredientDrag.dragHandleProps(row.id, idx)} aria-label="Glisser pour réordonner">⠿</button>
-                <input
-                  type="number"
-                  min="0"
-                  step="any"
-                  className="ing-qty"
-                  value={row.qty}
-                  onChange={(e) => updateIngredientRow(row.id, "qty", e.target.value)}
-                  placeholder="Qté"
-                />
-                <select
-                  className="ing-unit"
-                  value={row.unit}
-                  onChange={(e) => updateIngredientRow(row.id, "unit", e.target.value)}
-                >
-                  {UNIT_OPTIONS.map((u) => (
-                    <option key={u.label} value={u.value}>{u.label}</option>
-                  ))}
-                </select>
-                <input
-                  type="text"
-                  className="ing-name"
-                  value={row.name}
-                  onChange={(e) => updateIngredientRow(row.id, "name", e.target.value)}
-                  placeholder="Nom de l'ingrédient"
-                />
-                {ingredientRows.length > 1 && (
-                  <button
-                    type="button"
-                    className="ing-remove"
-                    onClick={() => removeIngredientRow(row.id)}
-                    aria-label="Supprimer cet ingrédient"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-            )
-          )}
-        </div>
+        <Reorder.Group as="div" className="ingredient-rows" axis="y" values={ingredientRows} onReorder={setIngredientRows}>
+          {ingredientRows.map((row) => (
+            <IngredientRow
+              key={row.id}
+              row={row}
+              onUpdateRow={updateIngredientRow}
+              onRemoveRow={removeIngredientRow}
+              canRemove={ingredientRows.length > 1}
+            />
+          ))}
+        </Reorder.Group>
         <button type="button" className="link-btn add-ingredient-btn" {...ingredientAddPress}>
           + Ajouter un ingrédient <span className="long-press-hint">(maintenir {formatPressDuration(pressDuration)} : titre de section)</span>
         </button>
@@ -504,64 +555,18 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
         <label className="field">
           <span>Étapes de préparation</span>
         </label>
-        <div className="step-rows">
-          {stepRows.map((row, idx) =>
-            row.isSection ? (
-              <div
-                className="step-section-row"
-                key={row.id}
-                ref={stepDrag.registerNode(row.id)}
-                style={stepDrag.getRowStyle(row.id, idx)}
-              >
-                <button type="button" className="row-drag-handle" {...stepDrag.dragHandleProps(row.id, idx)} aria-label="Glisser pour réordonner">⠿</button>
-                <input
-                  type="text"
-                  className="step-section-title"
-                  value={row.title}
-                  onChange={(e) => updateStepRow(row.id, "title", e.target.value)}
-                  placeholder="Titre de la section (ex. Garniture)"
-                />
-                {stepRows.length > 1 && (
-                  <button
-                    type="button"
-                    className="step-remove"
-                    onClick={() => removeStepRow(row.id)}
-                    aria-label="Supprimer cette section"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div
-                className="step-row"
-                key={row.id}
-                ref={stepDrag.registerNode(row.id)}
-                style={stepDrag.getRowStyle(row.id, idx)}
-              >
-                <button type="button" className="row-drag-handle" {...stepDrag.dragHandleProps(row.id, idx)} aria-label="Glisser pour réordonner">⠿</button>
-                <span className="step-row-num">{idx + 1}</span>
-                <input
-                  type="text"
-                  className="step-text"
-                  value={row.text}
-                  onChange={(e) => updateStepRow(row.id, "text", e.target.value)}
-                  placeholder={`Étape ${idx + 1}`}
-                />
-                {stepRows.length > 1 && (
-                  <button
-                    type="button"
-                    className="step-remove"
-                    onClick={() => removeStepRow(row.id)}
-                    aria-label="Supprimer cette étape"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-            )
-          )}
-        </div>
+        <Reorder.Group as="div" className="step-rows" axis="y" values={stepRows} onReorder={setStepRows}>
+          {stepRows.map((row, idx) => (
+            <StepRow
+              key={row.id}
+              row={row}
+              idx={idx}
+              onUpdateRow={updateStepRow}
+              onRemoveRow={removeStepRow}
+              canRemove={stepRows.length > 1}
+            />
+          ))}
+        </Reorder.Group>
         <button type="button" className="link-btn add-step-btn" {...stepAddPress}>
           + Ajouter une étape <span className="long-press-hint">(maintenir {formatPressDuration(pressDuration)} : titre de section)</span>
         </button>
