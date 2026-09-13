@@ -22,15 +22,14 @@ import PlanningMealItem from "./PlanningMealItem";
 /*  pendant le glissement — un wrapper intermédiaire fourni séparément                         */
 /*  casserait ce calcul.                                                                        */
 /*                                                                                                */
-/*  MIGRATION depuis hooks/useDragReorder.js (encore utilisé par                                 */
-/*  RecipeForm.jsx pour les ingrédients/étapes — migration prévue séparément,                     */
-/*  même technique) : Framer Motion fournit un couple <Reorder.Group>/                             */
-/*  <Reorder.Item> dédié précisément à ce geste — plus besoin de mesurer les                        */
-/*  hauteurs de rangée à la main ni de calculer des décalages de secours                             */
-/*  (l'ancien hook faisait les deux). Chaque <Reorder.Item> anime                                     */
-/*  AUTOMATIQUEMENT sa position (et celle des voisins qu'il croise) via son                            */
-/*  "layout" interne — c'est ce qui donne l'effet "la liste se réorganise                               */
-/*  toute seule" pendant le glissement, gratuitement.                                                    */
+/*  MIGRATION depuis hooks/useDragReorder.js (retiré — RecipeForm.jsx a suivi                    */
+/*  la même migration juste après, voir IngredientRow/StepRow) : Framer Motion                    */
+/*  fournit un couple <Reorder.Group>/<Reorder.Item> dédié précisément à ce                         */
+/*  geste — plus besoin de mesurer les hauteurs de rangée à la main ni de                            */
+/*  calculer des décalages de secours (l'ancien hook faisait les deux). Chaque                        */
+/*  <Reorder.Item> anime AUTOMATIQUEMENT sa position (et celle des voisins                             */
+/*  qu'il croise) via son "layout" interne — c'est ce qui donne l'effet "la                             */
+/*  liste se réorganise toute seule" pendant le glissement, gratuitement.                                */
 /*                                                                                                          */
 /*  État local (`localEntries`) plutôt que `entries` directement dans                                       */
 /*  <Reorder.Group value=...> : Framer appelle `onReorder` en CONTINU pendant                                */
