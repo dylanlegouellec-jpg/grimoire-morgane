@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ChevronDown, Plus, ShoppingBasket, User, Users } from "lucide-react";
 import { aisleIcon, copyText } from "../../utils/helpers";
@@ -8,9 +8,25 @@ import { translateRecipeText } from "../../utils/recipeTranslation";
 import Seal from "../common/Seal";
 import SegmentedControl from "../common/SegmentedControl";
 import QuantitySheet from "../common/QuantitySheet";
+import AnimatedNumber from "../common/AnimatedNumber";
 import RecipePickerModal from "./RecipePickerModal";
 import SwipeFlourish from "./SwipeFlourish";
 import ShoppingItemRow from "./ShoppingItemRow";
+
+// "shopping.recap" reste une SEULE phrase traduite interpolée (voir
+// translations.js, "{bought}/{total} article{plural}...") — t() ne rend
+// que du texte brut, jamais du JSX, donc impossible d'y glisser directement
+// un <AnimatedNumber>. Plutôt que d'éclater cette clé de traduction en
+// plusieurs morceaux (risque de casser l'ordre grammatical dans une langue
+// où les nombres ne tombent pas au même endroit), on redécoupe ICI le texte
+// déjà traduit sur les suites de chiffres : ça fonctionne quelle que soit la
+// langue ou la position des nombres dans la phrase, sans toucher aux clés
+// de traduction elles-mêmes.
+function withAnimatedNumbers(text) {
+  return text.split(/(\d+)/).map((part, i) => (
+    /^\d+$/.test(part) ? <AnimatedNumber key={i} value={Number(part)} /> : <Fragment key={i}>{part}</Fragment>
+  ));
+}
 
 /* ------------------------------------------------------------------ */
 /*  VUE COURSES                                                        */
@@ -180,13 +196,13 @@ export default function ShoppingView({
         {items.length > 0 ? (
           <div className="shopping-result">
             <div className="parchment-recap">
-              {t("shopping.recap", {
+              {withAnimatedNumbers(t("shopping.recap", {
                 bought: bought.length,
                 total: items.length,
                 plural: items.length > 1 ? "s" : "",
                 aisles: aisleCount,
                 aislesPlural: aisleCount > 1 ? "s" : "",
-              })}
+              }))}
             </div>
             <div className="shopping-progress" aria-hidden="true">
               <div
