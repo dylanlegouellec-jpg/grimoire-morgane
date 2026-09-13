@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { motion } from "motion/react";
 import { Plus } from "lucide-react";
 import { normalize, triggerHaptic } from "../../utils/helpers";
 import { useTranslation } from "../../contexts/LanguageContext";
@@ -188,9 +189,12 @@ export default function RecipesView({
           />
         ))}
       </div>
-      <button className="fab" onClick={() => { triggerHaptic(15); onAddRequest(); }}>
+      {/* whileTap plutôt qu'un ".fab:active" en CSS : pas d'effet d'enfoncement
+          existant sur ce bouton (contrairement à .seal, qui a déjà le sien —
+          voir recipeCards.css.js — non repris ici pour ne pas y toucher). */}
+      <motion.button className="fab" whileTap={{ scale: 0.88 }} onClick={() => { triggerHaptic(15); onAddRequest(); }}>
         <Plus size={22} />
-      </button>
+      </motion.button>
     </div>
   );
 }
