@@ -137,6 +137,35 @@ export function storeSoundEffects(value) {
   }
 }
 
+/* --- Retour tactile (vibration Android/Chrome, pulse visuel de repli sur
+   iOS — voir utils/haptics.js) ------------------------------------------
+   Un seul réglage pour les deux mécanismes : sur iPhone, WebKit n'expose
+   pas du tout l'API Vibration (choix délibéré de la plateforme, aucun
+   contournement possible depuis du contenu Web), donc SEUL le pulse visuel
+   y est perceptible — le couper sans couper l'autre laisserait ce réglage
+   sans effet visible sur cette plateforme. Purement local, comme les
+   effets sonores ci-dessus. */
+const HAPTIC_FEEDBACK_KEY = "haptic_feedback_enabled";
+
+export function getStoredHapticFeedback() {
+  try {
+    const v = localStorage.getItem(HAPTIC_FEEDBACK_KEY);
+    if (v === "0") return false;
+    if (v === "1") return true;
+  } catch {
+    /* repli ci-dessous */
+  }
+  return true; // activé par défaut
+}
+
+export function storeHapticFeedback(value) {
+  try {
+    localStorage.setItem(HAPTIC_FEEDBACK_KEY, value ? "1" : "0");
+  } catch {
+    /* rien à faire si le stockage échoue */
+  }
+}
+
 /* --- Opacité du fond de la nav basse (0 → 1) ---------------------------
    0 = verre dépoli seul (on voit le contenu défiler, flouté, à travers la
    barre), 1 = bandeau parchemin plein. Purement local à l'appareil, comme

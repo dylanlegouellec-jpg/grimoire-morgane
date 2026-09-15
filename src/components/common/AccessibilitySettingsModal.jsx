@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "../../contexts/LanguageContext";
-import { getStoredSoundEffects, storeSoundEffects } from "../../utils/localSettings";
+import { getStoredSoundEffects, storeSoundEffects, getStoredHapticFeedback, storeHapticFeedback } from "../../utils/localSettings";
 import { playClickSound } from "../../utils/audioUtils";
+import { triggerHaptic } from "../../utils/haptics";
 import Flourish from "./Flourish";
 import SegmentedControl from "./SegmentedControl";
 import Switch from "./Switch";
@@ -37,6 +38,15 @@ export default function AccessibilitySettingsModal({
     storeSoundEffects(value);
     setSoundEffectsState(value);
     if (value) playClickSound();
+  };
+  const [hapticFeedback, setHapticFeedbackState] = useState(() => getStoredHapticFeedback());
+  const setHapticFeedback = (value) => {
+    // Stocké AVANT le triggerHaptic de confirmation ci-dessous : celui-ci
+    // relit ce même réglage (voir utils/haptics.js) — l'appeler avant
+    // l'écriture le ferait juger "encore désactivé" et l'avaler en silence.
+    storeHapticFeedback(value);
+    setHapticFeedbackState(value);
+    if (value) triggerHaptic(15);
   };
 
   return (
@@ -74,6 +84,13 @@ export default function AccessibilitySettingsModal({
             <span className="settings-row-sub">{t("settings.soundEffectsHint")}</span>
           </div>
           <Switch checked={soundEffects} onChange={setSoundEffects} label={t("settings.soundEffects")} />
+        </div>
+        <div className="settings-row">
+          <div className="settings-row-label">
+            <span className="settings-row-title">{t("settings.hapticFeedback")}</span>
+            <span className="settings-row-sub">{t("settings.hapticFeedbackHint")}</span>
+          </div>
+          <Switch checked={hapticFeedback} onChange={setHapticFeedback} label={t("settings.hapticFeedback")} />
         </div>
       </div>
     </>
