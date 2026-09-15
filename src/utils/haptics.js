@@ -16,7 +16,14 @@
 /*  à l'animation d'enfoncement/rebond de l'appui long (voir RecipeCard.jsx */
 /*  et hooks/useLongPress.js), ça donne quand même une sensation "tactile"  */
 /*  cohérente sur les appareils sans vibreur accessible.                    */
+/*                                                                        */
+/*  Réglage "Retour tactile" (Accessibilité, voir utils/localSettings.js) : */
+/*  coupe les DEUX mécanismes ensemble, vibration réelle et pulse visuel     */
+/*  de repli — sur iPhone, seul le second est perceptible (WebKit n'expose    */
+/*  pas l'API Vibration), donc ne couper que la vibration laisserait ce         */
+/*  réglage sans effet visible sur cette plateforme.                             */
 /* ------------------------------------------------------------------ */
+import { getStoredHapticFeedback } from "./localSettings";
 
 const CAN_VIBRATE = typeof navigator !== "undefined" && typeof navigator.vibrate === "function";
 
@@ -30,9 +37,10 @@ export function isHapticVibrationSupported() {
 // `pattern` : un nombre de ms, ou un motif [on, off, on, ...] — mêmes
 // valeurs qu'avant (voir l'ancien triggerHaptic de utils/helpers.js, qui
 // délègue maintenant ici). Retourne `true` si une vraie vibration a été
-// déclenchée, `false` sinon (pas de support, ou échec silencieux).
+// déclenchée, `false` sinon (pas de support, réglage désactivé, ou échec
+// silencieux).
 export function triggerHaptic(pattern = 15) {
-  if (!CAN_VIBRATE) return false;
+  if (!CAN_VIBRATE || !getStoredHapticFeedback()) return false;
   try {
     return !!navigator.vibrate(pattern);
   } catch {
@@ -46,6 +54,7 @@ export function triggerHaptic(pattern = 15) {
 // coup. N'essaie de vibrer QUE si aucun élément n'a été fourni pour le
 // repli visuel serait de toute façon inutile (ex. depuis un contexte non-UI).
 export function triggerHapticFeedback(target, pattern = 15) {
+  if (!getStoredHapticFeedback()) return false;
   const vibrated = triggerHaptic(pattern);
   if (vibrated) return true;
   try {
