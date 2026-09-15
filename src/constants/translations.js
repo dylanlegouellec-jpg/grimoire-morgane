@@ -51,6 +51,13 @@ export const translations = {
     recipes: {
       noMatch: "Aucune recette ne correspond à ta recherche.",
     },
+    cookMode: {
+      stepsDone: "{done} / {total} étapes terminées",
+      ingredients: "Ingrédients",
+      group: "Groupe {index}",
+      nextGroup: "Groupe suivant ▶",
+      finish: "Terminer la préparation",
+    },
     fridge: {
       counter: "{count} ingrédient{plural} dans ton frigo",
       basicsTitle: "Les Basiques du placard",
@@ -381,6 +388,13 @@ export const translations = {
     },
     recipes: {
       noMatch: "No recipe matches your search.",
+    },
+    cookMode: {
+      stepsDone: "{done} / {total} steps done",
+      ingredients: "Ingredients",
+      group: "Group {index}",
+      nextGroup: "Next group ▶",
+      finish: "Finish cooking",
     },
     fridge: {
       counter: "{count} ingredient{plural} in your fridge",

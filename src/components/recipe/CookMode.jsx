@@ -1,11 +1,20 @@
 import { useState, useEffect } from "react";
 import { Check, X } from "lucide-react";
 import { groupSteps, parseDurationMinutes, triggerHaptic } from "../../utils/helpers";
+import { useTranslation } from "../../contexts/LanguageContext";
+import { translateRecipeText } from "../../utils/recipeTranslation";
 import Seal from "../common/Seal";
 import StepTimer from "./StepTimer";
 import PortionBadge from "./PortionBadge";
 
+// Contrairement à RecipeDetail.jsx/RecipeForm.jsx, ce composant ne passait
+// jusqu'ici AUCUN texte de recette (titre, ingrédients, étapes) — ni les
+// libellés fixes de son interface ("Ingrédients", "Groupe suivant"...) —
+// par translateRecipeText()/t() : tout restait en français quelle que soit
+// la langue choisie dans les Réglages, y compris pendant la préparation
+// elle-même (l'écran le plus consulté d'une recette en cuisinant).
 export default function CookMode({ recipe, onClose, pressDuration = 750 }) {
+  const { t, language } = useTranslation();
   const groups = groupSteps(recipe.steps);
   const [groupIndex, setGroupIndex] = useState(0);
   const [done, setDone] = useState(() => groups.map((g) => g.steps.map(() => false)));
@@ -71,8 +80,8 @@ export default function CookMode({ recipe, onClose, pressDuration = 750 }) {
     <div className="cookmode-backdrop">
       <div className="cookmode cookmode-list">
         <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={22} /></button>
-        <div className="cookmode-progress">{totalDone} / {totalSteps} étapes terminées</div>
-        <h2 className="dropcap-title">{recipe.title}</h2>
+        <div className="cookmode-progress">{t("cookMode.stepsDone", { done: totalDone, total: totalSteps })}</div>
+        <h2 className="dropcap-title">{translateRecipeText(recipe.title, language)}</h2>
 
         <div className="cookmode-ingredients-header">
           <button
@@ -80,7 +89,7 @@ export default function CookMode({ recipe, onClose, pressDuration = 750 }) {
             className={`ingredients-toggle ${showIngredients ? "open" : ""}`}
             onClick={() => { triggerHaptic(10); setShowIngredients((v) => !v); }}
           >
-            Ingrédients {showIngredients ? "▲" : "▼"}
+            {t("cookMode.ingredients")} {showIngredients ? "▲" : "▼"}
           </button>
           <PortionBadge value={servings} onChange={setServings} pressDuration={pressDuration} />
         </div>
@@ -89,9 +98,9 @@ export default function CookMode({ recipe, onClose, pressDuration = 750 }) {
             <ul>
               {scaledIngredients.map((ing, i) =>
                 ing.isSection ? (
-                  <li key={i} className="ingredient-section-title">{ing.title}</li>
+                  <li key={i} className="ingredient-section-title">{translateRecipeText(ing.title, language)}</li>
                 ) : (
-                  <li key={i}>{ing.qty} {ing.unit ? `${ing.unit} ` : ""}— {ing.name}</li>
+                  <li key={i}>{ing.qty} {ing.unit ? `${translateRecipeText(ing.unit, language)} ` : ""}— {translateRecipeText(ing.name, language)}</li>
                 )
               )}
             </ul>
@@ -102,13 +111,13 @@ export default function CookMode({ recipe, onClose, pressDuration = 750 }) {
           <div className="group-nav">
             <button type="button" className="group-nav-btn" onClick={goPrevGroup} disabled={groupIndex === 0}>◀</button>
             <span className="group-nav-label">
-              {currentGroup.title || `Groupe ${groupIndex + 1}`} <em>({groupIndex + 1}/{groups.length})</em>
+              {currentGroup.title ? translateRecipeText(currentGroup.title, language) : t("cookMode.group", { index: groupIndex + 1 })} <em>({groupIndex + 1}/{groups.length})</em>
             </span>
             <button type="button" className="group-nav-btn" onClick={goNextGroup} disabled={groupIndex === groups.length - 1}>▶</button>
           </div>
         )}
         {groups.length === 1 && currentGroup.title && (
-          <h3 className="group-solo-title">{currentGroup.title}</h3>
+          <h3 className="group-solo-title">{translateRecipeText(currentGroup.title, language)}</h3>
         )}
 
         <div className="cookmode-steps">
@@ -118,7 +127,7 @@ export default function CookMode({ recipe, onClose, pressDuration = 750 }) {
               <div key={i} className={`cookmode-step-card ${currentDone[i] ? "done" : ""}`} onClick={() => toggleDone(i)}>
                 <span className="step-check">{currentDone[i] && <Check size={14} />}</span>
                 <div className="step-body">
-                  <p className="cookmode-step-text">{s}</p>
+                  <p className="cookmode-step-text">{translateRecipeText(s, language)}</p>
                   {duration != null && <StepTimer minutes={duration} />}
                 </div>
               </div>
@@ -127,9 +136,9 @@ export default function CookMode({ recipe, onClose, pressDuration = 750 }) {
         </div>
 
         {groups.length > 1 && groupIndex < groups.length - 1 ? (
-          <Seal tone="gold" onClick={goNextGroup}>Groupe suivant ▶</Seal>
+          <Seal tone="gold" onClick={goNextGroup}>{t("cookMode.nextGroup")}</Seal>
         ) : (
-          <Seal tone="gold" onClick={onClose}>Terminer la préparation</Seal>
+          <Seal tone="gold" onClick={onClose}>{t("cookMode.finish")}</Seal>
         )}
       </div>
     </div>

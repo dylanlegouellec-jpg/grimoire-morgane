@@ -15,6 +15,7 @@ import {
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
 import { generateRecipeCardPng, shareOrDownloadPng } from "../../utils/recipeCardCanvas";
 import { useTranslation } from "../../contexts/LanguageContext";
+import { translateRecipeText } from "../../utils/recipeTranslation";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
@@ -22,21 +23,25 @@ import Switch from "./Switch";
 
 // Construit un texte brut (pour navigator.share, qui n'accepte pas de HTML
 // mis en forme) reprenant la structure de la fiche : titre, ingrédients
-// groupés par section, étapes numérotées, remarques. `t` est passé en
-// paramètre plutôt qu'obtenu via useTranslation() : cette fonction n'est
-// pas un composant, elle ne peut pas appeler de hook elle-même.
-function buildShareText(t, recipe, servings, ingredients, includeNotes) {
-  const lines = [recipe.title, "", t("share.shareTextIngredients")];
+// groupés par section, étapes numérotées, remarques. `t` et `language` sont
+// passés en paramètres plutôt qu'obtenus via useTranslation() : cette
+// fonction n'est pas un composant, elle ne peut pas appeler de hook
+// elle-même. Le contenu de la recette passe par translateRecipeText comme
+// partout ailleurs (RecipeDetail.jsx, CookMode.jsx...) — resté oublié ici
+// jusqu'ici, un partage en anglais renvoyait donc le texte tel quel en
+// français.
+function buildShareText(t, language, recipe, servings, ingredients, includeNotes) {
+  const lines = [translateRecipeText(recipe.title, language), "", t("share.shareTextIngredients")];
   groupIngredients(ingredients).forEach((g) => {
-    if (g.title) lines.push(`— ${g.title} —`);
-    g.items.forEach((it) => lines.push(`• ${[it.qty, it.unit].filter(Boolean).join(" ")} ${it.name}`.trim()));
+    if (g.title) lines.push(`— ${translateRecipeText(g.title, language)} —`);
+    g.items.forEach((it) => lines.push(`• ${[it.qty, it.unit ? translateRecipeText(it.unit, language) : ""].filter(Boolean).join(" ")} ${translateRecipeText(it.name, language)}`.trim()));
   });
   lines.push("", t("share.shareTextPreparation"));
   groupSteps(recipe.steps).forEach((g) => {
-    if (g.title) lines.push(`— ${g.title} —`);
-    g.steps.forEach((s, i) => lines.push(`${i + 1}. ${s}`));
+    if (g.title) lines.push(`— ${translateRecipeText(g.title, language)} —`);
+    g.steps.forEach((s, i) => lines.push(`${i + 1}. ${translateRecipeText(s, language)}`));
   });
-  if (includeNotes && recipe.notes) lines.push("", t("share.shareTextNotes"), recipe.notes);
+  if (includeNotes && recipe.notes) lines.push("", t("share.shareTextNotes"), translateRecipeText(recipe.notes, language));
   lines.push("", t("share.shareTextSignature"));
   return lines.join("\n");
 }
@@ -76,7 +81,7 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
 
   const nutriGrade = recipe.nutriscoreGrade || estimateNutriscoreLocal(ingredients, recipe.category);
   const nutriColor = NUTRI_COLORS[nutriGrade] || "#b3872a";
-  const { t, dict } = useTranslation();
+  const { t, dict, language } = useTranslation();
   const categoryText = dict.labels[categoryLabel(recipe)] || categoryLabel(recipe);
 
   const doCopyCode = () => {
@@ -145,8 +150,8 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
       if (navigator.share) {
         try {
           await navigator.share({
-            title: recipe.title,
-            text: buildShareText(t, recipe, servings, ingredients, includeNotes),
+            title: translateRecipeText(recipe.title, language),
+            text: buildShareText(t, language, recipe, servings, ingredients, includeNotes),
           });
           return;
         } catch (err) {
@@ -186,7 +191,7 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
       if (includePhoto && hasPhoto && !photoIncluded) {
         showToast(t("share.photoExcludedToast"));
       }
-      const result = await shareOrDownloadPng(blob, `${slugify(recipe.title)}.png`, recipe.title);
+      const result = await shareOrDownloadPng(blob, `${slugify(recipe.title)}.png`, translateRecipeText(recipe.title, language));
       if (result === "downloaded") showToast(t("share.cardDownloadedToast"));
       else if (!result) showToast(t("share.imageErrorToast"));
     } catch {
@@ -200,10 +205,10 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
     triggerHaptic(15);
     setBusy("text");
     try {
-      const text = buildShareText(t, recipe, servings, ingredients, includeNotes);
+      const text = buildShareText(t, language, recipe, servings, ingredients, includeNotes);
       if (navigator.share) {
         try {
-          await navigator.share({ title: recipe.title, text });
+          await navigator.share({ title: translateRecipeText(recipe.title, language), text });
           return;
         } catch (err) {
           if (err && err.name === "AbortError") return;
@@ -238,7 +243,7 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
           {...MODAL_SHEET_MOTION}
         >
           <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
-          <h2 className="dropcap-title">{t("share.title", { title: recipe.title })}</h2>
+          <h2 className="dropcap-title">{t("share.title", { title: translateRecipeText(recipe.title, language) })}</h2>
           <Flourish />
 
           <h4>{t("share.exportOptions")}</h4>
@@ -308,7 +313,7 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
               <span className="print-nutri-circle" style={{ background: nutriColor }}>{nutriGrade}</span>
             )}
           </div>
-          <h1>{recipe.title}</h1>
+          <h1>{translateRecipeText(recipe.title, language)}</h1>
           <p className="print-type">{t("share.printSignature")}</p>
           <div className="print-meta">
             <span>⏱ {recipe.time} {t("share.minutesShort")}</span>
@@ -322,10 +327,10 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
               <h2>{t("share.printIngredients")}</h2>
               {groupIngredients(ingredients).map((g, i) => (
                 <div key={i}>
-                  {g.title && <h3 className="print-sub">{g.title}</h3>}
+                  {g.title && <h3 className="print-sub">{translateRecipeText(g.title, language)}</h3>}
                   <ul>
                     {g.items.map((it, j) => (
-                      <li key={j}>{[it.qty, it.unit].filter(Boolean).join(" ")} — {it.name}</li>
+                      <li key={j}>{[it.qty, it.unit ? translateRecipeText(it.unit, language) : ""].filter(Boolean).join(" ")} — {translateRecipeText(it.name, language)}</li>
                     ))}
                   </ul>
                 </div>
@@ -335,9 +340,9 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
               <h2>{t("share.printPreparation")}</h2>
               {groupSteps(recipe.steps).map((g, i) => (
                 <div key={i}>
-                  {g.title && <h3 className="print-sub">{g.title}</h3>}
+                  {g.title && <h3 className="print-sub">{translateRecipeText(g.title, language)}</h3>}
                   <ol>
-                    {g.steps.map((s, j) => <li key={j}>{s}</li>)}
+                    {g.steps.map((s, j) => <li key={j}>{translateRecipeText(s, language)}</li>)}
                   </ol>
                 </div>
               ))}
@@ -347,7 +352,7 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
           {includeNotes && recipe.notes && (
             <>
               <h2>{t("share.printNotesTitle")}</h2>
-              <p className="print-notes">{recipe.notes}</p>
+              <p className="print-notes">{translateRecipeText(recipe.notes, language)}</p>
             </>
           )}
           <div className="print-footer">{t("share.printFooter")}</div>
