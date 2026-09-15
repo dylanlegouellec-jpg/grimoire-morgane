@@ -103,6 +103,70 @@ const CULINARY_FR_EN = [
   ["épluchez", "peel"],
   ["assaisonner", "season"],
   ["assaisonnez", "season"],
+  ["laisser mijoter", "let simmer"],
+  ["laissez mijoter", "let simmer"],
+  ["mijoter", "simmer"],
+  ["creuser un puits", "make a well"],
+  ["creusez un puits", "make a well"],
+  ["foncer un moule", "line a pan"],
+  ["foncez un moule", "line a pan"],
+  ["foncer", "line"],
+  ["foncez", "line"],
+  ["battre", "beat"],
+  ["battez", "beat"],
+  ["couvrir", "cover"],
+  ["couvrez", "cover"],
+  ["répartir", "spread"],
+  ["répartissez", "spread"],
+  ["frotter", "rub"],
+  ["frottez", "rub"],
+  ["enfourner", "put in the oven"],
+  ["enfournez", "put in the oven"],
+  ["arroser", "baste"],
+  ["arrosez", "baste"],
+  ["saupoudrer", "sprinkle"],
+  ["saupoudrez", "sprinkle"],
+  ["étaler", "roll out"],
+  ["étalez", "roll out"],
+  ["façonner", "shape"],
+  ["façonnez", "shape"],
+  ["délayer", "mix in"],
+  ["délayez", "mix in"],
+  ["tournant", "folding"],
+  ["tourner", "turn"],
+  ["tournez", "turn"],
+  ["écrasé", "crushed"],
+  ["écrasée", "crushed"],
+  ["dorés", "golden"],
+  ["dorées", "golden"],
+  ["en dés", "into cubes"],
+
+  // Unités de mesure — ces valeurs viennent du champ "unit" d'un
+  // ingrédient (voir UNIT_OPTIONS, RecipeForm.jsx), affiché À CÔTÉ du nom
+  // traduit ci-dessous mais jamais traduit lui-même avant ce correctif
+  // (voir RecipeDetail.jsx/CookMode.jsx/ShoppingItemRow.jsx, désormais
+  // passés eux aussi par translateRecipeText). Formes abrégées ET
+  // épelées : un import texte/lien (voir RecipeLinkImportModal.jsx) ne
+  // respecte pas forcément la liste fermée du formulaire.
+  ["cuillères à soupe", "tablespoons"],
+  ["cuillère à soupe", "tablespoon"],
+  ["cuillères à café", "teaspoons"],
+  ["cuillère à café", "teaspoon"],
+  ["c. à soupe", "tbsp"],
+  ["c. à café", "tsp"],
+  ["gousses d'ail", "cloves of garlic"],
+  ["gousse d'ail", "clove of garlic"],
+  ["gousses", "cloves"],
+  ["gousse", "clove"],
+  ["pincées", "pinches"],
+  ["pincée", "pinch"],
+  ["pièces", "pieces"],
+  ["pièce", "piece"],
+  ["bottes", "bunches"],
+  ["botte", "bunch"],
+  ["sachets", "packets"],
+  ["sachet", "packet"],
+  ["unité", "unit"],
 
   // Ingrédients courants
   ["farine", "flour"],
@@ -116,9 +180,23 @@ const CULINARY_FR_EN = [
   ["oeuf", "egg"],
   ["œuf", "egg"],
   ["lait", "milk"],
+  ["eau", "water"],
   ["crème fraîche", "crème fraîche"],
   ["crème liquide", "heavy cream"],
   ["crème fleurette", "heavy cream"],
+  // Pas de repli générique "crème" -> "cream" : entrerait en collision avec
+  // les noms de desserts ci-dessus qui gardent délibérément "Crème" tel
+  // quel (Crème Brûlée, Crème Caramel — déjà des mots adoptés tels quels en
+  // anglais culinaire) — un remplacement plus court, testé après eux (voir
+  // le tri par longueur), les re-matcherait et les casserait ("Crème
+  // Brûlée" -> "Cream Brûlée"). "Crème" seule (sans qualificatif) reste
+  // donc affichée telle quelle, comme "crème fraîche" ci-dessus.
+  ["lardons", "bacon lardons"],
+  ["lardon", "bacon lardon"],
+  ["légumes", "vegetables"],
+  ["légume", "vegetable"],
+  ["courgettes", "zucchini"],
+  ["courgette", "zucchini"],
   ["jaunes d'œufs", "egg yolks"],
   ["jaunes d'oeufs", "egg yolks"],
   ["jaune d'œuf", "egg yolk"],
@@ -156,6 +234,8 @@ const CULINARY_FR_EN = [
   ["saumon", "salmon"],
   ["persil", "parsley"],
   ["thym", "thyme"],
+  ["herbes", "herbs"],
+  ["herbe", "herb"],
   ["laurier", "bay leaf"],
   ["cannelle", "cinnamon"],
   ["amandes", "almonds"],
@@ -175,6 +255,30 @@ const CULINARY_FR_EN = [
   ["à feu moyen", "over medium heat"],
   ["à feu vif", "over high heat"],
   ["four préchauffé", "preheated oven"],
+
+  // Adverbes/connecteurs SANS risque de casser l'ordre des mots (un mot
+  // isolé qui se substitue à un autre mot isolé, jamais une réorganisation
+  // de la phrase) — volontairement limité à ceux-ci : le reste de la
+  // grammaire française (articles, prépositions comme "à"/"en" très
+  // polysémiques, ordre adjectif/nom...) resterait faux même traduit mot à
+  // mot, et un français correct reste préférable à un charabia anglais
+  // mal ordonné (voir le commentaire de fichier en tête).
+  ["généreusement", "generously"],
+  ["régulièrement", "regularly"],
+  ["progressivement", "gradually"],
+  ["ensemble", "together"],
+  ["puis", "then"],
+  ["environ", "about"],
+  // Prépositions à correspondance stable dans ce contexte (jamais "pour",
+  // qui entrerait en collision avec le "pour" anglais déjà utilisé comme
+  // traduction de "verser"/"versez" ci-dessus — un mot français ajouté ici
+  // ne doit jamais réutiliser un mot anglais déjà produit ailleurs dans ce
+  // dictionnaire, sous peine d'un second remplacement en cascade).
+  ["dans", "in"],
+  ["avec", "with"],
+  ["sur", "on"],
+  ["au", "with"],
+  ["aux", "with"],
 ];
 
 // Triées une seule fois, de la plus longue expression vers la plus courte,
@@ -237,6 +341,27 @@ function applyPossessiveRewrite(text) {
   return `${possessive} ${m[1].trim()}`;
 }
 
+// Élisions "l'"/"d'" ("le/la"/"de" devant une voyelle ou un h muet — de
+// très loin les deux plus fréquentes dans un texte de recette, les autres
+// comme "n'"/"j'"/"qu'" n'y apparaissent quasiment jamais). Développées
+// APRÈS le remplacement du dictionnaire ci-dessus, jamais avant : une
+// entrée composée qui contient elle-même une élision ("huile d'olive")
+// doit d'abord matcher telle quelle. Sans ce second passage, l'apostrophe
+// reste collée telle quelle au mot anglais qui la suit ("d'ail" -> "d'garlic"
+// au lieu de "of garlic") — un résidu plus étrange qu'utile, alors que
+// "l'"/"d'" eux-mêmes n'ont pas leur place dans un dictionnaire de mots
+// entiers (le mot qui suit une élision n'a par nature jamais de frontière
+// non-lettre juste après l'apostrophe, voir buildEntryRegex ci-dessus).
+const ELISION_EXPANSIONS = { l: "the", d: "of" };
+const ELISION_RE = /\b([ld])['’](?=\p{L})/giu;
+function expandElisions(text) {
+  return text.replace(ELISION_RE, (_match, article) => {
+    const expansion = ELISION_EXPANSIONS[article.toLowerCase()];
+    const isUpper = article === article.toUpperCase() && article !== article.toLowerCase();
+    return (isUpper ? expansion.charAt(0).toUpperCase() + expansion.slice(1) : expansion) + " ";
+  });
+}
+
 /* ------------------------------------------------------------------ */
 /*  API PUBLIQUE                                                        */
 /* ------------------------------------------------------------------ */
@@ -252,7 +377,7 @@ export function translateRecipeText(text, language) {
   for (const [fr, en] of SORTED_ENTRIES) {
     result = result.replace(buildEntryRegex(fr), (match) => matchCase(en, match));
   }
-  return result;
+  return expandElisions(result);
 }
 
 export { CULINARY_FR_EN };

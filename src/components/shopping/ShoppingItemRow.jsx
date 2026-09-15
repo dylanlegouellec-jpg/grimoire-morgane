@@ -107,7 +107,7 @@ function ShoppingItemRow({ item, checked, onToggle, onAdjust, onDelete, onOpenWh
         >
           <span className="checkbox-row" onClick={handleClick}>
             <span className="checkbox">{checked && <Check size={11} />}</span>
-            <span>{item.qty > 0 ? `${Math.round(item.qty * 100) / 100}${item.unit ? ` ${item.unit}` : ""} — ` : ""}{translateRecipeText(item.name, language)}</span>
+            <span>{item.qty > 0 ? `${Math.round(item.qty * 100) / 100}${item.unit ? ` ${translateRecipeText(item.unit, language)}` : ""} — ` : ""}{translateRecipeText(item.name, language)}</span>
           </span>
           {!checked && onAdjust && (
             <span className="qty-stepper">

@@ -289,7 +289,7 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
                 }
                 return (
                   <FadeInItem key={i} root={scrollRef} reducedMotion={prefersReducedMotion}>
-                    {ing.qty ? `${ing.qty} ` : ""}{ing.unit || ""} {translateRecipeText(ing.name || ing.title || "", language)}
+                    {ing.qty ? `${ing.qty} ` : ""}{ing.unit ? translateRecipeText(ing.unit, language) : ""} {translateRecipeText(ing.name || ing.title || "", language)}
                   </FadeInItem>
                 );
               })}
