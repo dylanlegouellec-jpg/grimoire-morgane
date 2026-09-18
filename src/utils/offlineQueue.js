@@ -9,7 +9,18 @@
 
 const QUEUE_KEY = "grimoire_offline_queue";
 
+// Repli mémoire RÉEL pour cette session si localStorage est indisponible ou
+// refuse l'écriture (quota dépassé, navigation privée stricte) — `null` tant
+// qu'aucun échec n'a eu lieu (cas normal : lit/écrit toujours localStorage).
+// Bascule une fois pour toutes au premier échec, puis fait foi pour toute
+// lecture/écriture ultérieure de cette même page. Avant ce correctif, le
+// commentaire promettait ce repli mais readQueue() relisait toujours
+// localStorage à froid, qui ne contenait jamais l'action perdue : une mise
+// en file au moment précis d'un échec d'écriture disparaissait en silence.
+let memoryFallback = null;
+
 function readQueue() {
+  if (memoryFallback !== null) return memoryFallback;
   try {
     if (typeof localStorage === "undefined") return [];
     const raw = localStorage.getItem(QUEUE_KEY);
@@ -21,12 +32,19 @@ function readQueue() {
 }
 
 function writeQueue(queue) {
+  if (memoryFallback !== null) {
+    memoryFallback = queue;
+    return;
+  }
   try {
-    if (typeof localStorage === "undefined") return;
+    if (typeof localStorage === "undefined") {
+      memoryFallback = queue;
+      return;
+    }
     localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
-  } catch {
-    /* stockage indisponible (quota, navigation privée...) : la file reste
-       en mémoire pour cette session, sans bloquer le reste de l'app */
+  } catch (err) {
+    console.error("[offlineQueue] Écriture localStorage impossible, repli en mémoire pour cette session (perdu à la fermeture/actualisation) :", err);
+    memoryFallback = queue;
   }
 }
 
