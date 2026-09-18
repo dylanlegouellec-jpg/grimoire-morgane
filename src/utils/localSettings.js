@@ -311,3 +311,33 @@ export function storeActiveShoppingListId(scope, id) {
     /* rien à faire si le stockage échoue */
   }
 }
+
+/* --- Ordre personnalisé des rayons de la liste de courses ---------------
+   Purement local à cet appareil, comme les préférences ci-dessus — jamais
+   synchronisé Supabase, contrairement aux articles eux-mêmes : glisser un
+   rayon ne change que l'ordre d'AFFICHAGE des blocs sur CET appareil,
+   jamais le classement des articles entre eux (voir ShoppingView.jsx,
+   `aisleOrder`). Un tableau de libellés de rayon (ceux de utils/helpers.js,
+   AISLES) plutôt qu'un simple index par rayon, pour rester tolérant à
+   l'ajout futur d'un nouveau rayon dans AISLES (voir DEFAULT_AISLE_ORDER,
+   utilisé par ShoppingView.jsx pour positionner tout rayon absent de ce
+   tableau mémorisé). */
+const AISLE_ORDER_KEY = "grimoire_aisle_order";
+
+export function getStoredAisleOrder() {
+  try {
+    const raw = localStorage.getItem(AISLE_ORDER_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return Array.isArray(parsed) ? parsed.filter((v) => typeof v === "string") : null;
+  } catch {
+    return null;
+  }
+}
+
+export function storeAisleOrder(order) {
+  try {
+    localStorage.setItem(AISLE_ORDER_KEY, JSON.stringify(order));
+  } catch {
+    /* rien à faire si le stockage échoue */
+  }
+}

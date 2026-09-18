@@ -35,12 +35,19 @@ export const AISLES = [
   },
 ];
 
-const DEFAULT_AISLE_LABEL = "Autre";
+export const DEFAULT_AISLE_LABEL = "Autre";
 const DEFAULT_AISLE_ICON = "📦";
 const AISLE_ICON_BY_LABEL = AISLES.reduce((acc, a) => {
   acc[a.label] = a.icon;
   return acc;
 }, { [DEFAULT_AISLE_LABEL]: DEFAULT_AISLE_ICON });
+
+// Ordre par défaut des rayons (celui de la liste AISLES ci-dessus, "Autre"
+// toujours en dernier) — sert de repli dans ShoppingView.jsx tant qu'aucun
+// ordre personnalisé n'a été glissé-déposé, et pour positionner un rayon qui
+// n'apparaît pas encore dans un ordre personnalisé déjà mémorisé (ex. tout
+// nouveau rayon ajouté à AISLES après coup).
+export const DEFAULT_AISLE_ORDER = [...AISLES.map((a) => a.label), DEFAULT_AISLE_LABEL];
 
 export function guessAisle(name) {
   const found = AISLES.find((a) => a.test.test(name));

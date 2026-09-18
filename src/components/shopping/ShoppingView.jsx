@@ -1,8 +1,9 @@
-import { Fragment, useMemo, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion, Reorder, useReducedMotion } from "motion/react";
 import { ChevronDown, Plus, ShoppingBasket, User, Users } from "lucide-react";
-import { aisleIcon, copyText } from "../../utils/helpers";
+import { DEFAULT_AISLE_ORDER, copyText } from "../../utils/helpers";
 import { triggerHaptic } from "../../utils/haptics";
+import { getStoredAisleOrder, storeAisleOrder } from "../../utils/localSettings";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { translateRecipeText } from "../../utils/recipeTranslation";
 import Seal from "../common/Seal";
@@ -12,6 +13,7 @@ import AnimatedNumber from "../common/AnimatedNumber";
 import RecipePickerModal from "./RecipePickerModal";
 import SwipeFlourish from "./SwipeFlourish";
 import ShoppingItemRow from "./ShoppingItemRow";
+import ShoppingAisleBlock from "./ShoppingAisleBlock";
 
 // "shopping.recap" reste une SEULE phrase traduite interpolée (voir
 // translations.js, "{bought}/{total} article{plural}...") — t() ne rend
@@ -70,6 +72,11 @@ export default function ShoppingView({
   const [wheelItem, setWheelItem] = useState(null);
   const [showRecipePicker, setShowRecipePicker] = useState(false);
   const [showBought, setShowBought] = useState(false);
+  // Ordre personnalisé des RAYONS (pas des articles), glissé-déposé par
+  // en-tête de rayon (voir ShoppingAisleBlock.jsx) et mémorisé localement
+  // sur cet appareil (utils/localSettings.js) — jamais synchronisé
+  // Supabase, comme la portée du plan de repas.
+  const [aisleOrder, setAisleOrder] = useState(() => getStoredAisleOrder() || DEFAULT_AISLE_ORDER);
 
   const items = activeList ? activeList.items : [];
 
@@ -104,9 +111,43 @@ export default function ShoppingView({
     return { unchecked, bought, grouped, aisleCount: Object.keys(grouped).length };
   }, [items]);
 
+  // Rayons actuellement affichés (ceux de `grouped`), triés selon l'ordre
+  // personnalisé mémorisé — un rayon absent de `aisleOrder` (jamais vu, ex.
+  // ajout futur à AISLES) se positionne selon l'ordre par défaut plutôt
+  // qu'en toute fin. Recalculé seulement quand `grouped` ou `aisleOrder`
+  // changent réellement, pas à chaque rendu.
+  const orderedAisleKeys = useMemo(() => {
+    const present = Object.keys(grouped);
+    const known = aisleOrder.filter((a) => present.includes(a));
+    const unknown = present
+      .filter((a) => !aisleOrder.includes(a))
+      .sort((a, b) => DEFAULT_AISLE_ORDER.indexOf(a) - DEFAULT_AISLE_ORDER.indexOf(b));
+    return [...known, ...unknown];
+  }, [grouped, aisleOrder]);
+
+  // État local pour l'affichage EN DIRECT pendant le glissement (Framer
+  // appelle onReorder en continu, pas seulement au relâchement) — même
+  // principe que `localEntries` dans PlanningMealItemsList.jsx. Resynchronisé
+  // dès que l'ordre affiché change pour une raison EXTÉRIEURE au glissement
+  // (article coché/décoché faisant apparaître/disparaître un rayon...).
+  const [visibleAisles, setVisibleAisles] = useState(orderedAisleKeys);
+  useEffect(() => { setVisibleAisles(orderedAisleKeys); }, [orderedAisleKeys]);
+
+  // Un seul commit (mémorisation) au relâchement du glissement, jamais
+  // pendant (voir ShoppingAisleBlock.jsx, commitDrag) — les rayons non
+  // affichés en ce moment (ex. "Autre" si aucun article non classé) gardent
+  // leur position relative d'avant, ajoutée à la suite.
+  const commitAisleOrder = () => {
+    const others = aisleOrder.filter((a) => !visibleAisles.includes(a));
+    const next = [...visibleAisles, ...others];
+    setAisleOrder(next);
+    storeAisleOrder(next);
+  };
+
   const buildListText = () => {
     const lines = [`🛒 ${activeList ? activeList.name : t("shopping.defaultListName")} — Le Grimoire de Morgane`, ""];
-    Object.entries(grouped).forEach(([aisle, list]) => {
+    orderedAisleKeys.forEach((aisle) => {
+      const list = grouped[aisle];
       lines.push(`${dict.labels[aisle] || aisle} :`);
       list.forEach((it) => lines.push(`- ${Math.round(it.qty * 100) / 100}${it.unit ? ` ${it.unit}` : ""} ${translateRecipeText(it.name, language)}`));
       lines.push("");
@@ -214,37 +255,31 @@ export default function ShoppingView({
               <SwipeFlourish onSwipeRight={handleAppleCopy} onSwipeLeft={handleAppleReset} onTap={handleAppleReset} />
             </div>
 
-            {Object.entries(grouped).map(([aisle, list]) => (
-              <div key={aisle} className="aisle-block">
-                <h4>
-                  <span className="aisle-icon" aria-hidden="true">{aisleIcon(aisle)}</span>
-                  {dict.labels[aisle] || aisle}
-                  <span className="aisle-count">{list.length}</span>
-                </h4>
-                <ul className="shopping-list">
-                  {/* mode="popLayout" : l'article qui sort (suppression ou
-                      coche, voir ShoppingItemRow.jsx) est retiré du flux DÈS
-                      le début de son fondu au lieu d'attendre sa fin — les
-                      articles suivants (qui ont "layout") glissent donc tout
-                      de suite pour combler l'espace, au lieu de sauter
-                      d'un coup une fois l'article disparu. */}
-                  <AnimatePresence mode="popLayout" initial={false}>
-                    {list.map((it) => (
-                      <ShoppingItemRow
-                        key={it.id}
-                        item={it}
-                        checked={false}
-                        onToggle={onToggleItem}
-                        onAdjust={onAdjustQty}
-                        onDelete={onDeleteItem}
-                        onOpenWheel={setWheelItem}
-                        pressDuration={pressDuration}
-                      />
-                    ))}
-                  </AnimatePresence>
-                </ul>
-              </div>
-            ))}
+            {/* Un seul <Reorder.Group> pour les BLOCS DE RAYON eux-mêmes
+                (pas pour les articles qu'ils contiennent, voir
+                ShoppingAisleBlock.jsx pour l'AnimatePresence par-article
+                qui reste inchangée à l'intérieur de chacun) — glisser
+                réordonne les rayons entre eux, "apprend" l'agencement du
+                magasin de l'utilisateur, et mémorise cet ordre localement
+                (voir commitAisleOrder ci-dessus). */}
+            <Reorder.Group as="div" axis="y" values={visibleAisles} onReorder={setVisibleAisles}>
+              {visibleAisles.map((aisle) => (
+                <ShoppingAisleBlock
+                  key={aisle}
+                  aisle={aisle}
+                  list={grouped[aisle]}
+                  aisleLabel={dict.labels[aisle] || aisle}
+                  onCommitOrder={commitAisleOrder}
+                  itemProps={{
+                    onToggle: onToggleItem,
+                    onAdjust: onAdjustQty,
+                    onDelete: onDeleteItem,
+                    onOpenWheel: setWheelItem,
+                    pressDuration,
+                  }}
+                />
+              ))}
+            </Reorder.Group>
 
             {bought.length > 0 && (
               <div className="aisle-block bought-block">
