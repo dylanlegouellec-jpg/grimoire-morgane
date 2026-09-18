@@ -149,6 +149,17 @@ export const SHOPPING_CSS = `
   margin-left: auto; font-family: 'EB Garamond', serif; font-style: italic; letter-spacing: 0; text-transform: none;
   color: var(--ink-soft); font-size: 0.72rem;
 }
+/* Poignée de glisser-déposer des RAYONS entre eux (voir ShoppingAisleBlock.jsx)
+   — même geste/allure que .planning-meal-drag-handle (planning.css.js) et
+   .row-drag-handle (forms.css.js), toujours visible ici (pas de "mode
+   réorganisation" à activer : rien d'autre sur cet en-tête ne réagit au tap). */
+.aisle-drag-handle {
+  flex-shrink: 0; width: 22px; height: 22px; margin-right: -2px; border-radius: 6px;
+  background: none; border: none; color: var(--ink-soft); cursor: grab;
+  display: flex; align-items: center; justify-content: center;
+  touch-action: none;
+}
+.aisle-drag-handle:active { cursor: grabbing; background: var(--surface); }
 /* --- Section "Articles achetés" repliable --- */
 .bought-block { margin-bottom: 4px; }
 .bought-toggle {
