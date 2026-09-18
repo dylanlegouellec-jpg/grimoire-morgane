@@ -363,6 +363,27 @@ export default function useOfflineSync({
     return () => clearInterval(interval);
   }, [connectionStatus, attemptFlush]);
 
+  // Filet de sécurité supplémentaire : relance un flush au retour de l'onglet
+  // au premier plan si on est déjà "online". Sans lui, une mise en arrière-
+  // plan prolongée peut voir le minuteur périodique ci-dessus throttlé/
+  // suspendu par le navigateur (comportement standard iOS/Android) — revenir
+  // au premier plan ne redéclenche alors qu'un ping (voir
+  // useConnectionStatus.js), qui reconfirme "online" SANS FAIRE CHANGER cette
+  // valeur, donc sans redéclencher l'effet basé sur `connectionStatus`
+  // au-dessus : jusqu'à PENDING_QUEUE_RETRY_MS de retard restait alors
+  // possible avant qu'une modification en attente ne reparte. Gated sur
+  // `connectionStatus === "online"` (pas seulement "visible") pour ne jamais
+  // gaspiller un essai de la file (voir MAX_ACTION_RETRIES, utils/supabase.js)
+  // sur une tentative perdue d'avance pendant qu'on est réellement hors-ligne.
+  useEffect(() => {
+    if (!SUPABASE_READY) return undefined;
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible" && connectionStatus === "online") attemptFlush();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [connectionStatus, attemptFlush]);
+
   // Supabase Realtime : synchronise en direct les changements faits
   // depuis un autre appareil connecté au même grimoire.
   useEffect(() => {

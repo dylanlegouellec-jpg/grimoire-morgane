@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   enqueueOfflineAction,
   getOfflineQueue,
@@ -80,5 +80,44 @@ describe("offlineQueue", () => {
     enqueueOfflineAction({ table: "recipes", type: "insert", payload: {} });
     clearOfflineQueue();
     expect(getOfflineQueue()).toEqual([]);
+  });
+});
+
+// Instance de module à part (vi.resetModules + import dynamique) : la
+// bascule en mémoire est un état de module PERMANENT pour le reste de la
+// session (voir offlineQueue.js, `memoryFallback`) — la déclencher sur le
+// même module que les tests ci-dessus les ferait tous basculer en mémoire à
+// leur tour dès que celui-ci s'exécute, quel que soit l'ordre réel
+// d'exécution des tests.
+describe("offlineQueue — repli mémoire si localStorage échoue", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("bascule en mémoire dès le premier échec d'écriture, sans perdre l'action mise en file au même moment", async () => {
+    vi.resetModules();
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    // Sur le PROTOTYPE (pas une réassignation directe sur l'instance) : le
+    // Storage de jsdom expose ses clés via un proxy qui intercepte aussi les
+    // affectations directes de propriété, une simple réassignation de
+    // `localStorage.setItem` ne remplace donc pas réellement la méthode
+    // appelée en interne par offlineQueue.js.
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("QuotaExceededError");
+    });
+
+    const fresh = await import("../offlineQueue");
+    fresh.enqueueOfflineAction({ table: "recipes", type: "insert", payload: { title: "Perdue ?" } });
+
+    // L'action reste lisible malgré l'échec d'écriture localStorage — plus
+    // le silence total d'avant (aucun repli réel derrière le commentaire).
+    expect(fresh.getOfflineQueue()).toHaveLength(1);
+    expect(fresh.getOfflineQueue()[0].payload.title).toBe("Perdue ?");
+    expect(consoleErrorSpy).toHaveBeenCalled();
+
+    // Le repli fait foi pour tout le reste de la session, pas seulement le
+    // tout premier échec : une action suivante reste elle aussi visible.
+    fresh.enqueueOfflineAction({ table: "recipes", type: "insert", payload: { title: "Deuxième" } });
+    expect(fresh.getOfflineQueue()).toHaveLength(2);
   });
 });
