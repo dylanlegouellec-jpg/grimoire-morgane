@@ -1,3 +1,5 @@
+import { HERO_TREATMENTS, DEFAULT_HERO_TREATMENT } from "../constants";
+
 /* ------------------------------------------------------------------ */
 /*  RÉGLAGES LOCAUX (repli hors-ligne)                                  */
 /*                                                                      */
@@ -337,6 +339,30 @@ export function getStoredAisleOrder() {
 export function storeAisleOrder(order) {
   try {
     localStorage.setItem(AISLE_ORDER_KEY, JSON.stringify(order));
+  } catch {
+    /* rien à faire si le stockage échoue */
+  }
+}
+
+/* --- Habillage du visuel de recette (fiche détail) ----------------------
+   Purement esthétique et purement local à l'appareil, comme l'ordre des
+   rayons ci-dessus — voir constants/index.js, HERO_TREATMENTS/
+   DEFAULT_HERO_TREATMENT pour la liste des valeurs valides. */
+const HERO_TREATMENT_KEY = "grimoire_hero_treatment";
+
+export function getStoredHeroTreatment() {
+  try {
+    const v = localStorage.getItem(HERO_TREATMENT_KEY);
+    if (HERO_TREATMENTS.some((t) => t.key === v)) return v;
+  } catch {
+    /* repli ci-dessous */
+  }
+  return DEFAULT_HERO_TREATMENT;
+}
+
+export function storeHeroTreatment(key) {
+  try {
+    localStorage.setItem(HERO_TREATMENT_KEY, key);
   } catch {
     /* rien à faire si le stockage échoue */
   }

@@ -13,6 +13,7 @@ import DishArt from "../art/DishArt";
 import Flourish from "../common/Flourish";
 import Seal from "../common/Seal";
 import AnimatedNumber from "../common/AnimatedNumber";
+import HeroTreatment, { heroTreatmentClassName, isLegendTreatment } from "./HeroTreatment";
 
 // Chargée à la demande : RecipeDetail est monté dès qu'on ouvre une seule
 // recette (voir AppShell.jsx), mais partager n'est qu'une action parmi
@@ -59,7 +60,7 @@ function FadeInItem({ root, reducedMotion, className, children }) {
   );
 }
 
-export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareText, showToast, showNutriscore = true }) {
+export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareText, showToast, showNutriscore = true, heroTreatment = "fondu" }) {
   // Sécurisation du nombre de portions initiales
   const baseServings = Number(recipe?.servings) || 1;
   const [servings, setServings] = useState(() => baseServings);
@@ -225,7 +226,7 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
                 "Réduire les animations" système, comme côté carte. */}
             <motion.div
               ref={heroRef}
-              className="detail-hero"
+              className={`detail-hero ${heroTreatmentClassName(heroTreatment)}`}
               layoutId={prefersReducedMotion ? undefined : `recipe-photo-${recipe.id}`}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
             >
@@ -235,15 +236,30 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
               >
                 <DishArt recipe={recipe} />
               </motion.div>
-              <div className="detail-hero-fade" />
-            </motion.div>
-            <div className="card-top-row" style={{ marginTop: 4 }}>
-              <span className={`chip ${categoryClass(recipe)}`}>{dict.labels[categoryLabel(recipe)] || categoryLabel(recipe)}</span>
-              {showNutriscore && (
-                <span className="nutri-badge" style={{ background: NUTRI_COLORS[nutri] }}>{nutri}</span>
+              <HeroTreatment treatment={heroTreatment} />
+              {isLegendTreatment(heroTreatment) && (
+                <div className="hero-legende-caption">
+                  <div className="card-top-row">
+                    <span className={`chip ${categoryClass(recipe)}`}>{dict.labels[categoryLabel(recipe)] || categoryLabel(recipe)}</span>
+                    {showNutriscore && (
+                      <span className="nutri-badge" style={{ background: NUTRI_COLORS[nutri] }}>{nutri}</span>
+                    )}
+                  </div>
+                  <h2 className="dropcap-title">{translateRecipeText(recipe.title, language)}</h2>
+                </div>
               )}
-            </div>
-            <h2 className="dropcap-title">{translateRecipeText(recipe.title, language)}</h2>
+            </motion.div>
+            {!isLegendTreatment(heroTreatment) && (
+              <>
+                <div className="card-top-row" style={{ marginTop: 4 }}>
+                  <span className={`chip ${categoryClass(recipe)}`}>{dict.labels[categoryLabel(recipe)] || categoryLabel(recipe)}</span>
+                  {showNutriscore && (
+                    <span className="nutri-badge" style={{ background: NUTRI_COLORS[nutri] }}>{nutri}</span>
+                  )}
+                </div>
+                <h2 className="dropcap-title">{translateRecipeText(recipe.title, language)}</h2>
+              </>
+            )}
             <div className="card-meta" style={{ marginBottom: 10 }}>
               <span><Clock size={13} /> {recipe.time || recipe.prep_time || 0} min</span>
               {recipe.carbs ? (

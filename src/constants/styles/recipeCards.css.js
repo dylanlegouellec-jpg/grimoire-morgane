@@ -270,6 +270,77 @@ export const RECIPE_CARDS_CSS = `
   background: linear-gradient(to bottom, transparent 75%, var(--parchment) 100%);
   pointer-events: none;
 }
+
+/* --- Habillages alternatifs du visuel de recette (voir Réglages >        */
+/* Apparence > Visuel de la fiche recette, HeroTreatmentPreview.jsx) ---    */
+/* "fondu" (ci-dessus) reste plein cadre, bord à bord ; les 5 autres         */
+/* réclament tous une marge visible autour de la photo (voir                 */
+/* .detail-hero-inset, qui neutralise le bord-à-bord de .detail-hero          */
+/* ci-dessus) — un bord doré/festonné/corné n'a de sens que si le fond de      */
+/* la page reste visible tout autour de la photo. */
+.detail-hero-inset {
+  margin: 0; width: 100%; border-radius: 20px; overflow: hidden;
+  box-shadow: 0 6px 16px rgba(42,32,19,0.18);
+}
+
+.hero-treat-cadre { border: 3px solid var(--gold); }
+.hero-corner {
+  position: absolute; width: 20px; height: 20px; border: 3px solid var(--gold-light);
+  pointer-events: none;
+}
+.hero-corner-tl { top: -6px; left: -6px; border-width: 3px 0 0 3px; border-radius: 6px 0 0 0; }
+.hero-corner-tr { top: -6px; right: -6px; border-width: 3px 3px 0 0; border-radius: 0 6px 0 0; }
+.hero-corner-bl { bottom: -6px; left: -6px; border-width: 0 0 3px 3px; border-radius: 0 0 0 6px; }
+.hero-corner-br { bottom: -6px; right: -6px; border-width: 0 3px 3px 0; border-radius: 0 0 6px 0; }
+
+/* Poinçon en dents de scie : un bandeau couleur parchemin, masqué en
+   demi-cercles répétés, posé sur le bord bas de la photo — voir le
+   commentaire détaillé de la première version dans l'historique Git ;
+   appliquer le masque DIRECTEMENT sur la photo (au lieu de ce bandeau
+   séparé) rendait tout le reste de la photo transparent, faute de
+   couvrir toute sa hauteur. */
+.scallop-cutter {
+  position: absolute; left: 0; right: 0; bottom: -1px; height: 13px;
+  background: var(--parchment);
+  -webkit-mask-image: radial-gradient(circle at 11px 13px, black 12px, transparent 12.5px);
+  mask-image: radial-gradient(circle at 11px 13px, black 12px, transparent 12.5px);
+  -webkit-mask-size: 22px 13px; mask-size: 22px 13px;
+  -webkit-mask-repeat: repeat-x; mask-repeat: repeat-x;
+}
+
+.hero-legende-veil {
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom, transparent 35%, rgba(42,32,19,0.55) 68%, rgba(42,32,19,0.92) 100%);
+  pointer-events: none;
+}
+.hero-legende-caption { position: absolute; left: 0; right: 0; bottom: 0; padding: 16px 18px 18px; }
+.hero-legende-caption .chip { background: var(--gold-light); color: var(--ink); }
+.hero-legende-caption .dropcap-title { color: #f6ecd2; margin: 8px 0 0; }
+
+.hero-vignette-shadow { position: absolute; inset: 0; box-shadow: inset 0 0 46px 18px rgba(42,32,19,0.4); pointer-events: none; }
+
+.hero-coin-shadow {
+  position: absolute; right: -2px; bottom: -2px; width: 0; height: 0;
+  border-style: solid; border-width: 0 0 46px 46px;
+  border-color: transparent transparent rgba(20,15,8,0.35) transparent;
+  filter: blur(3px); pointer-events: none;
+}
+.hero-coin-fold {
+  position: absolute; right: -2px; bottom: -2px; width: 0; height: 0;
+  border-style: solid; border-width: 0 0 42px 42px;
+  border-color: transparent transparent var(--parchment) transparent;
+  pointer-events: none;
+}
+
+/* Aperçu dans Réglages > Apparence > Visuel de la fiche recette (voir
+   HeroTreatmentPreview.jsx) : réutilise le même .detail-hero que la vraie
+   fiche recette (un seul rendu à maintenir pour les 6 réglages), mais son
+   bord-à-bord (margin négative, pensée pour la page recette elle-même)
+   n'a pas de sens dans une carte de réglages — neutralisé ici pour les 6
+   aperçus, "fondu" y compris (son fondu reste visible, seul le bord-à-bord
+   disparaît, sans conséquence pour un aperçu de cette taille). */
+.detail-hero.hero-preview-hero { margin: 0; width: 100%; border-radius: 14px; }
+.hero-preview-mini .detail-hero.hero-preview-hero { border-radius: 10px; }
 .detail-scroll { position: relative; overscroll-behavior: contain; touch-action: pan-y; }
 .detail-scroll-hint { text-align: center; color: var(--line); font-size: 1.2rem; margin-top: 18px; letter-spacing: 4px; }
 .portions-adjuster {

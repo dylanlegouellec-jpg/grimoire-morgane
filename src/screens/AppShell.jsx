@@ -99,6 +99,8 @@ export default function AppShell({
     setShowNutriscore,
     navOpacity,
     setNavOpacity,
+    heroTreatment,
+    setHeroTreatment,
     textSize,
     setTextSize,
     language,
@@ -553,6 +555,7 @@ export default function AppShell({
             shareText={shareText}
             showToast={showToast}
             showNutriscore={showNutriscore}
+            heroTreatment={heroTreatment}
           />
         )}
       </AnimatePresence>
@@ -661,6 +664,8 @@ export default function AppShell({
             onSetShowNutriscore={setShowNutriscore}
             navOpacity={navOpacity}
             onSetNavOpacity={setNavOpacity}
+            heroTreatment={heroTreatment}
+            onSetHeroTreatment={setHeroTreatment}
             textSize={textSize}
             onSetTextSize={setTextSize}
             language={language}

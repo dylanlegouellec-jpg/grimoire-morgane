@@ -3,6 +3,7 @@ import { useTranslation } from "../../contexts/LanguageContext";
 import Flourish from "./Flourish";
 import SegmentedControl from "./SegmentedControl";
 import Switch from "./Switch";
+import HeroTreatmentPreview from "./HeroTreatmentPreview";
 import { LANGUAGE_OPTIONS } from "./language";
 
 /* ------------------------------------------------------------------ */
@@ -19,6 +20,8 @@ export default function AppearanceSettingsModal({
   onSetShowNutriscore,
   navOpacity,
   onSetNavOpacity,
+  heroTreatment,
+  onSetHeroTreatment,
 }) {
   const { t } = useTranslation();
 
@@ -85,6 +88,12 @@ export default function AppearanceSettingsModal({
           <Switch checked={!!showNutriscore} onChange={onSetShowNutriscore} label={t("settings.nutriscoreBadge")} />
         </div>
       </div>
+
+      <p className="ios-group-title">{t("settings.heroTreatmentTitle")}</p>
+      <p className="hint" style={{ fontStyle: "normal", marginTop: -4 }}>
+        {t("settings.heroTreatmentHint")}
+      </p>
+      <HeroTreatmentPreview value={heroTreatment} onChange={onSetHeroTreatment} />
     </>
   );
 }
