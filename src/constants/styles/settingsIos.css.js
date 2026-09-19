@@ -58,6 +58,26 @@ export const SETTINGS_IOS_CSS = `
   font-family: 'Cinzel', serif; font-size: 0.85rem; letter-spacing: 0.5px; text-transform: uppercase;
 }
 
+/* Sélecteur "Visuel de la fiche recette" (AppearanceSettingsModal.jsx,
+   HeroTreatmentPreview.jsx) : un grand aperçu du réglage actif, puis une
+   rangée de 6 vignettes-boutons (une par habillage) — taper une vignette
+   met à jour l'aperçu au-dessus INSTANTANÉMENT (avant même de valider),
+   pour comparer sans naviguer ailleurs. */
+.hero-preview-big { padding: 10px; }
+.hero-swatch-row {
+  display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 2px;
+  -webkit-overflow-scrolling: touch;
+}
+.hero-swatch {
+  flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  width: 64px; padding: 4px; border-radius: 10px; border: 2px solid transparent;
+  background: none; cursor: pointer;
+}
+.hero-swatch.active { border-color: var(--gold); background: rgba(179,135,42,0.1); }
+.hero-swatch-label {
+  font-family: 'EB Garamond', serif; font-size: 0.62rem; line-height: 1.2; text-align: center; color: var(--ink-soft);
+}
+
 .ios-group .settings-row { padding: 11px 14px; }
 .ios-group .settings-row + .settings-row { border-top: 1px solid var(--line); }
 

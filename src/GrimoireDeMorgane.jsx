@@ -18,6 +18,8 @@ import {
   storeLanguage,
   getStoredOnboardingCompleted,
   storeOnboardingCompleted,
+  getStoredHeroTreatment,
+  storeHeroTreatment,
 } from "./utils/localSettings";
 import { getProfile, saveProfile, pressDurationFromDb } from "./utils/profile";
 import { getOnboardingCompletedFromProfile, saveOnboardingCompletedToProfile } from "./utils/onboarding";
@@ -130,6 +132,13 @@ export default function GrimoireDeMorgane() {
   const setNavOpacity = (value) => {
     storeNavOpacity(value);
     setNavOpacityState(value);
+  };
+  // Purement esthétique, purement local à l'appareil (voir constants/index.js,
+  // HERO_TREATMENTS) — même principe que navOpacity ci-dessus.
+  const [heroTreatment, setHeroTreatmentState] = useState(() => getStoredHeroTreatment());
+  const setHeroTreatment = (key) => {
+    storeHeroTreatment(key);
+    setHeroTreatmentState(key);
   };
   // Réglage mémorisé localement uniquement (pas encore de vraie traduction
   // à synchroniser — voir la note dans utils/localSettings.js).
@@ -374,6 +383,8 @@ export default function GrimoireDeMorgane() {
     setShowNutriscore,
     navOpacity,
     setNavOpacity,
+    heroTreatment,
+    setHeroTreatment,
     textSize,
     setTextSize,
     language,

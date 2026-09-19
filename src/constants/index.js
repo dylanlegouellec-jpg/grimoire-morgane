@@ -16,6 +16,26 @@ export const FILTERS = [
   { key: "sucre", label: "Sucré" },
 ];
 
+/* ------------------------------------------------------------------ */
+/*  HABILLAGE DU VISUEL DE RECETTE (fiche détail, voir RecipeDetail.jsx) */
+/*  Purement esthétique, purement local à l'appareil (voir              */
+/*  utils/localSettings.js, getStoredHeroTreatment) — chaque membre du    */
+/*  foyer peut choisir le sien sans affecter les autres. "fondu" est le    */
+/*  seul traitement plein cadre (bord à bord, comme avant cette liste) ;    */
+/*  les 5 autres encadrent la photo avec une marge (voir .detail-hero-inset,*/
+/*  recipeCards.css.js) — un bord doré/festonné/corné n'a de sens que si     */
+/*  le fond de la page reste visible tout autour.                            */
+/* ------------------------------------------------------------------ */
+export const HERO_TREATMENTS = [
+  { key: "fondu", label: "Fondu" },
+  { key: "cadre", label: "Cadre doré" },
+  { key: "feston", label: "Bord festonné" },
+  { key: "legende", label: "Voile et légende" },
+  { key: "vignette", label: "Vignette naturelle" },
+  { key: "coin", label: "Coin corné" },
+];
+export const DEFAULT_HERO_TREATMENT = "fondu";
+
 
 /* ------------------------------------------------------------------ */
 /*  BASIQUES PAR DÉFAUT (Mon Frigo)                                    */

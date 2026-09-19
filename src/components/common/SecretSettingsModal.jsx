@@ -55,6 +55,8 @@ export default function SecretSettingsModal({
   onSetShowNutriscore,
   navOpacity,
   onSetNavOpacity,
+  heroTreatment,
+  onSetHeroTreatment,
   textSize,
   onSetTextSize,
   user,
@@ -314,6 +316,8 @@ export default function SecretSettingsModal({
               onSetShowNutriscore={onSetShowNutriscore}
               navOpacity={navOpacity}
               onSetNavOpacity={onSetNavOpacity}
+              heroTreatment={heroTreatment}
+              onSetHeroTreatment={onSetHeroTreatment}
             />
           )}
           {activeView === "accessibility" && (
