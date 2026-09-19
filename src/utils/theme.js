@@ -32,12 +32,26 @@ export function resolveTheme(theme) {
   return systemPrefersDark() ? "dark" : "light";
 }
 
+// Même couleurs que --parchment (theme.css.js) pour chaque thème — copiées
+// ici plutôt que lues depuis une variable CSS : au tout premier appel (au
+// démarrage), la feuille de style vient à peine d'être posée et une lecture
+// via getComputedStyle serait fragile (dépend de l'ordre de chargement),
+// alors qu'une balise <meta> HTML, elle, doit être correcte immédiatement.
+const THEME_COLOR_META = { light: "#f1e6c8", dark: "#1c1917" };
+
 // Applique le thème résolu sur <html data-theme="..."> pour que styles.css.js
-// puisse cibler [data-theme="dark"] partout où c'est nécessaire.
+// puisse cibler [data-theme="dark"] partout où c'est nécessaire — et sur la
+// balise <meta name="theme-color"> (voir index.html), pour que la barre
+// d'état d'une PWA installée (iOS/Android) affiche la même teinte que le
+// fond de l'app plutôt qu'une couleur figée à la construction de la page,
+// qui décroche dès que l'utilisateur choisit un thème différent de celui
+// de son système.
 export function applyTheme(theme) {
   const resolved = resolveTheme(theme);
   if (typeof document !== "undefined" && document.documentElement) {
     document.documentElement.setAttribute("data-theme", resolved);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", THEME_COLOR_META[resolved]);
   }
   return resolved;
 }
