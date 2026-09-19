@@ -103,7 +103,16 @@
          la webview sous la barre d'état et sa hauteur correspond enfin à la
          place qu'elle occupe réellement. -->
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="theme-color" content="#f5f0e1">
+    <!-- #f5f0e1 (blanc cassé générique) ne correspondait plus à --parchment
+         (#f1e6c8, la vraie couleur de fond de l'app depuis son thème
+         actuel) — un écart visible en haut de l'écran, la barre d'état
+         installée (icônes horloge/réseau/batterie) affichant une teinte
+         différente du reste de la page juste en dessous. Valeur "claire"
+         ici : premier repli avant que le JS n'ait tourné, voir applyTheme()
+         (utils/theme.js) qui corrige ensuite cette balise vers la vraie
+         couleur du thème réellement appliqué (clair/sombre/système, ET le
+         choix explicite de l'utilisateur s'il diffère du système). -->
+    <meta name="theme-color" content="#f1e6c8">
   </head>
   <body>
     <div id="root"></div>

@@ -35,8 +35,17 @@ export default defineConfig({
         short_name: "Grimoire",
         start_url: "/",
         display: "standalone",
-        background_color: "#f5f0e1",
-        theme_color: "#f5f0e1",
+        // Alignées sur --parchment (theme.css.js), pas un blanc cassé
+        // générique — sans ça, l'écran de démarrage (background_color) et
+        // la barre d'état Android (theme_color) d'une PWA installée
+        // affichaient une teinte visiblement différente du reste de l'app
+        // juste en dessous. Reste la valeur du thème clair : la balise
+        // <meta name="theme-color"> d'index.html, elle, est corrigée en
+        // direct par applyTheme() (utils/theme.js) selon le thème
+        // réellement actif — mais le manifest n'a qu'une seule valeur
+        // statique, sans notion de thème clair/sombre.
+        background_color: "#f1e6c8",
+        theme_color: "#f1e6c8",
         orientation: "portrait",
         icons: [
           {
