@@ -19,7 +19,12 @@ import { ingredientKey } from "../../utils/helpers";
 // abréviation courante de "cuillère à soupe" tapée à la volée (à ne pas
 // confondre avec le mot "cas" — jamais suivi de "de" devant un ingrédient
 // dans un vrai texte de recette).
-const LEADING_MEASURE_PREFIX = /^(c\.?\s?à\.?\s?s\.?|càs|cas|c\.?\s?à\.?\s?c\.?|cc|gousses?|sachets?|pinc[ée]es?|verres?|tasses?|tranches?|bottes?|cuill[eè]res?(\s+à\s+(soupe|caf[ée]))?)\s+d[e']\s*/i;
+// "d[e'’]" (pas juste "d[e']") : couvre aussi bien l'apostrophe droite que
+// l'apostrophe courbe — celle que la correction automatique iOS/Android
+// insère par défaut ("gousse d'ail" devient "gousse d'ail" à l'affichage,
+// mais PAS le même caractère Unicode) — sans les deux, "gousse d'ail" tapé
+// depuis un téléphone échappait déjà à ce nettoyage.
+const LEADING_MEASURE_PREFIX = /^(c\.?\s?à\.?\s?s\.?|càs|cas|c\.?\s?à\.?\s?c\.?|cc|gousses?|sachets?|pinc[ée]es?|verres?|tasses?|tranches?|bottes?|cuill[eè]res?(\s+à\s+(soupe|caf[ée]))?)\s+d[e'’]\s*/i;
 // Résidu de préposition française isolé (sans mot de mesure devant) —
 // typiquement "d'eau" ou "de sucre" laissé tel quel par un parseur de
 // texte libre qui n'a pas su séparer la préposition du reste.
@@ -27,6 +32,18 @@ const LEADING_PREPOSITION = /^d['’]|^de\s+/i;
 
 function stripLeadingMeasure(name) {
   return name.replace(LEADING_MEASURE_PREFIX, "").replace(LEADING_PREPOSITION, "").trim();
+}
+
+// Note/qualificatif entre parenthèses ("(facultatif)", "(au choix)",
+// "(bœuf ou mélange bœuf/porc)"...) : jamais le nom réel de l'ingrédient,
+// juste une précision annexe — retirée AVANT toute autre étape. Sans ça,
+// une même précision répétée sur deux recettes ("Œufs (bio)" / "Œufs (à
+// température ambiante)") produisait deux options de frigo distinctes pour
+// un seul ingrédient réel, et un mot comme "bœuf" niché dans la parenthèse
+// pouvait accidentellement faire "matcher" une tout autre catégorie que la
+// viande (voir FRIDGE_CATEGORIES plus bas).
+function stripParenthetical(name) {
+  return name.replace(/\([^)]*\)/g, " ").replace(/\s+/g, " ").trim();
 }
 
 // "Beurre" et pas "beurre" / "BEURRE" : seule la première lettre est
@@ -45,7 +62,15 @@ function toDisplayCase(name) {
 // particulier qui mériterait sa propre entrée.
 const CANONICAL_INGREDIENTS = [
   { test: /^beurre\b/i, label: "Beurre" },
-  { test: /(jaunes?|blancs?)\s+d[e']\s*(oeuf|œuf)s?|^oeufs?$|^œufs?$/i, label: "Œufs" },
+  // Pas de "$" final (contrairement à avant) : une déclinaison comme
+  // "Œufs extra-frais" ou "Œufs bio" doit fusionner avec "Œufs" au lieu de
+  // rester une option à part — seul un vrai qualificatif de format ("Jaunes
+  // d'œuf"/"Blancs d'œuf") mérite encore un test dédié, tout le reste après
+  // "œuf(s)" est une précision annexe, pas un ingrédient différent.
+  // Même remarque sur l'apostrophe courbe que LEADING_MEASURE_PREFIX
+  // ci-dessus : "Blancs d'œuf" tapé depuis un téléphone (apostrophe
+  // courbe) échappait sinon à la fusion vers "Œufs".
+  { test: /(jaunes?|blancs?)\s+d[e'’]\s*(oeuf|œuf)s?|^(oeuf|œuf)s?\b/i, label: "Œufs" },
   { test: /^cr[eè]me\b/i, label: "Crème" },
   { test: /^farine\b/i, label: "Farine" },
   { test: /^sucre\b/i, label: "Sucre" },
@@ -59,13 +84,23 @@ const CANONICAL_INGREDIENTS = [
   { test: /^chocolat\b/i, label: "Chocolat" },
   { test: /^citrons?\b/i, label: "Citron" },
   { test: /^pommes?\b(?!\s*de\s*terre)/i, label: "Pomme" },
+  { test: /^colorant\b/i, label: "Colorant" },
+  // Bac large, en dernier : qu'elle vienne d'une gousse, d'un extrait ou
+  // d'une fiche mal saisie ("Ousse de vanille", coquille pour "Gousse de
+  // vanille"), toute mention de vanille devient une seule et même option —
+  // c'est la précision (gousse/extrait/poudre) qui est ici jugée superflue
+  // pour une case à cocher "j'en ai dans mon frigo", pas l'ingrédient
+  // lui-même.
+  { test: /vanille/i, label: "Vanille" },
 ];
 
-// Point d'entrée unique de normalisation — retire les préfixes de mesure
-// parasites, fusionne les déclinaisons connues vers un nom canonique, et
-// harmonise la casse pour celles qui n'ont pas de règle dédiée.
+// Point d'entrée unique de normalisation — retire les parenthèses et
+// préfixes de mesure parasites, fusionne les déclinaisons connues vers un
+// nom canonique, et harmonise la casse pour celles qui n'ont pas de règle
+// dédiée.
 export function normalizeIngredientLabel(rawName) {
-  const stripped = stripLeadingMeasure(String(rawName || ""));
+  const withoutParens = stripParenthetical(String(rawName || ""));
+  const stripped = stripLeadingMeasure(withoutParens);
   if (!stripped) return "";
   const canonical = CANONICAL_INGREDIENTS.find((c) => c.test.test(stripped));
   return canonical ? canonical.label : toDisplayCase(stripped);
@@ -96,15 +131,27 @@ function isIgnoredIngredient(label) {
 export const FRIDGE_CATEGORIES = [
   {
     key: "frais", label: "Frais & Crèmerie", icon: "🧀",
-    test: /beurre|crème|lait|oeuf|œuf|fromage|yaourt|parmesan|gruyère|mascarpone|mozzarella|comté/i,
+    // "(?<!b)" exclut "bœuf"/"boeuf" : ces mots CONTIENNENT littéralement
+    // "œuf"/"oeuf" (b-œuf), un pur hasard orthographique qui faisait
+    // classer toute viande de bœuf dans "Frais & Crèmerie" au lieu de
+    // "Viandes & Poissons" (la catégorie testée juste après ne s'exécutait
+    // jamais, la première correspondance l'emportant toujours).
+    test: /beurre|crème|lait|(?<!b)(oeuf|œuf)|fromage|yaourt|parmesan|gruyère|mascarpone|mozzarella|comté/i,
   },
   {
     key: "fruits-legumes", label: "Fruits & Légumes", icon: "🥦",
-    test: /oignon|ail\b|carotte|tomate|pomme|citron|herbe|persil|basilic|thym|laurier|échalote|poireau|courgette|champignon|salade|pêche|fraise|orange|banane|aubergine|poivron|céleri|chou|radis|artichaut|avocat|mangue|raisin|abricot|framboise|myrtille|betterave|endive|navet|brocoli|épinard/i,
+    // "\bail\b" (double frontière, pas juste finale) : "ail" seul en fin de
+    // mot matchait aussi "corail" (comme dans "lentilles corail") ou
+    // "détail", qui n'ont rien à voir avec la gousse d'ail.
+    test: /oignon|\bail\b|carotte|tomate|pomme|citron|herbe|persil|basilic|thym|laurier|échalote|poireau|courgette|champignon|salade|pêche|fraise|orange|banane|aubergine|poivron|céleri|chou|radis|artichaut|avocat|mangue|raisin|abricot|framboise|myrtille|betterave|endive|navet|brocoli|épinard/i,
   },
   {
     key: "viandes-poissons", label: "Viandes & Poissons", icon: "🥩",
-    test: /poulet|boeuf|bœuf|porc|veau|agneau|lardon|jambon|poisson|saumon|crevette|canard|thon|cabillaud|dinde|chorizo|merguez|andouille|bacon|saucisse/i,
+    // "viande" en toutes lettres, pas seulement les espèces citées : une
+    // "Viande hachée" générique (sans précision bœuf/porc, ou dont la
+    // précision a été retirée par stripParenthetical) doit atterrir ici,
+    // pas dans "Épicerie & Placard" par défaut faute de meilleur candidat.
+    test: /poulet|boeuf|bœuf|porc|veau|agneau|viande|lardon|jambon|poisson|saumon|crevette|canard|thon|cabillaud|dinde|chorizo|merguez|andouille|bacon|saucisse/i,
   },
   {
     key: "epices", label: "Épices, Huiles & Condiments", icon: "🧂",
