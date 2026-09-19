@@ -11,15 +11,25 @@
 export const AISLES = [
   {
     key: "fruits-legumes", label: "Fruits & Légumes", icon: "🥦",
-    test: /oignon|ail\b|carotte|tomate|pomme(?!\s*de\s*terre)|pomme de terre|patate|citron|herbe|persil|basilic|thym|laurier|échalote|poireau|courgette|champignon|salade|pêche|fraise|orange|banane|aubergine|poivron|céleri|chou|radis|artichaut|avocat|mangue|raisin|abricot|framboise|myrtille|betterave|endive|navet|brocoli|épinard/i,
+    // "\bail\b" (double frontière) : "ail" seul en fin de mot matchait
+    // aussi "corail" (ex. "lentilles corail") ou "détail", sans rapport
+    // avec la gousse d'ail.
+    test: /oignon|\bail\b|carotte|tomate|pomme(?!\s*de\s*terre)|pomme de terre|patate|citron|herbe|persil|basilic|thym|laurier|échalote|poireau|courgette|champignon|salade|pêche|fraise|orange|banane|aubergine|poivron|céleri|chou|radis|artichaut|avocat|mangue|raisin|abricot|framboise|myrtille|betterave|endive|navet|brocoli|épinard/i,
   },
   {
     key: "produits-frais", label: "Produits Frais & Crèmerie", icon: "🧀",
-    test: /beurre|crème|lait(?!\s*de\s*coco)|oeuf|œuf|fromage|yaourt|parmesan|gruyère|mascarpone|mozzarella|comté/i,
+    // "(?<!b)" exclut "bœuf"/"boeuf" : ces mots CONTIENNENT littéralement
+    // "œuf"/"oeuf" (b-œuf), un pur hasard orthographique qui classait toute
+    // viande de bœuf ici au lieu de "Viandes & Poissons" (jamais atteint,
+    // la première correspondance l'emportant toujours).
+    test: /beurre|crème|lait(?!\s*de\s*coco)|(?<!b)(oeuf|œuf)|fromage|yaourt|parmesan|gruyère|mascarpone|mozzarella|comté/i,
   },
   {
     key: "viandes-poissons", label: "Viandes & Poissons", icon: "🥩",
-    test: /poulet|boeuf|bœuf|porc|veau|agneau|lardon|jambon|poisson|saumon|crevette|canard|thon|cabillaud|dinde|chorizo|merguez|andouille|bacon|saucisse/i,
+    // "viande" en toutes lettres : une "Viande hachée" générique (sans
+    // précision bœuf/porc) doit atterrir ici, pas retomber dans "Autre"
+    // faute de mot-clé plus spécifique.
+    test: /poulet|boeuf|bœuf|porc|veau|agneau|viande|lardon|jambon|poisson|saumon|crevette|canard|thon|cabillaud|dinde|chorizo|merguez|andouille|bacon|saucisse/i,
   },
   {
     key: "epicerie", label: "Épicerie Salée & Sucrée", icon: "🌾",
