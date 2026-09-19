@@ -72,6 +72,31 @@ export default function useOfflineSync({
   const lastSyncedBasicsRef = useRef(undefined);
   const lastSyncedMealPlanRef = useRef(undefined);
 
+  // Bug réel corrigé ici (pas juste théorique — "je coche un ingrédient du
+  // frigo et parfois ça le décoche tout seul, je dois recliquer") : entre
+  // le moment où une modification locale est PROGRAMMÉE (debounce
+  // SAVE_DEBOUNCE_MS) et celui où son PATCH a effectivement abouti,
+  // `lastSyncedXRef` pointe encore vers l'ANCIENNE valeur serveur. Si un
+  // événement Realtime arrive dans cette fenêtre (l'écho du PATCH d'UNE
+  // modification précédente, encore en vol, pas forcément celle-ci) AVANT
+  // que le PATCH de la modification la plus récente ne soit parti, le
+  // handler Realtime écrasait `pantry`/`basics`/`mealPlan` avec cette
+  // valeur PÉRIMÉE — et mettait à jour `lastSyncedXRef` en conséquence, ce
+  // qui faisait ensuite croire à l'effet de sauvegarde que la modification
+  // qu'il s'apprêtait à envoyer était "déjà synchronisée" (comparaison
+  // sérialisée égale) : il l'annulait silencieusement sans jamais l'écrire
+  // en base. Deux coches rapprochées sur des ingrédients différents (le cas
+  // d'usage normal de cet écran) suffisaient à déclencher la course. Ces
+  // refs retiennent qu'une modification locale est en attente d'envoi (du
+  // clic jusqu'à la résolution du PATCH) : tant que c'est le cas, le
+  // handler Realtime ignore ce qu'il reçoit pour CETTE tranche plutôt que
+  // d'écraser une valeur locale plus récente que celle du serveur — au pire
+  // une modification concurrente d'un autre appareil est retardée jusqu'à
+  // la prochaine sauvegarde locale, jamais silencieusement perdue.
+  const pantryDirtyRef = useRef(false);
+  const basicsDirtyRef = useRef(false);
+  const mealPlanDirtyRef = useRef(false);
+
   // Second filet de sécurité (indépendant du mécanisme d'écho ci-dessus) :
   // un vrai debounce sur l'envoi réseau lui-même. Quelle qu'en soit la
   // cause exacte, aucun PATCH vers app_state ne peut plus partir moins de
@@ -225,6 +250,7 @@ export default function useOfflineSync({
     if (!ready || !SUPABASE_READY || !householdId) return undefined;
     const serialized = JSON.stringify(pantry);
     if (serialized === lastSyncedPantryRef.current) return undefined; // écho Realtime d'une sauvegarde qu'on vient de faire, pas une vraie modification
+    pantryDirtyRef.current = true; // voir pantryDirtyRef plus haut : bloque le handler Realtime tant que ceci n'est pas retombé à false
     if (pantrySaveTimerRef.current) clearTimeout(pantrySaveTimerRef.current);
     pantrySaveTimerRef.current = setTimeout(() => {
       // La ref n'est mise à jour qu'APRÈS coup (succès direct OU mise en
@@ -234,10 +260,13 @@ export default function useOfflineSync({
       // elle avait échoué en silence, et aucun mécanisme ne la reprenait
       // jamais ensuite (voir utils/supabase.js, saveAppState).
       saveAppState(householdId, { pantry })
-        .then(() => { lastSyncedPantryRef.current = serialized; })
+        .then(() => { lastSyncedPantryRef.current = serialized; pantryDirtyRef.current = false; })
         .catch((err) => {
           console.error("Échec de sauvegarde du frigo :", err);
           showToast("Impossible d'enregistrer le frigo — réessaie plus tard.");
+          // pantryDirtyRef reste à true : cette modification locale n'a
+          // jamais été confirmée en base, un écho Realtime ne doit donc
+          // toujours pas pouvoir l'écraser (voir le commentaire plus haut).
         });
     }, SAVE_DEBOUNCE_MS);
     return () => clearTimeout(pantrySaveTimerRef.current);
@@ -246,10 +275,11 @@ export default function useOfflineSync({
     if (!ready || !SUPABASE_READY || !householdId) return undefined;
     const serialized = JSON.stringify(basics);
     if (serialized === lastSyncedBasicsRef.current) return undefined;
+    basicsDirtyRef.current = true;
     if (basicsSaveTimerRef.current) clearTimeout(basicsSaveTimerRef.current);
     basicsSaveTimerRef.current = setTimeout(() => {
       saveAppState(householdId, { basics })
-        .then(() => { lastSyncedBasicsRef.current = serialized; })
+        .then(() => { lastSyncedBasicsRef.current = serialized; basicsDirtyRef.current = false; })
         .catch((err) => {
           console.error("Échec de sauvegarde des basiques :", err);
           showToast("Impossible d'enregistrer les basiques — réessaie plus tard.");
@@ -261,10 +291,11 @@ export default function useOfflineSync({
     if (!ready || !SUPABASE_READY || !householdId) return undefined;
     const serialized = JSON.stringify(mealPlan);
     if (serialized === lastSyncedMealPlanRef.current) return undefined;
+    mealPlanDirtyRef.current = true;
     if (mealPlanSaveTimerRef.current) clearTimeout(mealPlanSaveTimerRef.current);
     mealPlanSaveTimerRef.current = setTimeout(() => {
       saveAppState(householdId, { meal_plan: mealPlan })
-        .then(() => { lastSyncedMealPlanRef.current = serialized; })
+        .then(() => { lastSyncedMealPlanRef.current = serialized; mealPlanDirtyRef.current = false; })
         .catch((err) => {
           console.error("Échec de sauvegarde du plan de repas :", err);
           showToast("Impossible d'enregistrer le plan de repas — réessaie plus tard.");
@@ -426,15 +457,24 @@ export default function useOfflineSync({
         // PATCH en retour pour ce qui vient tout juste d'arriver du
         // serveur — voir le commentaire détaillé plus haut sur la boucle
         // d'écho.
-        if (Array.isArray(row.pantry)) {
+        // *DirtyRef.current === true : une modification locale de cette
+        // même tranche est en attente d'envoi (debounce pas encore écoulé,
+        // ou PATCH déjà parti mais pas encore résolu) — voir le
+        // commentaire détaillé sur ces refs plus haut. Cet événement
+        // Realtime peut alors être l'écho d'un PATCH ANTÉRIEUR, déjà
+        // dépassé par cette modification locale plus récente : l'appliquer
+        // écraserait silencieusement ce que l'utilisateur vient de faire.
+        // On l'ignore, la sauvegarde locale en cours écrira de toute façon
+        // l'état à jour dès qu'elle aboutira.
+        if (Array.isArray(row.pantry) && !pantryDirtyRef.current) {
           lastSyncedPantryRef.current = JSON.stringify(row.pantry);
           setPantry(row.pantry);
         }
-        if (Array.isArray(row.basics)) {
+        if (Array.isArray(row.basics) && !basicsDirtyRef.current) {
           lastSyncedBasicsRef.current = JSON.stringify(row.basics);
           setBasics(row.basics);
         }
-        if (Array.isArray(row.meal_plan)) {
+        if (Array.isArray(row.meal_plan) && !mealPlanDirtyRef.current) {
           lastSyncedMealPlanRef.current = JSON.stringify(row.meal_plan);
           setMealPlan(row.meal_plan);
         }
