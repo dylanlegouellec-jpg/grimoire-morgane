@@ -34,6 +34,13 @@ export const PAGE_MARGINS = [
 ];
 export const DEFAULT_PAGE_MARGIN = "normal";
 
+// Partagé entre CookbookDocument.jsx (règle CSS @page) et
+// utils/cookbookPdf.js (marges réelles du document jsPDF généré) — un
+// seul endroit qui sait résoudre un identifiant "fin/normal/large" en mm.
+export function marginMm(id) {
+  return (PAGE_MARGINS.find((m) => m.id === id) || PAGE_MARGINS[1]).mm;
+}
+
 export const PHOTO_SIZES = ["aucune", "moyenne", "grande"];
 export const DEFAULT_PHOTO_SIZE = "moyenne";
 
