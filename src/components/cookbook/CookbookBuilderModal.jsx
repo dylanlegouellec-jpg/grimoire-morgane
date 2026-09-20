@@ -6,7 +6,7 @@ import { triggerHaptic, categoryLabel, slugify, escapeHtml } from "../../utils/h
 import { translateRecipeText } from "../../utils/recipeTranslation";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { COOKBOOK_CSS } from "../../constants/styles/cookbook.css";
-import { generateCookbookPdf } from "../../utils/cookbookPdf";
+import { generateCookbookPdf, computeRecipeStartPages } from "../../utils/cookbookPdf";
 import {
   DEFAULT_COOKBOOK_CONFIG,
   COVER_COLORS,
@@ -60,6 +60,7 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
   const [config, setConfig] = useState(DEFAULT_COOKBOOK_CONFIG);
   const [showPreview, setShowPreview] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [pageStarts, setPageStarts] = useState({});
   const docRef = useRef(null);
   const sheetRef = useRef(null);
 
@@ -104,6 +105,37 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
     return true;
   };
 
+  // Mesure (géométrie DOM pure, aucune rasterisation — voir
+  // utils/cookbookPdf.js) la page de départ de chaque recette dans le
+  // document final, et repose la table des matières avec ces numéros AVANT
+  // toute prévisualisation/impression/téléchargement — signalé par
+  // l'utilisateur : la table des matières n'affichait jusqu'ici aucune
+  // référence de page. Toujours mesuré dans le contexte hors champ 800px
+  // (--rendering, même largeur que la génération PDF réelle) plutôt que
+  // dans le contexte d'affichage courant, pour que les numéros affichés
+  // correspondent à ce qui sera vraiment produit — même en ouvrant l'aperçu
+  // depuis un petit écran.
+  const refreshPageStarts = async () => {
+    if (!docRef.current || !sheetRef.current) return;
+    const hadPreview = sheetRef.current.classList.contains("cookbook-print-sheet--preview");
+    sheetRef.current.classList.remove("cookbook-print-sheet--preview");
+    sheetRef.current.classList.add("cookbook-print-sheet--rendering");
+    // Un repaint pour que .cookbook-page adopte bien la largeur hors champ
+    // avant de mesurer ses hauteurs réelles.
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    // La modale a pu être fermée/démontée pendant cette attente.
+    if (!docRef.current || !sheetRef.current) return;
+    const starts = computeRecipeStartPages(docRef.current, config, selectedRecipes.length);
+    const map = {};
+    selectedRecipes.forEach((r, i) => { map[r.id] = starts[i]; });
+    sheetRef.current.classList.remove("cookbook-print-sheet--rendering");
+    if (hadPreview) sheetRef.current.classList.add("cookbook-print-sheet--preview");
+    setPageStarts(map);
+    // Laisse React reposer la table des matières avec les nouveaux numéros
+    // avant que l'appelant ne poursuive (capture html2canvas ou impression).
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  };
+
   // Repli commun (PWA sans navigator.share, ou window.print() indisponible) :
   // télécharge un fichier HTML autonome reprenant EXACTEMENT le même
   // balisage que l'aperçu/l'impression (docRef pointe sur le même arbre
@@ -133,15 +165,17 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
     }
   };
 
-  const doOpenPreview = () => {
+  const doOpenPreview = async () => {
     if (!requireSelection()) return;
     triggerHaptic(15);
+    await refreshPageStarts();
     setShowPreview(true);
   };
 
   const doPrint = async () => {
     if (!requireSelection()) return;
     triggerHaptic(15);
+    await refreshPageStarts();
     if (isStandalonePWA()) {
       if (navigator.share) {
         try {
@@ -174,6 +208,7 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
     triggerHaptic(15);
     setGeneratingPdf(true);
     try {
+      await refreshPageStarts();
       if (sheetRef.current) sheetRef.current.classList.add("cookbook-print-sheet--rendering");
       const blob = await generateCookbookPdf(docRef.current, config);
       const url = URL.createObjectURL(blob);
@@ -394,7 +429,7 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
           </button>
         )}
         <div ref={docRef}>
-          <CookbookDocument recipes={selectedRecipes} config={config} />
+          <CookbookDocument recipes={selectedRecipes} config={config} pageStarts={pageStarts} />
         </div>
       </div>
     </>

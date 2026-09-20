@@ -1,4 +1,4 @@
-import { marginMm } from "../constants/cookbook";
+import { marginMm, PAGE_DIMENSIONS_MM } from "../constants/cookbook";
 
 /* ------------------------------------------------------------------ */
 /*  LIVRE DE CUISINE — génération d'un vrai fichier .pdf                 */
@@ -20,51 +20,143 @@ import { marginMm } from "../constants/cookbook";
 /*  bien plus longue et plus fragile entre l'aperçu et l'export.                                  */
 /* ------------------------------------------------------------------ */
 
+// Densité de rasterisation (voir html2canvas ci-dessous) — CSS px * SCALE =
+// canvas px. Utilisée aussi pour convertir les points de coupure calculés en
+// CSS px (mesure DOM, avant rasterisation) vers des coordonnées canvas.
+const SCALE = 2;
+
+// Jamais du contenu réel — quelques px d'arrondi (html2canvas capture la
+// taille réellement mise en page par le navigateur, arrondie au pixel
+// entier) : sans cette tolérance, une page dont le canvas fait ne serait-ce
+// que 1-2px de plus que la hauteur d'une page PDF déclenchait une page
+// supplémentaire pour ce reliquat quasi invisible — une page sur deux du
+// PDF téléchargé apparaissait alors entièrement blanche.
+const ROUNDING_TOLERANCE_PX = 4;
+
+// Éléments qu'une coupure de page ne doit jamais traverser en leur milieu :
+// une ligne d'ingrédient/étape, un sous-titre de groupe, le titre de
+// section ("Ingrédients"/"Préparation"), l'en-tête d'une recette (photo +
+// badges) — signalé par l'utilisateur : une recette dont la section
+// "Préparation" ne tenait pas entièrement sur une page se voyait coupée net
+// au milieu d'une étape plutôt que de basculer proprement sur la suivante.
+const ATOMIC_SELECTOR = "li, h3.cookbook-section-title, h2.cookbook-page-title, .cookbook-recipe-badges";
+
+function pageHeightPxFor(elementWidthPx, config) {
+  const pageMm = PAGE_DIMENSIONS_MM[config.format] || PAGE_DIMENSIONS_MM.A4;
+  const m = marginMm(config.margin);
+  const usableWidthMm = pageMm.width - m * 2;
+  const usableHeightMm = pageMm.height - m * 2;
+  const pxPerMm = elementWidthPx / usableWidthMm;
+  return usableHeightMm * pxPerMm;
+}
+
+// Calcule les points de coupure (en CSS px, relatifs au sommet de
+// `element`) d'une page logique trop haute pour une seule page physique —
+// en reculant chaque coupure candidate jusqu'au sommet du premier élément
+// "atomique" qu'elle traverserait, plutôt que de couper à une hauteur fixe
+// sans égard au contenu. Pure géométrie DOM (getBoundingClientRect),
+// AUCUNE rasterisation nécessaire : utilisée aussi bien pour compter les
+// pages à l'avance (computeRecipeStartPages, table des matières) que pour
+// découper l'image capturée ensuite (addElementAsPdfPages).
+export function computeBreakpoints(element, pageHeightPx) {
+  const rect = element.getBoundingClientRect();
+  const totalHeight = rect.height;
+
+  const atoms = Array.from(element.querySelectorAll(ATOMIC_SELECTOR))
+    .map((el) => {
+      const r = el.getBoundingClientRect();
+      return { top: r.top - rect.top, bottom: r.bottom - rect.top };
+    })
+    // Un élément plus haut qu'une page entière ne peut de toute façon pas
+    // être protégé — l'ignorer évite de reculer indéfiniment sur lui.
+    .filter((a) => a.bottom - a.top < pageHeightPx)
+    .sort((a, b) => a.top - b.top);
+
+  const breakpoints = [0];
+  let cursor = 0;
+  while (totalHeight - cursor > ROUNDING_TOLERANCE_PX) {
+    let candidate = cursor + pageHeightPx;
+    if (candidate >= totalHeight - ROUNDING_TOLERANCE_PX) {
+      breakpoints.push(totalHeight);
+      break;
+    }
+    const crossed = atoms.find(
+      (a) => a.top < candidate && a.bottom > candidate && a.top > cursor + ROUNDING_TOLERANCE_PX
+    );
+    if (crossed) candidate = crossed.top;
+    // Filet de sécurité anti-boucle infinie (ne devrait arriver que si un
+    // atome commence pile à `cursor`, cas déjà exclu ci-dessus par marge).
+    if (candidate <= cursor) candidate = cursor + pageHeightPx;
+    breakpoints.push(candidate);
+    cursor = candidate;
+  }
+  return breakpoints;
+}
+
+// Nombre de pages PDF que prendrait cet élément, SANS le rasteriser — sert
+// à calculer à l'avance les numéros de page de la table des matières (voir
+// computeRecipeStartPages ci-dessous), bien avant que la génération réelle
+// ne rastérise quoi que ce soit.
+function countPagesFor(element, config) {
+  const widthPx = element.getBoundingClientRect().width;
+  const pageHeightPx = pageHeightPxFor(widthPx, config);
+  return Math.max(1, computeBreakpoints(element, pageHeightPx).length - 1);
+}
+
+// Calcule la page de départ de chaque recette dans le document final —
+// AVANT toute rasterisation, à partir du DOM déjà mis en page (couverture +
+// éventuelle table des matières + une page par recette, dans cet ordre,
+// exactement ce que rend CookbookDocument.jsx). `containerEl` doit déjà
+// contenir ce DOM réel (peu importe que la table des matières affiche
+// encore ou non des numéros : leur ajout ne change pas sa hauteur).
+export function computeRecipeStartPages(containerEl, config, recipeCount) {
+  const pages = Array.from(containerEl.querySelectorAll(".cookbook-page"));
+  const recipePages = recipeCount > 0 ? pages.slice(pages.length - recipeCount) : [];
+  const headPages = recipeCount > 0 ? pages.slice(0, pages.length - recipeCount) : pages;
+
+  let page = 1;
+  headPages.forEach((p) => { page += countPagesFor(p, config); });
+
+  const starts = [];
+  recipePages.forEach((p) => {
+    starts.push(page);
+    page += countPagesFor(p, config);
+  });
+  return starts;
+}
+
 // Une "page" logique (.cookbook-page, ex. une recette avec beaucoup
-// d'ingrédients) peut être plus haute qu'une page PDF physique : on
-// découpe alors son image rasterisée en tranches de la hauteur utile
-// d'une page, chacune posée sur sa propre page PDF — jamais une seule
-// image débordant silencieusement hors de la page (ce que ferait un
-// simple addImage() sans découpe).
-async function addElementAsPdfPages(pdf, html2canvas, element, { marginMmValue, isFirstPageOfDoc }) {
+// d'ingrédients) peut être plus haute qu'une page PDF physique : on la
+// découpe alors selon les points de coupure calculés ci-dessus (jamais au
+// milieu d'un <li>/titre), chaque tranche posée sur sa propre page PDF.
+async function addElementAsPdfPages(pdf, html2canvas, element, config, { marginMmValue, isFirstPageOfDoc }) {
+  const widthPxCss = element.getBoundingClientRect().width;
+  const pageHeightPxCss = pageHeightPxFor(widthPxCss, config);
+  const breakpointsCss = computeBreakpoints(element, pageHeightPxCss);
+
   const canvas = await html2canvas(element, {
-    scale: 2,
+    scale: SCALE,
     useCORS: true,
     backgroundColor: "#f6ecd2",
   });
 
   const pageWidthMm = pdf.internal.pageSize.getWidth();
-  const pageHeightMm = pdf.internal.pageSize.getHeight();
   const usableWidthMm = pageWidthMm - marginMmValue * 2;
-  const usableHeightMm = pageHeightMm - marginMmValue * 2;
-  const pxPerMm = canvas.width / usableWidthMm;
-  const sliceHeightPx = Math.max(1, Math.floor(usableHeightMm * pxPerMm));
+  const pxPerMm = canvas.width / usableWidthMm; // inclut déjà SCALE
 
-  // Marge d'arrondi (quelques px à scale:2, jamais du contenu réel) : sans
-  // elle, une page dont le canvas fait ne serait-ce que 1-2px de plus que
-  // sliceHeightPx (cas courant depuis l'aspect-ratio posé sur .cookbook-page,
-  // voir CookbookDocument.jsx — html2canvas arrondit la taille réellement
-  // capturée au pixel entier) déclenchait une page PDF supplémentaire pour
-  // ce reliquat quasi invisible : signalé par l'utilisateur, une page sur
-  // deux du PDF téléchargé apparaissait entièrement blanche.
-  const ROUNDING_TOLERANCE_PX = 4;
-
-  let renderedPx = 0;
   let firstSlice = true;
-  while (canvas.height - renderedPx > ROUNDING_TOLERANCE_PX) {
-    const remainingPx = canvas.height - renderedPx;
-    // Absorbe le reliquat dans cette tranche plutôt que d'en laisser un,
-    // sous la tolérance, qui redéclencherait une nouvelle page au tour
-    // suivant de la boucle pour presque rien.
-    const sliceHeightPxClamped = remainingPx - sliceHeightPx <= ROUNDING_TOLERANCE_PX
-      ? remainingPx
-      : sliceHeightPx;
+  for (let i = 0; i < breakpointsCss.length - 1; i += 1) {
+    const sliceTopPx = Math.round(breakpointsCss[i] * SCALE);
+    const sliceBottomPx = Math.min(Math.round(breakpointsCss[i + 1] * SCALE), canvas.height);
+    const sliceHeightPx = sliceBottomPx - sliceTopPx;
+    if (sliceHeightPx <= 0) continue;
+
     const sliceCanvas = document.createElement("canvas");
     sliceCanvas.width = canvas.width;
-    sliceCanvas.height = sliceHeightPxClamped;
+    sliceCanvas.height = sliceHeightPx;
     sliceCanvas
       .getContext("2d")
-      .drawImage(canvas, 0, renderedPx, canvas.width, sliceHeightPxClamped, 0, 0, canvas.width, sliceHeightPxClamped);
+      .drawImage(canvas, 0, sliceTopPx, canvas.width, sliceHeightPx, 0, 0, canvas.width, sliceHeightPx);
 
     if (!(isFirstPageOfDoc && firstSlice)) pdf.addPage();
     pdf.addImage(
@@ -73,10 +165,9 @@ async function addElementAsPdfPages(pdf, html2canvas, element, { marginMmValue, 
       marginMmValue,
       marginMmValue,
       usableWidthMm,
-      sliceHeightPxClamped / pxPerMm
+      sliceHeightPx / pxPerMm
     );
 
-    renderedPx += sliceHeightPxClamped;
     firstSlice = false;
   }
 }
@@ -108,7 +199,7 @@ export async function generateCookbookPdf(containerEl, config) {
     // Séquentiel, jamais Promise.all : html2canvas doit rasteriser une page
     // à la fois (partage un même contexte de rendu interne), et jsPDF.addPage()
     // doit respecter l'ordre des pages du document final.
-    await addElementAsPdfPages(pdf, html2canvas, pages[i], { marginMmValue, isFirstPageOfDoc: i === 0 });
+    await addElementAsPdfPages(pdf, html2canvas, pages[i], config, { marginMmValue, isFirstPageOfDoc: i === 0 });
   }
 
   return pdf.output("blob");
