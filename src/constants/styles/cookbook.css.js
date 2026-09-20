@@ -40,6 +40,20 @@ export const COOKBOOK_CSS = `
   -webkit-overflow-scrolling: touch;
 }
 
+/* Mise en page RÉELLE mais hors champ visuel — utilisée le temps de générer
+   le vrai PDF (utils/cookbookPdf.js, html2canvas) : html2canvas ne peut
+   rasteriser que des éléments effectivement mis en page par le navigateur
+   (jamais display:none), mais l'utilisateur n'a cliqué que "Télécharger",
+   pas "Aperçu" — le document ne doit donc jamais apparaître à l'écran
+   pendant sa génération. */
+.cookbook-print-sheet.cookbook-print-sheet--rendering {
+  display: block;
+  position: fixed;
+  left: -9999px;
+  top: 0;
+  width: 800px;
+}
+
 .cookbook-preview-close {
   position: fixed;
   top: max(16px, env(safe-area-inset-top));

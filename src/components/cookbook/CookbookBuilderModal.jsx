@@ -6,6 +6,7 @@ import { triggerHaptic, categoryLabel, slugify, escapeHtml } from "../../utils/h
 import { translateRecipeText } from "../../utils/recipeTranslation";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { COOKBOOK_CSS } from "../../constants/styles/cookbook.css";
+import { generateCookbookPdf } from "../../utils/cookbookPdf";
 import {
   DEFAULT_COOKBOOK_CONFIG,
   COVER_COLORS,
@@ -36,13 +37,19 @@ function isStandalonePWA() {
 /* ------------------------------------------------------------------ */
 /*  LIVRE DE CUISINE PDF — éditeur                                       */
 /*                                                                          */
-/*  Stratégie "impression navigateur" choisie explicitement par                */
-/*  l'utilisateur plutôt qu'une vraie librairie de génération PDF en JS :        */
-/*  "Imprimer"/"Télécharger" reposent sur window.print() + CSS @media print       */
+/*  "Imprimer" repose sur la stratégie "impression navigateur" choisie          */
+/*  explicitement par l'utilisateur : window.print() + CSS @media print          */
 /*  (voir constants/styles/cookbook.css.js), avec le même repli conscient          */
 /*  du mode PWA installée que ShareRecipeModal.jsx (doExportPDF) — iOS bloque       */
-/*  silencieusement window.print() dans ce contexte.                                */
-/*                                                                                     */
+/*  silencieusement window.print() dans ce contexte.                                 */
+/*                                                                                        */
+/*  "Télécharger" génère lui un VRAI fichier .pdf (jsPDF + html2canvas, voir              */
+/*  utils/cookbookPdf.js) — signalé par l'utilisateur après coup : le bouton               */
+/*  téléchargeait initialement une fiche HTML autonome, un simple repli hérité              */
+/*  de la même stratégie "sans librairie PDF", qui ne correspondait plus à ce que             */
+/*  ce bouton précis promettait. Ce repli HTML reste utilisé en dernier recours                */
+/*  si la génération du vrai PDF échoue (voir downloadCookbookFile ci-dessous).                 */
+/*                                                                                                  */
 /*  Portée volontairement limitée aux champs qui existent déjà sur une                  */
 /*  recette (catégorie, temps, ingrédients, étapes, notes, nutri-score) —                */
 /*  ni "collections" ni "évaluation" (étoiles), qui n'existent pas dans le                */
@@ -52,7 +59,9 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
   const { t, language } = useTranslation();
   const [config, setConfig] = useState(DEFAULT_COOKBOOK_CONFIG);
   const [showPreview, setShowPreview] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
   const docRef = useRef(null);
+  const sheetRef = useRef(null);
 
   useBodyScrollLock(true);
 
@@ -155,10 +164,36 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
     }
   };
 
-  const doDownload = () => {
-    if (!requireSelection()) return;
+  // Vrai fichier .pdf (jsPDF + html2canvas, voir utils/cookbookPdf.js) : le
+  // document déjà mis en page par CookbookDocument (docRef) doit d'abord
+  // être réellement affiché hors champ visuel (classe --rendering, voir
+  // constants/styles/cookbook.css.js) — html2canvas ne peut rasteriser
+  // qu'un élément que le navigateur a vraiment mis en page.
+  const doDownload = async () => {
+    if (!requireSelection() || generatingPdf) return;
     triggerHaptic(15);
-    downloadCookbookFile();
+    setGeneratingPdf(true);
+    try {
+      if (sheetRef.current) sheetRef.current.classList.add("cookbook-print-sheet--rendering");
+      const blob = await generateCookbookPdf(docRef.current, config);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${slugify(config.coverTitle || "livre-de-cuisine")}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      showToast(t("cookbook.downloadedToast"));
+    } catch {
+      // Repli : la génération du vrai PDF a échoué (navigateur trop ancien,
+      // photo bloquée par CORS...) — la fiche HTML autonome reste toujours
+      // téléchargeable, quoi qu'il arrive.
+      downloadCookbookFile();
+    } finally {
+      if (sheetRef.current) sheetRef.current.classList.remove("cookbook-print-sheet--rendering");
+      setGeneratingPdf(false);
+    }
   };
 
   return (
@@ -331,17 +366,17 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
             {/* --- Export --- */}
             <p className="ios-group-title" style={{ marginTop: 22 }}>{t("cookbook.exportTitle")}</p>
             <div className="cookbook-export-grid">
-              <button type="button" className="cookbook-export-tile" onClick={doOpenPreview}>
+              <button type="button" className="cookbook-export-tile" onClick={doOpenPreview} disabled={generatingPdf}>
                 <Eye size={22} />
                 <span>{t("cookbook.livePreview")}</span>
               </button>
-              <button type="button" className="cookbook-export-tile" onClick={doPrint}>
+              <button type="button" className="cookbook-export-tile" onClick={doPrint} disabled={generatingPdf}>
                 <Printer size={22} />
                 <span>{t("cookbook.print")}</span>
               </button>
-              <button type="button" className="cookbook-export-tile" onClick={doDownload}>
+              <button type="button" className="cookbook-export-tile" onClick={doDownload} disabled={generatingPdf}>
                 <Download size={22} />
-                <span>{t("cookbook.download")}</span>
+                <span>{generatingPdf ? t("share.generating") : t("cookbook.download")}</span>
               </button>
             </div>
           </motion.div>
@@ -352,7 +387,7 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
           caché à l'écran par défaut, ne devient visible que dans le rendu
           d'impression (@media print) OU en mode aperçu (classe modificateur
           ci-dessous), sans jamais dupliquer le balisage entre les deux. */}
-      <div className={`cookbook-print-sheet ${showPreview ? "cookbook-print-sheet--preview" : ""}`} aria-hidden={!showPreview}>
+      <div ref={sheetRef} className={`cookbook-print-sheet ${showPreview ? "cookbook-print-sheet--preview" : ""}`} aria-hidden={!showPreview}>
         {showPreview && (
           <button type="button" className="cookbook-preview-close" onClick={() => setShowPreview(false)} aria-label={t("common.close")}>
             <X size={20} />

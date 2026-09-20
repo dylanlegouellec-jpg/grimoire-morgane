@@ -2,7 +2,7 @@ import { useTranslation } from "../../contexts/LanguageContext";
 import { translateRecipeText } from "../../utils/recipeTranslation";
 import { categoryLabel, groupIngredients, groupSteps } from "../../utils/helpers";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
-import { COVER_COLORS, PAGE_MARGINS } from "../../constants/cookbook";
+import { COVER_COLORS, marginMm } from "../../constants/cookbook";
 
 /* ------------------------------------------------------------------ */
 /*  LIVRE DE CUISINE — document partagé aperçu/impression                */
@@ -17,9 +17,6 @@ import { COVER_COLORS, PAGE_MARGINS } from "../../constants/cookbook";
 
 function coverColorValue(id) {
   return (COVER_COLORS.find((c) => c.id === id) || COVER_COLORS[0]).value;
-}
-function marginMm(id) {
-  return (PAGE_MARGINS.find((m) => m.id === id) || PAGE_MARGINS[1]).mm;
 }
 
 function CoverPage({ config, pageNumber }) {
