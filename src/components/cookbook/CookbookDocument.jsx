@@ -103,10 +103,19 @@ function RecipePage({ recipe, config, t, language, pageNumber, isLast, runningTi
   return (
     <section className={`cookbook-page cookbook-recipe-page ${isLast ? "cookbook-page--last" : ""}`}>
       <p className="cookbook-running-header">{runningTitle}</p>
+      {/* Image de fond CSS (background-size:cover) plutôt qu'un <img
+          object-fit:cover> : html2canvas (voir utils/cookbookPdf.js) ne
+          respecte pas object-fit sur un <img> — il étire la photo entière
+          dans la boîte au lieu de la recadrer, la rendant visiblement
+          aplatie/déformée dans le PDF téléchargé (signalé par l'utilisateur).
+          background-size:cover recadre correctement dans les deux cas
+          (aperçu à l'écran ET rasterisation html2canvas), sans rien changer
+          au rendu visuel normal du navigateur. */}
       {hasPhoto && (
-        <div className={`cookbook-recipe-photo-wrap cookbook-recipe-photo-wrap--${config.photoSize}`}>
-          <img className="cookbook-recipe-photo" src={recipe.imageUrl} alt="" crossOrigin="anonymous" />
-        </div>
+        <div
+          className={`cookbook-recipe-photo-wrap cookbook-recipe-photo-wrap--${config.photoSize}`}
+          style={{ backgroundImage: `url("${recipe.imageUrl}")` }}
+        />
       )}
       <div className="cookbook-recipe-badges">
         <span className={`cookbook-chip ${isSucreCat ? "chip-sucre" : "chip-sale"}`}>
