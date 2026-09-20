@@ -199,10 +199,17 @@ export const COOKBOOK_CSS = `
 }
 
 /* --- Page recette --- */
-.cookbook-recipe-photo-wrap { margin: 0 0 20px; border-radius: 14px; overflow: hidden; box-shadow: 0 8px 20px rgba(42,32,19,0.28); }
-.cookbook-recipe-photo { display: block; width: 100%; object-fit: cover; }
-.cookbook-recipe-photo-wrap--moyenne .cookbook-recipe-photo { height: 180px; }
-.cookbook-recipe-photo-wrap--grande .cookbook-recipe-photo { height: 300px; }
+/* Image de fond CSS (background-size:cover), pas un <img object-fit:cover> :
+   html2canvas (voir utils/cookbookPdf.js) ignore object-fit et étire l'image
+   entière dans sa boîte plutôt que de la recadrer — visiblement aplatie dans
+   le PDF téléchargé. background-size:cover recadre correctement dans les
+   deux rendus (aperçu à l'écran ET rasterisation). */
+.cookbook-recipe-photo-wrap {
+  margin: 0 0 20px; border-radius: 14px; overflow: hidden; box-shadow: 0 8px 20px rgba(42,32,19,0.28);
+  background-size: cover; background-position: center; background-repeat: no-repeat;
+}
+.cookbook-recipe-photo-wrap--moyenne { height: 180px; }
+.cookbook-recipe-photo-wrap--grande { height: 300px; }
 .cookbook-recipe-badges { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 14px; }
 .cookbook-recipe-title { font-family: 'Cinzel Decorative', 'Cinzel', serif; text-align: center; font-size: 1.6rem; margin: 0 0 10px; }
 .cookbook-recipe-meta { display: flex; justify-content: center; gap: 22px; font-size: 0.9rem; color: #5c4a30; margin-bottom: 18px; }
