@@ -34,6 +34,31 @@ function isStandalonePWA() {
   return Boolean(iosStandalone || mediaStandalone);
 }
 
+// Aperçu miniature TOUJOURS visible (pas besoin d'ouvrir "Aperçu en
+// direct") de la couverture — se met à jour instantanément à chaque
+// changement de titre/sous-titre/couleur/mise en page, React re-rendant ce
+// composant comme n'importe quel autre à chaque changement de `config`.
+// Balisage/CSS dédiés à cette petite taille plutôt qu'une réduction
+// (transform: scale()) de la vraie couverture pleine taille (CookbookDocument.jsx) :
+// le texte y resterait net à toute échelle, mais la vraie couverture est
+// pensée pour ~680px de large avec ses propres marges — la réduire
+// donnerait un rendu flou/à la mise en page tassée plutôt qu'une vraie
+// miniature lisible.
+function CookbookCoverPreview({ config }) {
+  const color = (COVER_COLORS.find((c) => c.id === config.coverColor) || COVER_COLORS[0]).value;
+  return (
+    <div
+      className={`cookbook-cover-mini cookbook-cover-mini--${config.coverLayout}`}
+      style={{ "--cookbook-cover-color": color }}
+    >
+      <div className="cookbook-cover-mini-flourish" aria-hidden="true">❦</div>
+      <p className="cookbook-cover-mini-title">{config.coverTitle || "Le Grimoire de Morgane"}</p>
+      {config.coverSubtitle && <p className="cookbook-cover-mini-subtitle">{config.coverSubtitle}</p>}
+      <div className="cookbook-cover-mini-flourish" aria-hidden="true">❦</div>
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /*  LIVRE DE CUISINE PDF — éditeur                                       */
 /*                                                                          */
@@ -294,6 +319,7 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
 
             {/* --- Couverture --- */}
             <p className="ios-group-title" style={{ marginTop: 22 }}>{t("cookbook.coverTitle")}</p>
+            <CookbookCoverPreview config={config} />
             <div className="ios-group" style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 12 }}>
               <label className="field">
                 <span>{t("cookbook.coverTitleLabel")}</span>
