@@ -19,6 +19,33 @@ function coverColorValue(id) {
   return (COVER_COLORS.find((c) => c.id === id) || COVER_COLORS[0]).value;
 }
 
+// Extrait un préfixe "càc"/"càs" (abréviation de cuillère à café/soupe)
+// resté collé dans le NOM d'un ingrédient plutôt que découpé dans son
+// propre champ unité — arrive quand une recette a été tapée comme texte
+// libre plutôt que via les champs qté/unité/nom séparés de l'éditeur (ex.
+// "càc de curry" plutôt que unité "c. à café" + nom "curry"). Jamais
+// appliqué si une unité existe déjà (elle est alors déjà correcte).
+const LEADING_SPOON_UNIT = /^c\.?\s?[aà]\.?\s?(c|s)\.?\s+(?:de\s+|d['’])?/i;
+function splitLeadingSpoonUnit(unit, name) {
+  if (unit || typeof name !== "string") return { unit, name };
+  const trimmed = name.trim();
+  const match = LEADING_SPOON_UNIT.exec(trimmed);
+  if (!match) return { unit, name };
+  const isSoupe = match[1].toLowerCase() === "s";
+  return { unit: isSoupe ? "c. à soupe" : "c. à café", name: trimmed.slice(match[0].length).trim() };
+}
+
+// Ligne d'ingrédient affichée — jamais de tiret "orphelin" après une
+// quantité sans unité (signalé par l'utilisateur : "10 — feuilles de
+// brick" devient "10 feuilles de brick") : ce tiret ne sépare rien tant
+// qu'il n'y a pas d'unité à distinguer du nom.
+export function formatIngredientLine(it, language) {
+  const { unit, name } = splitLeadingSpoonUnit(it.unit, it.name);
+  const translatedName = translateRecipeText(name, language);
+  if (!unit) return `${it.qty} ${translatedName}`.trim();
+  return `${it.qty} ${translateRecipeText(unit, language)} — ${translatedName}`;
+}
+
 function CoverPage({ config, pageNumber }) {
   const color = coverColorValue(config.coverColor);
   return (
@@ -35,7 +62,7 @@ function CoverPage({ config, pageNumber }) {
   );
 }
 
-function TocPage({ recipes, t, language, pageNumber, runningTitle }) {
+function TocPage({ recipes, t, language, pageNumber, runningTitle, pageStarts }) {
   return (
     <section className="cookbook-page cookbook-toc">
       <p className="cookbook-running-header">{runningTitle}</p>
@@ -43,6 +70,7 @@ function TocPage({ recipes, t, language, pageNumber, runningTitle }) {
       <ol className="cookbook-toc-list">
         {recipes.map((r) => {
           const isSucreCat = categoryLabel(r) === "Sucré";
+          const startPage = pageStarts ? pageStarts[r.id] : null;
           return (
             <li key={r.id}>
               <span className="cookbook-toc-name">{translateRecipeText(r.title, language)}</span>
@@ -50,6 +78,10 @@ function TocPage({ recipes, t, language, pageNumber, runningTitle }) {
               <span className={`cookbook-chip cookbook-toc-chip ${isSucreCat ? "chip-sucre" : "chip-sale"}`}>
                 {t(isSucreCat ? "filters.sucre" : "filters.sale")}
               </span>
+              {/* Absent tant que la mesure préalable (computeRecipeStartPages,
+                  voir CookbookBuilderModal.jsx) n'a pas encore tourné — pas un
+                  numéro faux, juste pas encore calculé. */}
+              {startPage != null && <span className="cookbook-toc-page">{startPage}</span>}
             </li>
           );
         })}
@@ -101,9 +133,7 @@ function RecipePage({ recipe, config, t, language, pageNumber, isLast, runningTi
                 {g.title && <h4 className="cookbook-sub">{translateRecipeText(g.title, language)}</h4>}
                 <ul>
                   {g.items.map((it, j) => (
-                    <li key={j}>
-                      {[it.qty, it.unit ? translateRecipeText(it.unit, language) : ""].filter(Boolean).join(" ")} — {translateRecipeText(it.name, language)}
-                    </li>
+                    <li key={j}>{formatIngredientLine(it, language)}</li>
                   ))}
                 </ul>
               </div>
@@ -136,7 +166,7 @@ function RecipePage({ recipe, config, t, language, pageNumber, isLast, runningTi
 // `recipes` : déjà filtrées/triées par l'appelant (voir CookbookBuilderModal,
 // selectionMode "all"/"category"/"manual") — ce composant ne fait plus que
 // mettre en page la sélection qu'on lui donne.
-export default function CookbookDocument({ recipes, config }) {
+export default function CookbookDocument({ recipes, config, pageStarts }) {
   const { t, language } = useTranslation();
   const list = Array.isArray(recipes) ? recipes : [];
   const runningTitle = config.coverTitle || "Le Grimoire de Morgane";
@@ -171,7 +201,7 @@ export default function CookbookDocument({ recipes, config }) {
       `}</style>
       <CoverPage config={config} pageNumber={coverNumber} />
       {config.toc && (
-        <TocPage recipes={list} t={t} language={language} pageNumber={tocNumber} runningTitle={runningTitle} />
+        <TocPage recipes={list} t={t} language={language} pageNumber={tocNumber} runningTitle={runningTitle} pageStarts={pageStarts} />
       )}
       {list.map((r, i) => (
         <RecipePage

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import CookbookBuilderModal from "../CookbookBuilderModal";
 import { LanguageProvider } from "../../../contexts/LanguageContext";
@@ -83,9 +83,14 @@ describe("CookbookBuilderModal — sélection des recettes", () => {
     const user = userEvent.setup();
     renderModal();
     await user.click(screen.getByRole("button", { name: "Aperçu en direct" }));
-    // Le bouton de fermeture de la modale principale ET celui, dédié, du
-    // panneau d'aperçu portent tous deux aria-label="Fermer" : en voir deux
-    // prouve que le panneau d'aperçu s'est bien monté par-dessus.
-    expect(screen.getAllByLabelText("Fermer")).toHaveLength(2);
+    // L'ouverture attend d'abord une mesure de pagination (requestAnimationFrame,
+    // voir refreshPageStarts dans CookbookBuilderModal.jsx) avant de basculer
+    // en mode aperçu — waitFor plutôt qu'une assertion immédiate.
+    await waitFor(() => {
+      // Le bouton de fermeture de la modale principale ET celui, dédié, du
+      // panneau d'aperçu portent tous deux aria-label="Fermer" : en voir deux
+      // prouve que le panneau d'aperçu s'est bien monté par-dessus.
+      expect(screen.getAllByLabelText("Fermer")).toHaveLength(2);
+    });
   });
 });

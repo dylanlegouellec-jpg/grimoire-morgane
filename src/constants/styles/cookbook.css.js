@@ -84,6 +84,13 @@ export const COOKBOOK_CSS = `
   border-radius: 6px;
   position: relative;
   box-shadow: 0 10px 26px rgba(0,0,0,0.35);
+  /* Base la mise en page (colonnes ingrédients/étapes, voir
+     .cookbook-recipe-columns plus bas) sur la largeur RÉELLE de cette page
+     plutôt que sur celle de la fenêtre — une media query classique se serait
+     basée sur la largeur du viewport, qui n'a aucun rapport avec la largeur
+     effective d'une page A4/A5 rendue hors champ pour le PDF (toujours
+     ~680px ici, quelle que soit la taille réelle de l'écran du visiteur). */
+  container-type: inline-size;
 }
 .cookbook-running-header {
   margin: 0 0 18px;
@@ -164,6 +171,14 @@ export const COOKBOOK_CSS = `
   margin-bottom: 4px;
 }
 .cookbook-toc-chip { flex-shrink: 0; }
+.cookbook-toc-page {
+  flex-shrink: 0;
+  min-width: 18px;
+  text-align: right;
+  font-family: 'Cinzel', serif;
+  font-size: 0.78rem;
+  color: #5c4a30;
+}
 
 /* --- Badges de catégorie / nutri-score (mêmes teintes que le reste de l'app) --- */
 .cookbook-chip {
@@ -193,6 +208,13 @@ export const COOKBOOK_CSS = `
 .cookbook-recipe-meta { display: flex; justify-content: center; gap: 22px; font-size: 0.9rem; color: #5c4a30; margin-bottom: 18px; }
 .cookbook-recipe-flourish { text-align: center; color: #b3872a; font-size: 1.2rem; margin: 12px 0; }
 .cookbook-recipe-columns { display: grid; grid-template-columns: 1fr 1.3fr; gap: 28px; align-items: start; }
+/* En dessous de cette largeur (aperçu sur un petit écran, jamais le cas du
+   PDF/impression réel — voir container-type sur .cookbook-page ci-dessus,
+   toujours rendu à ~680px pour ces deux usages) : ingrédients et étapes
+   repassent en une seule colonne plutôt que de s'écraser illisiblement. */
+@container (max-width: 460px) {
+  .cookbook-recipe-columns { grid-template-columns: 1fr; }
+}
 .cookbook-section-title { font-family: 'Cinzel', serif; font-size: 0.95rem; letter-spacing: 1px; color: #5c4a30; border-bottom: 1px dashed rgba(179,135,42,0.35); padding-bottom: 6px; }
 .cookbook-sub { font-family: 'Cinzel', serif; font-size: 0.8rem; letter-spacing: 0.5px; color: #b3872a; margin: 12px 0 4px; }
 .cookbook-notes { font-style: italic; color: #5c4a30; }
@@ -205,7 +227,6 @@ export const COOKBOOK_CSS = `
 .cookbook-page li { margin-bottom: 9px; font-size: 0.98rem; }
 
 @media (max-width: 600px) {
-  .cookbook-recipe-columns { grid-template-columns: 1fr; }
   .cookbook-page { padding: 30px 26px; }
 }
 
@@ -223,5 +244,22 @@ export const COOKBOOK_CSS = `
     page-break-after: always; break-after: page;
   }
   .cookbook-page--last { page-break-after: auto; break-after: auto; }
+
+  /* Pagination intelligente pour l'impression navigateur (bouton
+     "Imprimer") : jamais de <li>/titre de section coupé net entre deux
+     pages physiques — le moteur d'impression du navigateur repousse
+     l'élément entier sur la page suivante à sa place. Sans effet ici sur
+     "Télécharger" (jsPDF/html2canvas, voir utils/cookbookPdf.js), qui ne
+     passe jamais par le moteur de pagination CSS du navigateur : ce
+     chemin-là applique la même règle lui-même, en JS, sur les hauteurs
+     réellement mesurées avant de rasteriser. */
+  .cookbook-page li,
+  .cookbook-page-title,
+  .cookbook-section-title,
+  .cookbook-sub,
+  .cookbook-recipe-badges {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
 }
 `;
