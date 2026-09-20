@@ -94,3 +94,34 @@ describe("CookbookBuilderModal — sélection des recettes", () => {
     });
   });
 });
+
+/* ------------------------------------------------------------------ */
+/*  RÉGRESSION : demandé par l'utilisateur ("un aperçu en direct quand on    */
+/*  modifie des choses direct sur le module") — un mini-aperçu de la           */
+/*  couverture (CookbookCoverPreview) reste affiché en permanence dans la       */
+/*  section "Page de couverture", sans avoir besoin d'ouvrir le panneau           */
+/*  "Aperçu en direct" plein écran (qui, lui, attend une mesure de pagination        */
+/*  asynchrone — voir le test précédent). Ce mini-aperçu doit se mettre à             */
+/*  jour de façon purement synchrone (simple état React), à chaque frappe.             */
+/* ------------------------------------------------------------------ */
+describe("CookbookBuilderModal — mini-aperçu de la couverture", () => {
+  // Le document complet (CookbookDocument) reste monté en permanence, caché
+  // (voir .cookbook-print-sheet), avec le même titre — sélecteur scopé au
+  // mini-aperçu pour ne matcher que lui, pas ce doublon caché.
+  const MINI_TITLE = { selector: ".cookbook-cover-mini-title" };
+
+  it("affiche le titre par défaut dans le mini-aperçu, sans action de l'utilisateur", () => {
+    renderModal();
+    expect(screen.getByText("Le Grimoire de Morgane", MINI_TITLE)).toBeInTheDocument();
+  });
+
+  it("se met à jour instantanément à la frappe, sans bouton ni attente", async () => {
+    const user = userEvent.setup();
+    renderModal();
+    const titleInput = screen.getByLabelText("Titre");
+    await user.clear(titleInput);
+    await user.type(titleInput, "Recettes de Mamie");
+    expect(screen.getByText("Recettes de Mamie", MINI_TITLE)).toBeInTheDocument();
+    expect(screen.queryByText("Le Grimoire de Morgane", MINI_TITLE)).not.toBeInTheDocument();
+  });
+});

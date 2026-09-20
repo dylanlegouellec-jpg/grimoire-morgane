@@ -26,6 +26,39 @@ export const COOKBOOK_CSS = `
   text-transform: uppercase; color: var(--ink-soft); margin: 8px 2px 0;
 }
 
+/* Aperçu miniature de la couverture, toujours visible dans l'éditeur (voir
+   CookbookCoverPreview dans CookbookBuilderModal.jsx) — balisage/CSS dédiés
+   à cette petite taille, pas une réduction de .cookbook-cover (pensée pour
+   ~680px de large, voir CookbookDocument.jsx). Ratio ISO 216 (1:√2, A4 ET
+   A5) fixe : une vraie précision par format n'apporte rien à cette échelle. */
+.cookbook-cover-mini {
+  max-width: 220px;
+  aspect-ratio: 210 / 297;
+  margin: 4px auto 14px;
+  padding: 16px 14px;
+  border: 2px solid var(--cookbook-cover-color, #b3872a);
+  border-radius: 6px;
+  background: #f6ecd2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+}
+.cookbook-cover-mini--epure { border: none; box-shadow: none; }
+.cookbook-cover-mini-flourish { font-size: 0.85rem; color: var(--cookbook-cover-color, #b3872a); margin: 3px 0; }
+.cookbook-cover-mini-title {
+  font-family: 'Cinzel Decorative', 'Cinzel', serif;
+  font-size: 0.9rem; line-height: 1.25; margin: 3px 0;
+  color: var(--cookbook-cover-color, #b3872a);
+  word-break: break-word;
+}
+.cookbook-cover-mini-subtitle {
+  font-family: 'Cinzel', serif; letter-spacing: 1px; text-transform: uppercase;
+  font-size: 0.55rem; color: #5c4a30; margin: 0;
+}
+
 /* --- Document (aperçu écran + impression), voir CookbookDocument.jsx --- */
 .cookbook-print-sheet { display: none; }
 
