@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ChevronLeft, ChevronRight, Compass, Home, LogOut, Palette, Pencil, Save, SlidersHorizontal, UserCircle2, X } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, Compass, Home, LogOut, Palette, Pencil, Save, SlidersHorizontal, UserCircle2, X } from "lucide-react";
 import { triggerHaptic } from "../../utils/helpers";
 import { getCachedProfile, getProfile } from "../../utils/profile";
 import { useTranslation } from "../../contexts/LanguageContext";
@@ -74,6 +74,7 @@ export default function SecretSettingsModal({
   showToast,
   onSignOut,
   onReplayOnboarding,
+  onOpenCookbookBuilder,
 }) {
   const { t } = useTranslation();
   // 'main' | 'appearance' | 'accessibility' | 'backup' | 'household'
@@ -254,6 +255,18 @@ export default function SecretSettingsModal({
                 <ChevronRight size={18} className="ios-chevron" />
               </button>
             )}
+          </div>
+
+          <p className="ios-group-title">{t("settings.exportPrintSection")}</p>
+          <div className="ios-group">
+            {/* Ferme les Réglages avant d'ouvrir le livre de cuisine — même
+                raisonnement que "Revoir le tutoriel" juste en dessous : cet
+                éditeur est sa propre modale plein écran, jamais une sous-vue
+                empilée de plus dans SettingsSubPanel. */}
+            <button type="button" className="ios-row" onClick={() => { triggerHaptic(15); onOpenCookbookBuilder(); }}>
+              <span className="ios-row-icon" style={{ background: "var(--wine)" }}><BookOpen size={16} /></span>
+              <span className="ios-row-title">{t("settings.createCookbook")}</span>
+            </button>
           </div>
 
           <p className="ios-group-title">{t("settings.helpSection")}</p>
