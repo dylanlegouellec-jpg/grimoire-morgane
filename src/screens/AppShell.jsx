@@ -30,6 +30,7 @@ const DeleteConfirmModal = lazy(() => import("../components/common/DeleteConfirm
 const TextTemplateImportModal = lazy(() => import("../components/common/TextTemplateImportModal"));
 const RecipeLinkImportModal = lazy(() => import("../components/common/RecipeLinkImportModal"));
 const SecretSettingsModal = lazy(() => import("../components/common/SecretSettingsModal"));
+const CookbookBuilderModal = lazy(() => import("../components/cookbook/CookbookBuilderModal"));
 const ListsManagerModal = lazy(() => import("../components/common/ListsManagerModal"));
 const OnboardingTour = lazy(() => import("../components/onboarding/OnboardingTour"));
 
@@ -165,6 +166,7 @@ export default function AppShell({
   const [showTemplateImport, setShowTemplateImport] = useState(false);
   const [showLinkImport, setShowLinkImport] = useState(false);
   const [showSecretSettings, setShowSecretSettings] = useState(false);
+  const [showCookbookBuilder, setShowCookbookBuilder] = useState(false);
   const [showListsManager, setShowListsManager] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   // Lance le tuto UNE SEULE FOIS, dès qu'on sait avec certitude que ce
@@ -197,6 +199,13 @@ export default function AppShell({
   const replayOnboarding = () => {
     setShowSecretSettings(false);
     setShowOnboarding(true);
+  };
+  // Même raisonnement : ferme d'abord les Réglages pour éviter toute
+  // cohabitation avec sa modale encore montée (voir replayOnboarding
+  // ci-dessus).
+  const openCookbookBuilder = () => {
+    setShowSecretSettings(false);
+    setShowCookbookBuilder(true);
   };
 
   const touchStart = useRef(null);
@@ -685,6 +694,18 @@ export default function AppShell({
             showToast={showToast}
             onSignOut={signOut}
             onReplayOnboarding={replayOnboarding}
+            onOpenCookbookBuilder={openCookbookBuilder}
+          />
+        </Suspense>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showCookbookBuilder && (
+        <Suspense fallback={null}>
+          <CookbookBuilderModal
+            recipes={recipes}
+            onClose={() => setShowCookbookBuilder(false)}
+            showToast={showToast}
           />
         </Suspense>
         )}
