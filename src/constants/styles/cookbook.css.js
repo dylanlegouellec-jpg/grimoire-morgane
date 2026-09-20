@@ -108,9 +108,13 @@ export const COOKBOOK_CSS = `
   color: #b3872a;
 }
 
-/* --- Couverture --- */
+/* --- Couverture ---
+   Pas de min-height fixe ici : l'aspect-ratio posé sur .cookbook-page (voir
+   CookbookDocument.jsx, calculé depuis le format/les marges choisis dans
+   l'éditeur) fait déjà tenir cette page sur toute la hauteur utile réelle
+   — une valeur fixe en plus aurait pu entrer en conflit selon le format
+   (A4 vs A5) au lieu de toujours coller à la bonne forme. */
 .cookbook-cover {
-  min-height: 420px;
   display: flex;
   flex-direction: column;
   align-items: center;

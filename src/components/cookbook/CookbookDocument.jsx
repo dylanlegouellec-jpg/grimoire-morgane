@@ -2,7 +2,7 @@ import { useTranslation } from "../../contexts/LanguageContext";
 import { translateRecipeText } from "../../utils/recipeTranslation";
 import { categoryLabel, groupIngredients, groupSteps } from "../../utils/helpers";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
-import { COVER_COLORS, marginMm } from "../../constants/cookbook";
+import { COVER_COLORS, PAGE_DIMENSIONS_MM, marginMm } from "../../constants/cookbook";
 
 /* ------------------------------------------------------------------ */
 /*  LIVRE DE CUISINE — document partagé aperçu/impression                */
@@ -149,9 +149,26 @@ export default function CookbookDocument({ recipes, config }) {
   const coverNumber = config.pageNumbers ? ++counter : null;
   const tocNumber = config.toc && config.pageNumbers ? ++counter : null;
 
+  // Ratio largeur/hauteur de la surface utile d'une page (format moins les
+  // marges choisies) — posé comme aspect-ratio CSS sur .cookbook-page :
+  // sans lui, une page dont le contenu est plus court qu'une page entière
+  // (couverture, table des matières courte, petite recette) ne prenait que
+  // la hauteur de son propre contenu, laissant un immense blanc en dessous
+  // aussi bien à l'écran (aperçu) qu'au rendu du PDF (html2canvas rasterise
+  // exactement ce que le navigateur a mis en page). aspect-ratio ne FIXE
+  // pas la hauteur : une recette plus longue que ce ratio grandit quand
+  // même normalement (voir découpe en tranches, utils/cookbookPdf.js).
+  const pageMm = PAGE_DIMENSIONS_MM[config.format] || PAGE_DIMENSIONS_MM.A4;
+  const m = marginMm(config.margin);
+  const usableWidthMm = pageMm.width - m * 2;
+  const usableHeightMm = pageMm.height - m * 2;
+
   return (
     <>
-      <style>{`@page { size: ${config.format === "A5" ? "A5" : "A4"}; margin: ${marginMm(config.margin)}mm; }`}</style>
+      <style>{`
+        @page { size: ${config.format === "A5" ? "A5" : "A4"}; margin: ${m}mm; }
+        .cookbook-page { aspect-ratio: ${usableWidthMm} / ${usableHeightMm}; }
+      `}</style>
       <CoverPage config={config} pageNumber={coverNumber} />
       {config.toc && (
         <TocPage recipes={list} t={t} language={language} pageNumber={tocNumber} runningTitle={runningTitle} />

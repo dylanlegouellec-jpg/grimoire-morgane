@@ -24,6 +24,14 @@ export const DEFAULT_COVER_COLOR = "gold";
 export const PAGE_FORMATS = ["A4", "A5"];
 export const DEFAULT_PAGE_FORMAT = "A4";
 
+// A4 et A5 partagent le même ratio ISO 216 (1:√2), mais on garde les deux
+// jeux de dimensions explicites plutôt que de s'appuyer sur cette égalité :
+// plus lisible, et robuste si un format non-ISO (Letter...) s'ajoute un jour.
+export const PAGE_DIMENSIONS_MM = {
+  A4: { width: 210, height: 297 },
+  A5: { width: 148, height: 210 },
+};
+
 // mm de marge réelle @page — un intitulé "fin/normal/large" est plus
 // lisible dans un contrôle segmenté qu'un champ numérique libre sur
 // mobile.
