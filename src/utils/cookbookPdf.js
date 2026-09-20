@@ -40,10 +40,25 @@ async function addElementAsPdfPages(pdf, html2canvas, element, { marginMmValue, 
   const pxPerMm = canvas.width / usableWidthMm;
   const sliceHeightPx = Math.max(1, Math.floor(usableHeightMm * pxPerMm));
 
+  // Marge d'arrondi (quelques px à scale:2, jamais du contenu réel) : sans
+  // elle, une page dont le canvas fait ne serait-ce que 1-2px de plus que
+  // sliceHeightPx (cas courant depuis l'aspect-ratio posé sur .cookbook-page,
+  // voir CookbookDocument.jsx — html2canvas arrondit la taille réellement
+  // capturée au pixel entier) déclenchait une page PDF supplémentaire pour
+  // ce reliquat quasi invisible : signalé par l'utilisateur, une page sur
+  // deux du PDF téléchargé apparaissait entièrement blanche.
+  const ROUNDING_TOLERANCE_PX = 4;
+
   let renderedPx = 0;
   let firstSlice = true;
-  while (renderedPx < canvas.height) {
-    const sliceHeightPxClamped = Math.min(sliceHeightPx, canvas.height - renderedPx);
+  while (canvas.height - renderedPx > ROUNDING_TOLERANCE_PX) {
+    const remainingPx = canvas.height - renderedPx;
+    // Absorbe le reliquat dans cette tranche plutôt que d'en laisser un,
+    // sous la tolérance, qui redéclencherait une nouvelle page au tour
+    // suivant de la boucle pour presque rien.
+    const sliceHeightPxClamped = remainingPx - sliceHeightPx <= ROUNDING_TOLERANCE_PX
+      ? remainingPx
+      : sliceHeightPx;
     const sliceCanvas = document.createElement("canvas");
     sliceCanvas.width = canvas.width;
     sliceCanvas.height = sliceHeightPxClamped;
