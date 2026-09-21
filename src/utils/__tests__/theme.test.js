@@ -37,4 +37,13 @@ describe("applyTheme — synchronise <meta name=\"theme-color\">", () => {
     document.head.innerHTML = "";
     expect(() => applyTheme("dark")).not.toThrow();
   });
+
+  it("remplace le nœud <meta> plutôt que de muter son attribut en place (repli iOS PWA)", () => {
+    const before = document.querySelector('meta[name="theme-color"]');
+    applyTheme("dark");
+    const after = document.querySelector('meta[name="theme-color"]');
+    expect(after).not.toBe(before);
+    expect(after.content).toBe("#1c1917");
+    expect(document.querySelectorAll('meta[name="theme-color"]').length).toBe(1);
+  });
 });
