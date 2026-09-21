@@ -1,6 +1,13 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
+import { countGrimoireLoc } from "./scripts/countLoc.js";
+
+// Calculé une seule fois au démarrage de Vite (dev ET build) — jamais dans
+// le navigateur, voir scripts/countLoc.js. `vitest.config.js` définit la
+// même constante de la même façon : les deux doivent rester synchronisés.
+const GRIMOIRE_LOC = countGrimoireLoc(fileURLToPath(new URL("./src", import.meta.url)));
 
 /* ------------------------------------------------------------------ */
 /*  PWA — mode hors-ligne réel                                          */
@@ -25,6 +32,9 @@ import { VitePWA } from "vite-plugin-pwa";
 /*  reste utilisable une fois démarrée.                                    */
 /* ------------------------------------------------------------------ */
 export default defineConfig({
+  define: {
+    __GRIMOIRE_LOC__: JSON.stringify(GRIMOIRE_LOC),
+  },
   plugins: [
     react(),
     VitePWA({
