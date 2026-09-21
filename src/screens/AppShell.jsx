@@ -204,15 +204,26 @@ export default function AppShell({
   };
   // Même raisonnement : ferme d'abord les Réglages pour éviter toute
   // cohabitation avec sa modale encore montée (voir replayOnboarding
-  // ci-dessus).
+  // ci-dessus). Contrairement à replayOnboarding, celles-ci sont ouvertes
+  // DEPUIS les Réglages pour y effectuer une action ponctuelle (créer un
+  // cookbook, consulter les diagnostics) — leur fermeture doit donc
+  // rouvrir les Réglages plutôt que de renvoyer sur l'écran principal.
   const openCookbookBuilder = () => {
     setShowSecretSettings(false);
     setShowCookbookBuilder(true);
   };
-  // Même raisonnement que openCookbookBuilder ci-dessus.
+  const closeCookbookBuilder = () => {
+    setShowCookbookBuilder(false);
+    setShowSecretSettings(true);
+  };
+  // Même raisonnement que openCookbookBuilder/closeCookbookBuilder ci-dessus.
   const openDiagnostics = () => {
     setShowSecretSettings(false);
     setShowDiagnosticsPanel(true);
+  };
+  const closeDiagnostics = () => {
+    setShowDiagnosticsPanel(false);
+    setShowSecretSettings(true);
   };
   // Ne touche QUE l'état React local (voir hasCompletedOnboarding
   // ci-dessus) : le flag localStorage lui-même est déjà mis à jour par
@@ -717,7 +728,7 @@ export default function AppShell({
         <Suspense fallback={null}>
           <CookbookBuilderModal
             recipes={recipes}
-            onClose={() => setShowCookbookBuilder(false)}
+            onClose={closeCookbookBuilder}
             showToast={showToast}
           />
         </Suspense>
@@ -727,7 +738,7 @@ export default function AppShell({
         {showDiagnosticsPanel && (
         <Suspense fallback={null}>
           <DiagnosticsPanelModal
-            onClose={() => setShowDiagnosticsPanel(false)}
+            onClose={closeDiagnostics}
             showToast={showToast}
             onResetOnboarding={resetOnboarding}
           />
