@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { triggerHaptic } from "../../utils/helpers";
 import PortionWheel from "./PortionWheel";
+import Seal from "../common/Seal";
 
 export default function PortionBadge({ value, onChange, pressDuration = 750 }) {
   const [pressPhase, setPressPhase] = useState("idle"); // idle | charging | open
@@ -37,7 +38,8 @@ export default function PortionBadge({ value, onChange, pressDuration = 750 }) {
       </button>
       {pressPhase === "open" && (
         <div className="portion-badge-popover">
-          <PortionWheel value={value} onChange={onChange} min={1} max={24} onSettle={() => setPressPhase("idle")} />
+          <PortionWheel value={value} onChange={onChange} min={1} max={24} />
+          <Seal tone="gold" onClick={() => setPressPhase("idle")}>Valider</Seal>
         </div>
       )}
     </div>
