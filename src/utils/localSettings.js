@@ -345,9 +345,10 @@ export function storeAisleOrder(order) {
 }
 
 /* --- Habillage du visuel de recette (fiche détail) ----------------------
-   Purement esthétique et purement local à l'appareil, comme l'ordre des
-   rayons ci-dessus — voir constants/index.js, HERO_TREATMENTS/
-   DEFAULT_HERO_TREATMENT pour la liste des valeurs valides. */
+   Repli hors-ligne/avant résolution de session, comme les autres réglages
+   synchronisés par compte ci-dessus — voir GrimoireDeMorgane.jsx
+   (setHeroTreatment, synchronisé via utils/profile.js) et constants/index.js,
+   HERO_TREATMENTS/DEFAULT_HERO_TREATMENT pour la liste des valeurs valides. */
 const HERO_TREATMENT_KEY = "grimoire_hero_treatment";
 
 export function getStoredHeroTreatment() {

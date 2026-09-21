@@ -18,13 +18,18 @@ export const FILTERS = [
 
 /* ------------------------------------------------------------------ */
 /*  HABILLAGE DU VISUEL DE RECETTE (fiche détail, voir RecipeDetail.jsx) */
-/*  Purement esthétique, purement local à l'appareil (voir              */
-/*  utils/localSettings.js, getStoredHeroTreatment) — chaque membre du    */
-/*  foyer peut choisir le sien sans affecter les autres. "fondu" est le    */
-/*  seul traitement plein cadre (bord à bord, comme avant cette liste) ;    */
-/*  les 5 autres encadrent la photo avec une marge (voir .detail-hero-inset,*/
-/*  recipeCards.css.js) — un bord doré/festonné/corné n'a de sens que si     */
-/*  le fond de la page reste visible tout autour.                            */
+/*  Esthétique, mais plus purement local à l'appareil depuis que ce         */
+/*  réglage suit le compte comme les autres préférences (thème, appui      */
+/*  long, taille de texte...) — voir utils/localSettings.js               */
+/*  (getStoredHeroTreatment, repli hors-ligne/avant résolution de           */
+/*  session) et utils/profile.js (colonne `profiles.hero_treatment`,        */
+/*  synchronisée par GrimoireDeMorgane.jsx). Chaque membre du foyer garde     */
+/*  son propre choix (un réglage de PROFIL, jamais de foyer) — il le          */
+/*  retrouve simplement aussi sur ses autres appareils désormais. "fondu"       */
+/*  est le seul traitement plein cadre (bord à bord, comme avant cette           */
+/*  liste) ; les 5 autres encadrent la photo avec une marge (voir                  */
+/*  .detail-hero-inset, recipeCards.css.js) — un bord doré/festonné/corné            */
+/*  n'a de sens que si le fond de la page reste visible tout autour.                   */
 /* ------------------------------------------------------------------ */
 export const HERO_TREATMENTS = [
   { key: "fondu", label: "Fondu" },
@@ -34,7 +39,10 @@ export const HERO_TREATMENTS = [
   { key: "vignette", label: "Vignette naturelle" },
   { key: "coin", label: "Coin corné" },
 ];
-export const DEFAULT_HERO_TREATMENT = "fondu";
+// "Cadre doré" par défaut (à la demande de l'utilisateur) — plus "fondu",
+// qui reste un choix possible parmi les autres, jamais celui présélectionné
+// pour qui n'a encore rien choisi.
+export const DEFAULT_HERO_TREATMENT = "cadre";
 
 
 /* ------------------------------------------------------------------ */
