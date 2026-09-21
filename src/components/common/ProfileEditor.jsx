@@ -23,6 +23,10 @@ export default function ProfileEditor({ user, profile, onClose, onSaved, showToa
   const [firstName, setFirstName] = useState((profile && profile.first_name) || "");
   const [lastName, setLastName] = useState((profile && profile.last_name) || "");
   const [username, setUsername] = useState((profile && (profile.username || profile.display_name)) || "");
+  // `profile.birth_date` arrive de PostgreSQL au format ISO ("2000-05-14"
+  // ou "2000-05-14T00:00:00") — un <input type="date"> n'accepte que les 10
+  // premiers caractères ("AAAA-MM-JJ"), d'où le slice.
+  const [birthDate, setBirthDate] = useState((profile && profile.birth_date && profile.birth_date.slice(0, 10)) || "");
   const [avatarUrl, setAvatarUrl] = useState((profile && profile.avatar_url) || null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -59,8 +63,8 @@ export default function ProfileEditor({ user, profile, onClose, onSaved, showToa
       const trimmedFirst = firstName.trim();
       const trimmedLast = lastName.trim();
       const trimmedUsername = username.trim();
-      await saveProfile(user.id, { firstName: trimmedFirst, lastName: trimmedLast, username: trimmedUsername });
-      onSaved && onSaved({ first_name: trimmedFirst, last_name: trimmedLast, username: trimmedUsername });
+      await saveProfile(user.id, { firstName: trimmedFirst, lastName: trimmedLast, username: trimmedUsername, birthDate });
+      onSaved && onSaved({ first_name: trimmedFirst, last_name: trimmedLast, username: trimmedUsername, birth_date: birthDate || null });
       showToast && showToast("Profil mis à jour !");
       onClose();
     } catch (err) {
@@ -119,6 +123,11 @@ export default function ProfileEditor({ user, profile, onClose, onSaved, showToa
         <p className="hint" style={{ fontStyle: "normal", marginTop: 2 }}>
           Le surnom est visible par les autres membres de tes foyers.
         </p>
+
+        <label className="field" style={{ marginTop: 12 }}>
+          <span>Date de naissance</span>
+          <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} max={new Date().toISOString().slice(0, 10)} />
+        </label>
 
         <div className="cookmode-nav" style={{ marginTop: 16 }}>
           <button type="button" className="seal seal-gold" onClick={handleSave} disabled={saving}>

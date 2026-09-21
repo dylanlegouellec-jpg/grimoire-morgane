@@ -17,7 +17,7 @@ import { compressImageToBlob } from "./imageUpload";
 
 export const AVATAR_BUCKET = "avatars";
 const PROFILE_COLUMNS =
-  "id,display_name,avatar_url,first_name,last_name,username,theme,press_duration,show_nutriscore,text_size,hero_treatment,icon_style";
+  "id,display_name,avatar_url,first_name,last_name,username,birth_date,theme,press_duration,show_nutriscore,text_size,hero_treatment,icon_style";
 
 // `press_duration` est stocké en base sous forme de texte lisible
 // ("0.75s"), pendant que le reste de l'app raisonne en millisecondes
@@ -76,6 +76,7 @@ export async function saveProfile(userId, {
   firstName,
   lastName,
   username,
+  birthDate,
   theme,
   pressDuration,
   showNutriscore,
@@ -89,6 +90,10 @@ export async function saveProfile(userId, {
   if (firstName !== undefined) patch.first_name = firstName;
   if (lastName !== undefined) patch.last_name = lastName;
   if (username !== undefined) patch.username = username;
+  // "" (champ vidé dans le formulaire) doit effacer la date en base, pas y
+  // écrire une chaîne vide — une colonne `date` PostgreSQL n'accepte que
+  // NULL ou une vraie date.
+  if (birthDate !== undefined) patch.birth_date = birthDate || null;
   if (theme !== undefined) patch.theme = theme;
   if (pressDuration !== undefined) patch.press_duration = pressDurationToDb(pressDuration);
   if (showNutriscore !== undefined) patch.show_nutriscore = showNutriscore;
