@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { guessAisle } from "../helpers";
+import { guessAisle, formatDurationMinutes } from "../helpers";
 
 /* ------------------------------------------------------------------ */
 /*  RÉGRESSION : même bug de sous-chaîne que pantryUtils.js (Mon Frigo) —   */
@@ -30,5 +30,29 @@ describe("guessAisle — pas de collision de sous-chaîne", () => {
 
   it("range toujours l'œuf au rayon Produits Frais & Crèmerie", () => {
     expect(guessAisle("Œufs")).toBe("Produits Frais & Crèmerie");
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/*  RÉGRESSION : signalé par l'utilisateur — un temps de repos long (ex.  */
+/*  1440 min pour un tiramisu à réserver une nuit) s'affichait tel quel     */
+/*  ("1440 min") sur la page recette du livre de cuisine, au lieu d'un        */
+/*  format lisible en heures/jours.                                            */
+/* ------------------------------------------------------------------ */
+describe("formatDurationMinutes", () => {
+  it("affiche les minutes seules en dessous d'une heure", () => {
+    expect(formatDurationMinutes(45)).toBe("45 min");
+    expect(formatDurationMinutes(0)).toBe("0 min");
+  });
+
+  it("affiche heures + minutes entre 1h et 24h", () => {
+    expect(formatDurationMinutes(90)).toBe("1 h 30 min");
+    expect(formatDurationMinutes(120)).toBe("2 h");
+  });
+
+  it("bascule en jours à partir de 24h (1440 min), sans revenir à un total de minutes", () => {
+    expect(formatDurationMinutes(1440)).toBe("1 j");
+    expect(formatDurationMinutes(1500)).toBe("1 j 1 h");
+    expect(formatDurationMinutes(2 * 1440 + 90)).toBe("2 j 1 h");
   });
 });

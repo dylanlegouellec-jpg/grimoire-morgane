@@ -304,7 +304,19 @@ export const COOKBOOK_CSS = `
 .cookbook-recipe-photo-wrap--grande { height: 300px; }
 .cookbook-recipe-badges { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 14px; }
 .cookbook-recipe-title { font-family: 'Cinzel Decorative', 'Cinzel', serif; text-align: center; font-size: 1.6rem; margin: 0 0 10px; }
-.cookbook-recipe-meta { display: flex; justify-content: center; gap: 22px; font-size: 0.9rem; color: #5c4a30; margin-bottom: 18px; }
+.cookbook-recipe-meta {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Cinzel', serif;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  color: #5c4a30;
+  margin-bottom: 18px;
+}
+.cookbook-recipe-meta-dot { width: 3px; height: 3px; border-radius: 50%; background: #b3872a; flex-shrink: 0; }
 .cookbook-recipe-flourish { text-align: center; color: #b3872a; font-size: 1.2rem; margin: 12px 0; }
 .cookbook-recipe-columns { display: grid; grid-template-columns: 1fr 1.3fr; gap: 28px; align-items: start; }
 /* En dessous de cette largeur (aperçu sur un petit écran, jamais le cas du

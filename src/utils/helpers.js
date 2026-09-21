@@ -123,11 +123,17 @@ export function parseDurationMinutes(text = "") {
 
 // Sens inverse de parseDurationMinutes ci-dessus — utilisé par le
 // sélecteur à roues Heures/Minutes (voir WheelPickerModal) pour afficher
-// la durée totale choisie sur le bouton qui l'ouvre.
+// la durée totale choisie sur le bouton qui l'ouvre, ainsi que par la
+// ligne temps/portions de la page recette du livre de cuisine
+// (CookbookDocument.jsx) — signalé par l'utilisateur : un temps de repos
+// long (ex. 1440 min pour un tiramisu à réserver une nuit) s'affichait
+// en un seul bloc "1440 min" au lieu d'un format lisible ("1 j").
 export function formatDurationMinutes(totalMinutes) {
   const mins = Math.max(0, Math.round(Number(totalMinutes) || 0));
-  const h = Math.floor(mins / 60);
+  const days = Math.floor(mins / 1440);
+  const h = Math.floor((mins % 1440) / 60);
   const m = mins % 60;
+  if (days) return h ? `${days} j ${h} h` : `${days} j`;
   if (h && m) return `${h} h ${m} min`;
   if (h) return `${h} h`;
   return `${m} min`;
