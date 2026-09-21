@@ -205,6 +205,41 @@ export function buildRecipeShareLink(recipe) {
     return "";
   }
 }
+// Partage natif (menu iOS/Android : Messages, Mail, Enregistrer dans
+// Fichiers/Photos...) si le partage de FICHIERS est supporté ; sinon,
+// repli en téléchargement direct — fonctionne partout, y compris desktop.
+// Générique (mimeType en paramètre) : utilisé aussi bien pour une carte
+// PNG (recipeCardCanvas.js) que pour une vraie fiche PDF (ShareRecipeModal.jsx,
+// doExportPDF) plutôt que de dupliquer cette logique pour chaque format.
+// Retourne "shared" | "downloaded" | "cancelled" | false (échec), pour que
+// l'appelant puisse afficher le bon message (pas de toast "téléchargée !"
+// après un partage réussi, par exemple).
+export async function shareOrDownloadBlob(blob, filename, shareTitle, mimeType) {
+  if (!blob) return false;
+  try {
+    const file = new File([blob], filename, { type: mimeType });
+    if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
+      await navigator.share({ files: [file], title: shareTitle });
+      return "shared";
+    }
+  } catch (err) {
+    if (err && err.name === "AbortError") return "cancelled";
+    // toute autre erreur : on bascule sur le téléchargement direct ci-dessous
+  }
+  try {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    return "downloaded";
+  } catch {
+    return false;
+  }
+}
 // Lien d'invitation à un foyer — voir ?join_household=... (useOfflineSync.js,
 // JoinHouseholdConfirmModal.jsx) et son pendant QR code
 // (HouseholdManagerModal.jsx, buildQrCodeUrl ci-dessous).

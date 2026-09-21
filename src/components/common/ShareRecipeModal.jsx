@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { motion } from "motion/react";
 import { AlignLeft, Copy, Download, FileText, Image as ImageIcon, Link as LinkIcon, X } from "lucide-react";
 import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
@@ -7,14 +7,16 @@ import {
   buildImportLink,
   buildRecipeShareLink,
   slugify,
-  categoryLabel,
   groupIngredients,
   groupSteps,
   buildPrintHTML,
   triggerHaptic,
+  shareOrDownloadBlob,
 } from "../../utils/helpers";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
-import { generateRecipeCardPng, shareOrDownloadPng } from "../../utils/recipeCardCanvas";
+import { generateRecipeCardPng } from "../../utils/recipeCardCanvas";
+import { generateCookbookPdf } from "../../utils/cookbookPdf";
+import { RecipePage } from "../cookbook/CookbookDocument";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { translateRecipeText } from "../../utils/recipeTranslation";
 import useFocusTrap from "../../hooks/useFocusTrap";
@@ -47,18 +49,6 @@ function buildShareText(t, language, recipe, servings, ingredients, includeNotes
   return lines.join("\n");
 }
 
-// L'app tourne-t-elle en PWA installée (icône sur l'écran d'accueil) ?
-// `navigator.standalone` est la propriété historique iOS Safari,
-// `display-mode: standalone` est le standard suivi par les autres moteurs.
-// C'est important car iOS bloque silencieusement `window.print()` dans ce
-// mode — le clic sur "Fiche PDF / Parchemin" ne faisait alors plus rien.
-function isStandalonePWA() {
-  if (typeof window === "undefined") return false;
-  const iosStandalone = window.navigator && window.navigator.standalone;
-  const mediaStandalone = typeof window.matchMedia === "function" && window.matchMedia("(display-mode: standalone)").matches;
-  return Boolean(iosStandalone || mediaStandalone);
-}
-
 function currentTheme() {
   if (typeof document === "undefined" || !document.documentElement) return "light";
   return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
@@ -73,6 +63,7 @@ function currentTheme() {
 // bouton "X" ou un tap sur le fond, comme avant.
 export default function ShareRecipeModal({ recipe, servings, ingredients, onClose, shareText, showToast }) {
   const modalRef = useFocusTrap(onClose);
+  const pdfSheetRef = useRef(null);
   const hasPhoto = Boolean(recipe.imageUrl);
   const hasNotes = Boolean(recipe.notes);
   const [includePhoto, setIncludePhoto] = useState(hasPhoto);
@@ -82,8 +73,12 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
 
   const nutriGrade = recipe.nutriscoreGrade || estimateNutriscoreLocal(ingredients, recipe.category);
   const nutriColor = NUTRI_COLORS[nutriGrade] || "#b3872a";
-  const { t, dict, language } = useTranslation();
-  const categoryText = dict.labels[categoryLabel(recipe)] || categoryLabel(recipe);
+  const { t, language } = useTranslation();
+  // Portions/ingrédients tels qu'affichés à l'instant (déjà ajustés par le
+  // curseur de portions de RecipeDetail) — même recette que celle utilisée
+  // par doExportPng/doCopyPublicLink, pour un rendu cohérent entre tous
+  // les boutons de cette modale.
+  const pdfRecipe = { ...recipe, servings, ingredients };
 
   const doCopyCode = () => {
     const code = encodeRecipeCode(recipe);
@@ -154,47 +149,44 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
     }
   };
 
-  // Fiche PDF / Parchemin — le comportement diffère selon le contexte :
-  //
-  // • Safari classique (onglet navigateur) : window.print() fonctionne
-  //   normalement et ouvre l'aperçu d'impression natif (d'où l'utilisateur
-  //   peut enregistrer en PDF via l'icône de partage de l'aperçu).
-  //
-  // • PWA installée (mode Standalone, lancée depuis l'écran d'accueil) :
-  //   iOS bloque silencieusement window.print() dans ce contexte — aucune
-  //   erreur, mais rien ne se passe, ce qui correspond exactement au bug
-  //   observé. On privilégie donc le partage natif (navigator.share),
-  //   qui ouvre le menu de partage iOS et permet d'enregistrer dans
-  //   Fichiers/Notes ou d'envoyer par Mail/Messages. Si l'API est absente,
-  //   ou échoue pour une raison autre qu'une annulation, on retombe sur le
-  //   téléchargement direct de la fiche HTML (downloadPrintableFile), qui
-  //   fonctionne toujours, quel que soit le contexte.
+  // Fiche PDF — signalé par l'utilisateur : ce bouton ne produisait pas un
+  // vrai PDF (window.print() dans un onglet Safari classique, ou un simple
+  // PARTAGE DE TEXTE en PWA installée, iOS y bloquant silencieusement
+  // window.print()). Repose maintenant sur le même pipeline html2canvas +
+  // jsPDF que le livre de cuisine (utils/cookbookPdf.js) : `generateCookbookPdf`
+  // n'a besoin que d'un conteneur avec un ou plusieurs `.cookbook-page` —
+  // ici un seul, la même page recette déjà utilisée dans le livre (voir
+  // RecipePage, réexportée par CookbookDocument.jsx) — et produit un
+  // véritable blob PDF, identique quel que soit le contexte (plus aucun
+  // besoin de distinguer Safari/PWA standalone).
   const doExportPDF = async () => {
+    if (busy) return;
     triggerHaptic(15);
-    if (isStandalonePWA()) {
-      if (navigator.share) {
-        try {
-          await navigator.share({
-            title: translateRecipeText(recipe.title, language),
-            text: buildShareText(t, language, recipe, servings, ingredients, includeNotes),
-          });
-          return;
-        } catch (err) {
-          if (err && err.name === "AbortError") return; // partage annulé par l'utilisateur : rien à faire
-          // toute autre erreur : on bascule sur le téléchargement ci-dessous
-        }
-      }
-      downloadPrintableFile();
-      return;
-    }
-
-    // Safari classique.
+    setBusy("pdf");
     try {
-      window.print();
-    } catch {
-      // Filet de sécurité au cas où l'impression échouerait pour une
-      // raison inattendue : la fiche reste récupérable quand même.
+      const pdfConfig = {
+        format: "A4",
+        margin: "normal",
+        orientation: "portrait",
+        showTime: true,
+        showIngredients: true,
+        showSteps: true,
+        showNutrition: includeNutriscore,
+        showNotes: includeNotes,
+        photoSize: includePhoto && hasPhoto ? "grande" : "aucune",
+      };
+      const blob = await generateCookbookPdf(pdfSheetRef.current, pdfConfig);
+      const result = await shareOrDownloadBlob(blob, `${slugify(recipe.title)}.pdf`, translateRecipeText(recipe.title, language), "application/pdf");
+      if (result === "downloaded") showToast(t("share.sheetDownloadedToast"));
+      else if (!result) downloadPrintableFile();
+    } catch (err) {
+      console.error(err);
+      // Filet de sécurité : la fiche reste récupérable même si la
+      // génération du vrai PDF échoue pour une raison inattendue (image
+      // protégée, police non chargée...).
       downloadPrintableFile();
+    } finally {
+      setBusy(null);
     }
   };
 
@@ -216,7 +208,7 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
       if (includePhoto && hasPhoto && !photoIncluded) {
         showToast(t("share.photoExcludedToast"));
       }
-      const result = await shareOrDownloadPng(blob, `${slugify(recipe.title)}.png`, translateRecipeText(recipe.title, language));
+      const result = await shareOrDownloadBlob(blob, `${slugify(recipe.title)}.png`, translateRecipeText(recipe.title, language), "image/png");
       if (result === "downloaded") showToast(t("share.cardDownloadedToast"));
       else if (!result) showToast(t("share.imageErrorToast"));
     } catch {
@@ -311,7 +303,7 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
             </button>
             <button type="button" className="cookbook-export-tile" onClick={doExportPDF} disabled={busy !== null}>
               <FileText size={22} />
-              <span>{t("share.pdfSheet")}</span>
+              <span>{busy === "pdf" ? t("share.generating") : t("share.pdfSheet")}</span>
             </button>
             <button type="button" className="cookbook-export-tile" onClick={doExportText} disabled={busy !== null}>
               <AlignLeft size={22} />
@@ -327,66 +319,32 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
         </motion.div>
       </motion.div>
 
-      {/* Fiche imprimable — invisible à l'écran (.print-sheet { display: none })
-          n'apparaît que dans le rendu d'impression déclenché par window.print(). */}
-      <div className="print-sheet" aria-hidden="true">
-        <div className="print-page">
-          {includePhoto && hasPhoto && (
-            <div className="print-photo-wrap">
-              <img className="print-photo" src={recipe.imageUrl} alt="" crossOrigin="anonymous" />
-            </div>
-          )}
-          <div className="print-badges">
-            <span className={`print-chip ${categoryLabel(recipe) === "Sucré" ? "chip-sucre" : "chip-sale"}`}>
-              {categoryText}
-            </span>
-            {includeNutriscore && (
-              <span className="print-nutri-circle" style={{ background: nutriColor }}>{nutriGrade}</span>
-            )}
-          </div>
-          <h1>{translateRecipeText(recipe.title, language)}</h1>
-          <p className="print-type">{t("share.printSignature")}</p>
-          <div className="print-meta">
-            <span>⏱ {recipe.time} {t("share.minutesShort")}</span>
-            <span>👥 {servings} {t("share.servingsShort")}</span>
-            {recipe.carbs ? <span>{Math.round(recipe.carbs * servings)} {t("share.carbsTotalSuffix")}</span> : null}
-          </div>
-          <div className="print-flourish">❦</div>
-
-          <div className="print-columns">
-            <div>
-              <h2>{t("share.printIngredients")}</h2>
-              {groupIngredients(ingredients).map((g, i) => (
-                <div key={i}>
-                  {g.title && <h3 className="print-sub">{translateRecipeText(g.title, language)}</h3>}
-                  <ul>
-                    {g.items.map((it, j) => (
-                      <li key={j}>{[it.qty, it.unit ? translateRecipeText(it.unit, language) : ""].filter(Boolean).join(" ")} — {translateRecipeText(it.name, language)}</li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-            <div>
-              <h2>{t("share.printPreparation")}</h2>
-              {groupSteps(recipe.steps).map((g, i) => (
-                <div key={i}>
-                  {g.title && <h3 className="print-sub">{translateRecipeText(g.title, language)}</h3>}
-                  <ol>
-                    {g.steps.map((s, j) => <li key={j}>{translateRecipeText(s, language)}</li>)}
-                  </ol>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {includeNotes && recipe.notes && (
-            <>
-              <h2>{t("share.printNotesTitle")}</h2>
-              <p className="print-notes">{translateRecipeText(recipe.notes, language)}</p>
-            </>
-          )}
-          <div className="print-footer">{t("share.printFooter")}</div>
+      {/* Rendu hors-écran de la page recette, pour la rasterisation html2canvas
+          de "Fiche PDF" (voir doExportPDF) — jamais visible : positionné hors
+          du viewport plutôt qu'en display:none (html2canvas ne peut rasteriser
+          qu'un élément réellement mis en page par le navigateur), même
+          technique que CookbookBuilderModal.jsx (--rendering). 800px de large
+          pour rester dans le mode 2 colonnes de .cookbook-recipe-columns (voir
+          la @container query, cookbook.css.js) quelle que soit la largeur
+          réelle de l'écran visiteur. */}
+      <div style={{ position: "fixed", left: -9999, top: 0, width: 800 }} aria-hidden="true">
+        <div ref={pdfSheetRef}>
+          <RecipePage
+            recipe={pdfRecipe}
+            config={{
+              showTime: true,
+              showIngredients: true,
+              showSteps: true,
+              showNutrition: includeNutriscore,
+              showNotes: includeNotes,
+              photoSize: includePhoto && hasPhoto ? "grande" : "aucune",
+            }}
+            t={t}
+            language={language}
+            pageNumber={null}
+            isLast
+            runningTitle="Le Grimoire de Morgane"
+          />
         </div>
       </div>
     </>

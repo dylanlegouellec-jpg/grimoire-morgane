@@ -485,35 +485,3 @@ export async function generateRecipeCardPng(recipe, servings, ingredients, optio
   return { blob: fallback.blob, photoIncluded: false };
 }
 
-// Partage natif (menu iOS/Android : Messages, Mail, Enregistrer dans
-// Photos...) si le partage de FICHIERS est supporté ; sinon, repli en
-// téléchargement direct du PNG — fonctionne partout, y compris desktop.
-// Retourne "shared" | "downloaded" | "cancelled" | false (échec), pour que
-// l'appelant puisse afficher le bon message (pas de toast "téléchargée !"
-// après un partage réussi, par exemple).
-export async function shareOrDownloadPng(blob, filename, shareTitle) {
-  if (!blob) return false;
-  try {
-    const file = new File([blob], filename, { type: "image/png" });
-    if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
-      await navigator.share({ files: [file], title: shareTitle });
-      return "shared";
-    }
-  } catch (err) {
-    if (err && err.name === "AbortError") return "cancelled";
-    // toute autre erreur : on bascule sur le téléchargement direct ci-dessous
-  }
-  try {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    return "downloaded";
-  } catch {
-    return false;
-  }
-}
