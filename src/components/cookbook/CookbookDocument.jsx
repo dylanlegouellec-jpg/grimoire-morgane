@@ -176,7 +176,9 @@ export function RecipePage({ recipe, config, t, language, pageNumber, isLast, ru
           <div>
             <h3 className="cookbook-section-title">{t("share.printIngredients")}</h3>
             {groupIngredients(ingredients).map((g, i) => (
-              <div key={i}>
+              // "cookbook-recipe-group" : voir le même commentaire côté
+              // étapes ci-dessous, ATOMIC_SELECTOR dans utils/cookbookPdf.js.
+              <div key={i} className="cookbook-recipe-group">
                 {g.title && <h4 className="cookbook-sub">{translateRecipeText(g.title, language)}</h4>}
                 <ul>
                   {g.items.map((it, j) => (
@@ -191,7 +193,19 @@ export function RecipePage({ recipe, config, t, language, pageNumber, isLast, ru
           <div>
             <h3 className="cookbook-section-title">{t("share.printPreparation")}</h3>
             {groupSteps(steps).map((g, i) => (
-              <div key={i}>
+              // "cookbook-recipe-group" : signalé par l'utilisateur — un
+              // sous-titre de section (ex. "Montage") pouvait se retrouver
+              // seul en bas d'une page, ses étapes basculant sur la
+              // suivante, perdant tout lien visuel avec leur propre titre.
+              // ATOMIC_SELECTOR (utils/cookbookPdf.js) ne protégeait
+              // jusqu'ici que les <li> et le titre "Ingrédients"/
+              // "Préparation" (h3), jamais ce sous-titre (h4.cookbook-sub)
+              // ni son lien avec la liste qui le suit — cette classe rend
+              // le sous-titre ET sa liste indivisibles, comme un seul bloc,
+              // tant qu'ils tiennent sur une page (sinon, dégradation
+              // normale : ATOMIC_SELECTOR ignore déjà tout bloc plus haut
+              // qu'une page entière, repli sur les <li> pris un par un).
+              <div key={i} className="cookbook-recipe-group">
                 {g.title && <h4 className="cookbook-sub">{translateRecipeText(g.title, language)}</h4>}
                 <ol>{g.steps.map((s, j) => <li key={j}>{translateRecipeText(s, language)}</li>)}</ol>
               </div>
