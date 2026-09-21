@@ -51,3 +51,36 @@ describe("saveProfile — hero_treatment", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
+
+/* ------------------------------------------------------------------ */
+/*  Date de naissance (ProfileEditor.jsx) — écrite tel quel comme            */
+/*  hero_treatment ci-dessus, MAIS "" (champ vidé) doit convertir en NULL,     */
+/*  jamais écrire une chaîne vide dans une colonne `date` PostgreSQL.           */
+/* ------------------------------------------------------------------ */
+describe("saveProfile — birth_date", () => {
+  it("écrit birth_date tel quel quand une date est fournie", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ body: [{ id: "u1" }] }))
+      .mockResolvedValueOnce(jsonResponse({ body: [{ id: "u1", birth_date: "2000-05-14" }] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await saveProfile("u1", { birthDate: "2000-05-14" });
+
+    const patchCall = fetchMock.mock.calls[1];
+    expect(JSON.parse(patchCall[1].body)).toMatchObject({ birth_date: "2000-05-14" });
+  });
+
+  it("convertit une chaîne vide (champ vidé) en NULL plutôt que d'écrire \"\"", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ body: [{ id: "u1", birth_date: "2000-05-14" }] }))
+      .mockResolvedValueOnce(jsonResponse({ body: [{ id: "u1", birth_date: null }] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await saveProfile("u1", { birthDate: "" });
+
+    const patchCall = fetchMock.mock.calls[1];
+    expect(JSON.parse(patchCall[1].body)).toMatchObject({ birth_date: null });
+  });
+});
