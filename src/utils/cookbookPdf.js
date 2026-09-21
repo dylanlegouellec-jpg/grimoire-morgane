@@ -46,12 +46,21 @@ const PAGE_BACKGROUND_RGB = [0xf6, 0xec, 0xd2];
 const ROUNDING_TOLERANCE_PX = 4;
 
 // Éléments qu'une coupure de page ne doit jamais traverser en leur milieu :
-// une ligne d'ingrédient/étape, un sous-titre de groupe, le titre de
-// section ("Ingrédients"/"Préparation"), l'en-tête d'une recette (photo +
-// badges) — signalé par l'utilisateur : une recette dont la section
-// "Préparation" ne tenait pas entièrement sur une page se voyait coupée net
-// au milieu d'une étape plutôt que de basculer proprement sur la suivante.
-const ATOMIC_SELECTOR = "li, h3.cookbook-section-title, h2.cookbook-page-title, .cookbook-recipe-badges";
+// une ligne d'ingrédient/étape, le titre de section ("Ingrédients"/
+// "Préparation"), l'en-tête d'une recette (photo + badges) — signalé par
+// l'utilisateur : une recette dont la section "Préparation" ne tenait pas
+// entièrement sur une page se voyait coupée net au milieu d'une étape
+// plutôt que de basculer proprement sur la suivante.
+//
+// ".cookbook-recipe-group" (CookbookDocument.jsx) : un sous-titre de groupe
+// (ex. "Montage") ET la liste qui le suit, comme un seul bloc indivisible —
+// deuxième signalement, distinct du premier ci-dessus : un sous-titre
+// pouvait rester seul en bas d'une page, sa liste basculant sur la
+// suivante sans plus aucun lien visuel avec lui. Un h4.cookbook-sub seul
+// (sans sa liste) n'aurait rien résolu : rien n'empêchait alors une
+// coupure de tomber juste après lui plutôt qu'en son milieu, ce qui est
+// exactement le problème signalé.
+const ATOMIC_SELECTOR = "li, h3.cookbook-section-title, h2.cookbook-page-title, .cookbook-recipe-badges, .cookbook-recipe-group";
 
 function pageHeightPxFor(elementWidthPx, config) {
   const pageMm = pageDimensionsMm(config);

@@ -368,7 +368,8 @@ export const COOKBOOK_CSS = `
   .cookbook-page-title,
   .cookbook-section-title,
   .cookbook-sub,
-  .cookbook-recipe-badges {
+  .cookbook-recipe-badges,
+  .cookbook-recipe-group {
     break-inside: avoid;
     page-break-inside: avoid;
   }

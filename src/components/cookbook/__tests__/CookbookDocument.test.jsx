@@ -116,3 +116,38 @@ describe("CookbookDocument — ligne temps/portions de la page recette", () => {
     expect(meta.textContent).not.toContain("1440");
   });
 });
+
+/* ------------------------------------------------------------------ */
+/*  RÉGRESSION : signalé par l'utilisateur avec un exemple concret         */
+/*  ("Montage") — un sous-titre de groupe d'étapes/ingrédients pouvait        */
+/*  se retrouver seul en bas d'une page du PDF, sa liste basculant sur la      */
+/*  suivante. ATOMIC_SELECTOR (utils/cookbookPdf.js) protège désormais le       */
+/*  wrapper ".cookbook-recipe-group" comme un bloc indivisible — encore         */
+/*  faut-il que CookbookDocument.jsx pose bien cette classe sur chaque            */
+/*  groupe d'ingrédients ET d'étapes (avec ou sans sous-titre).                     */
+/* ------------------------------------------------------------------ */
+describe("CookbookDocument — regroupement sous-titre + liste (pagination PDF)", () => {
+  it("pose .cookbook-recipe-group sur chaque groupe d'étapes ET d'ingrédients, sous-titré ou non", () => {
+    render(
+      <LanguageProvider>
+        <CookbookDocument
+          recipes={[{
+            id: "r1",
+            title: "Bûche pâtissière",
+            category: "Sucré",
+            time: 30,
+            servings: 4,
+            ingredients: [{ isSection: true, title: "Biscuit" }, { qty: 4, unit: "", name: "oeufs" }],
+            steps: [{ isSection: true, title: "Montage" }, "Etaler la chantilly.", "Rouler la bûche."],
+          }]}
+          config={{ ...DEFAULT_COOKBOOK_CONFIG, tocMode: "aucune" }}
+        />
+      </LanguageProvider>
+    );
+    const groups = document.querySelectorAll(".cookbook-recipe-group");
+    expect(groups.length).toBeGreaterThanOrEqual(2);
+    const montageGroup = Array.from(groups).find((g) => g.textContent.includes("Montage"));
+    expect(montageGroup).toBeTruthy();
+    expect(montageGroup.textContent).toContain("Rouler la bûche");
+  });
+});

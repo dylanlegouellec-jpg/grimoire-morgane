@@ -56,4 +56,24 @@ describe("computeBreakpoints", () => {
     const breakpoints = computeBreakpoints(container, 400);
     expect(breakpoints[1]).toBe(400);
   });
+
+  /* ---------------------------------------------------------------- */
+  /*  RÉGRESSION : un sous-titre de groupe (ex. "Montage") se retrouvait   */
+  /*  seul en bas d'une page, sa liste basculant sur la suivante — un        */
+  /*  <h4.cookbook-sub> seul n'aurait rien protégé : rien n'empêchait          */
+  /*  alors une coupure de tomber juste APRÈS lui plutôt qu'en son milieu.       */
+  /*  Le wrapper ".cookbook-recipe-group" (titre + liste) doit donc reculer      */
+  /*  la coupure jusqu'à SON sommet, pas seulement celui du titre.                 */
+  /* ---------------------------------------------------------------- */
+  it("recule la coupure au sommet d'un .cookbook-recipe-group entier (sous-titre + liste), pas seulement du sous-titre", () => {
+    const container = document.createElement("div");
+    mockRect(container, 0, 1000);
+    const group = document.createElement("div");
+    group.className = "cookbook-recipe-group";
+    mockRect(group, 350, 500); // le sous-titre tiendrait seul avant 400, mais pas le groupe entier
+    container.appendChild(group);
+
+    const breakpoints = computeBreakpoints(container, 400);
+    expect(breakpoints[1]).toBe(350);
+  });
 });
