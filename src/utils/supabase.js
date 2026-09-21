@@ -44,7 +44,23 @@ export const APP_STATE_COLUMNS = "household_id,pantry,basics,meal_plan,updated_a
 // qu'un vrai ping a répondu au moins une fois, son résultat prime.
 let lastKnownReachable = null;
 
+// Bascule de simulation pour le Panneau de Diagnostics ("simuler le mode
+// hors-ligne") — jamais persistée (en mémoire seulement) : un rechargement
+// de page repart toujours en mode réel, pour ne jamais bloquer
+// durablement l'app sur un faux hors-ligne oublié après une session de
+// test.
+let forceOfflineForDebug = false;
+
+export function setForceOfflineForDebug(value) {
+  forceOfflineForDebug = Boolean(value);
+}
+
+export function isForceOfflineForDebug() {
+  return forceOfflineForDebug;
+}
+
 function isOffline() {
+  if (forceOfflineForDebug) return true;
   if (lastKnownReachable !== null) return !lastKnownReachable;
   return typeof navigator !== "undefined" && navigator.onLine === false;
 }
@@ -64,6 +80,10 @@ function isOffline() {
 // compter comme injoignable.
 export async function pingSupabase() {
   if (!SUPABASE_READY) return false;
+  if (forceOfflineForDebug) {
+    lastKnownReachable = false;
+    return false;
+  }
   let reachable = false;
   try {
     const token = await getAuthToken();
@@ -180,6 +200,35 @@ async function supabaseRequest(path, options = {}) {
 
 export async function fetchTable(table, query = `select=*`) {
   return supabaseRequest(`${table}?${query}`, { method: "GET" });
+}
+
+// Compte approximatif de lignes d'une table — pour la volumétrie Supabase
+// du Panneau de Diagnostics. Une requête HEAD ne rapatrie aucune ligne :
+// seul l'en-tête `Content-Range` renvoyé par PostgREST avec
+// `Prefer: count=exact` ("0-0/42") donne le total exact, sans le coût
+// d'un `select=*` complet. Ne lève jamais : `null` signifie simplement
+// "indisponible" (hors-ligne, RLS, table absente...), un panneau de debug
+// n'a pas à faire planter le reste de l'app pour une métrique accessoire.
+export async function countTableRows(table) {
+  if (!SUPABASE_READY || isOffline()) return null;
+  try {
+    const token = await getAuthToken();
+    const res = await fetchWithTimeout(
+      `${SUPABASE_URL}/rest/v1/${table}?select=id&limit=1`,
+      {
+        method: "HEAD",
+        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${token}`, Prefer: "count=exact" },
+      },
+      REQUEST_TIMEOUT_MS
+    );
+    if (!res.ok) return null;
+    const range = res.headers.get("content-range");
+    if (!range) return null;
+    const total = range.split("/")[1];
+    return total === "*" ? null : Number(total);
+  } catch {
+    return null;
+  }
 }
 
 // Une erreur est "récupérable hors-ligne" si elle vient du réseau (coupure,
