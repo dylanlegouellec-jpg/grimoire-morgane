@@ -359,82 +359,94 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
               {t("cookbook.selectedCount", { count: selectedRecipes.length, plural: selectedRecipes.length > 1 ? "s" : "" })}
             </p>
 
-            {/* --- Couverture --- */}
-            <p className="ios-group-title" style={{ marginTop: 22 }}>{t("cookbook.coverTitle")}</p>
-            <CookbookCoverPreview config={config} />
-            <div className="ios-group" style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 12 }}>
-              <label className="field">
-                <span>{t("cookbook.coverTitleLabel")}</span>
-                <input
-                  type="text"
-                  value={config.coverTitle}
-                  onChange={(e) => patch({ coverTitle: e.target.value })}
-                  placeholder="Le Grimoire de Morgane"
-                />
-              </label>
-              <label className="field">
-                <span>{t("cookbook.coverSubtitleLabel")}</span>
-                <input
-                  type="text"
-                  value={config.coverSubtitle}
-                  onChange={(e) => patch({ coverSubtitle: e.target.value })}
-                  placeholder={t("cookbook.coverSubtitlePlaceholder")}
-                />
-              </label>
-              <div>
-                <span className="settings-row-title">{t("cookbook.coverColorLabel")}</span>
-                <div className="cookbook-color-row">
-                  {COVER_COLORS.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      className={`cookbook-color-swatch ${config.coverColor === c.id ? "active" : ""}`}
-                      style={{ background: c.value }}
-                      aria-label={c.id}
-                      onClick={() => { triggerHaptic(10); patch({ coverColor: c.id }); }}
-                    />
-                  ))}
+            {/* --- Couverture ---
+                Le titre + l'aperçu épinglé + tous les réglages de CETTE
+                section sont enveloppés dans un même conteneur : un aperçu
+                en `position: sticky` ne se détache jamais au-delà des
+                bornes de son parent — sans cette enveloppe dédiée (bug
+                signalé : l'aperçu restait collé à l'écran jusqu'à la
+                section "Structure du livre", bien après la sienne), son
+                seul parent aurait été tout le contenu de la modale, donc
+                aucune borne avant la toute fin du scroll. */}
+            <div className="cookbook-sticky-section">
+              <p className="ios-group-title" style={{ marginTop: 22 }}>{t("cookbook.coverTitle")}</p>
+              <CookbookCoverPreview config={config} />
+              <div className="ios-group" style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 12 }}>
+                <label className="field">
+                  <span>{t("cookbook.coverTitleLabel")}</span>
+                  <input
+                    type="text"
+                    value={config.coverTitle}
+                    onChange={(e) => patch({ coverTitle: e.target.value })}
+                    placeholder="Le Grimoire de Morgane"
+                  />
+                </label>
+                <label className="field">
+                  <span>{t("cookbook.coverSubtitleLabel")}</span>
+                  <input
+                    type="text"
+                    value={config.coverSubtitle}
+                    onChange={(e) => patch({ coverSubtitle: e.target.value })}
+                    placeholder={t("cookbook.coverSubtitlePlaceholder")}
+                  />
+                </label>
+                <div>
+                  <span className="settings-row-title">{t("cookbook.coverColorLabel")}</span>
+                  <div className="cookbook-color-row">
+                    {COVER_COLORS.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        className={`cookbook-color-swatch ${config.coverColor === c.id ? "active" : ""}`}
+                        style={{ background: c.value }}
+                        aria-label={c.id}
+                        onClick={() => { triggerHaptic(10); patch({ coverColor: c.id }); }}
+                      />
+                    ))}
+                  </div>
                 </div>
+                <SegmentedControl
+                  options={COVER_LAYOUTS.map((l) => ({ value: l, label: t(`cookbook.coverLayout.${l}`) }))}
+                  value={config.coverLayout}
+                  onChange={(v) => patch({ coverLayout: v })}
+                  ariaLabel={t("cookbook.coverLayoutLabel")}
+                />
               </div>
-              <SegmentedControl
-                options={COVER_LAYOUTS.map((l) => ({ value: l, label: t(`cookbook.coverLayout.${l}`) }))}
-                value={config.coverLayout}
-                onChange={(v) => patch({ coverLayout: v })}
-                ariaLabel={t("cookbook.coverLayoutLabel")}
-              />
             </div>
 
-            {/* --- Mise en page des recettes --- */}
-            <p className="ios-group-title" style={{ marginTop: 22 }}>{t("cookbook.layoutTitle")}</p>
-            <CookbookRecipePreview config={config} />
-            <div className="ios-group ios-group-padded">
-              <SegmentedControl
-                options={PHOTO_SIZES.map((s) => ({ value: s, label: t(`cookbook.photoSize.${s}`) }))}
-                value={config.photoSize}
-                onChange={(v) => patch({ photoSize: v })}
-                ariaLabel={t("cookbook.photoSizeLabel")}
-              />
-            </div>
-            <div className="ios-group" style={{ marginTop: 8 }}>
-              <div className="settings-row">
-                <span className="settings-row-title">{t("cookbook.showIngredients")}</span>
-                <Switch checked={config.showIngredients} onChange={(v) => patch({ showIngredients: v })} label={t("cookbook.showIngredients")} />
+            {/* --- Mise en page des recettes --- (même raisonnement ci-dessus) */}
+            <div className="cookbook-sticky-section">
+              <p className="ios-group-title" style={{ marginTop: 22 }}>{t("cookbook.layoutTitle")}</p>
+              <CookbookRecipePreview config={config} />
+              <div className="ios-group ios-group-padded">
+                <SegmentedControl
+                  options={PHOTO_SIZES.map((s) => ({ value: s, label: t(`cookbook.photoSize.${s}`) }))}
+                  value={config.photoSize}
+                  onChange={(v) => patch({ photoSize: v })}
+                  ariaLabel={t("cookbook.photoSizeLabel")}
+                />
               </div>
-              <div className="settings-row">
-                <span className="settings-row-title">{t("cookbook.showSteps")}</span>
-                <Switch checked={config.showSteps} onChange={(v) => patch({ showSteps: v })} label={t("cookbook.showSteps")} />
-              </div>
-              <div className="settings-row">
-                <span className="settings-row-title">{t("cookbook.showNutrition")}</span>
-                <Switch checked={config.showNutrition} onChange={(v) => patch({ showNutrition: v })} label={t("cookbook.showNutrition")} />
-              </div>
-              <div className="settings-row">
-                <span className="settings-row-title">{t("cookbook.showNotes")}</span>
-                <Switch checked={config.showNotes} onChange={(v) => patch({ showNotes: v })} label={t("cookbook.showNotes")} />
-              </div>
-              <div className="settings-row">
-                <span className="settings-row-title">{t("cookbook.showTime")}</span>
-                <Switch checked={config.showTime} onChange={(v) => patch({ showTime: v })} label={t("cookbook.showTime")} />
+              <div className="ios-group" style={{ marginTop: 8 }}>
+                <div className="settings-row">
+                  <span className="settings-row-title">{t("cookbook.showIngredients")}</span>
+                  <Switch checked={config.showIngredients} onChange={(v) => patch({ showIngredients: v })} label={t("cookbook.showIngredients")} />
+                </div>
+                <div className="settings-row">
+                  <span className="settings-row-title">{t("cookbook.showSteps")}</span>
+                  <Switch checked={config.showSteps} onChange={(v) => patch({ showSteps: v })} label={t("cookbook.showSteps")} />
+                </div>
+                <div className="settings-row">
+                  <span className="settings-row-title">{t("cookbook.showNutrition")}</span>
+                  <Switch checked={config.showNutrition} onChange={(v) => patch({ showNutrition: v })} label={t("cookbook.showNutrition")} />
+                </div>
+                <div className="settings-row">
+                  <span className="settings-row-title">{t("cookbook.showNotes")}</span>
+                  <Switch checked={config.showNotes} onChange={(v) => patch({ showNotes: v })} label={t("cookbook.showNotes")} />
+                </div>
+                <div className="settings-row">
+                  <span className="settings-row-title">{t("cookbook.showTime")}</span>
+                  <Switch checked={config.showTime} onChange={(v) => patch({ showTime: v })} label={t("cookbook.showTime")} />
+                </div>
               </div>
             </div>
 
