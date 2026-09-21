@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { applyTheme, overrideStatusBarColor } from "../theme";
+import { applyTheme, overrideStatusBarColor, refreshStatusBarColor } from "../theme";
 
 /* ------------------------------------------------------------------ */
 /*  RÉGRESSION : "en haut de mon écran c'est pas la même teinte" — la      */
@@ -82,5 +82,42 @@ describe("overrideStatusBarColor — impose une teinte hors du thème réel", ()
   it("ne casse rien si la balise <meta name=\"theme-color\"> est absente", () => {
     document.head.innerHTML = "";
     expect(() => overrideStatusBarColor("#2c221e")).not.toThrow();
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/*  RÉGRESSION (4e round) : mesuré par capture vidéo — l'ouverture           */
+/*  d'UNE SEULE modale standard (juste son voile semi-transparent, sans      */
+/*  aucun changement de thème) suffit à faire "geler" la barre d'état sur      */
+/*  la teinte assombrie par ce voile ; elle ignore ensuite toute nouvelle       */
+/*  valeur de <meta theme-color>. refreshStatusBarColor() réaffiche la           */
+/*  couleur DÉJÀ déclarée (sans la recalculer) pour forcer iOS à la               */
+/*  redessiner, sans jamais risquer d'écraser une teinte posée par ailleurs        */
+/*  (ex. le mode cuisine, CookMode.jsx).                                            */
+/* ------------------------------------------------------------------ */
+describe("refreshStatusBarColor — réaffiche la couleur déjà déclarée", () => {
+  beforeEach(() => {
+    document.head.innerHTML = '<meta name="theme-color" content="#2c221e">';
+  });
+  afterEach(() => {
+    document.head.innerHTML = "";
+  });
+
+  it("conserve la valeur actuelle de la balise <meta theme-color>", () => {
+    refreshStatusBarColor();
+    expect(document.querySelector('meta[name="theme-color"]').content).toBe("#2c221e");
+  });
+
+  it("remplace tout de même le nœud <meta> (repli iOS PWA)", () => {
+    const before = document.querySelector('meta[name="theme-color"]');
+    refreshStatusBarColor();
+    const after = document.querySelector('meta[name="theme-color"]');
+    expect(after).not.toBe(before);
+    expect(document.querySelectorAll('meta[name="theme-color"]').length).toBe(1);
+  });
+
+  it("ne casse rien si la balise <meta name=\"theme-color\"> est absente", () => {
+    document.head.innerHTML = "";
+    expect(() => refreshStatusBarColor()).not.toThrow();
   });
 });

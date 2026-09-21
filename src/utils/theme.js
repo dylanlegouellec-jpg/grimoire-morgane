@@ -88,6 +88,30 @@ export function overrideStatusBarColor(color) {
   replaceThemeColorMeta(color);
 }
 
+// REGRESSION (4e round) : mesuré précisément par capture vidéo — dès
+// qu'UNE modale standard s'ouvre (le simple voile semi-transparent
+// derrière elle, PAS une couleur qu'on demande nous-mêmes), la barre
+// d'état se met à refléter ce voile (crème assombri), puis reste figée
+// sur cette teinte pour le reste de la session : ni la fermeture de la
+// modale, ni un changement de thème, ni overrideStatusBarColor() (mode
+// cuisine) ne la font plus bouger ensuite. iOS semble "geler" le rendu
+// de la barre après ce premier changement visuel, sourd à toute
+// nouvelle valeur de <meta theme-color> tant qu'on ne lui redonne pas
+// un nœud <meta> entièrement neuf — pas une nouvelle VALEUR (le thème
+// réel, lui, n'a pas changé), donc on ne recalcule rien ici : on
+// réaffirme juste la couleur déjà déclarée, pour forcer iOS à la
+// redessiner. Contrairement à la tentative précédente (réappliquer le
+// thème réel à la fermeture de toute modale, revertée : elle entrait en
+// conflit avec la couleur du mode cuisine, elle-même indépendante de ce
+// thème), ceci ne change jamais la valeur logique — donc rien à
+// réconcilier avec CookMode.jsx.
+export function refreshStatusBarColor() {
+  if (typeof document === "undefined") return;
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (!meta) return;
+  replaceThemeColorMeta(meta.getAttribute("content"));
+}
+
 // N'a d'effet que lorsque le thème choisi est "system" : réapplique le
 // thème à chaque bascule clair/sombre du système d'exploitation.
 export function watchSystemTheme(onChange) {

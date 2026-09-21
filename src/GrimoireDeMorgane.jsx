@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { DEFAULT_BASICS, SUPABASE_READY, demoRecipes } from "./constants";
 import { loadLocalCache } from "./utils/localCache";
-import { getStoredTheme, storeTheme, applyTheme, watchSystemTheme } from "./utils/theme";
+import { getStoredTheme, storeTheme, applyTheme, watchSystemTheme, refreshStatusBarColor } from "./utils/theme";
 import {
   getStoredPressDuration,
   storePressDuration,
@@ -32,6 +32,7 @@ import useMealPlan from "./hooks/useMealPlan";
 import useShoppingLists from "./hooks/useShoppingLists";
 import useOfflineSync from "./hooks/useOfflineSync";
 import useConnectionStatus from "./hooks/useConnectionStatus";
+import { useIsAnyModalOpen } from "./hooks/useBodyScrollLock";
 
 import LoadingScreen from "./screens/LoadingScreen";
 import LoginScreen from "./screens/LoginScreen";
@@ -251,6 +252,25 @@ export default function GrimoireDeMorgane() {
     if (theme !== "system") return undefined;
     return watchSystemTheme(() => applyTheme("system"));
   }, [theme]);
+
+  // REGRESSION (4e round) : mesuré par capture vidéo — l'ouverture d'UNE
+  // SEULE modale standard (son simple voile semi-transparent, sans aucun
+  // changement de thème) suffit à faire "geler" la barre d'état sur la
+  // teinte assombrie par ce voile ; elle ignore ensuite tout nouveau
+  // <meta theme-color> jusqu'au relancement de l'app. On force donc un
+  // réaffichage (pas un recalcul — voir refreshStatusBarColor()) dès la
+  // fermeture de la DERNIÈRE modale standard ouverte. Contrairement à la
+  // tentative revertée (#92/#93) qui RÉAPPLIQUAIT LE THÈME RÉEL ici (et
+  // entrait donc en conflit avec la teinte propre du mode cuisine,
+  // CookMode.jsx, ouvert juste après une telle fermeture), ceci ne
+  // change jamais la valeur — CookMode reste donc seul maître de la
+  // sienne, capturée/restaurée indépendamment (voir son propre effet).
+  const anyModalOpen = useIsAnyModalOpen();
+  const wasModalOpenRef = useRef(anyModalOpen);
+  useEffect(() => {
+    if (wasModalOpenRef.current && !anyModalOpen) refreshStatusBarColor();
+    wasModalOpenRef.current = anyModalOpen;
+  }, [anyModalOpen]);
 
   // Même principe que le thème, pour <html data-text-size="...">.
   useLayoutEffect(() => {
