@@ -79,3 +79,40 @@ describe("CookbookDocument — table des matières par chapitres", () => {
     expect(document.querySelector(".cookbook-toc")).not.toBeInTheDocument();
   });
 });
+
+/* ------------------------------------------------------------------ */
+/*  RÉGRESSION : signalé par l'utilisateur — la ligne temps/portions de     */
+/*  la page recette utilisait des icônes ⏱/👥 jugées trop basiques, et un     */
+/*  temps de repos long (1440 min) s'affichait tel quel plutôt qu'en jours.   */
+/* ------------------------------------------------------------------ */
+describe("CookbookDocument — ligne temps/portions de la page recette", () => {
+  it("n'affiche plus les anciennes icônes ⏱/👥 et sépare temps/portions par un point typographique", () => {
+    render(
+      <LanguageProvider>
+        <CookbookDocument
+          recipes={[{ id: "r1", title: "Tiramisu", category: "Sucré", time: 1440, servings: 6, ingredients: [], steps: ["Étape"] }]}
+          config={{ ...DEFAULT_COOKBOOK_CONFIG, tocMode: "aucune", showTime: true }}
+        />
+      </LanguageProvider>
+    );
+    const meta = document.querySelector(".cookbook-recipe-meta");
+    expect(meta).toBeInTheDocument();
+    expect(meta.textContent).not.toContain("⏱");
+    expect(meta.textContent).not.toContain("👥");
+    expect(meta.querySelector(".cookbook-recipe-meta-dot")).toBeInTheDocument();
+  });
+
+  it("affiche un temps de repos long (1440 min) en jours plutôt qu'en minutes brutes", () => {
+    render(
+      <LanguageProvider>
+        <CookbookDocument
+          recipes={[{ id: "r1", title: "Tiramisu", category: "Sucré", time: 1440, servings: 6, ingredients: [], steps: ["Étape"] }]}
+          config={{ ...DEFAULT_COOKBOOK_CONFIG, tocMode: "aucune", showTime: true }}
+        />
+      </LanguageProvider>
+    );
+    const meta = document.querySelector(".cookbook-recipe-meta");
+    expect(meta.textContent).toContain("1 j");
+    expect(meta.textContent).not.toContain("1440");
+  });
+});

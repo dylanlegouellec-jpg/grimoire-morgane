@@ -1,6 +1,6 @@
 import { useTranslation } from "../../contexts/LanguageContext";
 import { translateRecipeText } from "../../utils/recipeTranslation";
-import { categoryLabel, groupIngredients, groupSteps } from "../../utils/helpers";
+import { categoryLabel, groupIngredients, groupSteps, formatDurationMinutes } from "../../utils/helpers";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
 import { COVER_COLORS, marginMm, pageDimensionsMm } from "../../constants/cookbook";
 
@@ -152,8 +152,15 @@ function RecipePage({ recipe, config, t, language, pageNumber, isLast, runningTi
       <h2 className="cookbook-recipe-title">{translateRecipeText(recipe.title, language)}</h2>
       {config.showTime && (
         <div className="cookbook-recipe-meta">
-          <span>⏱ {recipe.time || recipe.prep_time || 0} {t("share.minutesShort")}</span>
-          <span>👥 {servings} {t("share.servingsShort")}</span>
+          {/* Remplace les anciennes icônes ⏱/👥 (jugées trop "basiques" par
+              l'utilisateur) par un traitement purement typographique — un
+              point plein comme séparateur, dans le même style Cinzel
+              espacé/majuscule que les puces de catégorie et la table des
+              matières un peu plus haut dans ce fichier, plutôt que des
+              pictogrammes qui détonnaient avec le reste du document. */}
+          <span>{formatDurationMinutes(recipe.time || recipe.prep_time || 0)}</span>
+          <span className="cookbook-recipe-meta-dot" aria-hidden="true" />
+          <span>{servings} {t("share.servingsShort")}</span>
         </div>
       )}
       <div className="cookbook-recipe-flourish" aria-hidden="true">❦</div>
