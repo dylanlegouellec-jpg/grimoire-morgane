@@ -14,8 +14,8 @@ import Seal from "./Seal";
 /*  en mode cuisine) côte à côte, avec un bouton "Enregistrer" explicite   */
 /*  plutôt qu'une fermeture automatique — utile dès que l'utilisateur       */
 /*  doit ajuster PLUSIEURS roues avant de valider (ex. Heures + Minutes),  */
-/*  contrairement à PortionBadge (une seule roue, valide toute seule en    */
-/*  s'arrêtant de tourner).                                                */
+/*  comme PortionBadge (une seule roue, mais un bouton "Valider" explicite  */
+/*  aussi, plutôt qu'une fermeture automatique en fin de défilement).       */
 /*                                                                          */
 /*  `columns`: [{ key, initialValue, min, max, step?, suffix }]            */
 /*  `onSave(values)`: values = { [key]: nombre final de chaque roue }      */

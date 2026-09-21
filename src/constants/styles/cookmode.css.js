@@ -75,10 +75,11 @@ export const COOKMODE_CSS = `
 .portion-badge-popover {
   position: absolute; top: 42px; right: 0; z-index: 20;
   background: #241a14; border: 1px solid rgba(217,180,92,0.4); border-radius: 14px;
-  padding: 8px 10px 4px; box-shadow: 0 10px 24px rgba(0,0,0,0.4);
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 10px 12px; box-shadow: 0 10px 24px rgba(0,0,0,0.4);
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
   animation: wheelPopIn 0.22s ease;
 }
+.portion-badge-popover .seal { padding: 8px 18px; font-size: 0.68rem; white-space: nowrap; }
 @keyframes wheelPopIn {
   from { opacity: 0; transform: translateY(-6px) scale(0.92); }
   to { opacity: 1; transform: none; }
