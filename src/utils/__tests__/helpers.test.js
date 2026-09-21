@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { guessAisle, formatDurationMinutes } from "../helpers";
+import { guessAisle, formatDurationMinutes, buildRecipeShareLink, decodeRecipeCode } from "../helpers";
 
 /* ------------------------------------------------------------------ */
 /*  RÉGRESSION : même bug de sous-chaîne que pantryUtils.js (Mon Frigo) —   */
@@ -54,5 +54,31 @@ describe("formatDurationMinutes", () => {
     expect(formatDurationMinutes(1440)).toBe("1 j");
     expect(formatDurationMinutes(1500)).toBe("1 j 1 h");
     expect(formatDurationMinutes(2 * 1440 + 90)).toBe("2 j 1 h");
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/*  Lien de partage PUBLIC d'une recette (voir PublicRecipeView.jsx) —    */
+/*  verrouille l'aller-retour encodage/décodage dont dépend tout ce         */
+/*  mécanisme : le paramètre doit s'appeler `recette` (jamais `import`,       */
+/*  qui déclenche un tout autre flux, voir useOfflineSync.js) et la recette     */
+/*  décodée doit être identique à celle passée à l'encodage.                     */
+/* ------------------------------------------------------------------ */
+describe("buildRecipeShareLink", () => {
+  it("produit un lien ?recette=... (jamais ?import=...) décodable en la même recette", () => {
+    const recipe = { title: "Tarte aux pommes", category: "Sucré", time: 45, servings: 6, ingredients: [{ qty: 3, unit: "", name: "pommes" }], steps: ["Éplucher", "Cuire"] };
+    const link = buildRecipeShareLink(recipe);
+
+    expect(link).toContain("?recette=");
+    expect(link).not.toContain("?import=");
+
+    const code = new URL(link).searchParams.get("recette");
+    expect(decodeRecipeCode(code)).toEqual(recipe);
+  });
+
+  it("renvoie une chaîne vide si la recette ne peut pas être encodée", () => {
+    const circular = {};
+    circular.self = circular; // JSON.stringify lève sur une référence circulaire
+    expect(buildRecipeShareLink(circular)).toBe("");
   });
 });

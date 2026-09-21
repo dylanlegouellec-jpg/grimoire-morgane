@@ -288,6 +288,10 @@ export const translations = {
       includeNutriscore: "Inclure le Nutri-Score",
       notesTips: "Notes & astuces",
       includeNotes: "Inclure les notes personnelles",
+      publicLinkTitle: "Lien de partage",
+      publicLinkHint: "Quiconque ouvre ce lien voit uniquement cette recette, sans accéder au reste de ton Grimoire.",
+      copyPublicLink: "Copier le lien",
+      publicLinkLabel: "Lien de la recette",
       cookbook: "Livre de Cuisine",
       generating: "Génération…",
       imageCard: "Carte Image",
@@ -411,6 +415,9 @@ export const translations = {
       logConsole: "Console de logs",
       clearLogs: "Vider",
       noLogs: "Aucun événement pour l'instant.",
+    },
+    publicRecipe: {
+      invalidTitle: "Ce lien de recette n'est plus valide.",
     },
     mealTypes: {
       "petit-dejeuner": "Petit-déjeuner",
@@ -734,6 +741,10 @@ export const translations = {
       includeNutriscore: "Include the Nutri-Score",
       notesTips: "Notes & tips",
       includeNotes: "Include personal notes",
+      publicLinkTitle: "Share link",
+      publicLinkHint: "Anyone who opens this link only sees this recipe, with no access to the rest of your Grimoire.",
+      copyPublicLink: "Copy link",
+      publicLinkLabel: "Recipe link",
       cookbook: "Cookbook",
       generating: "Generating…",
       imageCard: "Image Card",
@@ -857,6 +868,9 @@ export const translations = {
       logConsole: "Log console",
       clearLogs: "Clear",
       noLogs: "No events yet.",
+    },
+    publicRecipe: {
+      invalidTitle: "This recipe link is no longer valid.",
     },
     mealTypes: {
       "petit-dejeuner": "Breakfast",
