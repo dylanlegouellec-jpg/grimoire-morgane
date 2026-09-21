@@ -55,7 +55,7 @@ export const translations = {
       stepsDone: "{done} / {total} étapes terminées",
       ingredients: "Ingrédients",
       group: "Groupe {index}",
-      nextGroup: "Groupe suivant ▶",
+      nextGroup: "Groupe suivant",
       finish: "Terminer la préparation",
     },
     fridge: {
@@ -509,7 +509,7 @@ export const translations = {
       stepsDone: "{done} / {total} steps done",
       ingredients: "Ingredients",
       group: "Group {index}",
-      nextGroup: "Next group ▶",
+      nextGroup: "Next group",
       finish: "Finish cooking",
     },
     fridge: {
