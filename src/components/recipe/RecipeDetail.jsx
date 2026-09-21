@@ -2,6 +2,7 @@ import { useState, useRef, lazy, Suspense } from "react";
 import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform, useInView } from "motion/react";
 import { ChefHat, Clock, Minus, Plus, Share2, Users, X } from "lucide-react";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
+import { DEFAULT_HERO_TREATMENT } from "../../constants";
 import { categoryLabel, categoryClass, groupSteps, triggerHaptic } from "../../utils/helpers";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { translateRecipeText } from "../../utils/recipeTranslation";
@@ -60,7 +61,7 @@ function FadeInItem({ root, reducedMotion, className, children }) {
   );
 }
 
-export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareText, showToast, showNutriscore = true, heroTreatment = "fondu" }) {
+export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareText, showToast, showNutriscore = true, heroTreatment = DEFAULT_HERO_TREATMENT }) {
   // Sécurisation du nombre de portions initiales
   const baseServings = Number(recipe?.servings) || 1;
   const [servings, setServings] = useState(() => baseServings);

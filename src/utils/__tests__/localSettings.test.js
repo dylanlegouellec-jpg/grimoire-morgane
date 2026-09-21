@@ -6,8 +6,8 @@ describe("getStoredHeroTreatment / storeHeroTreatment", () => {
     localStorage.clear();
   });
 
-  it("retombe sur 'fondu' tant que rien n'a été mémorisé", () => {
-    expect(getStoredHeroTreatment()).toBe("fondu");
+  it("retombe sur 'cadre' tant que rien n'a été mémorisé", () => {
+    expect(getStoredHeroTreatment()).toBe("cadre");
   });
 
   it("mémorise et relit un choix valide", () => {
@@ -15,8 +15,8 @@ describe("getStoredHeroTreatment / storeHeroTreatment", () => {
     expect(getStoredHeroTreatment()).toBe("coin");
   });
 
-  it("ignore une valeur inconnue en stockage (donnée corrompue/ancienne) et retombe sur 'fondu'", () => {
+  it("ignore une valeur inconnue en stockage (donnée corrompue/ancienne) et retombe sur 'cadre'", () => {
     localStorage.setItem("grimoire_hero_treatment", "un-habillage-qui-n-existe-plus");
-    expect(getStoredHeroTreatment()).toBe("fondu");
+    expect(getStoredHeroTreatment()).toBe("cadre");
   });
 });

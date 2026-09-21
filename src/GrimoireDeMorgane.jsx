@@ -133,12 +133,15 @@ export default function GrimoireDeMorgane() {
     storeNavOpacity(value);
     setNavOpacityState(value);
   };
-  // Purement esthétique, purement local à l'appareil (voir constants/index.js,
-  // HERO_TREATMENTS) — même principe que navOpacity ci-dessus.
+  // Réglage de PROFIL (voir constants/index.js, HERO_TREATMENTS) — synchronisé
+  // avec Supabase comme le thème/l'appui long/la taille de texte ci-dessous :
+  // chaque membre du foyer garde son propre choix (jamais partagé entre les
+  // membres), mais le retrouve désormais aussi sur ses autres appareils.
   const [heroTreatment, setHeroTreatmentState] = useState(() => getStoredHeroTreatment());
   const setHeroTreatment = (key) => {
     storeHeroTreatment(key);
     setHeroTreatmentState(key);
+    if (user) saveProfile(user.id, { heroTreatment: key }).catch((err) => console.error("Sync habillage visuel impossible :", err));
   };
   // Réglage mémorisé localement uniquement (pas encore de vraie traduction
   // à synchroniser — voir la note dans utils/localSettings.js).
@@ -300,6 +303,10 @@ export default function GrimoireDeMorgane() {
       if (p.text_size) {
         storeTextSize(p.text_size);
         setTextSizeState(p.text_size);
+      }
+      if (p.hero_treatment) {
+        storeHeroTreatment(p.hero_treatment);
+        setHeroTreatmentState(p.hero_treatment);
       }
     });
   }, [user]);
