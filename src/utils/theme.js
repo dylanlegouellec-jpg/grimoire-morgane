@@ -46,12 +46,29 @@ const THEME_COLOR_META = { light: "#f1e6c8", dark: "#1c1917" };
 // fond de l'app plutôt qu'une couleur figée à la construction de la page,
 // qui décroche dès que l'utilisateur choisit un thème différent de celui
 // de son système.
+//
+// REGRESSION (2e round) : muter juste `content` sur la balise <meta>
+// EXISTANTE (comportement d'origine de cette fonction) ne suffit pas
+// toujours à faire recolorer la barre d'état par iOS une fois l'app
+// installée en PWA — signalé par l'utilisateur : la barre reste bloquée
+// sur une teinte sombre après un changement clair/sombre (ex. en quittant
+// les Réglages, une fois le thème "Système" réévalué), et ne se corrige
+// qu'en quittant/relançant l'app. iOS semble ne recolorer la barre native
+// qu'à la CRÉATION d'une balise <meta name="theme-color">, pas à la
+// simple mise à jour de son attribut sur un nœud déjà présent depuis le
+// chargement de la page — on force donc iOS à la revoir "neuve" en
+// remplaçant intégralement le nœud (clone + valeur, puis substitution)
+// plutôt qu'en modifiant l'existant en place.
 export function applyTheme(theme) {
   const resolved = resolveTheme(theme);
   if (typeof document !== "undefined" && document.documentElement) {
     document.documentElement.setAttribute("data-theme", resolved);
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", THEME_COLOR_META[resolved]);
+    if (meta) {
+      const fresh = meta.cloneNode(true);
+      fresh.setAttribute("content", THEME_COLOR_META[resolved]);
+      meta.replaceWith(fresh);
+    }
   }
   return resolved;
 }
