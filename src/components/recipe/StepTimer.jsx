@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Clock } from "lucide-react";
+import { Clock, Pause, Play } from "lucide-react";
 
 export default function StepTimer({ minutes }) {
   const fullSeconds = minutes * 60;
@@ -24,14 +24,15 @@ export default function StepTimer({ minutes }) {
   }, [running]);
 
   const fmt = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  const Icon = seconds === 0 ? Clock : running ? Pause : seconds === fullSeconds ? Clock : Play;
   const label =
     seconds === 0
       ? "Terminé !"
       : running
-      ? `⏸ ${fmt(seconds)}`
+      ? fmt(seconds)
       : seconds === fullSeconds
       ? `Lancer (${minutes} min)`
-      : `▶ Reprendre (${fmt(seconds)})`;
+      : `Reprendre (${fmt(seconds)})`;
 
   return (
     <button
@@ -39,7 +40,7 @@ export default function StepTimer({ minutes }) {
       className={`step-timer-btn ${running ? "running" : ""} ${seconds === 0 ? "done" : ""}`}
       onClick={(e) => { e.stopPropagation(); setRunning((r) => !r); }}
     >
-      <Clock size={13} /> {label}
+      <Icon size={13} /> {label}
     </button>
   );
 }
