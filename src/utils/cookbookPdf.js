@@ -25,6 +25,18 @@ import { marginMm, pageDimensionsMm } from "../constants/cookbook";
 // CSS px (mesure DOM, avant rasterisation) vers des coordonnées canvas.
 const SCALE = 2;
 
+// Même teinte que le fond crème/doré de CookbookDocument.jsx (couverture,
+// pages de recette) — appliquée aussi au fond PLEINE PAGE du PDF
+// (voir PAGE_BACKGROUND_RGB ci-dessous), pas seulement à la zone rasterisée
+// par html2canvas : une page jsPDF est blanche par défaut, et l'image posée
+// dans la zone utile (à `marginMmValue` du bord) ne recouvre jamais cette
+// marge elle-même — signalé par l'utilisateur ("il y a toujours du blanc
+// sur le côté"). Remplir toute la page de cette même teinte AVANT d'y poser
+// l'image fait disparaître cette bordure blanche, sans coudre de bord
+// visible entre marge et contenu (même couleur des deux côtés).
+const PAGE_BACKGROUND_HEX = "#f6ecd2";
+const PAGE_BACKGROUND_RGB = [0xf6, 0xec, 0xd2];
+
 // Jamais du contenu réel — quelques px d'arrondi (html2canvas capture la
 // taille réellement mise en page par le navigateur, arrondie au pixel
 // entier) : sans cette tolérance, une page dont le canvas fait ne serait-ce
@@ -137,10 +149,11 @@ async function addElementAsPdfPages(pdf, html2canvas, element, config, { marginM
   const canvas = await html2canvas(element, {
     scale: SCALE,
     useCORS: true,
-    backgroundColor: "#f6ecd2",
+    backgroundColor: PAGE_BACKGROUND_HEX,
   });
 
   const pageWidthMm = pdf.internal.pageSize.getWidth();
+  const pageHeightMm = pdf.internal.pageSize.getHeight();
   const usableWidthMm = pageWidthMm - marginMmValue * 2;
   const pxPerMm = canvas.width / usableWidthMm; // inclut déjà SCALE
 
@@ -159,6 +172,8 @@ async function addElementAsPdfPages(pdf, html2canvas, element, config, { marginM
       .drawImage(canvas, 0, sliceTopPx, canvas.width, sliceHeightPx, 0, 0, canvas.width, sliceHeightPx);
 
     if (!(isFirstPageOfDoc && firstSlice)) pdf.addPage();
+    pdf.setFillColor(...PAGE_BACKGROUND_RGB);
+    pdf.rect(0, 0, pageWidthMm, pageHeightMm, "F");
     pdf.addImage(
       sliceCanvas.toDataURL("image/jpeg", 0.92),
       "JPEG",
