@@ -115,7 +115,14 @@ function TocPage({ recipes, t, language, pageNumber, runningTitle, pageStarts, t
   );
 }
 
-function RecipePage({ recipe, config, t, language, pageNumber, isLast, runningTitle }) {
+// Exporté : réutilisé tel quel par ShareRecipeModal.jsx (bouton "Fiche
+// PDF" d'une recette isolée) — plutôt que de dupliquer ce balisage une
+// troisième fois (déjà repris une fois pour PublicRecipeView.jsx), le
+// rendu "une page recette" du livre de cuisine sert directement de base
+// à la génération PDF d'une recette seule (voir utils/cookbookPdf.js,
+// generateCookbookPdf, qui n'a besoin que d'un ou plusieurs éléments
+// `.cookbook-page` dans un conteneur, peu importe qu'il y en ait 12 ou 1).
+export function RecipePage({ recipe, config, t, language, pageNumber, isLast, runningTitle }) {
   const servings = Number(recipe.servings) || 1;
   const ingredients = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
   const steps = Array.isArray(recipe.steps) ? recipe.steps : [];
