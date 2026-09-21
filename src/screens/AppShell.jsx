@@ -31,6 +31,7 @@ const TextTemplateImportModal = lazy(() => import("../components/common/TextTemp
 const RecipeLinkImportModal = lazy(() => import("../components/common/RecipeLinkImportModal"));
 const SecretSettingsModal = lazy(() => import("../components/common/SecretSettingsModal"));
 const CookbookBuilderModal = lazy(() => import("../components/cookbook/CookbookBuilderModal"));
+const DiagnosticsPanelModal = lazy(() => import("../components/diagnostics/DiagnosticsPanelModal"));
 const ListsManagerModal = lazy(() => import("../components/common/ListsManagerModal"));
 const OnboardingTour = lazy(() => import("../components/onboarding/OnboardingTour"));
 
@@ -167,6 +168,7 @@ export default function AppShell({
   const [showLinkImport, setShowLinkImport] = useState(false);
   const [showSecretSettings, setShowSecretSettings] = useState(false);
   const [showCookbookBuilder, setShowCookbookBuilder] = useState(false);
+  const [showDiagnosticsPanel, setShowDiagnosticsPanel] = useState(false);
   const [showListsManager, setShowListsManager] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   // Lance le tuto UNE SEULE FOIS, dès qu'on sait avec certitude que ce
@@ -207,6 +209,16 @@ export default function AppShell({
     setShowSecretSettings(false);
     setShowCookbookBuilder(true);
   };
+  // Même raisonnement que openCookbookBuilder ci-dessus.
+  const openDiagnostics = () => {
+    setShowSecretSettings(false);
+    setShowDiagnosticsPanel(true);
+  };
+  // Ne touche QUE l'état React local (voir hasCompletedOnboarding
+  // ci-dessus) : le flag localStorage lui-même est déjà mis à jour par
+  // DiagnosticsPanelModal (storeOnboardingCompleted(false)) avant cet
+  // appel — ce composant n'a pas à connaître ce détail de stockage.
+  const resetOnboarding = () => setHasCompletedOnboarding(false);
 
   const touchStart = useRef(null);
   const appContentRef = useRef(null);
@@ -695,6 +707,7 @@ export default function AppShell({
             onSignOut={signOut}
             onReplayOnboarding={replayOnboarding}
             onOpenCookbookBuilder={openCookbookBuilder}
+            onOpenDiagnostics={openDiagnostics}
           />
         </Suspense>
         )}
@@ -706,6 +719,17 @@ export default function AppShell({
             recipes={recipes}
             onClose={() => setShowCookbookBuilder(false)}
             showToast={showToast}
+          />
+        </Suspense>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showDiagnosticsPanel && (
+        <Suspense fallback={null}>
+          <DiagnosticsPanelModal
+            onClose={() => setShowDiagnosticsPanel(false)}
+            showToast={showToast}
+            onResetOnboarding={resetOnboarding}
           />
         </Suspense>
         )}

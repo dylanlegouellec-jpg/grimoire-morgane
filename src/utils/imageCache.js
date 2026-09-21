@@ -41,6 +41,39 @@ async function isAlreadyCached(url) {
   return false;
 }
 
+// Utilisé par l'action "Vider le cache image" du Panneau de Diagnostics —
+// supprime les deux Cache Storage CacheFirst ci-dessus. Les images
+// reviendront au prochain affichage en ligne (voir prefetchRecipeImages),
+// mais l'app repasse hors-ligne à l'illustration vectorielle par défaut
+// tant qu'elles ne sont pas re-téléchargées.
+export async function clearImageCaches() {
+  if (typeof caches === "undefined") return { cleared: [] };
+  const cleared = [];
+  for (const name of IMAGE_CACHE_NAMES) {
+    try {
+      if (await caches.delete(name)) cleared.push(name);
+    } catch {
+      /* Cache Storage indisponible — rien à nettoyer. */
+    }
+  }
+  return { cleared };
+}
+
+export async function getImageCacheEntryCounts() {
+  if (typeof caches === "undefined") return null;
+  const counts = {};
+  for (const name of IMAGE_CACHE_NAMES) {
+    try {
+      const cache = await caches.open(name);
+      const keys = await cache.keys();
+      counts[name] = keys.length;
+    } catch {
+      counts[name] = null;
+    }
+  }
+  return counts;
+}
+
 export async function prefetchRecipeImages(recipes) {
   if (typeof caches === "undefined" || typeof fetch === "undefined") return;
   if (!navigator.onLine) return; // aucune chance qu'un fetch aboutisse, inutile de le tenter hors-ligne

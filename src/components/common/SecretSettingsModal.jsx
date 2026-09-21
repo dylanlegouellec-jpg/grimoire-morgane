@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { BookOpen, ChevronLeft, ChevronRight, Compass, Home, LogOut, Palette, Pencil, Save, SlidersHorizontal, UserCircle2, X } from "lucide-react";
+import { Activity, BookOpen, ChevronLeft, ChevronRight, Compass, Home, LogOut, Palette, Pencil, Save, SlidersHorizontal, UserCircle2, X } from "lucide-react";
 import { triggerHaptic } from "../../utils/helpers";
 import { getCachedProfile, getProfile } from "../../utils/profile";
 import { useTranslation } from "../../contexts/LanguageContext";
@@ -75,6 +75,7 @@ export default function SecretSettingsModal({
   onSignOut,
   onReplayOnboarding,
   onOpenCookbookBuilder,
+  onOpenDiagnostics,
 }) {
   const { t } = useTranslation();
   // 'main' | 'appearance' | 'accessibility' | 'backup' | 'household'
@@ -280,6 +281,16 @@ export default function SecretSettingsModal({
             <button type="button" className="ios-row" onClick={() => { triggerHaptic(15); onReplayOnboarding(); }}>
               <span className="ios-row-icon" style={{ background: "var(--gold-light)" }}><Compass size={16} /></span>
               <span className="ios-row-title">{t("settings.replayTutorial")}</span>
+            </button>
+          </div>
+
+          <p className="ios-group-title">{t("settings.developerSection")}</p>
+          <div className="ios-group">
+            {/* Même raisonnement que "Créer un livre de cuisine" ci-dessus :
+                sa propre modale plein écran, jamais une sous-vue empilée. */}
+            <button type="button" className="ios-row" onClick={() => { triggerHaptic(15); onOpenDiagnostics(); }}>
+              <span className="ios-row-icon" style={{ background: "var(--forest)" }}><Activity size={16} /></span>
+              <span className="ios-row-title">{t("settings.openDiagnostics")}</span>
             </button>
           </div>
 

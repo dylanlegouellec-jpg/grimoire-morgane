@@ -7,6 +7,13 @@ import ErrorBoundary from './components/common/ErrorBoundary.jsx'
 
 import { registerSW } from 'virtual:pwa-register'
 import { initAudioOnFirstTouch } from './utils/audioUtils'
+import { installDevLog } from './utils/devLog'
+
+// Patché avant tout le reste : le Panneau de Diagnostics (Réglages du
+// Grimoire) doit pouvoir montrer les logs/erreurs survenus dès le tout
+// début du chargement de l'app, pas seulement ceux postérieurs à
+// l'ouverture du panneau.
+installDevLog()
 
 // `registerType: "autoUpdate"` (vite.config.js) ne fait qu'une partie du
 // travail : un nouveau service worker prend bien le contrôle en silence
