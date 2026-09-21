@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Check, X } from "lucide-react";
+import { Check, ChevronRight, X } from "lucide-react";
 import { groupSteps, parseDurationMinutes, triggerHaptic } from "../../utils/helpers";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { translateRecipeText } from "../../utils/recipeTranslation";
@@ -136,7 +136,7 @@ export default function CookMode({ recipe, onClose, pressDuration = 750 }) {
         </div>
 
         {groups.length > 1 && groupIndex < groups.length - 1 ? (
-          <Seal tone="gold" onClick={goNextGroup}>{t("cookMode.nextGroup")}</Seal>
+          <Seal tone="gold" onClick={goNextGroup}>{t("cookMode.nextGroup")} <ChevronRight size={16} /></Seal>
         ) : (
           <Seal tone="gold" onClick={onClose}>{t("cookMode.finish")}</Seal>
         )}
