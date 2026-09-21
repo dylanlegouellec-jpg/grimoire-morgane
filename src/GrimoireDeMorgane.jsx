@@ -32,7 +32,6 @@ import useMealPlan from "./hooks/useMealPlan";
 import useShoppingLists from "./hooks/useShoppingLists";
 import useOfflineSync from "./hooks/useOfflineSync";
 import useConnectionStatus from "./hooks/useConnectionStatus";
-import { useIsAnyModalOpen } from "./hooks/useBodyScrollLock";
 
 import LoadingScreen from "./screens/LoadingScreen";
 import LoginScreen from "./screens/LoginScreen";
@@ -252,25 +251,6 @@ export default function GrimoireDeMorgane() {
     if (theme !== "system") return undefined;
     return watchSystemTheme(() => applyTheme("system"));
   }, [theme]);
-
-  // REGRESSION (3e round) : signalé après le fix ci-dessus — la barre
-  // d'état iOS reste parfois assombrie non pas après un changement de
-  // thème, mais après la fermeture d'UNE MODALE QUELCONQUE (Réglages,
-  // Cookbook Builder, Diagnostics...), alors que le thème choisi n'a lui
-  // pas changé. Hypothèse : WebKit peut différer le repeint de la barre
-  // d'état native après une animation de modale plein écran (fondu du
-  // voile, spring d'entrée/sortie), sans lien avec la balise <meta
-  // theme-color> elle-même. On réapplique donc le thème (même valeur —
-  // applyTheme() remplace de toute façon le nœud <meta>, ce qui force
-  // iOS à revoir la barre) à chaque fermeture de la DERNIÈRE modale
-  // ouverte, en plus du changement de thème : un filet de sécurité, pas
-  // une confirmation que c'est la cause réelle.
-  const anyModalOpen = useIsAnyModalOpen();
-  const wasModalOpenRef = useRef(anyModalOpen);
-  useEffect(() => {
-    if (wasModalOpenRef.current && !anyModalOpen) applyTheme(theme);
-    wasModalOpenRef.current = anyModalOpen;
-  }, [anyModalOpen, theme]);
 
   // Même principe que le thème, pour <html data-text-size="...">.
   useLayoutEffect(() => {

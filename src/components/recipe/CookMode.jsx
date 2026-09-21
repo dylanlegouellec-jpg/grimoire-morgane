@@ -3,7 +3,6 @@ import { Check, ChevronRight, X } from "lucide-react";
 import { groupSteps, parseDurationMinutes, triggerHaptic } from "../../utils/helpers";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { translateRecipeText } from "../../utils/recipeTranslation";
-import { applyTheme, getStoredTheme } from "../../utils/theme";
 import Seal from "../common/Seal";
 import StepTimer from "./StepTimer";
 import PortionBadge from "./PortionBadge";
@@ -74,15 +73,6 @@ export default function CookMode({ recipe, onClose, pressDuration = 750 }) {
       document.body.style.top = prevBodyTop;
       document.body.style.width = prevBodyWidth;
       window.scrollTo(0, scrollY);
-      // Ce composant est le seul de l'app à assombrir directement html/body
-      // (voir ci-dessus) sans passer par le compteur partagé de
-      // useBodyScrollLock — le filet de sécurité posé dans
-      // GrimoireDeMorgane.jsx (réapplique le thème à la fermeture de la
-      // dernière modale, pour forcer iOS à repeindre sa barre d'état) ne le
-      // voit donc pas se fermer. On réapplique ici directement, pour la même
-      // raison : repeindre la barre d'état au cas où WebKit l'ait laissée
-      // sur une teinte sombre après ce fond spécifique.
-      applyTheme(getStoredTheme());
     };
   }, []);
 
