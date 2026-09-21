@@ -3,7 +3,7 @@ import { Check, ChevronRight, X } from "lucide-react";
 import { groupSteps, parseDurationMinutes, triggerHaptic } from "../../utils/helpers";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { translateRecipeText } from "../../utils/recipeTranslation";
-import { applyTheme, getStoredTheme, overrideStatusBarColor } from "../../utils/theme";
+import { overrideStatusBarColor } from "../../utils/theme";
 import Seal from "../common/Seal";
 import StepTimer from "./StepTimer";
 import PortionBadge from "./PortionBadge";
@@ -56,6 +56,12 @@ export default function CookMode({ recipe, onClose, pressDuration = 750 }) {
     const prevBodyPosition = document.body.style.position;
     const prevBodyTop = document.body.style.top;
     const prevBodyWidth = document.body.style.width;
+    // Capturée telle quelle (pas re-dérivée du thème courant à la
+    // fermeture, voir plus bas) : la couleur EXACTE affichée juste avant
+    // l'ouverture est la seule certaine d'être correcte pour y revenir,
+    // quel que soit le thème réel au moment considéré.
+    const prevMeta = document.querySelector('meta[name="theme-color"]');
+    const prevMetaColor = prevMeta ? prevMeta.getAttribute("content") : null;
 
     document.documentElement.style.backgroundColor = "#2c221e";
     document.body.style.backgroundColor = "#2c221e";
@@ -69,8 +75,8 @@ export default function CookMode({ recipe, onClose, pressDuration = 750 }) {
     // name="theme-color"> continue donc de refléter le thème réel de l'app
     // (souvent clair), pas ce fond sombre — d'où la barre d'état d'une PWA
     // installée qui ne correspond à rien de visible à l'écran en mode
-    // cuisine. On l'aligne explicitement ici, et on restaure le vrai thème
-    // à la fermeture (voir plus bas).
+    // cuisine. On l'aligne explicitement ici, et on restaure la couleur
+    // capturée ci-dessus à la fermeture (voir plus bas).
     overrideStatusBarColor("#2c221e");
 
     return () => {
@@ -82,7 +88,7 @@ export default function CookMode({ recipe, onClose, pressDuration = 750 }) {
       document.body.style.top = prevBodyTop;
       document.body.style.width = prevBodyWidth;
       window.scrollTo(0, scrollY);
-      applyTheme(getStoredTheme());
+      if (prevMetaColor != null) overrideStatusBarColor(prevMetaColor);
     };
   }, []);
 
