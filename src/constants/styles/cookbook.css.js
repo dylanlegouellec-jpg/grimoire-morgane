@@ -31,6 +31,13 @@ export const COOKBOOK_CSS = `
    à cette petite taille, pas une réduction de .cookbook-cover (pensée pour
    ~680px de large, voir CookbookDocument.jsx). Ratio ISO 216 (1:√2, A4 ET
    A5) fixe : une vraie précision par format n'apporte rien à cette échelle. */
+/* position:sticky : reste visible pendant qu'on ajuste les réglages listés
+   EN DESSOUS dans la même section (titre/sous-titre/couleur/disposition
+   pour la couverture, taille de photo/sections pour la mise en page des
+   recettes) — demandé par l'utilisateur, captures de référence à l'appui,
+   plutôt que de devoir rouvrir "Aperçu en direct" à chaque changement. Un
+   top décalé (pas 0) : laisse une respiration visuelle avec le haut de la
+   zone de défilement plutôt qu'un collage brut au bord. */
 .cookbook-cover-mini {
   max-width: 220px;
   aspect-ratio: 210 / 297;
@@ -45,6 +52,9 @@ export const COOKBOOK_CSS = `
   justify-content: center;
   text-align: center;
   box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+  position: sticky;
+  top: 8px;
+  z-index: 5;
 }
 .cookbook-cover-mini--epure { border: none; box-shadow: none; }
 .cookbook-cover-mini-flourish { font-size: 0.85rem; color: var(--cookbook-cover-color, #b3872a); margin: 3px 0; }
@@ -58,6 +68,41 @@ export const COOKBOOK_CSS = `
   font-family: 'Cinzel', serif; letter-spacing: 1px; text-transform: uppercase;
   font-size: 0.55rem; color: #5c4a30; margin: 0;
 }
+
+/* Même principe, pour la section "Mise en page des recettes" (voir
+   CookbookRecipePreview) — une recette fictive dont seule la structure
+   (photo, colonnes, sections visibles) suit les réglages, le contenu reste
+   un simple gabarit (barres décoratives plutôt que du vrai texte). */
+.cookbook-recipe-mini {
+  max-width: 260px;
+  margin: 4px auto 14px;
+  padding: 14px 16px;
+  border-radius: 6px;
+  background: #f6ecd2;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+  position: sticky;
+  top: 8px;
+  z-index: 5;
+}
+.cookbook-recipe-mini-photo {
+  width: 100%; border-radius: 8px; margin-bottom: 8px;
+  background: linear-gradient(135deg, rgba(179,135,42,0.35), rgba(179,135,42,0.15));
+}
+.cookbook-recipe-mini-photo--moyenne { height: 54px; }
+.cookbook-recipe-mini-photo--grande { height: 84px; }
+.cookbook-recipe-mini-badges { display: flex; justify-content: center; align-items: center; gap: 6px; margin-bottom: 6px; }
+.cookbook-recipe-mini-chip { width: 34px; height: 10px; border-radius: 999px; background: #7c3232; }
+.cookbook-recipe-mini-nutri { width: 14px; height: 14px; border-radius: 50%; background: #6b7a3a; }
+.cookbook-recipe-mini-title {
+  font-family: 'Cinzel Decorative', 'Cinzel', serif; text-align: center;
+  font-size: 0.75rem; color: #2a2013; margin: 0 0 4px;
+}
+.cookbook-recipe-mini-meta { text-align: center; font-size: 0.6rem; color: #5c4a30; margin: 0 0 8px; }
+.cookbook-recipe-mini-columns { display: flex; gap: 10px; }
+.cookbook-recipe-mini-col { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.cookbook-recipe-mini-heading { width: 60%; height: 6px; border-radius: 3px; background: #b3872a; margin-bottom: 2px; }
+.cookbook-recipe-mini-line { display: block; height: 5px; border-radius: 3px; background: rgba(42,32,19,0.18); }
+.cookbook-recipe-mini-line--short { width: 55%; margin-top: 4px; }
 
 /* --- Document (aperçu écran + impression), voir CookbookDocument.jsx --- */
 .cookbook-print-sheet { display: none; }
@@ -189,13 +234,28 @@ export const COOKBOOK_CSS = `
   text-align: center;
   margin: 0 0 22px;
 }
-.cookbook-toc-list { list-style: none; margin: 0; padding: 0; }
+.cookbook-toc-chapter { margin-bottom: 18px; }
+.cookbook-toc-chapter-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.cookbook-toc-chapter-title {
+  font-family: 'Cinzel', serif;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  color: #5c4a30;
+  white-space: nowrap;
+}
+.cookbook-toc-list { list-style: none; margin: 0; padding: 0 0 0 18px; }
 .cookbook-toc-list li {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  margin-bottom: 14px;
-  font-size: 1rem;
+  margin-bottom: 12px;
+  font-size: 0.95rem;
 }
 .cookbook-toc-name { white-space: nowrap; }
 .cookbook-toc-dots {
@@ -203,7 +263,6 @@ export const COOKBOOK_CSS = `
   border-bottom: 1px dotted rgba(42,32,19,0.35);
   margin-bottom: 4px;
 }
-.cookbook-toc-chip { flex-shrink: 0; }
 .cookbook-toc-page {
   flex-shrink: 0;
   min-width: 18px;

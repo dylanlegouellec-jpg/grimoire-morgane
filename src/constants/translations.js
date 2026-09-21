@@ -345,9 +345,19 @@ export const translations = {
       showNotes: "Notes & astuces",
       showTime: "Temps & portions",
       structureTitle: "Structure du livre",
-      toc: "Table des matières",
+      tocModeLabel: "Table des matières",
+      tocMode: {
+        chapitresEtRecettes: "Chapitres et recettes",
+        chapitresSeuls: "Chapitres seuls",
+        aucune: "Rien",
+      },
       pageNumbers: "Numéros de page",
       formatLabel: "Format",
+      orientationLabel: "Orientation",
+      orientation: {
+        portrait: "Portrait",
+        paysage: "Paysage",
+      },
       marginLabel: "Marges",
       margin: {
         fin: "Fines",
@@ -742,9 +752,19 @@ export const translations = {
       showNotes: "Notes & tips",
       showTime: "Time & servings",
       structureTitle: "Book structure",
-      toc: "Table of contents",
+      tocModeLabel: "Table of contents",
+      tocMode: {
+        chapitresEtRecettes: "Chapters & recipes",
+        chapitresSeuls: "Chapters only",
+        aucune: "None",
+      },
       pageNumbers: "Page numbers",
       formatLabel: "Format",
+      orientationLabel: "Orientation",
+      orientation: {
+        portrait: "Portrait",
+        paysage: "Landscape",
+      },
       marginLabel: "Margins",
       margin: {
         fin: "Narrow",

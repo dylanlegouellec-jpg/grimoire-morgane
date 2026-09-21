@@ -2,7 +2,7 @@ import { useTranslation } from "../../contexts/LanguageContext";
 import { translateRecipeText } from "../../utils/recipeTranslation";
 import { categoryLabel, groupIngredients, groupSteps } from "../../utils/helpers";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
-import { COVER_COLORS, PAGE_DIMENSIONS_MM, marginMm } from "../../constants/cookbook";
+import { COVER_COLORS, marginMm, pageDimensionsMm } from "../../constants/cookbook";
 
 /* ------------------------------------------------------------------ */
 /*  LIVRE DE CUISINE — document partagé aperçu/impression                */
@@ -62,30 +62,54 @@ function CoverPage({ config, pageNumber }) {
   );
 }
 
-function TocPage({ recipes, t, language, pageNumber, runningTitle, pageStarts }) {
+// Groupe par catégorie (Salé d'abord, comme partout ailleurs dans l'app —
+// voir filters.sale/filters.sucre) pour une table des matières "par
+// chapitres" plutôt qu'une liste à plat — un chapitre sans recette (aucune
+// recette Sucrée sélectionnée, par ex.) n'apparaît simplement pas.
+function groupByCategory(recipes) {
+  const sale = recipes.filter((r) => categoryLabel(r) !== "Sucré");
+  const sucre = recipes.filter((r) => categoryLabel(r) === "Sucré");
+  return [
+    { key: "sale", labelKey: "filters.sale", recipes: sale },
+    { key: "sucre", labelKey: "filters.sucre", recipes: sucre },
+  ].filter((chapter) => chapter.recipes.length > 0);
+}
+
+function TocPage({ recipes, t, language, pageNumber, runningTitle, pageStarts, tocMode }) {
+  const chapters = groupByCategory(recipes);
   return (
     <section className="cookbook-page cookbook-toc">
       <p className="cookbook-running-header">{runningTitle}</p>
       <h2 className="cookbook-page-title">{t("cookbook.tocTitle")}</h2>
-      <ol className="cookbook-toc-list">
-        {recipes.map((r) => {
-          const isSucreCat = categoryLabel(r) === "Sucré";
-          const startPage = pageStarts ? pageStarts[r.id] : null;
-          return (
-            <li key={r.id}>
-              <span className="cookbook-toc-name">{translateRecipeText(r.title, language)}</span>
+      {chapters.map((chapter) => {
+        // Absent tant que la mesure préalable (computeRecipeStartPages, voir
+        // CookbookBuilderModal.jsx) n'a pas encore tourné — pas un numéro
+        // faux, juste pas encore calculé.
+        const chapterStartPage = pageStarts && chapter.recipes[0] ? pageStarts[chapter.recipes[0].id] : null;
+        return (
+          <div key={chapter.key} className="cookbook-toc-chapter">
+            <div className="cookbook-toc-chapter-row">
+              <span className="cookbook-toc-chapter-title">{t(chapter.labelKey)}</span>
               <span className="cookbook-toc-dots" aria-hidden="true" />
-              <span className={`cookbook-chip cookbook-toc-chip ${isSucreCat ? "chip-sucre" : "chip-sale"}`}>
-                {t(isSucreCat ? "filters.sucre" : "filters.sale")}
-              </span>
-              {/* Absent tant que la mesure préalable (computeRecipeStartPages,
-                  voir CookbookBuilderModal.jsx) n'a pas encore tourné — pas un
-                  numéro faux, juste pas encore calculé. */}
-              {startPage != null && <span className="cookbook-toc-page">{startPage}</span>}
-            </li>
-          );
-        })}
-      </ol>
+              {chapterStartPage != null && <span className="cookbook-toc-page">{chapterStartPage}</span>}
+            </div>
+            {tocMode === "chapitresEtRecettes" && (
+              <ol className="cookbook-toc-list">
+                {chapter.recipes.map((r) => {
+                  const startPage = pageStarts ? pageStarts[r.id] : null;
+                  return (
+                    <li key={r.id}>
+                      <span className="cookbook-toc-name">{translateRecipeText(r.title, language)}</span>
+                      <span className="cookbook-toc-dots" aria-hidden="true" />
+                      {startPage != null && <span className="cookbook-toc-page">{startPage}</span>}
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+          </div>
+        );
+      })}
       {pageNumber != null && <div className="cookbook-page-number">{pageNumber}</div>}
     </section>
   );
@@ -185,8 +209,9 @@ export default function CookbookDocument({ recipes, config, pageStarts }) {
   // simple numéro par page logique, sans dépendre du découpage physique
   // réel que seul le moteur d'impression connaît.
   let counter = 0;
+  const showToc = config.tocMode !== "aucune";
   const coverNumber = config.pageNumbers ? ++counter : null;
-  const tocNumber = config.toc && config.pageNumbers ? ++counter : null;
+  const tocNumber = showToc && config.pageNumbers ? ++counter : null;
 
   // Ratio largeur/hauteur de la surface utile d'une page (format moins les
   // marges choisies) — posé comme aspect-ratio CSS sur .cookbook-page :
@@ -197,7 +222,7 @@ export default function CookbookDocument({ recipes, config, pageStarts }) {
   // exactement ce que le navigateur a mis en page). aspect-ratio ne FIXE
   // pas la hauteur : une recette plus longue que ce ratio grandit quand
   // même normalement (voir découpe en tranches, utils/cookbookPdf.js).
-  const pageMm = PAGE_DIMENSIONS_MM[config.format] || PAGE_DIMENSIONS_MM.A4;
+  const pageMm = pageDimensionsMm(config);
   const m = marginMm(config.margin);
   const usableWidthMm = pageMm.width - m * 2;
   const usableHeightMm = pageMm.height - m * 2;
@@ -205,12 +230,20 @@ export default function CookbookDocument({ recipes, config, pageStarts }) {
   return (
     <>
       <style>{`
-        @page { size: ${config.format === "A5" ? "A5" : "A4"}; margin: ${m}mm; }
+        @page { size: ${config.format === "A5" ? "A5" : "A4"}${config.orientation === "paysage" ? " landscape" : ""}; margin: ${m}mm; }
         .cookbook-page { aspect-ratio: ${usableWidthMm} / ${usableHeightMm}; }
       `}</style>
       <CoverPage config={config} pageNumber={coverNumber} />
-      {config.toc && (
-        <TocPage recipes={list} t={t} language={language} pageNumber={tocNumber} runningTitle={runningTitle} pageStarts={pageStarts} />
+      {showToc && (
+        <TocPage
+          recipes={list}
+          t={t}
+          language={language}
+          pageNumber={tocNumber}
+          runningTitle={runningTitle}
+          pageStarts={pageStarts}
+          tocMode={config.tocMode}
+        />
       )}
       {list.map((r, i) => (
         <RecipePage

@@ -1,4 +1,4 @@
-import { marginMm, PAGE_DIMENSIONS_MM } from "../constants/cookbook";
+import { marginMm, pageDimensionsMm } from "../constants/cookbook";
 
 /* ------------------------------------------------------------------ */
 /*  LIVRE DE CUISINE — génération d'un vrai fichier .pdf                 */
@@ -42,7 +42,7 @@ const ROUNDING_TOLERANCE_PX = 4;
 const ATOMIC_SELECTOR = "li, h3.cookbook-section-title, h2.cookbook-page-title, .cookbook-recipe-badges";
 
 function pageHeightPxFor(elementWidthPx, config) {
-  const pageMm = PAGE_DIMENSIONS_MM[config.format] || PAGE_DIMENSIONS_MM.A4;
+  const pageMm = pageDimensionsMm(config);
   const m = marginMm(config.margin);
   const usableWidthMm = pageMm.width - m * 2;
   const usableHeightMm = pageMm.height - m * 2;
@@ -191,6 +191,7 @@ export async function generateCookbookPdf(containerEl, config) {
   const pdf = new jsPDF({
     unit: "mm",
     format: config.format === "A5" ? "a5" : "a4",
+    orientation: config.orientation === "paysage" ? "landscape" : "portrait",
   });
   const marginMmValue = marginMm(config.margin);
 

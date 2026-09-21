@@ -9,15 +9,31 @@
 /*  fonctionnalité plutôt que de les ajouter aux recettes.                     */
 /* ------------------------------------------------------------------ */
 
-// Mêmes teintes que les chips catégorie / l'habillage "Cadre doré" —
-// gardent la couverture cohérente avec le reste de l'identité visuelle
-// de l'app plutôt que d'introduire une palette propre au livre.
+// Les 5 premières reprennent les teintes des chips catégorie / de
+// l'habillage "Cadre doré" — le reste étend cette même palette chaude et
+// patinée (jamais une couleur vive/saturée qui jurerait avec le fond
+// parchemin) pour un vrai choix, comme dans les captures de référence de
+// l'utilisateur, sans pour autant sortir de l'identité visuelle de l'app.
 export const COVER_COLORS = [
   { id: "gold", value: "#b3872a" },
   { id: "bordeaux", value: "#7c3232" },
   { id: "plum", value: "#5a3a63" },
   { id: "forest", value: "#3c5a3a" },
   { id: "ink", value: "#2a2013" },
+  { id: "wine", value: "#6b2737" },
+  { id: "terracotta", value: "#a8562e" },
+  { id: "mustard", value: "#c99a2e" },
+  { id: "olive", value: "#6b7a3a" },
+  { id: "teal", value: "#2f6b63" },
+  { id: "sage", value: "#7a9070" },
+  { id: "slate", value: "#45586b" },
+  { id: "indigo", value: "#3a4a7c" },
+  { id: "rose", value: "#b5657a" },
+  { id: "mauve", value: "#8a6b8a" },
+  { id: "charcoal", value: "#3a3a3a" },
+  { id: "cream", value: "#c9b384" },
+  { id: "rust", value: "#8f3a1f" },
+  { id: "copper", value: "#b06a3a" },
 ];
 export const DEFAULT_COVER_COLOR = "gold";
 
@@ -49,11 +65,35 @@ export function marginMm(id) {
   return (PAGE_MARGINS.find((m) => m.id === id) || PAGE_MARGINS[1]).mm;
 }
 
+// Dimensions RÉELLES d'une page (mm), format ET orientation déjà combinés —
+// un seul endroit qui sait inverser largeur/hauteur en paysage, partagé
+// entre CookbookDocument.jsx (aspect-ratio CSS, règle @page) et
+// utils/cookbookPdf.js (calcul de la hauteur de page en px, orientation
+// jsPDF).
+export function pageDimensionsMm(config) {
+  const base = PAGE_DIMENSIONS_MM[config.format] || PAGE_DIMENSIONS_MM.A4;
+  return config.orientation === "paysage"
+    ? { width: base.height, height: base.width }
+    : base;
+}
+
 export const PHOTO_SIZES = ["aucune", "moyenne", "grande"];
 export const DEFAULT_PHOTO_SIZE = "moyenne";
 
 export const COVER_LAYOUTS = ["classique", "epure"];
 export const DEFAULT_COVER_LAYOUT = "classique";
+
+export const PAGE_ORIENTATIONS = ["portrait", "paysage"];
+export const DEFAULT_PAGE_ORIENTATION = "portrait";
+
+// "chapitresEtRecettes" : table des matières groupée par catégorie (Salé/
+// Sucré), chaque recette listée sous son chapitre — le comportement
+// d'origine, désormais groupé plutôt qu'à plat.
+// "chapitresSeuls" : uniquement les deux chapitres, avec la page où
+// commence chacun (pas le détail recette par recette).
+// "aucune" : pas de table des matières du tout.
+export const TOC_MODES = ["chapitresEtRecettes", "chapitresSeuls", "aucune"];
+export const DEFAULT_TOC_MODE = "chapitresEtRecettes";
 
 export const DEFAULT_COOKBOOK_CONFIG = {
   // "all" | "category" | "manual"
@@ -75,8 +115,9 @@ export const DEFAULT_COOKBOOK_CONFIG = {
   showNutrition: true,
   showTime: true,
 
-  toc: true,
+  tocMode: DEFAULT_TOC_MODE,
   pageNumbers: true,
   format: DEFAULT_PAGE_FORMAT,
+  orientation: DEFAULT_PAGE_ORIENTATION,
   margin: DEFAULT_PAGE_MARGIN,
 };

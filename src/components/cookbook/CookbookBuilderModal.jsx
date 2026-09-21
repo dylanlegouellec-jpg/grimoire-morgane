@@ -13,7 +13,9 @@ import {
   COVER_LAYOUTS,
   PAGE_FORMATS,
   PAGE_MARGINS,
+  PAGE_ORIENTATIONS,
   PHOTO_SIZES,
+  TOC_MODES,
 } from "../../constants/cookbook";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
@@ -55,6 +57,46 @@ function CookbookCoverPreview({ config }) {
       <p className="cookbook-cover-mini-title">{config.coverTitle || "Le Grimoire de Morgane"}</p>
       {config.coverSubtitle && <p className="cookbook-cover-mini-subtitle">{config.coverSubtitle}</p>}
       <div className="cookbook-cover-mini-flourish" aria-hidden="true">❦</div>
+    </div>
+  );
+}
+
+// Même principe que CookbookCoverPreview, pour la section "Mise en page des
+// recettes" — une recette FICTIVE (jamais une vraie, cette section ne
+// choisit pas quelle recette regarder) dont seule la STRUCTURE (photo,
+// colonnes, sections visibles) reflète les réglages en direct ; le contenu
+// (titre, lignes) reste volontairement un simple gabarit.
+function CookbookRecipePreview({ config }) {
+  return (
+    <div className="cookbook-recipe-mini">
+      {config.photoSize !== "aucune" && (
+        <div className={`cookbook-recipe-mini-photo cookbook-recipe-mini-photo--${config.photoSize}`} />
+      )}
+      <div className="cookbook-recipe-mini-badges">
+        <span className="cookbook-recipe-mini-chip" />
+        {config.showNutrition && <span className="cookbook-recipe-mini-nutri" />}
+      </div>
+      <p className="cookbook-recipe-mini-title">Titre de la recette</p>
+      {config.showTime && <p className="cookbook-recipe-mini-meta">⏱ · 👥</p>}
+      <div className="cookbook-recipe-mini-columns">
+        {config.showIngredients && (
+          <div className="cookbook-recipe-mini-col">
+            <span className="cookbook-recipe-mini-heading" />
+            <span className="cookbook-recipe-mini-line" />
+            <span className="cookbook-recipe-mini-line" />
+            <span className="cookbook-recipe-mini-line cookbook-recipe-mini-line--short" />
+          </div>
+        )}
+        {config.showSteps && (
+          <div className="cookbook-recipe-mini-col">
+            <span className="cookbook-recipe-mini-heading" />
+            <span className="cookbook-recipe-mini-line" />
+            <span className="cookbook-recipe-mini-line" />
+            <span className="cookbook-recipe-mini-line cookbook-recipe-mini-line--short" />
+          </div>
+        )}
+      </div>
+      {config.showNotes && <span className="cookbook-recipe-mini-line cookbook-recipe-mini-line--short" />}
     </div>
   );
 }
@@ -364,6 +406,7 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
 
             {/* --- Mise en page des recettes --- */}
             <p className="ios-group-title" style={{ marginTop: 22 }}>{t("cookbook.layoutTitle")}</p>
+            <CookbookRecipePreview config={config} />
             <div className="ios-group ios-group-padded">
               <SegmentedControl
                 options={PHOTO_SIZES.map((s) => ({ value: s, label: t(`cookbook.photoSize.${s}`) }))}
@@ -397,11 +440,15 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
 
             {/* --- Structure --- */}
             <p className="ios-group-title" style={{ marginTop: 22 }}>{t("cookbook.structureTitle")}</p>
-            <div className="ios-group">
-              <div className="settings-row">
-                <span className="settings-row-title">{t("cookbook.toc")}</span>
-                <Switch checked={config.toc} onChange={(v) => patch({ toc: v })} label={t("cookbook.toc")} />
-              </div>
+            <div className="ios-group ios-group-padded">
+              <SegmentedControl
+                options={TOC_MODES.map((mode) => ({ value: mode, label: t(`cookbook.tocMode.${mode}`) }))}
+                value={config.tocMode}
+                onChange={(v) => patch({ tocMode: v })}
+                ariaLabel={t("cookbook.tocModeLabel")}
+              />
+            </div>
+            <div className="ios-group" style={{ marginTop: 8 }}>
               <div className="settings-row">
                 <span className="settings-row-title">{t("cookbook.pageNumbers")}</span>
                 <Switch checked={config.pageNumbers} onChange={(v) => patch({ pageNumbers: v })} label={t("cookbook.pageNumbers")} />
@@ -413,6 +460,14 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
                 value={config.format}
                 onChange={(v) => patch({ format: v })}
                 ariaLabel={t("cookbook.formatLabel")}
+              />
+            </div>
+            <div className="ios-group ios-group-padded" style={{ marginTop: 8 }}>
+              <SegmentedControl
+                options={PAGE_ORIENTATIONS.map((o) => ({ value: o, label: t(`cookbook.orientation.${o}`) }))}
+                value={config.orientation}
+                onChange={(v) => patch({ orientation: v })}
+                ariaLabel={t("cookbook.orientationLabel")}
               />
             </div>
             <div className="ios-group ios-group-padded" style={{ marginTop: 8 }}>
