@@ -9,6 +9,7 @@ import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import Flourish from "../common/Flourish";
+import CategoryIcon from "../common/CategoryIcon";
 
 /* ------------------------------------------------------------------ */
 /*  SÉLECTEUR DE MOMENT — "Changer le moment du repas" d'un en-tête de    */
@@ -63,7 +64,12 @@ export default function MoveMealSectionModal({ currentMealTypeKey, sourceLabel, 
               className="ios-row"
               onClick={() => handlePick(m.key)}
             >
-              <span className="ios-row-icon" style={{ background: "var(--surface-strong)", fontSize: "1.05rem" }}>{m.icon}</span>
+              <CategoryIcon
+                className="ios-row-icon"
+                style={{ background: "var(--surface-strong)", fontSize: "1.05rem" }}
+                emoji={m.icon}
+                icon={m.vectorIcon}
+              />
               <span className="ios-row-title">{t(`mealTypes.${m.key}`)}</span>
             </button>
           ))}

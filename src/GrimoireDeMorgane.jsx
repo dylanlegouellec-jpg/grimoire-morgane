@@ -20,6 +20,8 @@ import {
   storeOnboardingCompleted,
   getStoredHeroTreatment,
   storeHeroTreatment,
+  getStoredIconStyle,
+  storeIconStyle,
 } from "./utils/localSettings";
 import { getProfile, saveProfile, pressDurationFromDb } from "./utils/profile";
 import { getOnboardingCompletedFromProfile, saveOnboardingCompletedToProfile } from "./utils/onboarding";
@@ -38,6 +40,7 @@ import LoadingScreen from "./screens/LoadingScreen";
 import LoginScreen from "./screens/LoginScreen";
 import AppShell from "./screens/AppShell";
 import { LanguageProvider } from "./contexts/LanguageContext";
+import { IconStyleProvider } from "./contexts/IconStyleContext";
 
 // Reproduit le déséquilibre réel signalé en mode invité (4 recettes Salé /
 // 20 Sucré) pour rejouer fidèlement le bug de bascule de filtre — la
@@ -143,6 +146,15 @@ export default function GrimoireDeMorgane() {
     storeHeroTreatment(key);
     setHeroTreatmentState(key);
     if (user) saveProfile(user.id, { heroTreatment: key }).catch((err) => console.error("Sync habillage visuel impossible :", err));
+  };
+  // Même principe que heroTreatment ci-dessus — voir contexts/IconStyleContext.jsx
+  // pour comment cette valeur redescend jusqu'aux icônes de catégorie
+  // (rayons de courses, moments du Plan...) sans prop-drilling.
+  const [iconStyle, setIconStyleState] = useState(() => getStoredIconStyle());
+  const setIconStyle = (style) => {
+    storeIconStyle(style);
+    setIconStyleState(style);
+    if (user) saveProfile(user.id, { iconStyle: style }).catch((err) => console.error("Sync style des icônes impossible :", err));
   };
   // Réglage mémorisé localement uniquement (pas encore de vraie traduction
   // à synchroniser — voir la note dans utils/localSettings.js).
@@ -328,6 +340,10 @@ export default function GrimoireDeMorgane() {
         storeHeroTreatment(p.hero_treatment);
         setHeroTreatmentState(p.hero_treatment);
       }
+      if (p.icon_style) {
+        storeIconStyle(p.icon_style);
+        setIconStyleState(p.icon_style);
+      }
     });
   }, [user]);
 
@@ -412,6 +428,8 @@ export default function GrimoireDeMorgane() {
     setNavOpacity,
     heroTreatment,
     setHeroTreatment,
+    iconStyle,
+    setIconStyle,
     textSize,
     setTextSize,
     language,
@@ -447,17 +465,19 @@ export default function GrimoireDeMorgane() {
 
   return (
     <LanguageProvider language={language}>
-      <AppShell
-        recipesApi={recipesApi}
-        pantryApi={pantryApi}
-        mealPlanApi={mealPlanApi}
-        shoppingApi={shoppingApi}
-        settingsApi={settingsApi}
-        householdApi={householdApi}
-        syncApi={syncApi}
-        toast={toast}
-        showToast={showToast}
-      />
+      <IconStyleProvider iconStyle={iconStyle}>
+        <AppShell
+          recipesApi={recipesApi}
+          pantryApi={pantryApi}
+          mealPlanApi={mealPlanApi}
+          shoppingApi={shoppingApi}
+          settingsApi={settingsApi}
+          householdApi={householdApi}
+          syncApi={syncApi}
+          toast={toast}
+          showToast={showToast}
+        />
+      </IconStyleProvider>
     </LanguageProvider>
   );
 }

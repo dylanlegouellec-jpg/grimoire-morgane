@@ -1,3 +1,5 @@
+import { Beef, Carrot, CupSoda, Milk, Package, SprayCan, Wheat } from "lucide-react";
+
 /* ------------------------------------------------------------------ */
 /*  RAYONS DE COURSES                                                  */
 /*  Le libellé stocké dans `item.aisle` (voir hooks/useShoppingLists.js) */
@@ -6,18 +8,24 @@
 /*  gravé dans les données : un article déjà en base avec un ancien        */
 /*  libellé de rayon reste affiché normalement (juste sans icône dédiée    */
 /*  tant qu'il n'est pas régénéré), plutôt que de casser l'affichage.      */
+/*                                                                        */
+/*  `vectorIcon` : équivalent lucide-react de `icon` (voir Réglages >      */
+/*  Apparence > "Style des icônes", contexts/IconStyleContext.jsx) — un     */
+/*  seul point de correspondance emoji -> icône vectorielle, ici au plus    */
+/*  près de la donnée qu'il habille plutôt que dispersé dans chaque          */
+/*  composant qui l'affiche (voir aisleVectorIcon ci-dessous).                */
 /* ------------------------------------------------------------------ */
 
 export const AISLES = [
   {
-    key: "fruits-legumes", label: "Fruits & Légumes", icon: "🥦",
+    key: "fruits-legumes", label: "Fruits & Légumes", icon: "🥦", vectorIcon: Carrot,
     // "\bail\b" (double frontière) : "ail" seul en fin de mot matchait
     // aussi "corail" (ex. "lentilles corail") ou "détail", sans rapport
     // avec la gousse d'ail.
     test: /oignon|\bail\b|carotte|tomate|pomme(?!\s*de\s*terre)|pomme de terre|patate|citron|herbe|persil|basilic|thym|laurier|échalote|poireau|courgette|champignon|salade|pêche|fraise|orange|banane|aubergine|poivron|céleri|chou|radis|artichaut|avocat|mangue|raisin|abricot|framboise|myrtille|betterave|endive|navet|brocoli|épinard/i,
   },
   {
-    key: "produits-frais", label: "Produits Frais & Crèmerie", icon: "🧀",
+    key: "produits-frais", label: "Produits Frais & Crèmerie", icon: "🧀", vectorIcon: Milk,
     // "(?<!b)" exclut "bœuf"/"boeuf" : ces mots CONTIENNENT littéralement
     // "œuf"/"oeuf" (b-œuf), un pur hasard orthographique qui classait toute
     // viande de bœuf ici au lieu de "Viandes & Poissons" (jamais atteint,
@@ -25,32 +33,37 @@ export const AISLES = [
     test: /beurre|crème|lait(?!\s*de\s*coco)|(?<!b)(oeuf|œuf)|fromage|yaourt|parmesan|gruyère|mascarpone|mozzarella|comté/i,
   },
   {
-    key: "viandes-poissons", label: "Viandes & Poissons", icon: "🥩",
+    key: "viandes-poissons", label: "Viandes & Poissons", icon: "🥩", vectorIcon: Beef,
     // "viande" en toutes lettres : une "Viande hachée" générique (sans
     // précision bœuf/porc) doit atterrir ici, pas retomber dans "Autre"
     // faute de mot-clé plus spécifique.
     test: /poulet|boeuf|bœuf|porc|veau|agneau|viande|lardon|jambon|poisson|saumon|crevette|canard|thon|cabillaud|dinde|chorizo|merguez|andouille|bacon|saucisse/i,
   },
   {
-    key: "epicerie", label: "Épicerie Salée & Sucrée", icon: "🌾",
+    key: "epicerie", label: "Épicerie Salée & Sucrée", icon: "🌾", vectorIcon: Wheat,
     test: /sel\b|poivre|huile|vinaigre|bouillon|farine|pâte(?! sucrée)|riz|moutarde|câpre|sucre|chocolat|vanille|miel|levure|cannelle|amande|noisette|confiture|pain|baguette|brioche|lentille|pois chiche|quinoa|avoine|épice|paprika|cumin|curry|piment/i,
   },
   {
-    key: "boissons", label: "Boissons & Liquides", icon: "🥤",
+    key: "boissons", label: "Boissons & Liquides", icon: "🥤", vectorIcon: CupSoda,
     test: /\beau\b|jus|soda|\bvin\b|bière|café|\bthé\b|lait de coco|limonade|sirop/i,
   },
   {
-    key: "hygiene", label: "Hygiène & Entretien", icon: "🧼",
+    key: "hygiene", label: "Hygiène & Entretien", icon: "🧼", vectorIcon: SprayCan,
     test: /savon|shampoing|dentifrice|lessive|éponge|papier toilette|sopalin|liquide vaisselle|désodorisant|essuie-tout/i,
   },
 ];
 
 export const DEFAULT_AISLE_LABEL = "Autre";
 const DEFAULT_AISLE_ICON = "📦";
+const DEFAULT_AISLE_VECTOR_ICON = Package;
 const AISLE_ICON_BY_LABEL = AISLES.reduce((acc, a) => {
   acc[a.label] = a.icon;
   return acc;
 }, { [DEFAULT_AISLE_LABEL]: DEFAULT_AISLE_ICON });
+const AISLE_VECTOR_ICON_BY_LABEL = AISLES.reduce((acc, a) => {
+  acc[a.label] = a.vectorIcon;
+  return acc;
+}, { [DEFAULT_AISLE_LABEL]: DEFAULT_AISLE_VECTOR_ICON });
 
 // Ordre par défaut des rayons (celui de la liste AISLES ci-dessus, "Autre"
 // toujours en dernier) — sert de repli dans ShoppingView.jsx tant qu'aucun
@@ -69,6 +82,12 @@ export function guessAisle(name) {
 // évolution de la liste ci-dessus).
 export function aisleIcon(label) {
   return AISLE_ICON_BY_LABEL[label] || DEFAULT_AISLE_ICON;
+}
+
+// Équivalent vectoriel de aisleIcon() ci-dessus — voir Réglages > Apparence
+// > "Style des icônes".
+export function aisleVectorIcon(label) {
+  return AISLE_VECTOR_ICON_BY_LABEL[label] || DEFAULT_AISLE_VECTOR_ICON;
 }
 
 /* ------------------------------------------------------------------ */

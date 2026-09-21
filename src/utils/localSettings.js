@@ -368,3 +368,30 @@ export function storeHeroTreatment(key) {
     /* rien à faire si le stockage échoue */
   }
 }
+
+/* --- Style des icônes (émoji vs vectoriel/minimaliste) -------------------
+   Réglage de PROFIL comme heroTreatment ci-dessus, synchronisé via
+   utils/profile.js (colonne `profiles.icon_style`) — voir
+   GrimoireDeMorgane.jsx (setIconStyle) et contexts/IconStyleContext.jsx
+   (useIconStyle(), qui redistribue la valeur à toute l'app). */
+const ICON_STYLE_KEY = "grimoire_icon_style";
+const VALID_ICON_STYLES = ["emoji", "vector"];
+export const DEFAULT_ICON_STYLE = "emoji";
+
+export function getStoredIconStyle() {
+  try {
+    const v = localStorage.getItem(ICON_STYLE_KEY);
+    if (VALID_ICON_STYLES.includes(v)) return v;
+  } catch {
+    /* repli ci-dessous */
+  }
+  return DEFAULT_ICON_STYLE;
+}
+
+export function storeIconStyle(style) {
+  try {
+    localStorage.setItem(ICON_STYLE_KEY, style);
+  } catch {
+    /* rien à faire si le stockage échoue */
+  }
+}

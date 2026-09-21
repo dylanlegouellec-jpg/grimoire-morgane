@@ -17,7 +17,7 @@ import { compressImageToBlob } from "./imageUpload";
 
 export const AVATAR_BUCKET = "avatars";
 const PROFILE_COLUMNS =
-  "id,display_name,avatar_url,first_name,last_name,username,theme,press_duration,show_nutriscore,text_size,hero_treatment";
+  "id,display_name,avatar_url,first_name,last_name,username,theme,press_duration,show_nutriscore,text_size,hero_treatment,icon_style";
 
 // `press_duration` est stocké en base sous forme de texte lisible
 // ("0.75s"), pendant que le reste de l'app raisonne en millisecondes
@@ -81,6 +81,7 @@ export async function saveProfile(userId, {
   showNutriscore,
   textSize,
   heroTreatment,
+  iconStyle,
 } = {}) {
   const patch = {};
   if (displayName !== undefined) patch.display_name = displayName;
@@ -93,6 +94,7 @@ export async function saveProfile(userId, {
   if (showNutriscore !== undefined) patch.show_nutriscore = showNutriscore;
   if (textSize !== undefined) patch.text_size = textSize;
   if (heroTreatment !== undefined) patch.hero_treatment = heroTreatment;
+  if (iconStyle !== undefined) patch.icon_style = iconStyle;
   if (!Object.keys(patch).length) return;
 
   // Le surnom affiché aux autres membres du foyer (liste "Membres", voir

@@ -1,3 +1,4 @@
+import { Beef, Carrot, Droplet, Milk, Wheat } from "lucide-react";
 import { ingredientKey } from "../../utils/helpers";
 
 /* ------------------------------------------------------------------ */
@@ -130,7 +131,7 @@ function isIgnoredIngredient(label) {
 /* ------------------------------------------------------------------ */
 export const FRIDGE_CATEGORIES = [
   {
-    key: "frais", label: "Frais & Crèmerie", icon: "🧀",
+    key: "frais", label: "Frais & Crèmerie", icon: "🧀", vectorIcon: Milk,
     // "(?<!b)" exclut "bœuf"/"boeuf" : ces mots CONTIENNENT littéralement
     // "œuf"/"oeuf" (b-œuf), un pur hasard orthographique qui faisait
     // classer toute viande de bœuf dans "Frais & Crèmerie" au lieu de
@@ -139,14 +140,14 @@ export const FRIDGE_CATEGORIES = [
     test: /beurre|crème|lait|(?<!b)(oeuf|œuf)|fromage|yaourt|parmesan|gruyère|mascarpone|mozzarella|comté/i,
   },
   {
-    key: "fruits-legumes", label: "Fruits & Légumes", icon: "🥦",
+    key: "fruits-legumes", label: "Fruits & Légumes", icon: "🥦", vectorIcon: Carrot,
     // "\bail\b" (double frontière, pas juste finale) : "ail" seul en fin de
     // mot matchait aussi "corail" (comme dans "lentilles corail") ou
     // "détail", qui n'ont rien à voir avec la gousse d'ail.
     test: /oignon|\bail\b|carotte|tomate|pomme|citron|herbe|persil|basilic|thym|laurier|échalote|poireau|courgette|champignon|salade|pêche|fraise|orange|banane|aubergine|poivron|céleri|chou|radis|artichaut|avocat|mangue|raisin|abricot|framboise|myrtille|betterave|endive|navet|brocoli|épinard/i,
   },
   {
-    key: "viandes-poissons", label: "Viandes & Poissons", icon: "🥩",
+    key: "viandes-poissons", label: "Viandes & Poissons", icon: "🥩", vectorIcon: Beef,
     // "viande" en toutes lettres, pas seulement les espèces citées : une
     // "Viande hachée" générique (sans précision bœuf/porc, ou dont la
     // précision a été retirée par stripParenthetical) doit atterrir ici,
@@ -154,11 +155,11 @@ export const FRIDGE_CATEGORIES = [
     test: /poulet|boeuf|bœuf|porc|veau|agneau|viande|lardon|jambon|poisson|saumon|crevette|canard|thon|cabillaud|dinde|chorizo|merguez|andouille|bacon|saucisse/i,
   },
   {
-    key: "epices", label: "Épices, Huiles & Condiments", icon: "🧂",
+    key: "epices", label: "Épices, Huiles & Condiments", icon: "🧂", vectorIcon: Droplet,
     test: /^sel\b|poivre|huile|vinaigre|moutarde|épice|cannelle|paprika|cumin|curry|piment|vanille|câpre|bouillon/i,
   },
   {
-    key: "epicerie", label: "Épicerie & Placard", icon: "🌾",
+    key: "epicerie", label: "Épicerie & Placard", icon: "🌾", vectorIcon: Wheat,
     test: /farine|sucre|riz|pâtes?|lentille|pois chiche|quinoa|avoine|chocolat|miel|levure|confiture|pain|biscuit|conserve|amande|noisette|noix/i,
   },
 ];
