@@ -188,6 +188,23 @@ export function buildImportLink(code) {
     return code;
   }
 }
+// Lien de partage PUBLIC d'une seule recette (voir PublicRecipeView.jsx) —
+// volontairement un paramètre différent de `?import=` ci-dessus : ce
+// dernier ouvre l'app normale et propose d'AJOUTER la recette au grimoire
+// de qui clique (nécessite d'avoir l'app, un compte...), alors que
+// `?recette=` doit rester ouvrable par n'importe qui, sans compte ni accès
+// au reste du grimoire — juste la recette, encodée intégralement dans
+// l'URL elle-même (voir main.jsx) : aucune requête réseau, aucune table
+// Supabase dédiée à créer pour ça.
+export function buildRecipeShareLink(recipe) {
+  try {
+    const code = encodeRecipeCode(recipe);
+    if (!code) return "";
+    return `${window.location.origin}${window.location.pathname}?recette=${code}`;
+  } catch {
+    return "";
+  }
+}
 // Lien d'invitation à un foyer — voir ?join_household=... (useOfflineSync.js,
 // JoinHouseholdConfirmModal.jsx) et son pendant QR code
 // (HouseholdManagerModal.jsx, buildQrCodeUrl ci-dessous).

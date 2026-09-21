@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { AlignLeft, Copy, Download, FileText, Image as ImageIcon, X } from "lucide-react";
+import { AlignLeft, Copy, Download, FileText, Image as ImageIcon, Link as LinkIcon, X } from "lucide-react";
 import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
 import {
   encodeRecipeCode,
   buildImportLink,
+  buildRecipeShareLink,
   slugify,
   categoryLabel,
   groupIngredients,
@@ -88,6 +89,30 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
     const code = encodeRecipeCode(recipe);
     if (!code) { showToast(t("share.codeErrorToast")); return; }
     shareText(buildImportLink(code), t("share.recipeLink"));
+  };
+
+  // Lien PUBLIC (voir PublicRecipeView.jsx) — à ne pas confondre avec
+  // doCopyCode ci-dessus : celui-là ouvre l'app normale et propose
+  // d'AJOUTER la recette au grimoire de qui clique (transfert entre
+  // comptes) ; celui-ci reste ouvrable par n'importe qui, sans compte ni
+  // accès au reste du Grimoire — juste la recette, telle qu'affichée à
+  // l'instant (portions ajustées, options d'export cochées ci-dessus).
+  const doCopyPublicLink = () => {
+    const shareRecipe = {
+      title: recipe.title,
+      category: recipe.category,
+      time: recipe.time,
+      prep_time: recipe.prep_time,
+      servings,
+      ingredients,
+      steps: recipe.steps,
+      imageUrl: includePhoto && hasPhoto ? recipe.imageUrl : undefined,
+      notes: includeNotes && hasNotes ? recipe.notes : undefined,
+      nutriscoreGrade: includeNutriscore ? nutriGrade : undefined,
+    };
+    const link = buildRecipeShareLink(shareRecipe);
+    if (!link) { showToast(t("share.codeErrorToast")); return; }
+    shareText(link, t("share.publicLinkLabel"));
   };
 
   const doDownloadFile = () => {
@@ -270,6 +295,12 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
                 <Switch checked={includeNotes} onChange={setIncludeNotes} label={t("share.includeNotes")} />
               </div>
             )}
+          </div>
+
+          <h4 style={{ marginTop: 22 }}>{t("share.publicLinkTitle")}</h4>
+          <p className="hint" style={{ fontStyle: "normal" }}>{t("share.publicLinkHint")}</p>
+          <div className="share-option-row">
+            <Seal tone="gold" onClick={doCopyPublicLink}><LinkIcon size={16} /> {t("share.copyPublicLink")}</Seal>
           </div>
 
           <h4 style={{ marginTop: 22 }}>{t("share.cookbook")}</h4>

@@ -1,7 +1,9 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import GrimoireDeMorgane from './GrimoireDeMorgane.jsx'
+import PublicRecipeView from './components/recipe/PublicRecipeView.jsx'
 import ErrorBoundary from './components/common/ErrorBoundary.jsx'
+import { decodeRecipeCode } from './utils/helpers'
 // Supprime ou commente cette ligne si le fichier n'existe pas :
 // import './index.css'
 
@@ -137,6 +139,29 @@ if (window.visualViewport) {
 // clic sonore global — voir utils/audioUtils.js.
 initAudioOnFirstTouch()
 
+// Lien de partage public d'une seule recette (?recette=..., voir
+// PublicRecipeView.jsx et utils/helpers.js, buildRecipeShareLink) — décodé
+// ICI, avant même GrimoireDeMorgane, pour que ce composant (auth, hooks
+// Supabase, écran de connexion...) ne soit JAMAIS monté pour qui ouvre un
+// tel lien : à la demande explicite de l'utilisateur, ce lien ne doit
+// donner accès à rien d'autre que cette seule recette, ni déclencher la
+// moindre requête vers le reste du Grimoire.
+let isShareLink = false;
+let sharedRecipe = null;
+try {
+  const code = new URLSearchParams(window.location.search).get("recette");
+  if (code) {
+    // Un lien cassé/corrompu doit afficher un message clair
+    // (PublicRecipeView avec recipe=null), jamais retomber sur l'app
+    // normale : ce serait montrer le reste du Grimoire à quelqu'un qui n'a
+    // cliqué que pour voir UNE recette précise.
+    isShareLink = true;
+    sharedRecipe = decodeRecipeCode(code);
+  }
+} catch {
+  /* pas d'URL exploitable, tant pis — GrimoireDeMorgane prend le relais */
+}
+
 // Filet de sécurité de dernier recours : sans lui, une erreur JS
 // inattendue n'importe où dans l'arbre React (avant même l'affichage des
 // onglets — écran de connexion, chargement initial...) faisait planter
@@ -146,7 +171,7 @@ initAudioOnFirstTouch()
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <GrimoireDeMorgane />
+      {isShareLink ? <PublicRecipeView recipe={sharedRecipe} /> : <GrimoireDeMorgane />}
     </ErrorBoundary>
   </React.StrictMode>,
 )
