@@ -87,19 +87,34 @@ export async function pingSupabase() {
   let reachable = false;
   try {
     const token = await getAuthToken();
-    // `_conncheck=1` : sans lui, cette URL tombe sous la même règle du
+    // `#_conncheck=1` (fragment, PAS un paramètre de requête `?...`) :
+    // sans un marqueur quelconque, cette URL tombe sous la même règle du
     // service worker que toute autre lecture Supabase (NetworkFirst, voir
     // vite.config.js) — un fetch() servi depuis SON cache résout
     // normalement, sans jamais lever d'exception. pingSupabase() ne
     // pouvait alors plus jamais détecter une vraie coupure réseau dès
     // qu'une réponse Supabase avait été mise en cache une fois (quasi
     // toujours vrai après le tout premier chargement de l'app) : la
-    // pastille restait verte indéfiniment même hors ligne. Ce paramètre
+    // pastille restait verte indéfiniment même hors ligne. Ce marqueur
     // fait correspondre la requête à une règle dédiée, ajoutée AVANT la
     // règle générale, qui force NetworkOnly — jamais de repli sur le
     // cache pour un ping, par définition.
+    //
+    // REGRESSION corrigée : c'était `?_conncheck=1` (vrai paramètre de
+    // requête) à l'origine — reconnu par le service worker (voir
+    // `url.hash` vs `url.searchParams` dans vite.config.js), mais AUSSI
+    // transmis tel quel jusqu'à PostgREST, qui interprète tout paramètre
+    // non reconnu comme un filtre sur une colonne du même nom
+    // (`colonne=valeur`) : `_conncheck` n'étant pas une colonne de
+    // `recipes`, chaque ping renvoyait un vrai 400 Bad Request, visible
+    // dans les logs du Panneau de Diagnostics. Un fragment d'URL
+    // (`#...`) n'est en revanche JAMAIS envoyé par le navigateur dans la
+    // requête HTTP réelle (c'est une convention universelle du protocole,
+    // pas spécifique à fetch()) — tout en restant lisible par le service
+    // worker, qui voit l'URL complète de la Request AVANT son départ sur
+    // le réseau.
     await fetchWithTimeout(
-      `${SUPABASE_URL}/rest/v1/recipes?select=id&limit=1&_conncheck=1`,
+      `${SUPABASE_URL}/rest/v1/recipes?select=id&limit=1#_conncheck=1`,
       { method: "GET", headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` } },
       PING_TIMEOUT_MS
     );

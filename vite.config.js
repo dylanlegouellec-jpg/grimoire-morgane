@@ -75,19 +75,23 @@ export default defineConfig({
         runtimeCaching: [
           {
             // Ping de connectivité (pingSupabase() / useConnectionStatus.js,
-            // repéré par ?_conncheck=1) — DOIT taper le vrai réseau à
-            // chaque fois, jamais retomber sur une réponse mise en cache.
-            // Sans cette règle, il tombait sous la règle générale juste en
-            // dessous (même hôte/chemin) : NetworkFirst y retombe sur le
-            // cache si le réseau échoue, et un fetch() servi depuis le
-            // cache résout normalement (aucune exception) — la pastille de
-            // statut restait alors "en ligne" indéfiniment, même hors
+            // repéré par #_conncheck=1 — un FRAGMENT d'URL, pas un
+            // paramètre `?...` : voir le commentaire détaillé dans
+            // pingSupabase(), utils/supabase.js, sur pourquoi ce marqueur a
+            // été déplacé là — jamais transmis à Supabase lui-même, tout en
+            // restant visible ici via `url.hash`) — DOIT taper le vrai
+            // réseau à chaque fois, jamais retomber sur une réponse mise en
+            // cache. Sans cette règle, il tombait sous la règle générale
+            // juste en dessous (même hôte/chemin) : NetworkFirst y retombe
+            // sur le cache si le réseau échoue, et un fetch() servi depuis
+            // le cache résout normalement (aucune exception) — la pastille
+            // de statut restait alors "en ligne" indéfiniment, même hors
             // ligne, dès qu'une réponse Supabase avait été mise en cache
             // une fois (quasi toujours vrai après le tout premier
             // chargement). DOIT rester AVANT la règle générale ci-dessous :
             // Workbox retient la première correspondance, jamais la plus
             // spécifique.
-            urlPattern: ({ url }) => url.hostname.endsWith(".supabase.co") && url.searchParams.has("_conncheck"),
+            urlPattern: ({ url }) => url.hostname.endsWith(".supabase.co") && url.hash.includes("_conncheck"),
             handler: "NetworkOnly",
           },
           {
