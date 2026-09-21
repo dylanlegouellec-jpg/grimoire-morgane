@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { applyTheme } from "../theme";
+import { applyTheme, overrideStatusBarColor } from "../theme";
 
 /* ------------------------------------------------------------------ */
 /*  RÉGRESSION : "en haut de mon écran c'est pas la même teinte" — la      */
@@ -45,5 +45,42 @@ describe("applyTheme — synchronise <meta name=\"theme-color\">", () => {
     expect(after).not.toBe(before);
     expect(after.content).toBe("#1c1917");
     expect(document.querySelectorAll('meta[name="theme-color"]').length).toBe(1);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/*  RÉGRESSION : mode cuisine (CookMode.jsx) toujours sombre quel que      */
+/*  soit le thème choisi — mais peint son propre fond en style inline,      */
+/*  sans jamais passer par applyTheme(). La balise <meta theme-color>        */
+/*  restait donc au thème réel (souvent clair) pendant que l'écran            */
+/*  affichait un fond sombre : la barre d'état d'une PWA installée ne          */
+/*  correspondait à rien de visible. overrideStatusBarColor() permet à un       */
+/*  tel écran d'imposer sa propre teinte, à charge pour lui de restaurer         */
+/*  le vrai thème (via applyTheme) à sa fermeture.                                */
+/* ------------------------------------------------------------------ */
+describe("overrideStatusBarColor — impose une teinte hors du thème réel", () => {
+  beforeEach(() => {
+    document.head.innerHTML = '<meta name="theme-color" content="#f1e6c8">';
+  });
+  afterEach(() => {
+    document.head.innerHTML = "";
+  });
+
+  it("pose la couleur demandée sur la balise <meta theme-color>", () => {
+    overrideStatusBarColor("#2c221e");
+    expect(document.querySelector('meta[name="theme-color"]').content).toBe("#2c221e");
+  });
+
+  it("remplace le nœud <meta>, comme applyTheme() (repli iOS PWA)", () => {
+    const before = document.querySelector('meta[name="theme-color"]');
+    overrideStatusBarColor("#2c221e");
+    const after = document.querySelector('meta[name="theme-color"]');
+    expect(after).not.toBe(before);
+    expect(document.querySelectorAll('meta[name="theme-color"]').length).toBe(1);
+  });
+
+  it("ne casse rien si la balise <meta name=\"theme-color\"> est absente", () => {
+    document.head.innerHTML = "";
+    expect(() => overrideStatusBarColor("#2c221e")).not.toThrow();
   });
 });
