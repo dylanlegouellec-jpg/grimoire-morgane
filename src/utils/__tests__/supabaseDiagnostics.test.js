@@ -30,6 +30,29 @@ afterEach(() => {
   setForceOfflineForDebug(false);
 });
 
+/* ------------------------------------------------------------------ */
+/*  RÉGRESSION : le marqueur "ne jamais servir depuis le cache du         */
+/*  service worker" (voir vite.config.js) était `?_conncheck=1`, un        */
+/*  vrai paramètre de requête — transmis tel quel jusqu'à PostgREST, qui     */
+/*  l'interprète comme un filtre sur une colonne inexistante et renvoyait     */
+/*  un 400 Bad Request à chaque ping (visible dans les logs du Panneau de      */
+/*  Diagnostics). Déplacé dans le FRAGMENT de l'URL (`#_conncheck=1`),          */
+/*  jamais transmis par le navigateur dans la requête HTTP réelle, tout en       */
+/*  restant visible par le service worker (voir son commentaire de fichier).      */
+/* ------------------------------------------------------------------ */
+describe("pingSupabase — marqueur anti-cache", () => {
+  it("place le marqueur dans le fragment de l'URL, jamais comme paramètre de requête", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, text: async () => "" });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await pingSupabase();
+
+    const requestedUrl = fetchMock.mock.calls[0][0];
+    expect(new URL(requestedUrl).searchParams.has("_conncheck")).toBe(false);
+    expect(requestedUrl).toContain("#_conncheck=1");
+  });
+});
+
 describe("setForceOfflineForDebug", () => {
   it("fait échouer pingSupabase() sans jamais appeler fetch", async () => {
     await primeOnline();
