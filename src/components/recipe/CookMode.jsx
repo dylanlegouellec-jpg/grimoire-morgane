@@ -3,6 +3,7 @@ import { Check, ChevronRight, X } from "lucide-react";
 import { groupSteps, parseDurationMinutes, triggerHaptic } from "../../utils/helpers";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { translateRecipeText } from "../../utils/recipeTranslation";
+import { applyTheme, getStoredTheme, overrideStatusBarColor } from "../../utils/theme";
 import Seal from "../common/Seal";
 import StepTimer from "./StepTimer";
 import PortionBadge from "./PortionBadge";
@@ -63,6 +64,14 @@ export default function CookMode({ recipe, onClose, pressDuration = 750 }) {
     document.body.style.position = "fixed";
     document.body.style.top = `-${scrollY}px`;
     document.body.style.width = "100%";
+    // Le fond ci-dessus est peint directement en style inline, sans jamais
+    // passer par applyTheme() (utils/theme.js) : la balise <meta
+    // name="theme-color"> continue donc de refléter le thème réel de l'app
+    // (souvent clair), pas ce fond sombre — d'où la barre d'état d'une PWA
+    // installée qui ne correspond à rien de visible à l'écran en mode
+    // cuisine. On l'aligne explicitement ici, et on restaure le vrai thème
+    // à la fermeture (voir plus bas).
+    overrideStatusBarColor("#2c221e");
 
     return () => {
       document.documentElement.style.backgroundColor = prevHtmlBg;
@@ -73,6 +82,7 @@ export default function CookMode({ recipe, onClose, pressDuration = 750 }) {
       document.body.style.top = prevBodyTop;
       document.body.style.width = prevBodyWidth;
       window.scrollTo(0, scrollY);
+      applyTheme(getStoredTheme());
     };
   }, []);
 
