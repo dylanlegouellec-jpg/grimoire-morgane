@@ -1,6 +1,6 @@
 import { useState, useRef, lazy, Suspense } from "react";
 import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform, useInView } from "motion/react";
-import { ChefHat, Clock, Minus, Plus, Share2, Users, X } from "lucide-react";
+import { ChefHat, Clock, Minus, Plus, Share2, Users, Wheat, X } from "lucide-react";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
 import { DEFAULT_HERO_TREATMENT } from "../../constants";
 import { categoryLabel, categoryClass, groupSteps, triggerHaptic } from "../../utils/helpers";
@@ -13,6 +13,7 @@ import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import DishArt from "../art/DishArt";
 import Flourish from "../common/Flourish";
 import Seal from "../common/Seal";
+import CategoryIcon from "../common/CategoryIcon";
 import AnimatedNumber from "../common/AnimatedNumber";
 import HeroTreatment, { heroTreatmentClassName, isLegendTreatment } from "./HeroTreatment";
 
@@ -264,7 +265,7 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
             <div className="card-meta" style={{ marginBottom: 10 }}>
               <span><Clock size={13} /> {recipe.time || recipe.prep_time || 0} min</span>
               {recipe.carbs ? (
-                <span className="carbs-badge">🍞 {Math.round(recipe.carbs * servings)} g glucides</span>
+                <span className="carbs-badge"><CategoryIcon emoji="🍞" icon={Wheat} size={13} /> {Math.round(recipe.carbs * servings)} g glucides</span>
               ) : null}
             </div>
             <div className="portions-adjuster">

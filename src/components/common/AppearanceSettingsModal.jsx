@@ -1,4 +1,4 @@
-import { Monitor, Moon, Sun } from "lucide-react";
+import { Monitor, Moon, Sparkles, Sun } from "lucide-react";
 import { useTranslation } from "../../contexts/LanguageContext";
 import Flourish from "./Flourish";
 import SegmentedControl from "./SegmentedControl";
@@ -22,6 +22,8 @@ export default function AppearanceSettingsModal({
   onSetNavOpacity,
   heroTreatment,
   onSetHeroTreatment,
+  iconStyle,
+  onSetIconStyle,
 }) {
   const { t } = useTranslation();
 
@@ -29,6 +31,11 @@ export default function AppearanceSettingsModal({
     { value: "light", label: t("settings.themeLight"), icon: Sun },
     { value: "dark", label: t("settings.themeDark"), icon: Moon },
     { value: "system", label: t("settings.themeSystem"), icon: Monitor },
+  ];
+
+  const ICON_STYLE_OPTIONS = [
+    { value: "emoji", label: t("settings.iconStyleEmoji") },
+    { value: "vector", label: t("settings.iconStyleVector"), icon: Sparkles },
   ];
 
   return (
@@ -42,6 +49,14 @@ export default function AppearanceSettingsModal({
       </div>
       <p className="hint" style={{ fontStyle: "normal", marginTop: 8 }}>
         {t("settings.themeSystemHint")}
+      </p>
+
+      <p className="ios-group-title">{t("settings.iconStyleTitle")}</p>
+      <div className="ios-group ios-group-padded">
+        <SegmentedControl options={ICON_STYLE_OPTIONS} value={iconStyle} onChange={onSetIconStyle} ariaLabel={t("settings.iconStyleTitle")} />
+      </div>
+      <p className="hint" style={{ fontStyle: "normal", marginTop: 8 }}>
+        {t("settings.iconStyleHint")}
       </p>
 
       <p className="ios-group-title">{t("settings.languageTitle")}</p>

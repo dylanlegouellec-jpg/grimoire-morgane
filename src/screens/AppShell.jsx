@@ -103,6 +103,8 @@ export default function AppShell({
     setNavOpacity,
     heroTreatment,
     setHeroTreatment,
+    iconStyle,
+    setIconStyle,
     textSize,
     setTextSize,
     language,
@@ -698,6 +700,8 @@ export default function AppShell({
             onSetNavOpacity={setNavOpacity}
             heroTreatment={heroTreatment}
             onSetHeroTreatment={setHeroTreatment}
+            iconStyle={iconStyle}
+            onSetIconStyle={setIconStyle}
             textSize={textSize}
             onSetTextSize={setTextSize}
             language={language}

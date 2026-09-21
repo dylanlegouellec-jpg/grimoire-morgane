@@ -1,18 +1,23 @@
+import { Cookie, Moon, Salad, Soup, Sun, Sunrise, CakeSlice, Wine } from "lucide-react";
+
 /* ------------------------------------------------------------------ */
 /*  PLANIFICATION DES REPAS — utilitaires de semaine (lundi -> dimanche)  */
 /*  Pas de librairie de dates (aucune dans les dépendances du projet) :   */
 /*  tout ici repose sur l'API Date native, volontairement simple —        */
 /*  une seule notion de "semaine" (le lundi qui la commence) sert de       */
 /*  pivot pour la navigation ET pour regrouper les entrées du plan.        */
+/*                                                                        */
+/*  `vectorIcon` : équivalent lucide-react de `icon` (voir Réglages >      */
+/*  Apparence > "Style des icônes", contexts/IconStyleContext.jsx).         */
 /* ------------------------------------------------------------------ */
 
 export const DAY_LABELS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
 
 export const MEAL_TYPES = [
-  { key: "petit-dejeuner", label: "Petit-déjeuner", icon: "🌅" },
-  { key: "dejeuner", label: "Déjeuner", icon: "☀️" },
-  { key: "diner", label: "Dîner", icon: "🌙" },
-  { key: "encas", label: "En-cas", icon: "🍪" },
+  { key: "petit-dejeuner", label: "Petit-déjeuner", icon: "🌅", vectorIcon: Sunrise },
+  { key: "dejeuner", label: "Déjeuner", icon: "☀️", vectorIcon: Sun },
+  { key: "diner", label: "Dîner", icon: "🌙", vectorIcon: Moon },
+  { key: "encas", label: "En-cas", icon: "🍪", vectorIcon: Cookie },
 ];
 const MEAL_TYPE_BY_KEY = MEAL_TYPES.reduce((acc, m) => { acc[m.key] = m; return acc; }, {});
 export function mealTypeInfo(key) {
@@ -25,10 +30,10 @@ export function mealTypeInfo(key) {
 // (DEFAULT_COURSE_TYPE) — le cas le plus courant, pour ne pas obliger à
 // changer le sélecteur à chaque ajout.
 export const COURSE_TYPES = [
-  { key: "aperitif", label: "Apéro", icon: "🍸" },
-  { key: "entree", label: "Entrée", icon: "🥗" },
-  { key: "plat", label: "Plat", icon: "🍲" },
-  { key: "dessert", label: "Dessert", icon: "🍰" },
+  { key: "aperitif", label: "Apéro", icon: "🍸", vectorIcon: Wine },
+  { key: "entree", label: "Entrée", icon: "🥗", vectorIcon: Salad },
+  { key: "plat", label: "Plat", icon: "🍲", vectorIcon: Soup },
+  { key: "dessert", label: "Dessert", icon: "🍰", vectorIcon: CakeSlice },
 ];
 export const DEFAULT_COURSE_TYPE = "plat";
 const COURSE_TYPE_BY_KEY = COURSE_TYPES.reduce((acc, c) => { acc[c.key] = c; return acc; }, {});

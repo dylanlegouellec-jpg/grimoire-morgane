@@ -1,7 +1,8 @@
 import { AnimatePresence, Reorder, useDragControls } from "motion/react";
 import { GripVertical } from "lucide-react";
-import { aisleIcon } from "../../utils/helpers";
+import { aisleIcon, aisleVectorIcon } from "../../utils/helpers";
 import { triggerHaptic } from "../../utils/haptics";
+import CategoryIcon from "../common/CategoryIcon";
 import ShoppingItemRow from "./ShoppingItemRow";
 
 /* ------------------------------------------------------------------ */
@@ -44,7 +45,7 @@ export default function ShoppingAisleBlock({ aisle, list, aisleLabel, onCommitOr
         >
           <GripVertical size={16} />
         </button>
-        <span className="aisle-icon" aria-hidden="true">{aisleIcon(aisle)}</span>
+        <CategoryIcon className="aisle-icon" emoji={aisleIcon(aisle)} icon={aisleVectorIcon(aisle)} />
         {aisleLabel}
         <span className="aisle-count">{list.length}</span>
       </h4>

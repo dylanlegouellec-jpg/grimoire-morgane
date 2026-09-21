@@ -6,6 +6,11 @@ import { useTranslation } from "../../contexts/LanguageContext";
 import { collectPantryOptions, missingIngredients, normalizeIngredientLabel, FRIDGE_CATEGORIES } from "./pantryUtils";
 import DishArt from "../art/DishArt";
 import SwipeFlourish from "../shopping/SwipeFlourish";
+import CategoryIcon from "../common/CategoryIcon";
+
+// Icône des "basiques" (sel/poivre/huile...) — pas une vraie catégorie
+// FRIDGE_CATEGORIES, mais la même famille que "epices" (voir pantryUtils.js).
+const BASICS_VECTOR_ICON = FRIDGE_CATEGORIES.find((c) => c.key === "epices")?.vectorIcon;
 
 // Au-delà de ce nombre d'ingrédients manquants, une recette est reléguée
 // hors de la liste par défaut (voir le bouton "Afficher aussi..." plus
@@ -95,7 +100,10 @@ export default function FridgeView({ recipes, pantry, setPantry, basics, search,
         className="basics-title basics-title-toggle"
         onClick={() => { triggerHaptic(10); setShowBasics((v) => !v); }}
       >
-        <span>🧂 {t("fridge.basicsTitle")} <span className="hint-inline">{t("fridge.basicsHint")}</span></span>
+        <span>
+          <CategoryIcon emoji="🧂" icon={BASICS_VECTOR_ICON} /> {t("fridge.basicsTitle")}{" "}
+          <span className="hint-inline">{t("fridge.basicsHint")}</span>
+        </span>
         <ChevronDown size={16} className={`fridge-category-chevron ${showBasics ? "open" : ""}`} />
       </button>
       {showBasics && (
@@ -151,7 +159,7 @@ export default function FridgeView({ recipes, pantry, setPantry, basics, search,
             return (
               <div className="fridge-category" key={cat.key}>
                 <button type="button" className="fridge-category-header" onClick={() => toggleCategory(cat.key)}>
-                  <span className="fridge-category-icon" aria-hidden="true">{cat.icon}</span>
+                  <CategoryIcon className="fridge-category-icon" emoji={cat.icon} icon={cat.vectorIcon} />
                   <span className="fridge-category-label">{dict.labels[cat.label] || cat.label}</span>
                   <span className="fridge-category-count">{ownedInCategory}/{items.length}</span>
                   <ChevronDown size={16} className={`fridge-category-chevron ${isOpen ? "open" : ""}`} />

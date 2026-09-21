@@ -10,6 +10,7 @@ import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import Flourish from "../common/Flourish";
+import CategoryIcon from "../common/CategoryIcon";
 import CalendarPicker from "./CalendarPicker";
 
 /* ------------------------------------------------------------------ */
@@ -155,6 +156,10 @@ export default function AddMealModal({
           <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         )}
         {step === "recipe" && mealTypeHasCourse(mealType) && (
+          // <option> ne peut pas rendre une icône lucide (contenu texte
+          // brut imposé par la plateforme) — reste en emoji quel que soit
+          // le "Style des icônes" choisi (voir CategoryIcon.jsx), seul cas
+          // de l'app où ce réglage n'a pas d'effet.
           <select
             className="meal-course-select"
             value={courseType}
@@ -192,7 +197,12 @@ export default function AddMealModal({
                 className="ios-row"
                 onClick={() => { triggerHaptic(15); setMealType(m.key); }}
               >
-                <span className="ios-row-icon" style={{ background: "var(--surface-strong)", fontSize: "1.05rem" }}>{m.icon}</span>
+                <CategoryIcon
+                  className="ios-row-icon"
+                  style={{ background: "var(--surface-strong)", fontSize: "1.05rem" }}
+                  emoji={m.icon}
+                  icon={m.vectorIcon}
+                />
                 <span className="ios-row-title">{t(`mealTypes.${m.key}`)}</span>
               </button>
             ))}

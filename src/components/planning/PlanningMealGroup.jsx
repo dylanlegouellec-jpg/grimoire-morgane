@@ -3,6 +3,7 @@ import { AnimatePresence } from "motion/react";
 import { useTranslation } from "../../contexts/LanguageContext";
 import useLongPress from "../../hooks/useLongPress";
 import { mealTypeHasCourse } from "../../utils/planning";
+import CategoryIcon from "../common/CategoryIcon";
 import PlanningCourseGroup from "./PlanningCourseGroup";
 import PlanningMealItemsList from "./PlanningMealItemsList";
 import MealSectionOptionsModal from "./MealSectionOptionsModal";
@@ -68,7 +69,7 @@ export default function PlanningMealGroup({
         onClick={() => { headerLongPress.wasLongPress(); }}
         {...headerLongPress.handlers}
       >
-        <span className="planning-meal-icon" aria-hidden="true">{mealType.icon}</span>
+        <CategoryIcon className="planning-meal-icon" emoji={mealType.icon} icon={mealType.vectorIcon} />
         <span className="planning-meal-type">{mealLabel}</span>
       </div>
       {/* Aucun type de plat pour petit-déjeuner/en-cas (voir

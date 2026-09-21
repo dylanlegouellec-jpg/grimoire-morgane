@@ -2,6 +2,7 @@ import { useState } from "react";
 import { AnimatePresence } from "motion/react";
 import { useTranslation } from "../../contexts/LanguageContext";
 import useLongPress from "../../hooks/useLongPress";
+import CategoryIcon from "../common/CategoryIcon";
 import PlanningMealItemsList from "./PlanningMealItemsList";
 import CourseOptionsModal from "./CourseOptionsModal";
 import MoveMealSectionModal from "./MoveMealSectionModal";
@@ -47,7 +48,7 @@ export default function PlanningCourseGroup({ mealTypeKey, course, entries, labe
         onClick={() => { headerLongPress.wasLongPress(); }}
         {...headerLongPress.handlers}
       >
-        <span className="planning-meal-course-icon" aria-hidden="true">{course.icon}</span>
+        <CategoryIcon className="planning-meal-course-icon" emoji={course.icon} icon={course.vectorIcon} />
         <span className="planning-course-label">{label}</span>
       </div>
       {/* Pas de <ul> séparé ici : PlanningMealItemsList rend lui-même son

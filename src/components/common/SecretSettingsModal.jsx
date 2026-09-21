@@ -57,6 +57,8 @@ export default function SecretSettingsModal({
   onSetNavOpacity,
   heroTreatment,
   onSetHeroTreatment,
+  iconStyle,
+  onSetIconStyle,
   textSize,
   onSetTextSize,
   user,
@@ -342,6 +344,8 @@ export default function SecretSettingsModal({
               onSetNavOpacity={onSetNavOpacity}
               heroTreatment={heroTreatment}
               onSetHeroTreatment={onSetHeroTreatment}
+              iconStyle={iconStyle}
+              onSetIconStyle={onSetIconStyle}
             />
           )}
           {activeView === "accessibility" && (
