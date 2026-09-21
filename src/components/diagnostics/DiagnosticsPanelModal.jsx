@@ -225,6 +225,14 @@ export default function DiagnosticsPanelModal({ onClose, showToast, onResetOnboa
                     : t("diagnostics.unavailable")}
                 </span>
               </div>
+              {/* Pour le kiff — calculé une seule fois au build, jamais
+                  dans le navigateur (voir scripts/countLoc.js), donc
+                  toujours la même valeur tant que l'app n'est pas
+                  redéployée : c'est voulu, pas une métrique "en direct". */}
+              <div className="diagnostics-metric">
+                <span className="diagnostics-metric-label">{t("diagnostics.locCount")}</span>
+                <span className="diagnostics-metric-value">{__GRIMOIRE_LOC__.toLocaleString()}</span>
+              </div>
             </div>
 
             {/* --- Stockage appareil --- */}

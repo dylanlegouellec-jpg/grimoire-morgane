@@ -20,7 +20,14 @@ export default [
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
-      globals: globals.browser,
+      globals: {
+        ...globals.browser,
+        // Injectée au build par Vite/Vitest (voir vite.config.js,
+        // vitest.config.js, scripts/countLoc.js) — jamais une vraie
+        // variable du bundle navigateur, juste une constante littérale
+        // substituée à la compilation.
+        __GRIMOIRE_LOC__: "readonly",
+      },
       parserOptions: {
         ecmaFeatures: { jsx: true },
       },
@@ -55,7 +62,7 @@ export default [
     },
   },
   {
-    files: ["api/**/*.js", "*.config.js"],
+    files: ["api/**/*.js", "*.config.js", "scripts/**/*.js"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
