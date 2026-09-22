@@ -8,6 +8,12 @@ import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import Flourish from "../common/Flourish";
 import Seal from "../common/Seal";
 
+interface DeleteMealSectionConfirmModalProps {
+  mealLabel: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
 /* ------------------------------------------------------------------ */
 /*  CONFIRMATION avant de vider toute une section du plan ("Supprimer la */
 /*  section Déjeuner", voir MealSectionOptionsModal.jsx/                  */
@@ -15,9 +21,9 @@ import Seal from "../common/Seal";
 /*  (recettes), généralisé au libellé du moment plutôt que codé en dur       */
 /*  pour "la recette".                                                       */
 /* ------------------------------------------------------------------ */
-export default function DeleteMealSectionConfirmModal({ mealLabel, onConfirm, onCancel }) {
+export default function DeleteMealSectionConfirmModal({ mealLabel, onConfirm, onCancel }: DeleteMealSectionConfirmModalProps) {
   const { t } = useTranslation();
-  const modalRef = useFocusTrap(onCancel);
+  const modalRef = useFocusTrap<HTMLDivElement>(onCancel);
   const sheet = useDismissibleSheet(onCancel, { scrollRef: modalRef });
   // Manquait ici (contrairement à toutes les autres modales du planning) :
   // sans lui, le fond défilait toujours derrière cette confirmation

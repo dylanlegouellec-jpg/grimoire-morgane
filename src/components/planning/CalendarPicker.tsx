@@ -12,7 +12,7 @@ import { useTranslation } from "../../contexts/LanguageContext";
 /*  dernier jour d'un mois).                                                */
 /* ------------------------------------------------------------------ */
 
-function getMonthGrid(viewMonth) {
+function getMonthGrid(viewMonth: Date): Date[] {
   const firstOfMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1);
   const startIsoDay = firstOfMonth.getDay() === 0 ? 7 : firstOfMonth.getDay(); // 1 = lundi
   const gridStart = new Date(firstOfMonth);
@@ -28,7 +28,7 @@ function getMonthGrid(viewMonth) {
 // françaises figées ("L M M J V S D" n'a pas de sens une fois l'app
 // basculée en anglais) — 2024-01-01 est un lundi connu, sert juste de
 // point de départ pour dérouler les 7 jours de la semaine.
-function getWeekdayLetters(locale) {
+function getWeekdayLetters(locale: string): string[] {
   const monday = new Date(2024, 0, 1);
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday);
@@ -37,7 +37,14 @@ function getWeekdayLetters(locale) {
   });
 }
 
-export default function CalendarPicker({ viewMonth, onChangeMonth, selectedDate, onSelectDate }) {
+interface CalendarPickerProps {
+  viewMonth: Date;
+  onChangeMonth: (date: Date) => void;
+  selectedDate?: Date | null;
+  onSelectDate: (date: Date) => void;
+}
+
+export default function CalendarPicker({ viewMonth, onChangeMonth, selectedDate, onSelectDate }: CalendarPickerProps) {
   const { t, language } = useTranslation();
   const locale = localeFor(language);
   const days = getMonthGrid(viewMonth);

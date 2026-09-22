@@ -9,6 +9,13 @@ import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import Flourish from "../common/Flourish";
 
+interface MealOptionsModalProps {
+  label: string;
+  onClose: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
 /* ------------------------------------------------------------------ */
 /*  MENU D'ACTIONS SUR UN PLAT DU PLAN (déclenché par l'appui long sur   */
 /*  une ligne — voir PlanningMealItem.jsx) : mêmes composants/gabarit    */
@@ -19,9 +26,9 @@ import Flourish from "../common/Flourish";
 /*  Modal) — un nom générique de "feuille d'actions", pas propre aux       */
 /*  recettes malgré son préfixe historique.                                */
 /* ------------------------------------------------------------------ */
-export default function MealOptionsModal({ label, onClose, onEdit, onDelete }) {
+export default function MealOptionsModal({ label, onClose, onEdit, onDelete }: MealOptionsModalProps) {
   const { t } = useTranslation();
-  const modalRef = useFocusTrap(onClose);
+  const modalRef = useFocusTrap<HTMLDivElement>(onClose);
   const sheet = useDismissibleSheet(onClose, { scrollRef: modalRef });
   useBodyScrollLock(true);
 
