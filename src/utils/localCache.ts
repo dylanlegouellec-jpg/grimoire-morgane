@@ -18,7 +18,7 @@ const CACHE_KEY = "grimoire_local_cache_v1";
 export interface LocalCacheData {
   recipes?: unknown[];
   pantry?: unknown[];
-  basics?: Record<string, unknown>;
+  basics?: unknown[];
   mealPlan?: unknown[];
   shoppingLists?: unknown[];
   activeListId?: string | null;

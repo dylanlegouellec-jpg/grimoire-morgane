@@ -15,6 +15,12 @@ import { getSupabaseClient } from "../utils/supabaseClient";
 import { getOfflineQueueSize } from "../utils/offlineQueue";
 import { saveLocalCache } from "../utils/localCache";
 import { prefetchRecipeImages } from "../utils/imageCache";
+import type { Dispatch, SetStateAction } from "react";
+import type { LocalCacheData } from "../utils/localCache";
+import type { ConnectionStatus } from "./useConnectionStatus";
+import type { Recipe } from "./useRecipes";
+import type { ShoppingList } from "./useShoppingLists";
+import type { MealPlanEntry } from "./useMealPlan";
 
 /* ------------------------------------------------------------------ */
 /*  SYNCHRONISATION — hors-ligne, chargement initial, Realtime          */
@@ -33,13 +39,35 @@ import { prefetchRecipeImages } from "../utils/imageCache";
 // chargement (voir l'effet de chargement initial) : pas de baseline dans
 // ce cas, `saveAppState` traite alors cette écriture comme avant ce
 // correctif (aucune détection de conflit possible sans valeur de départ).
-function parseBaseline(serialized) {
+function parseBaseline(serialized: string | undefined): unknown {
   if (serialized == null) return undefined;
   try {
     return JSON.parse(serialized);
   } catch {
     return undefined;
   }
+}
+
+interface UseOfflineSyncParams {
+  authLoading: boolean;
+  user: { id: string } | null;
+  householdId: string | null;
+  localCache: LocalCacheData;
+  connectionStatus: ConnectionStatus;
+  recipes: Recipe[];
+  setRecipes: Dispatch<SetStateAction<Recipe[]>>;
+  pantry: string[];
+  setPantry: Dispatch<SetStateAction<string[]>>;
+  basics: string[];
+  setBasics: Dispatch<SetStateAction<string[]>>;
+  mealPlan: MealPlanEntry[];
+  setMealPlan: Dispatch<SetStateAction<MealPlanEntry[]>>;
+  shoppingLists: ShoppingList[];
+  setShoppingLists: Dispatch<SetStateAction<ShoppingList[]>>;
+  activeListId: string | null;
+  setActiveListId: Dispatch<SetStateAction<string | null>>;
+  shoppingScope: string;
+  showToast: (msg: string) => void;
 }
 
 export default function useOfflineSync({
@@ -62,14 +90,14 @@ export default function useOfflineSync({
   setActiveListId,
   shoppingScope,
   showToast,
-}) {
+}: UseOfflineSyncParams) {
   const [ready, setReady] = useState(false);
   const [offlineQueueSize, setOfflineQueueSize] = useState(() => getOfflineQueueSize());
-  const [pendingImport, setPendingImport] = useState(null);
+  const [pendingImport, setPendingImport] = useState<Record<string, unknown> | null>(null);
   // uuid du foyer à rejoindre (lien/QR d'invitation, ?join_household=...) —
   // en attente de confirmation utilisateur, voir l'effet ci-dessous et
   // JoinHouseholdConfirmModal.jsx.
-  const [pendingHouseholdJoin, setPendingHouseholdJoin] = useState(null);
+  const [pendingHouseholdJoin, setPendingHouseholdJoin] = useState<string | null>(null);
 
   // Boucle d'écho app_state ↔ Realtime (voir les 2 useEffect plus bas +
   // le canal Realtime) : une sauvegarde locale de `pantry`/`basics`/
@@ -84,9 +112,9 @@ export default function useOfflineSync({
   // mis à jour à la fois après une sauvegarde locale ET après réception
   // Realtime, pour que l'effet de sauvegarde puisse distinguer une VRAIE
   // modification locale d'un simple écho et ignorer ce dernier.
-  const lastSyncedPantryRef = useRef(undefined);
-  const lastSyncedBasicsRef = useRef(undefined);
-  const lastSyncedMealPlanRef = useRef(undefined);
+  const lastSyncedPantryRef = useRef<string | undefined>(undefined);
+  const lastSyncedBasicsRef = useRef<string | undefined>(undefined);
+  const lastSyncedMealPlanRef = useRef<string | undefined>(undefined);
 
   // Bug réel corrigé ici (pas juste théorique — "je coche un ingrédient du
   // frigo et parfois ça le décoche tout seul, je dois recliquer") : entre
@@ -120,9 +148,9 @@ export default function useOfflineSync({
   // rafale de changements (légitime ou non) se résout en UN seul envoi,
   // celui de la toute dernière valeur, une fois la rafale terminée.
   const SAVE_DEBOUNCE_MS = 400;
-  const pantrySaveTimerRef = useRef(null);
-  const basicsSaveTimerRef = useRef(null);
-  const mealPlanSaveTimerRef = useRef(null);
+  const pantrySaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const basicsSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mealPlanSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Cadence du filet de sécurité périodique de rejeu de la file hors-ligne
   // (voir l'effet plus bas) — alignée sur PING_INTERVAL_MS de
@@ -145,7 +173,7 @@ export default function useOfflineSync({
     (async () => {
       if (!SUPABASE_READY) {
         if (!hasCache) {
-          setRecipes(demoRecipes());
+          setRecipes(demoRecipes() as unknown as Recipe[]);
           setPantry([]);
           setBasics(DEFAULT_BASICS);
           setMealPlan([]);
@@ -179,7 +207,7 @@ export default function useOfflineSync({
         lastSyncedPantryRef.current = JSON.stringify(loadedPantry);
         lastSyncedBasicsRef.current = JSON.stringify(loadedBasics);
         lastSyncedMealPlanRef.current = JSON.stringify(loadedMealPlan);
-        const mappedLists = (listRows || []).map(mapRowToShoppingList);
+        const mappedLists = (listRows || []).map(mapRowToShoppingList) as ShoppingList[];
         setShoppingLists(mappedLists);
         // Filtrée par la portée AFFICHÉE (préférence locale à l'appareil,
         // voir useShoppingLists.js) avant de choisir la dernière créée —
@@ -195,7 +223,7 @@ export default function useOfflineSync({
           showToast("Hors-ligne — dernières données synchronisées affichées.");
         } else {
           showToast("Connexion Supabase impossible — mode démo en mémoire.");
-          setRecipes(demoRecipes());
+          setRecipes(demoRecipes() as unknown as Recipe[]);
         }
       } finally {
         setReady(true);
@@ -291,7 +319,7 @@ export default function useOfflineSync({
           // toujours pas pouvoir l'écraser (voir le commentaire plus haut).
         });
     }, SAVE_DEBOUNCE_MS);
-    return () => clearTimeout(pantrySaveTimerRef.current);
+    return () => { if (pantrySaveTimerRef.current) clearTimeout(pantrySaveTimerRef.current); };
   }, [pantry, ready, householdId, showToast]);
   useEffect(() => {
     if (!ready || !SUPABASE_READY || !householdId) return undefined;
@@ -307,7 +335,7 @@ export default function useOfflineSync({
           showToast("Impossible d'enregistrer les basiques — réessaie plus tard.");
         });
     }, SAVE_DEBOUNCE_MS);
-    return () => clearTimeout(basicsSaveTimerRef.current);
+    return () => { if (basicsSaveTimerRef.current) clearTimeout(basicsSaveTimerRef.current); };
   }, [basics, ready, householdId, showToast]);
   useEffect(() => {
     if (!ready || !SUPABASE_READY || !householdId) return undefined;
@@ -323,7 +351,7 @@ export default function useOfflineSync({
           showToast("Impossible d'enregistrer le plan de repas — réessaie plus tard.");
         });
     }, SAVE_DEBOUNCE_MS);
-    return () => clearTimeout(mealPlanSaveTimerRef.current);
+    return () => { if (mealPlanSaveTimerRef.current) clearTimeout(mealPlanSaveTimerRef.current); };
   }, [mealPlan, ready, householdId, showToast]);
 
   // Rejoue la file d'attente hors-ligne, puis rafraîchit depuis Supabase —
@@ -365,7 +393,7 @@ export default function useOfflineSync({
     // ici aurait fait disparaître le premier message avant même qu'il ait
     // pu s'afficher, jamais vu par l'utilisateur.
     if (flushed > 0 || dropped > 0 || (conflicts && conflicts.length)) {
-      const parts = [];
+      const parts: string[] = [];
       if (flushed > 0) parts.push(`${flushed} modification(s) resynchronisée(s)`);
       if (dropped > 0) {
         parts.push(
@@ -375,7 +403,7 @@ export default function useOfflineSync({
         );
       }
       if (conflicts && conflicts.length) {
-        const labels = { pantry: "le frigo", basics: "les basiques", meal_plan: "le plan de repas" };
+        const labels: Record<string, string> = { pantry: "le frigo", basics: "les basiques", meal_plan: "le plan de repas" };
         const fields = [...new Set(conflicts.flatMap((c) => c.keys))].map((k) => labels[k] || k);
         parts.push(`ta modification hors-ligne de ${fields.join(" et ")} n'a pas pu être conservée (modifié ailleurs entre-temps)`);
       }
@@ -387,8 +415,8 @@ export default function useOfflineSync({
         fetchTable("recipes", `select=${RECIPE_COLUMNS}&household_id=eq.${householdId}&order=created_at.desc`),
         fetchTable("shopping_lists", `select=${SHOPPING_LIST_COLUMNS}&household_id=eq.${householdId}&order=created_at.asc`),
       ]);
-      setRecipes((rows || []).map(mapRowToRecipe));
-      setShoppingLists((listRows || []).map(mapRowToShoppingList));
+      setRecipes((rows || []).map(mapRowToRecipe) as Recipe[]);
+      setShoppingLists((listRows || []).map(mapRowToShoppingList) as ShoppingList[]);
     } catch (err) {
       console.error("Rafraîchissement après reconnexion impossible :", err);
     }
@@ -477,7 +505,7 @@ export default function useOfflineSync({
           setRecipes((prev) => prev.filter((r) => r.id !== payload.old.id));
           return;
         }
-        const incoming = mapRowToRecipe(payload.new);
+        const incoming = mapRowToRecipe(payload.new) as Recipe;
         setRecipes((prev) => {
           const exists = prev.some((r) => r.id === incoming.id);
           return exists ? prev.map((r) => (r.id === incoming.id ? incoming : r)) : [incoming, ...prev];
@@ -488,7 +516,7 @@ export default function useOfflineSync({
           setShoppingLists((prev) => prev.filter((l) => l.id !== payload.old.id));
           return;
         }
-        const incoming = mapRowToShoppingList(payload.new);
+        const incoming = mapRowToShoppingList(payload.new) as ShoppingList;
         setShoppingLists((prev) => {
           const exists = prev.some((l) => l.id === incoming.id);
           return exists ? prev.map((l) => (l.id === incoming.id ? incoming : l)) : [...prev, incoming];
