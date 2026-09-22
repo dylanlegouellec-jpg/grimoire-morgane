@@ -1,4 +1,5 @@
 import { estimateNutriscoreLocal } from "./nutriscore";
+import type { NormalizedIngredient } from "./ingredients";
 
 /* ------------------------------------------------------------------ */
 /*  NUTRI-SCORE — APPEL SERVEUR (une fois, à la création/édition)      */
@@ -22,7 +23,13 @@ import { estimateNutriscoreLocal } from "./nutriscore";
 const ENDPOINT = import.meta.env.VITE_NUTRISCORE_ENDPOINT || "/api/nutriscore";
 const TIMEOUT_MS = 6000;
 
-async function fetchWithTimeout(url, options, ms) {
+// Reflète scoreToGradeLocal (utils/nutriscore.js) — pas encore un type
+// exporté depuis ce fichier, resté en .js pour l'instant, d'où la
+// duplication assumée ici (première étape de la migration : le fichier
+// source de vérité viendra plus tard sans que ce type ait à bouger).
+export type NutriscoreGrade = "A" | "B" | "C" | "D" | "E";
+
+async function fetchWithTimeout(url: string, options: RequestInit, ms: number): Promise<Response> {
   const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
   const timer = controller ? setTimeout(() => controller.abort(), ms) : null;
   try {
@@ -37,7 +44,10 @@ async function fetchWithTimeout(url, options, ms) {
 // l'heuristique locale plutôt que de bloquer l'enregistrement d'une
 // recette — le Nutri-Score est une aide visuelle, jamais une condition
 // de sauvegarde.
-export async function fetchNutriscoreGrade(ingredients, category) {
+export async function fetchNutriscoreGrade(
+  ingredients: NormalizedIngredient[],
+  category: string
+): Promise<NutriscoreGrade> {
   try {
     if (typeof navigator !== "undefined" && navigator.onLine === false) {
       return estimateNutriscoreLocal(ingredients, category);

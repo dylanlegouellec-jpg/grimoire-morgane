@@ -23,7 +23,18 @@ export const RECIPE_IMAGE_BUCKET = "recipe-images";
 const MAX_WIDTH = 1200;
 const JPEG_QUALITY = 0.82;
 
-function loadBitmap(file) {
+export interface CompressedImage {
+  blob: Blob;
+  mimeType: "image/webp" | "image/jpeg";
+  extension: "webp" | "jpg";
+}
+
+// ImageBitmap (voie normale) ou HTMLImageElement (repli ci-dessous) : les
+// deux exposent width/height (ou naturalWidth/naturalHeight pour le
+// second) et peuvent être passés tels quels à CanvasRenderingContext2D.drawImage.
+type LoadedBitmap = ImageBitmap | HTMLImageElement;
+
+function loadBitmap(file: File): Promise<LoadedBitmap> {
   if (typeof createImageBitmap === "function") return createImageBitmap(file);
   // Repli pour les navigateurs sans createImageBitmap (rare aujourd'hui,
   // mais évite un plantage sec plutôt qu'une dégradation silencieuse).
@@ -35,7 +46,7 @@ function loadBitmap(file) {
   });
 }
 
-function supportsWebp(canvas) {
+function supportsWebp(canvas: HTMLCanvasElement): boolean {
   try {
     return canvas.toDataURL("image/webp").startsWith("data:image/webp");
   } catch {
@@ -46,10 +57,17 @@ function supportsWebp(canvas) {
 // Redimensionne (largeur max, ratio conservé) et recompresse une image
 // côté client, avant tout envoi réseau — jamais de photo brute qui part
 // sur le réseau ou qui atterrit dans Supabase Storage.
-export async function compressImageToBlob(file, { maxWidth = MAX_WIDTH, quality = JPEG_QUALITY } = {}) {
+export async function compressImageToBlob(
+  file: File,
+  { maxWidth = MAX_WIDTH, quality = JPEG_QUALITY }: { maxWidth?: number; quality?: number } = {}
+): Promise<CompressedImage> {
   const bitmap = await loadBitmap(file);
-  const sourceWidth = bitmap.width || bitmap.naturalWidth;
-  const sourceHeight = bitmap.height || bitmap.naturalHeight;
+  // ImageBitmap n'a que width/height ; HTMLImageElement (repli ci-dessus)
+  // a aussi naturalWidth/naturalHeight, utile si .width vaut encore 0 sur
+  // une <img> jamais insérée dans le document au moment de la lecture —
+  // comportement inchangé, seul le typage change ici.
+  const sourceWidth = bitmap.width || (bitmap as HTMLImageElement).naturalWidth;
+  const sourceHeight = bitmap.height || (bitmap as HTMLImageElement).naturalHeight;
   const scale = Math.min(1, maxWidth / sourceWidth);
   const width = Math.max(1, Math.round(sourceWidth * scale));
   const height = Math.max(1, Math.round(sourceHeight * scale));
@@ -57,11 +75,11 @@ export async function compressImageToBlob(file, { maxWidth = MAX_WIDTH, quality 
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
-  const ctx = canvas.getContext("2d");
+  const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
   ctx.drawImage(bitmap, 0, 0, width, height);
 
-  const mimeType = supportsWebp(canvas) ? "image/webp" : "image/jpeg";
-  const blob = await new Promise((resolve) => canvas.toBlob(resolve, mimeType, quality));
+  const mimeType: CompressedImage["mimeType"] = supportsWebp(canvas) ? "image/webp" : "image/jpeg";
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, mimeType, quality));
   if (!blob) throw new Error("Compression d'image impossible sur cet appareil.");
   return { blob, mimeType, extension: mimeType === "image/webp" ? "webp" : "jpg" };
 }
@@ -72,7 +90,7 @@ export async function compressImageToBlob(file, { maxWidth = MAX_WIDTH, quality 
 // JSON (voir utils/offlineQueue.js) — en cas d'échec réseau, l'appelant
 // doit informer l'utilisateur plutôt que de faire semblant d'avoir
 // réussi.
-export async function uploadRecipeImage(file, householdId) {
+export async function uploadRecipeImage(file: File, householdId: string | null | undefined): Promise<string> {
   const client = getSupabaseClient();
   if (!client) throw new Error("Supabase non configuré — upload d'image impossible.");
 

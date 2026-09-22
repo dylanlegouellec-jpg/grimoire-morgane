@@ -12,10 +12,19 @@
 /*  de toute façon la main pour saisir/corriger chaque champ librement.    */
 /* ------------------------------------------------------------------ */
 
+import type { NormalizedIngredient } from "./ingredients";
+
 const ENDPOINT = import.meta.env.VITE_NUTRITION_ENDPOINT || "/api/nutrition-estimate";
 const TIMEOUT_MS = 6000;
 
-async function fetchWithTimeout(url, options, ms) {
+export interface NutritionEstimate {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
+async function fetchWithTimeout(url: string, options: RequestInit, ms: number): Promise<Response> {
   const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
   const timer = controller ? setTimeout(() => controller.abort(), ms) : null;
   try {
@@ -28,7 +37,10 @@ async function fetchWithTimeout(url, options, ms) {
 // Retourne { calories, protein, carbs, fat } (arrondis, par portion), ou
 // `null` si l'estimation est indisponible (hors-ligne, timeout, pas assez
 // d'ingrédients reconnus par Open Food Facts) — ne lève jamais d'exception.
-export async function estimateNutritionOnline(ingredients, servings) {
+export async function estimateNutritionOnline(
+  ingredients: NormalizedIngredient[],
+  servings: number
+): Promise<NutritionEstimate | null> {
   try {
     if (typeof navigator !== "undefined" && navigator.onLine === false) return null;
     const res = await fetchWithTimeout(
