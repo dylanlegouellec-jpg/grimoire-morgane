@@ -1,6 +1,15 @@
-import { Component } from "react";
+import { Component, type ErrorInfo, type ReactNode } from "react";
 import { RotateCcw } from "lucide-react";
 import { CSS } from "../../constants/styles.css";
+
+interface ErrorBoundaryProps {
+  children: ReactNode;
+  compact?: boolean;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+}
 
 /* ------------------------------------------------------------------ */
 /*  FILET DE SÉCURITÉ — capture une erreur JS inattendue dans son sous-  */
@@ -18,8 +27,8 @@ import { CSS } from "../../constants/styles.css";
 /*    changer d'onglet réinitialise le filet automatiquement (remontage    */
 /*    via le changement de `key`).                                         */
 /* ------------------------------------------------------------------ */
-export default class ErrorBoundary extends Component {
-  constructor(props) {
+export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false };
   }
@@ -28,7 +37,7 @@ export default class ErrorBoundary extends Component {
     return { hasError: true };
   }
 
-  componentDidCatch(error, info) {
+  componentDidCatch(error: Error, info: ErrorInfo) {
     // Toujours au moins dans la console — c'est le seul filet de
     // diagnostic disponible une fois l'app en production, sans outil de
     // suivi d'erreurs connecté à ce projet.

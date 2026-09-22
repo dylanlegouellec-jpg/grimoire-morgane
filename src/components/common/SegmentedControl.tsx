@@ -1,6 +1,22 @@
 import { useId } from "react";
+import type { LucideIcon } from "lucide-react";
 import { motion } from "motion/react";
 import { triggerHaptic } from "../../utils/helpers";
+
+interface SegmentedOption {
+  value: string;
+  label?: string;
+  icon?: LucideIcon;
+  ariaLabel?: string;
+}
+
+interface SegmentedControlProps {
+  options: SegmentedOption[];
+  value: string;
+  onChange: (value: string) => void;
+  ariaLabel?: string;
+  compact?: boolean;
+}
 
 /* ------------------------------------------------------------------ */
 /*  CONTRÔLE SEGMENTÉ — style iOS (HIG), pour les réglages à choix       */
@@ -23,7 +39,7 @@ import { triggerHaptic } from "../../utils/helpers";
 /*  propre à chacun, Framer les confondrait en un seul groupe et ferait      */
 /*  glisser leurs pastilles l'une vers l'autre au montage.                    */
 /* ------------------------------------------------------------------ */
-export default function SegmentedControl({ options, value, onChange, ariaLabel, compact = false }) {
+export default function SegmentedControl({ options, value, onChange, ariaLabel, compact = false }: SegmentedControlProps) {
   const layoutId = useId();
   return (
     <div className={`segmented ${compact ? "segmented-compact" : ""}`} role="tablist" aria-label={ariaLabel}>

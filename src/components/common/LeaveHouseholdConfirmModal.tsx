@@ -9,6 +9,12 @@ import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
 
+interface LeaveHouseholdConfirmModalProps {
+  householdName: string;
+  onConfirm: () => Promise<void>;
+  onClose: () => void;
+}
+
 /* ------------------------------------------------------------------ */
 /*  QUITTER UN FOYER — ouvert par appui long sur SA PROPRE ligne dans la   */
 /*  liste des membres (voir HouseholdManagerModal.jsx), accessible à        */
@@ -17,10 +23,10 @@ import Seal from "./Seal";
 /*  appliqué côté serveur (voir la fonction SQL leave_household) — l'erreur  */
 /*  renvoyée s'affiche ici telle quelle, jamais devinée côté client.         */
 /* ------------------------------------------------------------------ */
-export default function LeaveHouseholdConfirmModal({ householdName, onConfirm, onClose }) {
+export default function LeaveHouseholdConfirmModal({ householdName, onConfirm, onClose }: LeaveHouseholdConfirmModalProps) {
   const { t } = useTranslation();
   useBodyScrollLock(true);
-  const modalRef = useFocusTrap(onClose);
+  const modalRef = useFocusTrap<HTMLDivElement>(onClose);
   const sheet = useDismissibleSheet(onClose, { scrollRef: modalRef });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -33,7 +39,7 @@ export default function LeaveHouseholdConfirmModal({ householdName, onConfirm, o
       await onConfirm();
       onClose();
     } catch (err) {
-      setError((err && err.message) || t("household.requestActionFailedToast"));
+      setError((err instanceof Error && err.message) || t("household.requestActionFailedToast"));
       setBusy(false);
     }
   };

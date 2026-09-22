@@ -1,15 +1,26 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type MouseEvent } from "react";
+import type { LucideIcon } from "lucide-react";
 import { motion } from "motion/react";
 import { triggerHaptic, triggerHapticFeedback } from "../../utils/haptics";
 // Le clic sonore est désormais joué par l'écouteur global délégué (voir
 // utils/audioUtils.js, initAudioOnFirstTouch) — plus besoin de l'appeler
 // ici, ça doublerait le son.
 
-export default function NavButton({ tabKey, label, Icon, active, onSelect, onLongPress, pressDuration = 750 }) {
-  const timer = useRef(null);
+interface NavButtonProps {
+  tabKey: string;
+  label: string;
+  Icon: LucideIcon;
+  active: boolean;
+  onSelect: () => void;
+  onLongPress?: () => void;
+  pressDuration?: number;
+}
+
+export default function NavButton({ tabKey, label, Icon, active, onSelect, onLongPress, pressDuration = 750 }: NavButtonProps) {
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fired = useRef(false);
-  const btnRef = useRef(null);
-  const [pressState, setPressState] = useState("idle");
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [pressState, setPressState] = useState<"idle" | "pressing" | "fired">("idle");
   const start = () => {
     if (!onLongPress) return;
     fired.current = false;
@@ -46,7 +57,7 @@ export default function NavButton({ tabKey, label, Icon, active, onSelect, onLon
       onMouseDown={start}
       onMouseUp={cancel}
       onMouseLeave={cancel}
-      onContextMenu={(e) => { if (onLongPress) e.preventDefault(); }}
+      onContextMenu={(e: MouseEvent<HTMLButtonElement>) => { if (onLongPress) e.preventDefault(); }}
     >
       {/* Pastille active — Framer Motion (layoutId partagé "nav-pill") :
           un seul <motion.span> existe à la fois dans le DOM (rendu

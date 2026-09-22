@@ -9,9 +9,14 @@ import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
 
-export default function TextTemplateImportModal({ onClose, onImport }) {
+interface TextTemplateImportModalProps {
+  onClose: () => void;
+  onImport: (parsed: ReturnType<typeof parseRecipeTemplate>) => void;
+}
+
+export default function TextTemplateImportModal({ onClose, onImport }: TextTemplateImportModalProps) {
   useBodyScrollLock(true);
-  const modalRef = useFocusTrap(onClose);
+  const modalRef = useFocusTrap<HTMLDivElement>(onClose);
   const sheet = useDismissibleSheet(onClose, { scrollRef: modalRef });
   const [text, setText] = useState("");
   const [error, setError] = useState("");
@@ -59,4 +64,3 @@ export default function TextTemplateImportModal({ onClose, onImport }) {
     </motion.div>
   );
 }
-

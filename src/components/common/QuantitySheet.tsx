@@ -8,6 +8,7 @@ import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
+import type { ShoppingItem } from "../../hooks/useShoppingLists";
 
 /* ------------------------------------------------------------------ */
 /*  SAISIE DE QUANTITÉ (Courses) — remplace l'ancienne molette à roue     */
@@ -28,19 +29,25 @@ const QUICK_PICKS = [
   { value: 1, unit: "kg", label: "1kg" },
 ];
 
-export default function QuantitySheet({ item, onChange, onClose }) {
+interface QuantitySheetProps {
+  item: ShoppingItem;
+  onChange: (qty: number, unit: string) => void;
+  onClose: () => void;
+}
+
+export default function QuantitySheet({ item, onChange, onClose }: QuantitySheetProps) {
   useBodyScrollLock(true);
-  const modalRef = useFocusTrap(onClose);
+  const modalRef = useFocusTrap<HTMLDivElement>(onClose);
   const sheet = useDismissibleSheet(onClose, { scrollRef: modalRef });
   const [value, setValue] = useState(item.qty > 0 ? String(Math.round(item.qty * 100) / 100) : "");
   const [unit, setUnit] = useState(item.unit || "unité");
 
-  const applyQuickPick = (qp) => {
+  const applyQuickPick = (qp: typeof QUICK_PICKS[number]) => {
     triggerHaptic(12);
     setValue(String(qp.value));
     setUnit(qp.unit);
   };
-  const pickUnit = (u) => {
+  const pickUnit = (u: string) => {
     triggerHaptic(10);
     setUnit(u);
   };
