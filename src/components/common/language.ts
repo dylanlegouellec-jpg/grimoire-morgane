@@ -4,7 +4,14 @@
 /*  (mémorisé, mais pas encore branché à une vraie traduction de l'app). */
 /* ------------------------------------------------------------------ */
 
-export const LANGUAGE_OPTIONS = [
+import type { Language } from "../../utils/localSettings";
+
+interface LanguageOption {
+  value: Language;
+  label: string;
+}
+
+export const LANGUAGE_OPTIONS: LanguageOption[] = [
   { value: "fr", label: "Français" },
   { value: "en", label: "English" },
 ];
