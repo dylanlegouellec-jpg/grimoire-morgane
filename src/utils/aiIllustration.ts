@@ -15,7 +15,15 @@
 
 const AI_ENDPOINT = import.meta.env.VITE_AI_ILLUSTRATION_ENDPOINT || "/api/generate-illustration";
 
-export async function generateAIIllustration(recipe) {
+// Seuls ces deux champs de la recette sont lus ici — pas d'import d'un
+// type Recipe complet (encore inexistant ailleurs dans le code) pour ne
+// pas figer prématurément une forme qui n'a pas encore été modélisée.
+interface IllustratedRecipe {
+  title: string;
+  category: string;
+}
+
+export async function generateAIIllustration(recipe: IllustratedRecipe): Promise<string> {
   const res = await fetch(AI_ENDPOINT, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -34,7 +42,7 @@ export async function generateAIIllustration(recipe) {
   return data.imageUrl; // URL distante ou data: URI base64, les deux fonctionnent avec DishArt
 }
 
-function buildPrompt(recipe) {
+function buildPrompt(recipe: IllustratedRecipe): string {
   const genre = recipe.category === "Sucré" ? "un dessert" : "un plat salé";
   return `Illustration culinaire façon aquarelle ancienne, tons chauds et terreux, pour ${genre} nommé "${recipe.title}". Style peinture de grimoire de cuisine fait main, sans texte, sans photographie.`;
 }

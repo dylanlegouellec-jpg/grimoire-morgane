@@ -9,7 +9,12 @@
 const ENDPOINT = "/api/extract-recipe-from-link";
 const TIMEOUT_MS = 12000;
 
-async function fetchWithTimeout(url, options, ms) {
+interface ExtractedCaption {
+  caption: string;
+  [key: string]: unknown;
+}
+
+async function fetchWithTimeout(url: string, options: RequestInit, ms: number): Promise<Response> {
   const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
   const timer = controller ? setTimeout(() => controller.abort(), ms) : null;
   try {
@@ -19,7 +24,7 @@ async function fetchWithTimeout(url, options, ms) {
   }
 }
 
-export async function fetchCaptionFromLink(url) {
+export async function fetchCaptionFromLink(url: string): Promise<ExtractedCaption> {
   let res;
   try {
     res = await fetchWithTimeout(

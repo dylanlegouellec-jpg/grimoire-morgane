@@ -13,16 +13,19 @@
 const HOUSEHOLDS_KEY = "grimoire_households_cache";
 const MEMBERS_KEY_PREFIX = "grimoire_household_members__";
 
-export function getCachedHouseholds() {
+// Ce cache ne lit ni n'écrit jamais un champ précis des foyers/membres
+// qu'on lui passe (simple passe-plat JSON) : `unknown[]` reste honnête
+// tant qu'aucun type Household/HouseholdMember dédié n'existe ailleurs.
+export function getCachedHouseholds(): unknown[] {
   try {
-    const list = JSON.parse(localStorage.getItem(HOUSEHOLDS_KEY));
+    const list = JSON.parse(localStorage.getItem(HOUSEHOLDS_KEY) as string);
     return Array.isArray(list) ? list : [];
   } catch {
     return [];
   }
 }
 
-export function setCachedHouseholds(list) {
+export function setCachedHouseholds(list: unknown[]): void {
   try {
     localStorage.setItem(HOUSEHOLDS_KEY, JSON.stringify(Array.isArray(list) ? list : []));
   } catch {
@@ -30,17 +33,17 @@ export function setCachedHouseholds(list) {
   }
 }
 
-export function getCachedMembers(householdId) {
+export function getCachedMembers(householdId: string | null | undefined): unknown[] {
   if (!householdId) return [];
   try {
-    const list = JSON.parse(localStorage.getItem(MEMBERS_KEY_PREFIX + householdId));
+    const list = JSON.parse(localStorage.getItem(MEMBERS_KEY_PREFIX + householdId) as string);
     return Array.isArray(list) ? list : [];
   } catch {
     return [];
   }
 }
 
-export function setCachedMembers(householdId, members) {
+export function setCachedMembers(householdId: string | null | undefined, members: unknown[]): void {
   if (!householdId) return;
   try {
     localStorage.setItem(MEMBERS_KEY_PREFIX + householdId, JSON.stringify(Array.isArray(members) ? members : []));
