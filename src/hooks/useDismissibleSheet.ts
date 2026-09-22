@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { useMotionValue, useTransform, animate } from "motion/react";
+import type { RefObject, TouchEvent } from "react";
 
 /* ------------------------------------------------------------------ */
 /*  "TIRER POUR FERMER" — version Framer Motion de useSwipeToDismiss.js */
@@ -41,9 +42,14 @@ const DISMISS_DISTANCE_PX = 100;
 // L'ancien hook mesurait une vitesse en px/ms (0.6) ; Framer exprime la
 // sienne en px/s (info.velocity) — même seuil, juste convertie.
 const DISMISS_VELOCITY_PX_PER_S = 600;
-const CLOSE_SPRING = { type: "spring", stiffness: 500, damping: 34 };
+const CLOSE_SPRING: { type: "spring"; stiffness: number; damping: number } = { type: "spring", stiffness: 500, damping: 34 };
 
-export default function useDismissibleSheet(onDismiss, { scrollRef, disabled = false } = {}) {
+interface UseDismissibleSheetOptions {
+  scrollRef?: RefObject<HTMLElement | null>;
+  disabled?: boolean;
+}
+
+export default function useDismissibleSheet(onDismiss: () => void, { scrollRef, disabled = false }: UseDismissibleSheetOptions = {}) {
   const y = useMotionValue(0);
   // Estompe le CONTENU pendant le tirage (jamais la feuille elle-même, ni
   // son fond) — inconditionnel, à l'appelant de s'en servir ou non (voir
@@ -64,14 +70,14 @@ export default function useDismissibleSheet(onDismiss, { scrollRef, disabled = f
   // derrière).
   const contentOpacity = useTransform(y, [0, 300], [1, 0.4]);
 
-  const startYRef = useRef(null);
+  const startYRef = useRef<number | null>(null);
   const draggingRef = useRef(false);
   // Deux derniers échantillons (position + horodatage) : sert à calculer une
   // vitesse INSTANTANÉE au relâchement (celle du tout dernier mouvement), pas
   // une moyenne depuis le début du geste — un "flick" rapide doit fermer la
   // modale même si la distance totale tirée reste sous le seuil.
-  const prevSampleRef = useRef({ y: 0, time: 0 });
-  const lastSampleRef = useRef({ y: 0, time: 0 });
+  const prevSampleRef = useRef<{ y: number; time: number }>({ y: 0, time: 0 });
+  const lastSampleRef = useRef<{ y: number; time: number }>({ y: 0, time: 0 });
   // Seul bout d'état React de ce hook : un SEUL re-rendu au moment où le
   // tirage bascule confirmé/non confirmé (pour faire suivre `touch-action`,
   // voir le commentaire de tête) — jamais à chaque pixel, `y` (MotionValue)
@@ -83,7 +89,7 @@ export default function useDismissibleSheet(onDismiss, { scrollRef, disabled = f
     return !el || el.scrollTop <= 0;
   };
 
-  const recordSample = (clientY) => {
+  const recordSample = (clientY: number) => {
     prevSampleRef.current = lastSampleRef.current;
     lastSampleRef.current = { y: clientY, time: Date.now() };
   };
@@ -94,7 +100,7 @@ export default function useDismissibleSheet(onDismiss, { scrollRef, disabled = f
     setIsDragging(false);
   };
 
-  const handleTouchStart = (event) => {
+  const handleTouchStart = (event: TouchEvent) => {
     if (disabled) return;
     const t = event.touches && event.touches[0];
     if (!t) return;
@@ -104,7 +110,7 @@ export default function useDismissibleSheet(onDismiss, { scrollRef, disabled = f
     lastSampleRef.current = prevSampleRef.current;
   };
 
-  const handleTouchMove = (event) => {
+  const handleTouchMove = (event: TouchEvent) => {
     if (disabled || startYRef.current == null) return;
     const t = event.touches && event.touches[0];
     if (!t) return;
@@ -149,7 +155,7 @@ export default function useDismissibleSheet(onDismiss, { scrollRef, disabled = f
     y.set(dy);
   };
 
-  const handleTouchEnd = (event) => {
+  const handleTouchEnd = (event?: TouchEvent) => {
     if (disabled) return;
     const wasDragging = draggingRef.current;
     const distance = y.get();
