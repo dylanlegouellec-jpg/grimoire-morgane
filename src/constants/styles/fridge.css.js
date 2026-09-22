@@ -39,8 +39,11 @@ export const FRIDGE_CSS = `
   background: var(--surface-strong); border: 1px solid rgba(179,135,42,0.4);
   border-radius: 999px; padding: 6px 6px 6px 13px;
 }
+/* 24px (relevé de 20px) : cible tactile minimum WCAG 2.5.8 (24×24px CSS) —
+   le "gap: 6px" de .basic-chip ci-dessus laisse la place nécessaire entre
+   les deux boutons (⇄ et ✕) sans qu'ils se touchent. */
 .basic-action {
-  width: 20px; height: 20px; border-radius: 50%; border: none;
+  width: 24px; height: 24px; border-radius: 50%; border: none;
   background: rgba(179,135,42,0.2); color: var(--gold); font-size: 0.7rem;
   display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
 }

@@ -154,7 +154,11 @@ export const SHOPPING_CSS = `
    .row-drag-handle (forms.css.js), toujours visible ici (pas de "mode
    réorganisation" à activer : rien d'autre sur cet en-tête ne réagit au tap). */
 .aisle-drag-handle {
-  flex-shrink: 0; width: 22px; height: 22px; margin-right: -2px; border-radius: 6px;
+  /* 26px (relevé de 22px) : alignée sur ses deux jumelles (voir le
+     commentaire ci-dessus) qui, elles, respectaient déjà la cible tactile
+     minimum WCAG 2.5.8 (24×24px CSS) — cette poignée-ci était la seule
+     des trois en dessous. */
+  flex-shrink: 0; width: 26px; height: 26px; margin-right: -2px; border-radius: 6px;
   background: none; border: none; color: var(--ink-soft); cursor: grab;
   display: flex; align-items: center; justify-content: center;
   touch-action: none;
@@ -191,9 +195,13 @@ export const SHOPPING_CSS = `
   width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid var(--gold);
   display: flex; align-items: center; justify-content: center; color: var(--gold); flex-shrink: 0;
 }
-.qty-stepper { display: flex; gap: 4px; opacity: 0.45; flex-shrink: 0; }
+/* "gap: 6px" (relevé de 4px) et boutons à 24px (relevés de 20px) : cible
+   tactile minimum WCAG 2.5.8 (24×24px CSS) — en dessous, +/- collés à 4px
+   d'écart avec des cercles de 20px ne laissaient presque plus d'espace
+   entre eux une fois la zone de +/- réellement mesurée au doigt. */
+.qty-stepper { display: flex; gap: 6px; opacity: 0.45; flex-shrink: 0; }
 .qty-stepper button {
-  width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--line);
+  width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--line);
   background: var(--surface-strong); color: var(--ink-soft); display: flex; align-items: center; justify-content: center; cursor: pointer;
 }
 
