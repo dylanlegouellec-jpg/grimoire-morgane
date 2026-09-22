@@ -13,13 +13,16 @@ export const FORMS_CSS = `
   background: var(--surface-strong); border: 1px solid var(--line); border-radius: 8px;
   padding: 9px 10px; resize: vertical; width: 100%; max-width: 100%;
 }
-/* iOS Safari ignore la largeur CSS des <input type="date/time/datetime-local">
-   et dimensionne leur contenu via -webkit-min-logical-width, une propriété
-   interne à WebKit distincte de width/min-width — d'où le champ "Date de
-   naissance" qui débordait du cadre du formulaire sur iPhone malgré le
-   width: 100% ci-dessus. */
+/* iOS Safari rend <input type="date/time/datetime-local"> en inline-flex et
+   dimensionne son contenu interne (jour/mois/année) SUR sa propre valeur,
+   en ignorant width: 100% — -webkit-min-logical-width (tenté en premier)
+   ne change rien, c'est le rendu natif ("appearance") qui court-circuite la
+   largeur CSS. On le désactive : le picker natif s'ouvre toujours au tap,
+   seul l'habillage visuel change (on garde notre propre cadre/bordure). */
 .field input[type="date"], .field input[type="time"], .field input[type="datetime-local"] {
-  -webkit-min-logical-width: 0;
+  min-width: 0;
+  -webkit-appearance: none;
+  appearance: none;
 }
 .field-row { display: flex; gap: 10px; max-width: 100%; }
 .field-row .field { flex: 1; min-width: 0; }
