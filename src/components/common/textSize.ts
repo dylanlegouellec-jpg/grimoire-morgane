@@ -4,7 +4,14 @@
 /*  (stockage + application sur <html data-text-size="...">).           */
 /* ------------------------------------------------------------------ */
 
-export const TEXT_SIZE_OPTIONS = [
+import type { TextSize } from "../../utils/localSettings";
+
+interface TextSizeOption {
+  value: TextSize;
+  label: string;
+}
+
+export const TEXT_SIZE_OPTIONS: TextSizeOption[] = [
   { value: "normal", label: "Normal" },
   { value: "large", label: "Grand" },
 ];

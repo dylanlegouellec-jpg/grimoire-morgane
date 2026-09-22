@@ -1,5 +1,7 @@
 import { Beef, Carrot, Droplet, Milk, Wheat } from "lucide-react";
 import { ingredientKey } from "../../utils/helpers";
+import type { LucideIcon } from "lucide-react";
+import type { Recipe } from "../../hooks/useRecipes";
 
 /* ------------------------------------------------------------------ */
 /*  VUE MON FRIGO — utilitaires de gestion des basiques & du pantry    */
@@ -31,7 +33,7 @@ const LEADING_MEASURE_PREFIX = /^(c\.?\s?à\.?\s?s\.?|càs|cas|c\.?\s?à\.?\s?c\
 // texte libre qui n'a pas su séparer la préposition du reste.
 const LEADING_PREPOSITION = /^d['’]|^de\s+/i;
 
-function stripLeadingMeasure(name) {
+function stripLeadingMeasure(name: string): string {
   return name.replace(LEADING_MEASURE_PREFIX, "").replace(LEADING_PREPOSITION, "").trim();
 }
 
@@ -43,14 +45,14 @@ function stripLeadingMeasure(name) {
 // un seul ingrédient réel, et un mot comme "bœuf" niché dans la parenthèse
 // pouvait accidentellement faire "matcher" une tout autre catégorie que la
 // viande (voir FRIDGE_CATEGORIES plus bas).
-function stripParenthetical(name) {
+function stripParenthetical(name: string): string {
   return name.replace(/\([^)]*\)/g, " ").replace(/\s+/g, " ").trim();
 }
 
 // "Beurre" et pas "beurre" / "BEURRE" : seule la première lettre est
 // capitalisée (convention française pour un nom commun, contrairement à
 // l'anglais qui capitaliserait chaque mot).
-function toDisplayCase(name) {
+function toDisplayCase(name: string): string {
   const trimmed = name.trim();
   if (!trimmed) return trimmed;
   return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
@@ -61,7 +63,12 @@ function toDisplayCase(name) {
 // de mesure — la première correspondance gagne, du plus spécifique au
 // plus générique pour éviter qu'un nom générique n'avale un cas
 // particulier qui mériterait sa propre entrée.
-const CANONICAL_INGREDIENTS = [
+interface CanonicalIngredient {
+  test: RegExp;
+  label: string;
+}
+
+const CANONICAL_INGREDIENTS: CanonicalIngredient[] = [
   { test: /^beurre\b/i, label: "Beurre" },
   // Pas de "$" final (contrairement à avant) : une déclinaison comme
   // "Œufs extra-frais" ou "Œufs bio" doit fusionner avec "Œufs" au lieu de
@@ -99,7 +106,7 @@ const CANONICAL_INGREDIENTS = [
 // préfixes de mesure parasites, fusionne les déclinaisons connues vers un
 // nom canonique, et harmonise la casse pour celles qui n'ont pas de règle
 // dédiée.
-export function normalizeIngredientLabel(rawName) {
+export function normalizeIngredientLabel(rawName?: string | null): string {
   const withoutParens = stripParenthetical(String(rawName || ""));
   const stripped = stripLeadingMeasure(withoutParens);
   if (!stripped) return "";
@@ -117,7 +124,7 @@ export function normalizeIngredientLabel(rawName) {
 // (un ingrédient à part entière, distinct de l'eau du robinet).
 const IGNORED_INGREDIENT = /^(d['’]|de\s+)?eau(\s+(tiède|froide|chaude|bouillante|glacée|fraîche))?$/i;
 
-function isIgnoredIngredient(label) {
+function isIgnoredIngredient(label: string): boolean {
   return IGNORED_INGREDIENT.test(label);
 }
 
@@ -129,7 +136,15 @@ function isIgnoredIngredient(label) {
 /*  mais un rayon Épices/Huiles/Condiments qui n'a pas de sens au           */
 /*  supermarché comme catégorie de courses à part entière.                 */
 /* ------------------------------------------------------------------ */
-export const FRIDGE_CATEGORIES = [
+interface FridgeCategory {
+  key: string;
+  label: string;
+  icon: string;
+  vectorIcon: LucideIcon;
+  test: RegExp;
+}
+
+export const FRIDGE_CATEGORIES: FridgeCategory[] = [
   {
     key: "frais", label: "Frais & Crèmerie", icon: "🧀", vectorIcon: Milk,
     // "(?<!b)" exclut "bœuf"/"boeuf" : ces mots CONTIENNENT littéralement
@@ -165,16 +180,22 @@ export const FRIDGE_CATEGORIES = [
 ];
 const DEFAULT_FRIDGE_CATEGORY = "epicerie";
 
-export function categorizeIngredient(label) {
+export function categorizeIngredient(label: string): string {
   const found = FRIDGE_CATEGORIES.find((c) => c.test.test(label));
   return found ? found.key : DEFAULT_FRIDGE_CATEGORY;
 }
 
-export function collectPantryOptions(recipes) {
-  const seen = new Map();
+export interface PantryOption {
+  key: string;
+  label: string;
+  category: string;
+}
+
+export function collectPantryOptions(recipes: Recipe[]): PantryOption[] {
+  const seen = new Map<string, string>();
   recipes.forEach((r) => {
     r.ingredients.forEach((ing) => {
-      if (ing.isSection || !ing.name) return;
+      if ("isSection" in ing || !ing.name) return;
       const label = normalizeIngredientLabel(ing.name);
       if (!label || isIgnoredIngredient(label)) return;
       const key = ingredientKey(label);
@@ -190,9 +211,9 @@ export function collectPantryOptions(recipes) {
 // dessus : sans ça, cocher l'option canonique "Beurre" dans le frigo ne
 // suffirait pas à couvrir une recette dont l'ingrédient brut est "beurre
 // fondu" (clé de normalisation différente si on comparait le texte brut).
-export function missingIngredients(recipe, ownedSet) {
+export function missingIngredients(recipe: Recipe, ownedSet: Set<string>) {
   return recipe.ingredients.filter((ing) => {
-    if (ing.isSection || !ing.name) return false;
+    if ("isSection" in ing || !ing.name) return false;
     const label = normalizeIngredientLabel(ing.name);
     if (isIgnoredIngredient(label)) return false; // jamais "manquant"
     return !ownedSet.has(ingredientKey(label));
