@@ -1,6 +1,17 @@
 import { useEffect, useState } from "react";
 import { Reorder } from "motion/react";
-import PlanningMealItem from "./PlanningMealItem";
+import PlanningMealItem, { type MealEntryLike } from "./PlanningMealItem";
+
+interface PlanningMealItemsListProps {
+  entries: MealEntryLike[];
+  bulleted: boolean;
+  wrapperClassName: string;
+  reorderMode: boolean;
+  onReorder: (ids: string[]) => void;
+  labelForEntry: (entry: MealEntryLike) => string;
+  onEdit: (entry: MealEntryLike) => void;
+  onDelete: (entry: MealEntryLike) => void;
+}
 
 /* ------------------------------------------------------------------ */
 /*  LISTE DE PLATS RÉORDONNABLE — un seul <Reorder.Group> par LISTE (pas    */
@@ -42,7 +53,7 @@ import PlanningMealItem from "./PlanningMealItem";
 /*  ces mises à jour en direct pour l'AFFICHAGE seul ; le vrai `onReorder` (voir                                     */
 /*  PlanningMealItem.jsx, onCommitOrder) n'est appelé QU'UNE FOIS, au relâchement.                                    */
 /* ------------------------------------------------------------------ */
-export default function PlanningMealItemsList({ entries, bulleted, wrapperClassName, reorderMode, onReorder, labelForEntry, onEdit, onDelete }) {
+export default function PlanningMealItemsList({ entries, bulleted, wrapperClassName, reorderMode, onReorder, labelForEntry, onEdit, onDelete }: PlanningMealItemsListProps) {
   const [localEntries, setLocalEntries] = useState(entries);
   // Resynchronise dès que la vraie liste change pour une raison EXTÉRIEURE
   // au glissement (ajout/suppression/modification d'un plat, changement de

@@ -6,8 +6,25 @@ import CategoryIcon from "../common/CategoryIcon";
 import PlanningMealItemsList from "./PlanningMealItemsList";
 import CourseOptionsModal from "./CourseOptionsModal";
 import MoveMealSectionModal from "./MoveMealSectionModal";
+import type { MealEntryLike } from "./PlanningMealItem";
+import type { MealTypeInfo } from "../../utils/planning";
 
 const LONG_PRESS_DURATION_MS = 500;
+
+interface PlanningCourseGroupProps {
+  mealTypeKey: string;
+  course: MealTypeInfo;
+  entries: MealEntryLike[];
+  labelForEntry: (entry: MealEntryLike) => string;
+  reorderMode: boolean;
+  onToggleReorder: () => void;
+  onReorder: (ids: string[]) => void;
+  onEdit: (entry: MealEntryLike) => void;
+  onDelete: (entry: MealEntryLike) => void;
+  onAddToCourse: (courseKey: string) => void;
+  onMoveToMeal: (entries: MealEntryLike[], newMealTypeKey: string) => void;
+  onDeleteAll: (entries: MealEntryLike[]) => void;
+}
 
 /* ------------------------------------------------------------------ */
 /*  SOUS-GROUPE D'UN TYPE DE PLAT (ex. "Entrées") DANS LE PLAN — voir       */
@@ -27,11 +44,11 @@ const LONG_PRESS_DURATION_MS = 500;
 /*  que toutes celles du moment — le reste du moment d'origine n'est jamais           */
 /*  touché), ou tout supprimer d'un coup.                                              */
 /* ------------------------------------------------------------------ */
-export default function PlanningCourseGroup({ mealTypeKey, course, entries, labelForEntry, reorderMode, onToggleReorder, onReorder, onEdit, onDelete, onAddToCourse, onMoveToMeal, onDeleteAll }) {
+export default function PlanningCourseGroup({ mealTypeKey, course, entries, labelForEntry, reorderMode, onToggleReorder, onReorder, onEdit, onDelete, onAddToCourse, onMoveToMeal, onDeleteAll }: PlanningCourseGroupProps) {
   const { t } = useTranslation();
   const [showOptions, setShowOptions] = useState(false);
   const [showMoveModal, setShowMoveModal] = useState(false);
-  const headerLongPress = useLongPress(() => setShowOptions(true), LONG_PRESS_DURATION_MS);
+  const headerLongPress = useLongPress<HTMLDivElement>(() => setShowOptions(true), LONG_PRESS_DURATION_MS);
   const closeOptions = () => {
     setShowOptions(false);
     headerLongPress.resetPressState();

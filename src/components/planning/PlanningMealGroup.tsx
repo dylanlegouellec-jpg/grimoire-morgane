@@ -9,8 +9,32 @@ import PlanningMealItemsList from "./PlanningMealItemsList";
 import MealSectionOptionsModal from "./MealSectionOptionsModal";
 import DeleteMealSectionConfirmModal from "./DeleteMealSectionConfirmModal";
 import MoveMealSectionModal from "./MoveMealSectionModal";
+import type { MealEntryLike } from "./PlanningMealItem";
+import type { MealTypeInfo } from "../../utils/planning";
 
 const LONG_PRESS_DURATION_MS = 500;
+
+interface CourseGroupEntry {
+  course: MealTypeInfo;
+  entries: MealEntryLike[];
+}
+
+interface PlanningMealGroupProps {
+  mealType: MealTypeInfo;
+  entries: MealEntryLike[];
+  groupEntriesByCourse: (entries: MealEntryLike[]) => CourseGroupEntry[];
+  labelForEntry: (entry: MealEntryLike) => string;
+  reorderMode: boolean;
+  onToggleReorder: () => void;
+  onReorder: (ids: string[]) => void;
+  onEdit: (entry: MealEntryLike) => void;
+  onDelete: (entry: MealEntryLike) => void;
+  onAddMeal: () => void;
+  onMoveSection: (entries: MealEntryLike[], newMealTypeKey: string) => void;
+  onDeleteSection: (entries: MealEntryLike[]) => void;
+  onAddToCourse: (courseKey: string) => void;
+  onDeleteAllCourse: (entries: MealEntryLike[]) => void;
+}
 
 /* ------------------------------------------------------------------ */
 /*  BLOC D'UN MOMENT ("DÉJEUNER", "DÎNER"…) DANS LE PLAN — voir             */
@@ -48,12 +72,12 @@ export default function PlanningMealGroup({
   onDeleteSection,
   onAddToCourse,
   onDeleteAllCourse,
-}) {
+}: PlanningMealGroupProps) {
   const { t } = useTranslation();
   const [showOptions, setShowOptions] = useState(false);
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const headerLongPress = useLongPress(() => setShowOptions(true), LONG_PRESS_DURATION_MS);
+  const headerLongPress = useLongPress<HTMLDivElement>(() => setShowOptions(true), LONG_PRESS_DURATION_MS);
   const closeOptions = () => {
     setShowOptions(false);
     headerLongPress.resetPressState();
