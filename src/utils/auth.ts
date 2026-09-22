@@ -1,5 +1,17 @@
 import { getSupabaseClient } from "./supabaseClient";
 import { fetchTable, updateRow } from "./supabase";
+import type { Session } from "@supabase/supabase-js";
+
+export interface Household {
+  id: string;
+  name: string;
+}
+
+// Ligne renvoyée par les RPC de gestion de foyer (get_household_members,
+// get_pending_requests...) — champs exacts définis côté SQL, pas encore
+// répliqués ici en toute rigueur (voir le même choix pour ProfileRow,
+// utils/profile.ts).
+export type HouseholdMember = Record<string, unknown>;
 
 /* ------------------------------------------------------------------ */
 /*  AUTHENTIFICATION (Google OAuth via Supabase Auth) + FOYERS         */
@@ -12,15 +24,15 @@ const RPC_TIMEOUT_MS = 6000;
 // de temps que le reste de l'app pour ne jamais rester bloqué en
 // attente d'un réseau qui ne répond pas (cf. la resynchro de
 // utils/supabase.js).
-function withTimeout(promise, ms, timeoutMessage) {
-  let timer;
-  const timeout = new Promise((_, reject) => {
+function withTimeout<T>(promise: PromiseLike<T>, ms: number, timeoutMessage: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
     timer = setTimeout(() => reject(new Error(timeoutMessage)), ms);
   });
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
-export async function signInWithGoogle() {
+export async function signInWithGoogle(): Promise<void> {
   const client = getSupabaseClient();
   if (!client) throw new Error("Supabase non configuré");
   const { error } = await client.auth.signInWithOAuth({
@@ -34,17 +46,17 @@ export async function signInWithGoogle() {
   if (error) throw error;
 }
 
-export async function signOutUser() {
+export async function signOutUser(): Promise<void> {
   const client = getSupabaseClient();
   if (!client) return;
   await client.auth.signOut();
 }
 
-export async function getCurrentSession() {
+export async function getCurrentSession(): Promise<Session | null> {
   const client = getSupabaseClient();
   if (!client) return null;
   const { data } = await client.auth.getSession();
-  return data && data.session;
+  return (data && data.session) || null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -57,7 +69,7 @@ export async function getCurrentSession() {
 // détection hors-ligne déjà en place pour le reste de l'app. RLS
 // (policy households_select_members) filtre déjà côté serveur — pas
 // besoin de repasser par la RPC my_household_ids ici.
-export async function getMyHouseholds() {
+export async function getMyHouseholds(): Promise<Household[]> {
   try {
     const rows = await fetchTable("households", "select=id,name&order=name.asc");
     return Array.isArray(rows) ? rows : [];
@@ -71,7 +83,7 @@ export async function getMyHouseholds() {
 // de façon atomique (voir la fonction SQL create_household — un seul
 // aller-retour réseau, pas de risque d'avoir un foyer créé sans membre
 // si la deuxième requête échouait en plein milieu).
-export async function createHousehold(name) {
+export async function createHousehold(name: string): Promise<string> {
   const client = getSupabaseClient();
   if (!client) throw new Error("Supabase non configuré");
   const { data, error } = await withTimeout(
@@ -86,7 +98,7 @@ export async function createHousehold(name) {
 // Renomme un foyer existant — passe par updateRow (utils/supabase.js),
 // donc bénéficie aussi de la mise en file hors-ligne si le réseau
 // manque au moment du clic.
-export async function renameHousehold(householdId, name) {
+export async function renameHousehold(householdId: string, name: string) {
   const trimmed = (name || "").trim();
   if (!trimmed) throw new Error("Le nom du foyer ne peut pas être vide.");
   return updateRow("households", householdId, { name: trimmed });
@@ -97,7 +109,7 @@ export async function renameHousehold(householdId, name) {
 // delete_household : elle vérifie l'appartenance de l'appelant et
 // refuse si c'est son unique foyer, plutôt que de le laisser sans aucun
 // foyer actif.
-export async function deleteHousehold(householdId) {
+export async function deleteHousehold(householdId: string): Promise<void> {
   const client = getSupabaseClient();
   if (!client) throw new Error("Supabase non configuré");
   const { error } = await withTimeout(
@@ -111,7 +123,7 @@ export async function deleteHousehold(householdId) {
 // Liste des membres (e-mail) du foyer donné — voir la fonction SQL
 // get_household_members : elle vérifie elle-même que l'appelant fait
 // partie de ce foyer avant de renvoyer quoi que ce soit.
-export async function getHouseholdMembers(householdId) {
+export async function getHouseholdMembers(householdId: string | null | undefined): Promise<HouseholdMember[]> {
   const client = getSupabaseClient();
   if (!client || !householdId) return [];
   try {
@@ -130,7 +142,7 @@ export async function getHouseholdMembers(householdId) {
 
 // Ajoute un membre par e-mail (doit déjà s'être connecté une fois à
 // l'appli — voir le message d'erreur renvoyé par la RPC côté SQL).
-export async function addUserToHousehold(email, householdId) {
+export async function addUserToHousehold(email: string, householdId: string): Promise<void> {
   const client = getSupabaseClient();
   if (!client) throw new Error("Supabase non configuré");
   const { error } = await withTimeout(
@@ -151,7 +163,7 @@ export async function addUserToHousehold(email, householdId) {
 // Dépose une demande d'adhésion à un foyer (statut "pending" — ne donne
 // PAS accès aux données du foyer tant qu'un admin n'a pas validé, voir
 // approveHouseholdMember ci-dessous).
-export async function requestJoinHousehold(householdId) {
+export async function requestJoinHousehold(householdId: string): Promise<void> {
   const client = getSupabaseClient();
   if (!client) throw new Error("Supabase non configuré");
   const { error } = await withTimeout(
@@ -164,7 +176,7 @@ export async function requestJoinHousehold(householdId) {
 
 // Demandes en attente pour un foyer donné — réservé aux admins (la RPC
 // vérifie elle-même le rôle de l'appelant et refuse sinon).
-export async function getPendingHouseholdRequests(householdId) {
+export async function getPendingHouseholdRequests(householdId: string | null | undefined): Promise<HouseholdMember[]> {
   const client = getSupabaseClient();
   if (!client || !householdId) return [];
   try {
@@ -181,7 +193,7 @@ export async function getPendingHouseholdRequests(householdId) {
   }
 }
 
-export async function approveHouseholdMember(householdId, userId) {
+export async function approveHouseholdMember(householdId: string, userId: string): Promise<void> {
   const client = getSupabaseClient();
   if (!client) throw new Error("Supabase non configuré");
   const { error } = await withTimeout(
@@ -192,7 +204,7 @@ export async function approveHouseholdMember(householdId, userId) {
   if (error) throw error;
 }
 
-export async function rejectHouseholdMember(householdId, userId) {
+export async function rejectHouseholdMember(householdId: string, userId: string): Promise<void> {
   const client = getSupabaseClient();
   if (!client) throw new Error("Supabase non configuré");
   const { error } = await withTimeout(
@@ -209,7 +221,7 @@ export async function rejectHouseholdMember(householdId, userId) {
 /*  dernier admin d'un foyer, voir la refonte SQL).                        */
 /* ------------------------------------------------------------------ */
 
-export async function changeHouseholdMemberRole(householdId, userId, newRole) {
+export async function changeHouseholdMemberRole(householdId: string, userId: string, newRole: string): Promise<void> {
   const client = getSupabaseClient();
   if (!client) throw new Error("Supabase non configuré");
   const { error } = await withTimeout(
@@ -220,7 +232,7 @@ export async function changeHouseholdMemberRole(householdId, userId, newRole) {
   if (error) throw error;
 }
 
-export async function removeHouseholdMember(householdId, userId) {
+export async function removeHouseholdMember(householdId: string, userId: string): Promise<void> {
   const client = getSupabaseClient();
   if (!client) throw new Error("Supabase non configuré");
   const { error } = await withTimeout(
@@ -237,7 +249,7 @@ export async function removeHouseholdMember(householdId, userId) {
 // admin ET qu'il reste d'autres membres (voir le message d'erreur
 // renvoyé), mais autorise de quitter son tout dernier foyer (ce qui le
 // supprime alors, voir la fonction SQL leave_household).
-export async function leaveHousehold(householdId) {
+export async function leaveHousehold(householdId: string): Promise<void> {
   const client = getSupabaseClient();
   if (!client) throw new Error("Supabase non configuré");
   const { error } = await withTimeout(

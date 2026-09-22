@@ -1,5 +1,17 @@
 import { normalize, parseDurationMinutes } from "./helpers";
 import { normalizeIngredientList } from "./ingredients";
+import type { NormalizedIngredient } from "./ingredients";
+
+export interface ParsedRecipe {
+  title: string;
+  category: string;
+  time: number;
+  servings: number;
+  carbs: null;
+  notes: string | null;
+  ingredients: NormalizedIngredient[];
+  steps: (string | { isSection: true; title: string })[];
+}
 
 /* ------------------------------------------------------------------ */
 /*  PARSEUR DE FICHE TEXTE ("Recette de : …", "Ingrédients : …", …)    */
@@ -15,7 +27,7 @@ export const TEMPLATE_SECTIONS = [
   { key: "notes", test: /^remarques?\s*:?\s*/i },
 ];
 
-export function normalizeUnit(raw) {
+export function normalizeUnit(raw: string): string {
   const u = normalize(raw);
   if (!u) return "";
   if (/^g(rammes?)?$/.test(u)) return "g";
@@ -35,7 +47,13 @@ export function normalizeUnit(raw) {
 // molette), donc on élargit la plage et on grossit le pas pour les grosses
 // unités (g, ml), plus finement pour kg/l, et on garde un pas de 1 pour les
 // unités qui se comptent naturellement (pièce, pincée, cuillères...).
-export function getWheelRange(unit) {
+export interface WheelRange {
+  min: number;
+  max: number;
+  step: number;
+}
+
+export function getWheelRange(unit: string): WheelRange {
   const u = normalize(unit);
   if (/^g$|^grammes?$/.test(u) || /^ml$/.test(u)) return { min: 0, max: 2000, step: 5 };
   if (/^kgs?$/.test(u) || /^l$|^litres?$/.test(u)) return { min: 0, max: 20, step: 0.25 };
@@ -52,7 +70,7 @@ export function getWheelRange(unit) {
 // Jamais si elle commence par une quantité chiffrée ou une puce explicite —
 // ça, c'est toujours un ingrédient/une étape, quoi qu'il arrive ensuite sur
 // la ligne.
-function isSectionHeaderLine(line) {
+function isSectionHeaderLine(line: string): boolean {
   const trimmed = line.trim();
   if (!trimmed) return false;
   if (/^[\d.,]+\s/.test(trimmed)) return false;
@@ -62,11 +80,11 @@ function isSectionHeaderLine(line) {
   return false;
 }
 
-function stripSectionColon(line) {
+function stripSectionColon(line: string): string {
   return line.replace(/:\s*$/, "").trim();
 }
 
-export function guessCategoryFromText(text) {
+export function guessCategoryFromText(text: string): string {
   const t = normalize(text);
   const sweet = /sucre|chocolat|vanille|dessert|gateau|tarte|patisserie|miel|confiture|biscuit|creme patissiere|caramel/.test(t);
   const savory = /poulet|boeuf|porc|poisson|legume|sel|poivre|fromage|viande|sauce|oignon|ail/.test(t);
@@ -74,11 +92,11 @@ export function guessCategoryFromText(text) {
   return "Salé";
 }
 
-export function parseRecipeTemplate(raw) {
+export function parseRecipeTemplate(raw: string): ParsedRecipe | null {
   const lines = (raw || "").split("\n");
-  const sections = {};
-  let current = null;
-  let buffer = [];
+  const sections: Record<string, string> = {};
+  let current: string | null = null;
+  let buffer: string[] = [];
   const flush = () => {
     if (current) {
       const text = buffer.join("\n").trim();
@@ -119,7 +137,8 @@ export function parseRecipeTemplate(raw) {
   const servings = servingsMatch ? parseInt(servingsMatch[0], 10) : 4;
 
   const timeText = sections.time || "";
-  const time = parseDurationMinutes(timeText) || (timeText.match(/\d+/) ? parseInt(timeText.match(/\d+/)[0], 10) : 30);
+  const timeDigitsMatch = timeText.match(/\d+/);
+  const time = parseDurationMinutes(timeText) || (timeDigitsMatch ? parseInt(timeDigitsMatch[0], 10) : 30);
 
   const ingredientLines = (sections.ingredients || "")
     .split("\n")
@@ -146,8 +165,8 @@ export function parseRecipeTemplate(raw) {
   // vanille :", "Pour la garniture :") — voir groupSteps (utils/helpers.js),
   // qui sait déjà afficher ces titres { isSection: true, title } comme des
   // séparateurs plutôt que comme une étape numérotée.
-  const steps = stepLines.map((line) => (
-    isSectionHeaderLine(line) ? { isSection: true, title: stripSectionColon(line) } : line
+  const steps: ParsedRecipe["steps"] = stepLines.map((line) => (
+    isSectionHeaderLine(line) ? { isSection: true as const, title: stripSectionColon(line) } : line
   ));
 
   const equipment = (sections.equipment || "").trim();
