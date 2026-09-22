@@ -14,7 +14,7 @@
 /*  quel — un reste de français est préférable à un charabia mal traduit. */
 /* ------------------------------------------------------------------ */
 
-const CULINARY_FR_EN = [
+const CULINARY_FR_EN: [string, string][] = [
   // Recettes précises de la base (titres exacts, entrées prioritaires —
   // triées avant tout par longueur ci-dessous, donc pas besoin de les
   // ordonner à la main ici).
@@ -286,7 +286,7 @@ const CULINARY_FR_EN = [
 // écrasée par une entrée plus générique testée avant elle (ex. "pain").
 const SORTED_ENTRIES = [...CULINARY_FR_EN].sort((a, b) => b[0].length - a[0].length);
 
-function escapeRegExp(str) {
+function escapeRegExp(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
@@ -295,14 +295,14 @@ function escapeRegExp(str) {
 // commençant ou finissant par une lettre accentuée, comme "œuf" ou
 // "échalote", ne matcherait alors jamais en début/fin de phrase). \p{L}
 // couvre correctement l'alphabet français avec le flag "u".
-function buildEntryRegex(fr) {
+function buildEntryRegex(fr: string): RegExp {
   return new RegExp(`(?<![\\p{L}\\p{N}])${escapeRegExp(fr)}(?![\\p{L}\\p{N}])`, "giu");
 }
 
 // Préserve la casse de la première lettre du texte d'origine trouvé — utile
 // en tout début de phrase/titre : "Poulet rôti" -> "Roast chicken", pas
 // "roast chicken".
-function matchCase(replacement, original) {
+function matchCase(replacement: string, original: string): string {
   if (!original) return replacement;
   const firstChar = original.charAt(0);
   if (firstChar === firstChar.toUpperCase() && firstChar !== firstChar.toLowerCase()) {
@@ -316,7 +316,7 @@ function matchCase(replacement, original) {
 // traduirait dans le mauvais ordre ("Crepes of mom" au lieu de "Mom's
 // Crepes"). Repéré et réordonné à part, AVANT le remplacement du
 // dictionnaire ci-dessus (qui traduira ensuite "Crêpes" normalement).
-const POSSESSIVE_NAMES = {
+const POSSESSIVE_NAMES: Record<string, string> = {
   maman: "Mom's",
   papa: "Dad's",
   mamie: "Grandma's",
@@ -334,7 +334,7 @@ const POSSESSIVE_RE = new RegExp(
   `^(.*?)\\s+de\\s+(${Object.keys(POSSESSIVE_NAMES).sort((a, b) => b.length - a.length).join("|")})\\s*$`,
   "i"
 );
-function applyPossessiveRewrite(text) {
+function applyPossessiveRewrite(text: string): string {
   const m = text.match(POSSESSIVE_RE);
   if (!m || !m[1].trim()) return text;
   const possessive = POSSESSIVE_NAMES[m[2].toLowerCase()];
@@ -352,9 +352,9 @@ function applyPossessiveRewrite(text) {
 // "l'"/"d'" eux-mêmes n'ont pas leur place dans un dictionnaire de mots
 // entiers (le mot qui suit une élision n'a par nature jamais de frontière
 // non-lettre juste après l'apostrophe, voir buildEntryRegex ci-dessus).
-const ELISION_EXPANSIONS = { l: "the", d: "of" };
+const ELISION_EXPANSIONS: Record<string, string> = { l: "the", d: "of" };
 const ELISION_RE = /\b([ld])['’](?=\p{L})/giu;
-function expandElisions(text) {
+function expandElisions(text: string): string {
   return text.replace(ELISION_RE, (_match, article) => {
     const expansion = ELISION_EXPANSIONS[article.toLowerCase()];
     const isUpper = article === article.toUpperCase() && article !== article.toLowerCase();
@@ -371,7 +371,7 @@ function expandElisions(text) {
 // reconnues par leur équivalent anglais, laisse tout le reste inchangé.
 // N'agit QUE si `language === "en"` : en français, retourne le texte tel
 // quel, sans aucun coût de calcul.
-export function translateRecipeText(text, language) {
+export function translateRecipeText(text: string, language: string): string {
   if (language !== "en" || !text) return text;
   let result = applyPossessiveRewrite(String(text));
   for (const [fr, en] of SORTED_ENTRIES) {
