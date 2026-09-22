@@ -13,6 +13,14 @@ export const FORMS_CSS = `
   background: var(--surface-strong); border: 1px solid var(--line); border-radius: 8px;
   padding: 9px 10px; resize: vertical; width: 100%; max-width: 100%;
 }
+/* iOS Safari ignore la largeur CSS des <input type="date/time/datetime-local">
+   et dimensionne leur contenu via -webkit-min-logical-width, une propriété
+   interne à WebKit distincte de width/min-width — d'où le champ "Date de
+   naissance" qui débordait du cadre du formulaire sur iPhone malgré le
+   width: 100% ci-dessus. */
+.field input[type="date"], .field input[type="time"], .field input[type="datetime-local"] {
+  -webkit-min-logical-width: 0;
+}
 .field-row { display: flex; gap: 10px; max-width: 100%; }
 .field-row .field { flex: 1; min-width: 0; }
 .field-discreet { opacity: 0.8; }
