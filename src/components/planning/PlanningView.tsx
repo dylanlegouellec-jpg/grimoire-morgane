@@ -11,6 +11,10 @@ import Seal from "../common/Seal";
 import SegmentedControl from "../common/SegmentedControl";
 import AddMealModal from "./AddMealModal";
 import PlanningMealGroup from "./PlanningMealGroup";
+import type { Recipe } from "../../hooks/useRecipes";
+import type { MealPlanEntry } from "../../hooks/useMealPlan";
+import type { ViewScope } from "../../utils/localSettings";
+import type { MealEntryLike } from "./PlanningMealItem";
 
 /* ------------------------------------------------------------------ */
 /*  PLANIFICATION — vue chronologique par semaine, un jour par bloc,      */
@@ -33,10 +37,24 @@ import PlanningMealGroup from "./PlanningMealGroup";
 // qu'un @keyframes CSS, pour pouvoir la piloter par React state (`scope`) au
 // lieu d'un changement de `key` sur tout un onglet.
 const SCOPE_SWITCH_DURATION_S = 0.24;
-const SCOPE_SWITCH_EASE = [0.22, 1, 0.36, 1];
+const SCOPE_SWITCH_EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 const SCOPE_SWITCH_SLIDE_PX = 14;
 
-export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMeal, onRemoveMeals, onUpdateMeal, onReorderMeals, onMoveMealSection, onSendToShoppingList, showToast, user }) {
+interface PlanningViewProps {
+  recipes: Recipe[];
+  mealPlan: MealPlanEntry[];
+  onAddMeal: (date: string, mealType: string, recipeId: string | null, customTitle: string | null, scope: "household" | "personal", userId: string | null, courseType: string | null) => void;
+  onRemoveMeal: (id: string) => void;
+  onRemoveMeals: (ids: string[]) => void;
+  onUpdateMeal: (id: string, updates: Partial<MealPlanEntry>) => void;
+  onReorderMeals: (orderedIds: string[]) => void;
+  onMoveMealSection: (entryIds: string[], newMealType: string) => void;
+  onSendToShoppingList: (recipeIds: string[]) => void;
+  showToast: (msg: string) => void;
+  user: { id: string } | null;
+}
+
+export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMeal, onRemoveMeals, onUpdateMeal, onReorderMeals, onMoveMealSection, onSendToShoppingList, showToast, user }: PlanningViewProps) {
   const { t, language } = useTranslation();
   const prefersReducedMotion = useReducedMotion();
   const [weekStart, setWeekStart] = useState(() => getWeekStart());
@@ -50,30 +68,30 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
   // l'affichage tant qu'on n'a pas fait ce geste.
   const [reorderMode, setReorderMode] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [addModalDate, setAddModalDate] = useState(null); // date ISO pré-remplie ("YYYY-MM-DD") | null (FAB, calendrier libre)
+  const [addModalDate, setAddModalDate] = useState<string | null>(null); // date ISO pré-remplie ("YYYY-MM-DD") | null (FAB, calendrier libre)
   // Moment/type de plat prérempli pour le "+" ouvert depuis le menu d'un
   // en-tête de sous-catégorie (voir PlanningCourseGroup.jsx) — null pour le
   // FAB ou le "+" d'un jour, qui démarrent tous deux sans rien de préréglé.
-  const [addModalMealType, setAddModalMealType] = useState(null);
-  const [addModalCourseType, setAddModalCourseType] = useState(null);
+  const [addModalMealType, setAddModalMealType] = useState<string | null>(null);
+  const [addModalCourseType, setAddModalCourseType] = useState<string | null>(null);
   // Entrée en cours de modification (menu "Modifier", voir
   // PlanningMealItem.jsx/MealOptionsModal.jsx) — sa date et son moment
   // restent fixes, seuls la recette/le type de plat peuvent changer (voir
   // AddMealModal.jsx, prop `editEntry`).
-  const [editingEntry, setEditingEntry] = useState(null);
+  const [editingEntry, setEditingEntry] = useState<MealPlanEntry | null>(null);
   // Jours dépliés/repliés (voir isDayExpanded plus bas) — seuls les
   // BASCULEMENTS explicites de l'utilisateur sont mémorisés ici, par date
   // ISO (persiste donc d'une semaine à l'autre pour cette même date) ;
   // l'état par défaut (aujourd'hui déplié, le reste replié) n'a pas besoin
   // d'être stocké puisqu'il est recalculable à tout moment.
-  const [expandedOverrides, setExpandedOverrides] = useState(() => new Map());
+  const [expandedOverrides, setExpandedOverrides] = useState<Map<string, boolean>>(() => new Map());
   // Portée affichée ("household" | "personal") — préférence locale à
   // l'appareil (voir utils/localSettings.js), pas une donnée de foyer :
   // chaque membre peut avoir son propre onglet de départ.
-  const [scope, setScope] = useState(() => getStoredPlanningScope());
-  const changeScope = (next) => {
-    setScope(next);
-    storePlanningScope(next);
+  const [scope, setScope] = useState<ViewScope>(() => getStoredPlanningScope());
+  const changeScope = (next: string) => {
+    setScope(next as ViewScope);
+    storePlanningScope(next as ViewScope);
   };
 
   const days = getWeekDays(weekStart);
@@ -90,12 +108,12 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
   const scopedMealPlan = mealPlan.filter((e) => (
     scope === "personal" ? (e.scope === "personal" && e.userId === (user && user.id)) : e.scope !== "personal"
   ));
-  const entriesForDay = (isoDate) => scopedMealPlan.filter((e) => e.date === isoDate);
+  const entriesForDay = (isoDate: string) => scopedMealPlan.filter((e) => e.date === isoDate);
   const weekEntries = days.flatMap((d) => entriesForDay(toISODate(d)));
   // Regroupe les entrées d'un jour par moment (un seul bloc "DÉJEUNER" plutôt
   // qu'une carte par plat) et trie chaque groupe dans l'ordre gastronomique
   // (voir courseTypeOrder) plutôt que dans l'ordre d'ajout au planning.
-  const groupEntriesByMealType = (dayEntries) =>
+  const groupEntriesByMealType = (dayEntries: MealPlanEntry[]) =>
     MEAL_TYPES
       .map((m) => ({
         mealType: m,
@@ -111,18 +129,21 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
   // ci-dessus) est déjà trié dans l'ordre gastronomique, donc les entrées
   // d'un même type y sont déjà contiguës : un simple filtre par type, dans
   // l'ordre de COURSE_TYPES, suffit à les répartir sans perdre cet ordre.
-  const groupEntriesByCourse = (entries) =>
-    COURSE_TYPES
+  const groupEntriesByCourse = (entries: MealEntryLike[]) => {
+    const typed = entries as MealPlanEntry[];
+    return COURSE_TYPES
       .map((c) => ({
         course: c,
-        entries: entries.filter((e) => courseTypeInfo(e.courseType).key === c.key),
+        entries: typed.filter((e) => courseTypeInfo(e.courseType || "").key === c.key),
       }))
       .filter((g) => g.entries.length > 0);
+  };
   // Recette liée, repas personnalisé (texte libre, voir AddMealModal.jsx) ou
   // recette depuis effacée : voir le commentaire détaillé plus bas où cette
   // même logique était répétée pour chaque entrée avant l'ajout du sous-
   // regroupement par type de plat.
-  const labelForEntry = (entry) => {
+  const labelForEntry = (entryLike: MealEntryLike) => {
+    const entry = entryLike as MealPlanEntry;
     const recipe = entry.recipeId ? recipeById.get(entry.recipeId) : null;
     return entry.customTitle || (recipe ? recipe.title : t("planning.recipeDeletedLabel"));
   };
@@ -149,7 +170,7 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
   const anyModalOpen = useIsAnyModalOpen();
   const weekSwipeActive = !anyModalOpen && !reorderMode;
 
-  const openAddForDay = (iso) => {
+  const openAddForDay = (iso: string) => {
     triggerHaptic(15);
     setAddModalDate(iso);
     setAddModalMealType(null);
@@ -168,7 +189,7 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
   // moment ET type de plat démarrent déjà préremplis sur cette catégorie
   // (voir AddMealModal.jsx, props initialMealType/initialCourseType) —
   // l'étape recette s'affiche donc directement.
-  const openAddForCourse = (iso, mealTypeKey, courseKey) => {
+  const openAddForCourse = (iso: string, mealTypeKey: string, courseKey: string) => {
     triggerHaptic(15);
     setAddModalDate(iso);
     setAddModalMealType(mealTypeKey);
@@ -182,7 +203,7 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
   // DEFAULT_COURSE_TYPE) pour Déjeuner/Dîner, tout en laissant son
   // sélecteur d'en-tête (Apéro/Entrée/Plat/Dessert) accessible pour le
   // changer avant de choisir la recette.
-  const openAddForMealSection = (iso, mealTypeKey) => {
+  const openAddForMealSection = (iso: string, mealTypeKey: string) => {
     triggerHaptic(15);
     setAddModalDate(iso);
     setAddModalMealType(mealTypeKey);
@@ -190,15 +211,15 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
     setShowAddModal(true);
   };
 
-  const handleAdd = (dateISO, mealType, recipeId, customTitle, courseType) => {
+  const handleAdd = (dateISO: string, mealType: string, recipeId: string | null, customTitle: string | null, courseType: string | null) => {
     // Le nouveau repas hérite automatiquement de la portée actuellement
     // affichée (voir hooks/useMealPlan.js pour la forme exacte de l'entrée).
-    onAddMeal(dateISO, mealType, recipeId, customTitle, scope, user && user.id, courseType);
+    onAddMeal(dateISO, mealType, recipeId, customTitle, scope as "household" | "personal", user && user.id, courseType);
     setShowAddModal(false);
     setWeekStart(getWeekStart(new Date(dateISO)));
   };
 
-  const handleSaveEdit = (entryId, recipeId, customTitle, courseType) => {
+  const handleSaveEdit = (entryId: string, recipeId: string | null, customTitle: string | null, courseType: string | null) => {
     onUpdateMeal(entryId, {
       recipeId: recipeId || null,
       customTitle: customTitle || null,
@@ -212,12 +233,12 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
   // moment d'un coup (toutes ses entrées, tous types de plat confondus),
   // via la même suppression groupée que "Tout supprimer" d'une sous-
   // catégorie (voir onRemoveMeals, hooks/useMealPlan.js).
-  const handleDeleteSection = (entries) => onRemoveMeals(entries.map((e) => e.id));
+  const handleDeleteSection = (entries: MealPlanEntry[]) => onRemoveMeals(entries.map((e) => e.id));
 
   // "Changer le moment du repas" du même menu — reclasse TOUTE la section
   // vers `newMealTypeKey` (voir MoveMealSectionModal.jsx, hooks/useMealPlan
   // .js pour l'ajustement du courseType selon le moment d'arrivée).
-  const handleMoveSection = (entries, newMealTypeKey) => onMoveMealSection(entries.map((e) => e.id), newMealTypeKey);
+  const handleMoveSection = (entries: MealPlanEntry[], newMealTypeKey: string) => onMoveMealSection(entries.map((e) => e.id), newMealTypeKey);
 
   const toggleReorderMode = () => {
     triggerHaptic(15);
@@ -229,8 +250,8 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
   // jour est déplié par défaut UNIQUEMENT s'il s'agit d'aujourd'hui, replié
   // sinon (y compris pour une semaine sans "aujourd'hui" du tout, passée ou
   // future : tous ses jours démarrent alors repliés).
-  const isDayExpanded = (iso, isToday) => (expandedOverrides.has(iso) ? expandedOverrides.get(iso) : isToday);
-  const toggleDay = (iso, isToday) => {
+  const isDayExpanded = (iso: string, isToday: boolean) => (expandedOverrides.has(iso) ? expandedOverrides.get(iso) : isToday);
+  const toggleDay = (iso: string, isToday: boolean) => {
     triggerHaptic(10);
     setExpandedOverrides((prev) => {
       const next = new Map(prev);
@@ -240,7 +261,7 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
   };
 
   const handleSend = () => {
-    const recipeIds = weekEntries.map((e) => e.recipeId).filter(Boolean);
+    const recipeIds = weekEntries.map((e) => e.recipeId).filter((id): id is string => Boolean(id));
     if (!recipeIds.length) {
       showToast(t("planning.noMealsThisWeek"));
       return;
@@ -359,13 +380,13 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
                           reorderMode={reorderMode}
                           onToggleReorder={toggleReorderMode}
                           onReorder={onReorderMeals}
-                          onEdit={setEditingEntry}
-                          onDelete={(e) => onRemoveMeal(e.id)}
+                          onEdit={(entry) => setEditingEntry(entry as MealPlanEntry)}
+                          onDelete={(e) => onRemoveMeal((e as MealPlanEntry).id)}
                           onAddMeal={() => openAddForMealSection(iso, group.mealType.key)}
-                          onMoveSection={handleMoveSection}
-                          onDeleteSection={handleDeleteSection}
+                          onMoveSection={(entries, newMealTypeKey) => handleMoveSection(entries as MealPlanEntry[], newMealTypeKey)}
+                          onDeleteSection={(entries) => handleDeleteSection(entries as MealPlanEntry[])}
                           onAddToCourse={(courseKey) => openAddForCourse(iso, group.mealType.key, courseKey)}
-                          onDeleteAllCourse={(groupEntries) => onRemoveMeals(groupEntries.map((e) => e.id))}
+                          onDeleteAllCourse={(groupEntries) => onRemoveMeals((groupEntries as MealPlanEntry[]).map((e) => e.id))}
                         />
                       ))}
                     </div>

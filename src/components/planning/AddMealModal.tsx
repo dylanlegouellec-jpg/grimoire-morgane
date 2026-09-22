@@ -12,6 +12,21 @@ import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import Flourish from "../common/Flourish";
 import CategoryIcon from "../common/CategoryIcon";
 import CalendarPicker from "./CalendarPicker";
+import type { Recipe } from "../../hooks/useRecipes";
+import type { MealPlanEntry } from "../../hooks/useMealPlan";
+
+type Step = "date" | "meal" | "recipe";
+
+interface AddMealModalProps {
+  recipes: Recipe[];
+  initialDate?: string | null;
+  initialMealType?: string | null;
+  initialCourseType?: string | null;
+  editEntry?: MealPlanEntry | null;
+  onAdd?: (date: string, mealType: string, recipeId: string | null, customTitle: string | null, courseType: string | null) => void;
+  onSave?: (id: string, recipeId: string | null, customTitle: string | null, courseType: string | null) => void;
+  onClose: () => void;
+}
 
 /* ------------------------------------------------------------------ */
 /*  AJOUTER UN REPAS — assistant en couches (même principe de navigation   */
@@ -47,18 +62,18 @@ export default function AddMealModal({
   onAdd,
   onSave,
   onClose,
-}) {
+}: AddMealModalProps) {
   useBodyScrollLock(true);
-  const modalRef = useFocusTrap(onClose);
+  const modalRef = useFocusTrap<HTMLDivElement>(onClose);
   const sheet = useDismissibleSheet(onClose, { scrollRef: modalRef });
   const { t, dict, language } = useTranslation();
   const hasDateStep = !initialDate;
-  const [selectedDate, setSelectedDate] = useState(() => {
+  const [selectedDate, setSelectedDate] = useState<Date | null>(() => {
     if (editEntry) return new Date(editEntry.date);
     return initialDate ? new Date(initialDate) : null;
   });
   const [viewMonth, setViewMonth] = useState(() => (initialDate ? new Date(initialDate) : new Date()));
-  const [mealType, setMealType] = useState(() => (editEntry ? editEntry.mealType : initialMealType));
+  const [mealType, setMealType] = useState<string | null>(() => (editEntry ? editEntry.mealType : initialMealType));
   // Type de plat (Apéro/Entrée/Plat/Dessert) — dimension INDÉPENDANTE du
   // moment (mealType) ci-dessus, choisie à côté de lui sur cette même étape
   // (voir le sélecteur à droite de la date plus bas) : "Plat" par défaut,
@@ -75,7 +90,7 @@ export default function AddMealModal({
   // retaper le nom pour "confirmer" (voir addCustomMeal plus bas).
   const [search, setSearch] = useState(() => (editEntry && editEntry.customTitle ? editEntry.customTitle : ""));
 
-  const step = editEntry ? "recipe" : (!selectedDate ? "date" : !mealType ? "meal" : "recipe");
+  const step: Step = editEntry ? "recipe" : (!selectedDate ? "date" : !mealType ? "meal" : "recipe");
   const isFirstStep = hasDateStep ? step === "date" : step === "meal";
 
   const goBack = () => {
@@ -84,16 +99,16 @@ export default function AddMealModal({
     else if (step === "meal") setSelectedDate(null);
   };
 
-  const handleSelectDate = (d) => {
+  const handleSelectDate = (d: Date) => {
     triggerHaptic(15);
     setSelectedDate(d);
   };
 
-  const pickRecipe = (recipeId) => {
+  const pickRecipe = (recipeId: string) => {
     triggerHaptic(15);
-    const course = mealTypeHasCourse(mealType) ? courseType : null;
-    if (editEntry) onSave(editEntry.id, recipeId, null, course);
-    else onAdd(toISODate(selectedDate), mealType, recipeId, null, course);
+    const course = mealType && mealTypeHasCourse(mealType) ? courseType : null;
+    if (editEntry) onSave && onSave(editEntry.id, recipeId, null, course);
+    else if (selectedDate && mealType) onAdd && onAdd(toISODate(selectedDate), mealType, recipeId, null, course);
     onClose();
   };
 
@@ -112,9 +127,9 @@ export default function AddMealModal({
   const addCustomMeal = () => {
     if (!customTitles.length) return;
     triggerHaptic(15);
-    const course = mealTypeHasCourse(mealType) ? courseType : null;
-    if (editEntry) onSave(editEntry.id, null, customTitles[0], course);
-    else customTitles.forEach((title) => onAdd(toISODate(selectedDate), mealType, null, title, course));
+    const course = mealType && mealTypeHasCourse(mealType) ? courseType : null;
+    if (editEntry) onSave && onSave(editEntry.id, null, customTitles[0], course);
+    else if (selectedDate && mealType) customTitles.forEach((title) => onAdd && onAdd(toISODate(selectedDate), mealType, null, title, course));
     onClose();
   };
 
@@ -123,12 +138,12 @@ export default function AddMealModal({
     .filter((r) => !q || r.title.toLowerCase().includes(q))
     .sort((a, b) => a.title.localeCompare(b.title, "fr"));
 
-  const titles = {
+  const titles: Record<Step, string> = {
     date: t("planning.dateStepTitle"),
     meal: t("planning.mealStepTitle"),
     recipe: editEntry ? t("planning.editMealStepTitle") : t("planning.recipeStepTitle"),
   };
-  const backLabels = { meal: t("planning.backToDate"), recipe: t("planning.backToMealType") };
+  const backLabels: Partial<Record<Step, string>> = { meal: t("planning.backToDate"), recipe: t("planning.backToMealType") };
 
   return (
     <motion.div className="modal-backdrop" onClick={onClose} {...MODAL_BACKDROP_MOTION}>
@@ -155,7 +170,7 @@ export default function AddMealModal({
         ) : (
           <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         )}
-        {step === "recipe" && mealTypeHasCourse(mealType) && (
+        {step === "recipe" && mealType && mealTypeHasCourse(mealType) && (
           // <option> ne peut pas rendre une icône lucide (contenu texte
           // brut imposé par la plateforme) — reste en emoji quel que soit
           // le "Style des icônes" choisi (voir CategoryIcon.jsx), seul cas
@@ -243,7 +258,7 @@ export default function AddMealModal({
                     onClick={() => pickRecipe(r.id)}
                   >
                     <span className="recipe-select-row-title">{r.title}</span>
-                    <span className={`chip ${categoryClass(r)}`}>{dict.labels[categoryLabel(r)] || categoryLabel(r)}</span>
+                    <span className={`chip ${categoryClass(r)}`}>{(dict.labels as Record<string, string>)[categoryLabel(r)] || categoryLabel(r)}</span>
                   </button>
                 ))}
               </div>
