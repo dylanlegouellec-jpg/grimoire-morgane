@@ -1,4 +1,6 @@
 import { createContext, useContext } from "react";
+import type { ReactNode } from "react";
+import type { IconStyle } from "../utils/localSettings";
 
 /* ------------------------------------------------------------------ */
 /*  CONTEXTE DE STYLE D'ICÔNES — redistribue la préférence `iconStyle`    */
@@ -10,12 +12,17 @@ import { createContext, useContext } from "react";
 /*  intermédiaire — même principe que LanguageContext (useTranslation()).            */
 /* ------------------------------------------------------------------ */
 
-const IconStyleContext = createContext("emoji");
+const IconStyleContext = createContext<IconStyle>("emoji");
 
-export function IconStyleProvider({ iconStyle, children }) {
+interface IconStyleProviderProps {
+  iconStyle?: IconStyle;
+  children: ReactNode;
+}
+
+export function IconStyleProvider({ iconStyle, children }: IconStyleProviderProps) {
   return <IconStyleContext.Provider value={iconStyle || "emoji"}>{children}</IconStyleContext.Provider>;
 }
 
-export function useIconStyle() {
+export function useIconStyle(): IconStyle {
   return useContext(IconStyleContext);
 }
