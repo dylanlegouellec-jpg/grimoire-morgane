@@ -9,6 +9,29 @@
 
 const QUEUE_KEY = "grimoire_offline_queue";
 
+export type OfflineActionType = "insert" | "update" | "delete" | "app_state";
+
+// "app_state" : recordId = householdId, payload = le patch partiel à
+// appliquer, baseline = la valeur que ce client croyait être sur le
+// serveur juste avant sa modification (voir findAppStateConflicts,
+// utils/supabase.js — sert à détecter qu'un autre appareil a modifié le
+// même champ pendant la coupure, plutôt que de l'écraser en silence).
+// `id`/`ts`/`failCount` sont ajoutés par enqueueOfflineAction ci-dessous,
+// jamais fournis par l'appelant — d'où `NewOfflineAction`, le sous-type
+// que ses appelants construisent réellement.
+export interface OfflineAction {
+  id: string;
+  table: string;
+  type: OfflineActionType;
+  payload?: Record<string, unknown>;
+  recordId?: string;
+  baseline?: Record<string, unknown>;
+  ts: number;
+  failCount: number;
+}
+
+export type NewOfflineAction = Omit<OfflineAction, "id" | "ts" | "failCount">;
+
 // Repli mémoire RÉEL pour cette session si localStorage est indisponible ou
 // refuse l'écriture (quota dépassé, navigation privée stricte) — `null` tant
 // qu'aucun échec n'a eu lieu (cas normal : lit/écrit toujours localStorage).
@@ -17,9 +40,9 @@ const QUEUE_KEY = "grimoire_offline_queue";
 // commentaire promettait ce repli mais readQueue() relisait toujours
 // localStorage à froid, qui ne contenait jamais l'action perdue : une mise
 // en file au moment précis d'un échec d'écriture disparaissait en silence.
-let memoryFallback = null;
+let memoryFallback: OfflineAction[] | null = null;
 
-function readQueue() {
+function readQueue(): OfflineAction[] {
   if (memoryFallback !== null) return memoryFallback;
   try {
     if (typeof localStorage === "undefined") return [];
@@ -31,7 +54,7 @@ function readQueue() {
   }
 }
 
-function writeQueue(queue) {
+function writeQueue(queue: OfflineAction[]): void {
   if (memoryFallback !== null) {
     memoryFallback = queue;
     return;
@@ -48,9 +71,7 @@ function writeQueue(queue) {
   }
 }
 
-// action = { id, table, type: "insert"|"update"|"delete"|"app_state", payload?, recordId?, ts, failCount }
-// ("app_state" : recordId = householdId, payload = le patch partiel à appliquer — voir saveAppState/applyAppStatePatch dans utils/supabase.js)
-export function enqueueOfflineAction(action) {
+export function enqueueOfflineAction(action: NewOfflineAction): OfflineAction[] {
   const queue = readQueue();
   queue.push({
     ...action,
@@ -62,15 +83,15 @@ export function enqueueOfflineAction(action) {
   return queue;
 }
 
-export function getOfflineQueue() {
+export function getOfflineQueue(): OfflineAction[] {
   return readQueue();
 }
 
-export function getOfflineQueueSize() {
+export function getOfflineQueueSize(): number {
   return readQueue().length;
 }
 
-export function removeFromOfflineQueue(actionId) {
+export function removeFromOfflineQueue(actionId: string): void {
   writeQueue(readQueue().filter((a) => a.id !== actionId));
 }
 
@@ -80,7 +101,7 @@ export function removeFromOfflineQueue(actionId) {
 // capricieux — ex. le foyer visé a été supprimé entre-temps) bloquait
 // autrement toute la file derrière elle indéfiniment, sans qu'aucun
 // signal ne prévienne l'utilisateur de quoi que ce soit de particulier.
-export function incrementOfflineActionFailCount(actionId) {
+export function incrementOfflineActionFailCount(actionId: string): number {
   const queue = readQueue();
   let nextCount = 0;
   const updated = queue.map((a) => {
@@ -92,6 +113,6 @@ export function incrementOfflineActionFailCount(actionId) {
   return nextCount;
 }
 
-export function clearOfflineQueue() {
+export function clearOfflineQueue(): void {
   writeQueue([]);
 }

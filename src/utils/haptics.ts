@@ -27,10 +27,14 @@ import { getStoredHapticFeedback } from "./localSettings";
 
 const CAN_VIBRATE = typeof navigator !== "undefined" && typeof navigator.vibrate === "function";
 
+// Même type que le premier argument de Navigator.vibrate() : un nombre de
+// ms, ou un motif [on, off, on, ...].
+type VibratePattern = number | number[];
+
 // À utiliser si un appelant a besoin d'adapter son comportement selon la
 // disponibilité d'un vrai vibreur matériel (ex. insister moins sur le
 // retour visuel quand la vibration réelle est déjà là).
-export function isHapticVibrationSupported() {
+export function isHapticVibrationSupported(): boolean {
   return CAN_VIBRATE;
 }
 
@@ -39,7 +43,7 @@ export function isHapticVibrationSupported() {
 // délègue maintenant ici). Retourne `true` si une vraie vibration a été
 // déclenchée, `false` sinon (pas de support, réglage désactivé, ou échec
 // silencieux).
-export function triggerHaptic(pattern = 15) {
+export function triggerHaptic(pattern: VibratePattern = 15): boolean {
   if (!CAN_VIBRATE || !getStoredHapticFeedback()) return false;
   try {
     return !!navigator.vibrate(pattern);
@@ -53,7 +57,7 @@ export function triggerHaptic(pattern = 15) {
 // par défaut si aucun élément n'est passé), retirée automatiquement après
 // coup. N'essaie de vibrer QUE si aucun élément n'a été fourni pour le
 // repli visuel serait de toute façon inutile (ex. depuis un contexte non-UI).
-export function triggerHapticFeedback(target, pattern = 15) {
+export function triggerHapticFeedback(target?: Element | null, pattern: VibratePattern = 15): boolean {
   if (!getStoredHapticFeedback()) return false;
   const vibrated = triggerHaptic(pattern);
   if (vibrated) return true;

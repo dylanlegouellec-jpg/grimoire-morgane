@@ -8,7 +8,25 @@
 
 const CACHE_KEY = "grimoire_local_cache_v1";
 
-export function saveLocalCache(data) {
+// Reflète ce que useOfflineSync.js écrit réellement (voir l'appel à
+// saveLocalCache dans son effet de sauvegarde) — champs optionnels : rien
+// n'oblige un appelant à fournir la totalité de l'état applicatif d'un
+// coup. Les types `unknown[]`/`Record<string, unknown>` restent volontai-
+// rement larges tant qu'il n'existe pas de types Recipe/MealPlanEntry
+// dédiés ailleurs dans le code (première étape de la migration TypeScript,
+// pas encore la modélisation complète du domaine).
+export interface LocalCacheData {
+  recipes?: unknown[];
+  pantry?: unknown[];
+  basics?: Record<string, unknown>;
+  mealPlan?: unknown[];
+  shoppingLists?: unknown[];
+  activeListId?: string | null;
+  householdId?: string | null;
+  savedAt?: number;
+}
+
+export function saveLocalCache(data: LocalCacheData): void {
   try {
     if (typeof localStorage === "undefined") return;
     localStorage.setItem(CACHE_KEY, JSON.stringify({ ...data, savedAt: Date.now() }));
@@ -17,7 +35,7 @@ export function saveLocalCache(data) {
   }
 }
 
-export function loadLocalCache() {
+export function loadLocalCache(): LocalCacheData | null {
   try {
     if (typeof localStorage === "undefined") return null;
     const raw = localStorage.getItem(CACHE_KEY);

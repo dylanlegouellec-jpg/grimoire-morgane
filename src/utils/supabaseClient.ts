@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_READY } from "../constants";
 
 /* ------------------------------------------------------------------ */
@@ -10,9 +10,9 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_READY } from "../constants";
 /*  en recréer un à chaque rendu ouvrirait une nouvelle connexion à     */
 /*  chaque fois, ce que le plan gratuit Supabase ne pardonne pas.       */
 /* ------------------------------------------------------------------ */
-let client = null;
+let client: SupabaseClient | null = null;
 
-export function getSupabaseClient() {
+export function getSupabaseClient(): SupabaseClient | null {
   if (!SUPABASE_READY) return null;
   if (!client) {
     client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
