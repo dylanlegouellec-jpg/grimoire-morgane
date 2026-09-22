@@ -6,6 +6,12 @@ import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motio
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 
+interface UnsavedChangesModalProps {
+  onSave: () => void;
+  onDiscard: () => void;
+  onCancel: () => void;
+}
+
 /* ------------------------------------------------------------------ */
 /*  MODIFICATIONS NON ENREGISTRÉES — 3 choix, jamais de fermeture         */
 /*  silencieuse d'un changement non sauvegardé (voir RecipeForm.jsx,       */
@@ -13,8 +19,8 @@ import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 /*  que toute autre modale imbriquée de l'app, voir WheelPickerModal dans     */
 /*  ce même fichier) : l'empiler stoppe net le fond, jusqu'à un choix.         */
 /* ------------------------------------------------------------------ */
-export default function UnsavedChangesModal({ onSave, onDiscard, onCancel }) {
-  const modalRef = useFocusTrap(onCancel);
+export default function UnsavedChangesModal({ onSave, onDiscard, onCancel }: UnsavedChangesModalProps) {
+  const modalRef = useFocusTrap<HTMLDivElement>(onCancel);
   const sheet = useDismissibleSheet(onCancel, { scrollRef: modalRef });
   return (
     <motion.div className="modal-backdrop" onClick={onCancel} {...MODAL_BACKDROP_MOTION}>

@@ -9,10 +9,15 @@ import HeroTreatment, { heroTreatmentClassName, isLegendTreatment } from "../rec
 // sans dépendre d'une photo personnelle ni du réseau.
 const PREVIEW_RECIPE = { title: "Bûche pâtissière", category: "Sucré", illustrationKey: "chocolat" };
 
+interface HeroTreatmentCardProps {
+  treatment: string;
+  mini?: boolean;
+}
+
 // Un seul rendu du habillage (voir HeroTreatment.jsx) réutilisé ici pour
 // l'aperçu ET par RecipeDetail.jsx pour la vraie fiche — jamais deux
 // implémentations à maintenir en parallèle qui pourraient diverger.
-function HeroTreatmentCard({ treatment, mini }) {
+function HeroTreatmentCard({ treatment, mini }: HeroTreatmentCardProps) {
   return (
     <div className={`hero-preview-frame ${mini ? "hero-preview-mini" : ""}`}>
       <div className={`detail-hero hero-preview-hero ${heroTreatmentClassName(treatment)}`}>
@@ -30,7 +35,12 @@ function HeroTreatmentCard({ treatment, mini }) {
   );
 }
 
-export default function HeroTreatmentPreview({ value, onChange }) {
+interface HeroTreatmentPreviewProps {
+  value: string;
+  onChange: (key: string) => void;
+}
+
+export default function HeroTreatmentPreview({ value, onChange }: HeroTreatmentPreviewProps) {
   const { dict } = useTranslation();
   return (
     <>
@@ -47,7 +57,7 @@ export default function HeroTreatmentPreview({ value, onChange }) {
             aria-pressed={value === opt.key}
           >
             <HeroTreatmentCard treatment={opt.key} mini />
-            <span className="hero-swatch-label">{dict.labels[opt.label] || opt.label}</span>
+            <span className="hero-swatch-label">{(dict.labels as Record<string, string>)[opt.label] || opt.label}</span>
           </button>
         ))}
       </div>

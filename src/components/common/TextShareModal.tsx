@@ -8,10 +8,16 @@ import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import Seal from "./Seal";
 
-export default function TextShareModal({ title, text, onClose }) {
+interface TextShareModalProps {
+  title: string;
+  text: string;
+  onClose: () => void;
+}
+
+export default function TextShareModal({ title, text, onClose }: TextShareModalProps) {
   useBodyScrollLock(true);
-  const ref = useRef(null);
-  const modalRef = useFocusTrap(onClose);
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const modalRef = useFocusTrap<HTMLDivElement>(onClose);
   const sheet = useDismissibleSheet(onClose, { scrollRef: modalRef });
   useEffect(() => {
     if (ref.current) {
@@ -33,7 +39,7 @@ export default function TextShareModal({ title, text, onClose }) {
         <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
         <h2 className="dropcap-title">{title}</h2>
         <p className="hint" style={{ margin: "4px 0 12px" }}>Ton navigateur a bloqué la copie automatique — sélectionne et copie le texte ci-dessous.</p>
-        <textarea ref={ref} className="share-textarea" readOnly value={text} rows={8} onClick={(e) => e.target.select()} />
+        <textarea ref={ref} className="share-textarea" readOnly value={text} rows={8} onClick={(e) => e.currentTarget.select()} />
         <Seal
           tone="gold"
           onClick={async () => {
@@ -47,4 +53,3 @@ export default function TextShareModal({ title, text, onClose }) {
     </motion.div>
   );
 }
-

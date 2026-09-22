@@ -16,7 +16,7 @@ import { motion, useReducedMotion } from "motion/react";
 // gauche à droite. "stroke=currentColor" : hérite du "color: var(--gold)"
 // déjà posé sur .flourish (modalsBase.css.js), pas besoin de dupliquer la
 // couleur ici.
-const DRAW_TRANSITION = { duration: 0.55, ease: [0.22, 1, 0.36, 1] };
+const DRAW_TRANSITION: { duration: number; ease: [number, number, number, number] } = { duration: 0.55, ease: [0.22, 1, 0.36, 1] };
 const DOT_TRANSITION = { delay: DRAW_TRANSITION.duration * 0.75, duration: 0.2 };
 
 export default function Flourish() {

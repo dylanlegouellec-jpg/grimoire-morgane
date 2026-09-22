@@ -9,6 +9,13 @@ import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 
+interface JoinHouseholdConfirmModalProps {
+  householdId: string;
+  onRequestJoin: (householdId: string) => Promise<void>;
+  onClose: () => void;
+  showToast?: (msg: string) => void;
+}
+
 /* ------------------------------------------------------------------ */
 /*  CONFIRMATION D'ADHÉSION À UN FOYER — ouverte automatiquement quand      */
 /*  l'app détecte ?join_household=<id> dans l'URL (lien ou QR partagé       */
@@ -21,10 +28,10 @@ import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 /*  qu'un admin ne l'a pas validée depuis "Demandes en attente"                */
 /*  (HouseholdManagerModal.jsx).                                               */
 /* ------------------------------------------------------------------ */
-export default function JoinHouseholdConfirmModal({ householdId, onRequestJoin, onClose, showToast }) {
+export default function JoinHouseholdConfirmModal({ householdId, onRequestJoin, onClose, showToast }: JoinHouseholdConfirmModalProps) {
   const { t } = useTranslation();
   useBodyScrollLock(true);
-  const modalRef = useFocusTrap(onClose);
+  const modalRef = useFocusTrap<HTMLDivElement>(onClose);
   const sheet = useDismissibleSheet(onClose, { scrollRef: modalRef });
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
@@ -38,7 +45,7 @@ export default function JoinHouseholdConfirmModal({ householdId, onRequestJoin, 
       showToast && showToast(t("household.joinRequestSentToast"));
       onClose();
     } catch (err) {
-      setError((err && err.message) || t("household.joinRequestFailed"));
+      setError((err instanceof Error && err.message) || t("household.joinRequestFailed"));
     } finally {
       setSending(false);
     }

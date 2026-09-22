@@ -8,6 +8,23 @@ import PortionWheel from "../recipe/PortionWheel";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
 
+interface WheelColumn {
+  key: string;
+  initialValue: number;
+  min: number;
+  max: number;
+  step?: number;
+  suffix?: string;
+}
+
+interface WheelPickerModalProps {
+  title: string;
+  hint?: string;
+  columns: WheelColumn[];
+  onSave: (values: Record<string, number>) => void;
+  onClose: () => void;
+}
+
 /* ------------------------------------------------------------------ */
 /*  SÉLECTEUR À ROUES GÉNÉRIQUE (iOS picker wheel) — une ou plusieurs     */
 /*  roues défilantes (voir PortionWheel, déjà utilisé pour les portions    */
@@ -29,10 +46,10 @@ import Seal from "./Seal";
 /*  fermeture reste possible via le bouton "X" ou "Enregistrer" — l'entrée/ */
 /*  sortie anime tout de même avec Framer Motion (MODAL_SHEET_MOTION).     */
 /* ------------------------------------------------------------------ */
-export default function WheelPickerModal({ title, hint, columns, onSave, onClose }) {
+export default function WheelPickerModal({ title, hint, columns, onSave, onClose }: WheelPickerModalProps) {
   useBodyScrollLock(true);
-  const modalRef = useFocusTrap(onClose);
-  const [values, setValues] = useState(() =>
+  const modalRef = useFocusTrap<HTMLDivElement>(onClose);
+  const [values, setValues] = useState<Record<string, number>>(() =>
     Object.fromEntries(columns.map((c) => [c.key, c.initialValue]))
   );
 
@@ -60,12 +77,13 @@ export default function WheelPickerModal({ title, hint, columns, onSave, onClose
             <PortionWheel
               key={c.key}
               value={values[c.key]}
-              onChange={(v) => setValues((prev) => ({ ...prev, [c.key]: v }))}
+              onChange={(v: number) => setValues((prev) => ({ ...prev, [c.key]: v }))}
               min={c.min}
               max={c.max}
               step={c.step || 1}
               dark={false}
               suffix={c.suffix}
+              onSettle={undefined}
             />
           ))}
         </div>

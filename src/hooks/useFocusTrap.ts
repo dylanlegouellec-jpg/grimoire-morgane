@@ -46,8 +46,8 @@ let nextModalId = 1;
 /*  Usage : const modalRef = useFocusTrap(onClose);                        */
 /*          <div ref={modalRef} role="dialog" aria-modal="true" ...>        */
 /* ------------------------------------------------------------------ */
-export default function useFocusTrap(onClose?: () => void) {
-  const containerRef = useRef<HTMLElement | null>(null);
+export default function useFocusTrap<T extends HTMLElement = HTMLElement>(onClose?: () => void) {
+  const containerRef = useRef<T | null>(null);
   // Toujours la dernière fonction reçue, sans jamais faire redémarrer
   // l'effet ci-dessous (deps `[]` volontaire) : un `onClose` recréé à
   // chaque rendu du parent (cas courant, fonction fléchée inline) ne doit

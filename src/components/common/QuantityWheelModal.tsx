@@ -5,6 +5,13 @@ import { getWheelRange } from "../../utils/templateParser";
 import PortionWheel from "../recipe/PortionWheel";
 import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
 import useFocusTrap from "../../hooks/useFocusTrap";
+import type { ShoppingItem } from "../../hooks/useShoppingLists";
+
+interface QuantityWheelModalProps {
+  item: ShoppingItem;
+  onChange: (value: number) => void;
+  onClose: () => void;
+}
 
 // Volontairement SANS le geste "tirer pour fermer" (voir useDismissibleSheet,
 // utilisé par les autres modales) : cette molette EST une zone de
@@ -15,9 +22,9 @@ import useFocusTrap from "../../hooks/useFocusTrap";
 // possible via le bouton "X" ou, une fois la valeur stabilisée, via
 // onSettle (voir PortionWheel.jsx). L'entrée/sortie anime tout de même
 // avec Framer Motion (MODAL_SHEET_MOTION), juste sans le geste de tirage.
-export default function QuantityWheelModal({ item, onChange, onClose }) {
+export default function QuantityWheelModal({ item, onChange, onClose }: QuantityWheelModalProps) {
   const { min, max, step } = getWheelRange(item.unit);
-  const modalRef = useFocusTrap(onClose);
+  const modalRef = useFocusTrap<HTMLDivElement>(onClose);
   const [value, setValue] = useState(() => {
     const raw = Math.max(min, item.qty || 0);
     return Math.round(raw / step) * step;
@@ -38,7 +45,7 @@ export default function QuantityWheelModal({ item, onChange, onClose }) {
         <div className="qty-wheel-wrap">
           <PortionWheel
             value={value}
-            onChange={(v) => { setValue(v); onChange(v); }}
+            onChange={(v: number) => { setValue(v); onChange(v); }}
             min={min}
             max={max}
             step={step}
@@ -51,4 +58,3 @@ export default function QuantityWheelModal({ item, onChange, onClose }) {
     </motion.div>
   );
 }
-

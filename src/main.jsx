@@ -2,7 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import GrimoireDeMorgane from './GrimoireDeMorgane.jsx'
 import PublicRecipeView from './components/recipe/PublicRecipeView.jsx'
-import ErrorBoundary from './components/common/ErrorBoundary.jsx'
+import ErrorBoundary from './components/common/ErrorBoundary'
 import { decodeRecipeCode } from './utils/helpers'
 // Supprime ou commente cette ligne si le fichier n'existe pas :
 // import './index.css'

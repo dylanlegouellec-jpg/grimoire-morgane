@@ -1,8 +1,15 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type ChangeEvent } from "react";
 import { Download, FileText, Link2, Upload, Wand2 } from "lucide-react";
 import { useTranslation } from "../../contexts/LanguageContext";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
+
+interface DataBackupModalProps {
+  onExport: () => void;
+  onImportFile: (e: ChangeEvent<HTMLInputElement>) => void;
+  onImportTextRecipe: () => void;
+  onImportLink: () => void;
+}
 
 /* ------------------------------------------------------------------ */
 /*  SOUS-VUE "SAUVEGARDE & IMPORTATION" — contenu seul, voir la note dans   */
@@ -12,9 +19,9 @@ import Seal from "./Seal";
 /*  déjà enveloppés par l'appelant) — c'est le parent qui gère cette             */
 /*  fermeture globale, cette vue se contente d'appeler les callbacks reçus.      */
 /* ------------------------------------------------------------------ */
-export default function DataBackupModal({ onExport, onImportFile, onImportTextRecipe, onImportLink }) {
+export default function DataBackupModal({ onExport, onImportFile, onImportTextRecipe, onImportLink }: DataBackupModalProps) {
   const { t } = useTranslation();
-  const fileRef = useRef(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [showImportChoice, setShowImportChoice] = useState(false);
 
   return (
