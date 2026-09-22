@@ -19,24 +19,29 @@ export const AVATAR_BUCKET = "avatars";
 const PROFILE_COLUMNS =
   "id,display_name,avatar_url,first_name,last_name,username,birth_date,theme,press_duration,show_nutriscore,text_size,hero_treatment,icon_style";
 
+// Ligne `profiles` telle qu'elle revient de Supabase (PROFILE_COLUMNS
+// ci-dessus) — pas encore un type partagé plus largement dans le code
+// (voir le même choix pour Recipe/MealPlanEntry, toujours absents).
+export type ProfileRow = Record<string, unknown>;
+
 // `press_duration` est stocké en base sous forme de texte lisible
 // ("0.75s"), pendant que le reste de l'app raisonne en millisecondes
 // (500/750/1000, voir components/common/pressDuration.js) — conversion
 // isolée ici, au plus près de la colonne qu'elle concerne.
-const PRESS_DURATION_DB_BY_MS = { 500: "0.5s", 750: "0.75s", 1000: "1s" };
-const MS_BY_PRESS_DURATION_DB = { "0.5s": 500, "0.75s": 750, "1s": 1000 };
+const PRESS_DURATION_DB_BY_MS: Record<number, string> = { 500: "0.5s", 750: "0.75s", 1000: "1s" };
+const MS_BY_PRESS_DURATION_DB: Record<string, number> = { "0.5s": 500, "0.75s": 750, "1s": 1000 };
 
-export function pressDurationToDb(ms) {
+export function pressDurationToDb(ms: number): string {
   return PRESS_DURATION_DB_BY_MS[ms] || "0.75s";
 }
-export function pressDurationFromDb(value) {
+export function pressDurationFromDb(value: string): number {
   return MS_BY_PRESS_DURATION_DB[value] || 750;
 }
 
 /* --- Repli hors-ligne : dernier profil connu, en localStorage --------- */
 const PROFILE_CACHE_KEY = "grimoire_profile_cache";
 
-export function getCachedProfile() {
+export function getCachedProfile(): ProfileRow | null {
   try {
     const raw = localStorage.getItem(PROFILE_CACHE_KEY);
     return raw ? JSON.parse(raw) : null;
@@ -45,7 +50,7 @@ export function getCachedProfile() {
   }
 }
 
-function setCachedProfile(profile) {
+function setCachedProfile(profile: ProfileRow): void {
   try {
     if (profile) localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(profile));
   } catch {
@@ -53,7 +58,7 @@ function setCachedProfile(profile) {
   }
 }
 
-export async function getProfile(userId) {
+export async function getProfile(userId: string | null | undefined): Promise<ProfileRow | null> {
   if (!userId) return null;
   try {
     const rows = await fetchTable("profiles", `select=${PROFILE_COLUMNS}&id=eq.${encodeURIComponent(userId)}`);
@@ -70,7 +75,22 @@ export async function getProfile(userId) {
 // PostgREST : ça nous permet de rester sur les mêmes petites fonctions
 // insertRow/updateRow déjà utilisées partout ailleurs (recettes, listes de
 // courses...), avec leur repli file hors-ligne intégré.
-export async function saveProfile(userId, {
+export interface SaveProfileOptions {
+  displayName?: string;
+  avatarUrl?: string;
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+  birthDate?: string;
+  theme?: string;
+  pressDuration?: number;
+  showNutriscore?: boolean;
+  textSize?: string;
+  heroTreatment?: string;
+  iconStyle?: string;
+}
+
+export async function saveProfile(userId: string, {
   displayName,
   avatarUrl,
   firstName,
@@ -83,8 +103,8 @@ export async function saveProfile(userId, {
   textSize,
   heroTreatment,
   iconStyle,
-} = {}) {
-  const patch = {};
+}: SaveProfileOptions = {}) {
+  const patch: Record<string, unknown> = {};
   if (displayName !== undefined) patch.display_name = displayName;
   if (avatarUrl !== undefined) patch.avatar_url = avatarUrl;
   if (firstName !== undefined) patch.first_name = firstName;
@@ -126,7 +146,7 @@ export async function saveProfile(userId, {
 // recettes, juste une résolution plus petite pour un avatar) puis envoie
 // vers le bucket `avatars`, toujours au même chemin par utilisateur
 // (upsert: true) pour ne jamais accumuler d'anciens avatars orphelins.
-export async function uploadAvatar(file, userId) {
+export async function uploadAvatar(file: File, userId: string | null | undefined): Promise<string> {
   const client = getSupabaseClient();
   if (!client) throw new Error("Supabase non configuré — upload d'avatar impossible.");
   if (!userId) throw new Error("Utilisateur inconnu.");

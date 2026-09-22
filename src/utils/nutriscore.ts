@@ -1,4 +1,6 @@
 import { normalize } from "./helpers";
+import type { NormalizedIngredient, Ingredient } from "./ingredients";
+import type { NutriscoreGrade } from "./nutriscoreClient";
 
 /* ------------------------------------------------------------------ */
 /*  NUTRI-SCORE — HEURISTIQUE LOCALE (client)                          */
@@ -43,7 +45,7 @@ const PIECE_WEIGHTS = [
 ];
 const DEFAULT_PIECE_GRAMS = 60;
 
-function estimatePieceWeight(name) {
+function estimatePieceWeight(name: string): number {
   const found = PIECE_WEIGHTS.find((p) => p.test.test(name));
   return found ? found.grams : DEFAULT_PIECE_GRAMS;
 }
@@ -52,7 +54,7 @@ function estimatePieceWeight(name) {
 // dans une fiche saisie à la main) en grammes approximatifs, pour pouvoir
 // pondérer chaque ingrédient par son poids réel dans la recette plutôt
 // que de le compter comme une simple occurrence.
-function estimateGrams(ing) {
+function estimateGrams(ing: Ingredient): number {
   const qty = Number(ing.qty) || 0;
   if (qty <= 0) return 0;
   const u = normalize(ing.unit || "");
@@ -101,16 +103,16 @@ const NUTRI_CATEGORIES = [
 // crème, quelle que soit la source (en ligne ou locale) du calcul.
 const RICH_DESSERT_MARKERS = /beurre|crème|creme|sucre|miel|chocolat|caramel|mascarpone|confiture|p[aâ]te à tartiner|nutella|lait concentré|sirop|cr[eè]me fra[iî]che/i;
 
-function isDessertCategory(category) {
+function isDessertCategory(category: string | null | undefined): boolean {
   return normalize(category || "").startsWith("sucr");
 }
 
-function localImpactFor(ing) {
+function localImpactFor(ing: Ingredient): { impact: number; label: string } | null {
   const match = NUTRI_CATEGORIES.find((c) => c.test.test(ing.name));
   return match ? { impact: match.impact, label: match.label } : null;
 }
 
-function scoreToGradeLocal(score) {
+function scoreToGradeLocal(score: number): NutriscoreGrade {
   if (score >= 10) return "A";
   if (score >= 3) return "B";
   if (score >= -4) return "C";
@@ -118,7 +120,7 @@ function scoreToGradeLocal(score) {
   return "E";
 }
 
-function computeLocalGrade(items, grams) {
+function computeLocalGrade(items: Ingredient[], grams: number[]): NutriscoreGrade {
   const totalGrams = grams.reduce((a, b) => a + b, 0);
   let score = 0;
   const positiveKinds = new Set();
@@ -142,7 +144,7 @@ function computeLocalGrade(items, grams) {
   return scoreToGradeLocal(score);
 }
 
-function applyDessertSafetyNet(grade, items, category) {
+function applyDessertSafetyNet(grade: NutriscoreGrade, items: Ingredient[], category: string | null | undefined): NutriscoreGrade {
   if (!isDessertCategory(category)) return grade;
   if (grade !== "A" && grade !== "B") return grade;
   const hasRichMarker = items.some((ing) => RICH_DESSERT_MARKERS.test(ing.name));
@@ -158,9 +160,14 @@ function applyDessertSafetyNet(grade, items, category) {
 // (création hors-ligne, timeout), et comme valeur par défaut pour toute
 // recette qui n'a pas encore de nutriscore_grade stocké en base (recettes
 // de démo, recettes créées avant l'introduction de cette colonne).
-export function estimateNutriscoreLocal(ingredients = [], category) {
+export function estimateNutriscoreLocal(
+  ingredients: NormalizedIngredient[] = [],
+  category?: string
+): NutriscoreGrade {
   try {
-    const items = (ingredients || []).filter((ing) => ing && !ing.isSection && ing.name);
+    const items = (ingredients || []).filter(
+      (ing): ing is Ingredient => Boolean(ing) && !("isSection" in ing) && Boolean((ing as Ingredient).name)
+    );
     if (!items.length) return "C";
     const grams = items.map(estimateGrams);
     const grade = computeLocalGrade(items, grams);
@@ -174,4 +181,4 @@ export function estimateNutriscoreLocal(ingredients = [], category) {
 /*  COULEURS NUTRI-SCORE                                               */
 /* ------------------------------------------------------------------ */
 
-export const NUTRI_COLORS = { A: "#2E7D32", B: "#8BA33F", C: "#C9A227", D: "#D4771C", E: "#B33A2E" };
+export const NUTRI_COLORS: Record<NutriscoreGrade, string> = { A: "#2E7D32", B: "#8BA33F", C: "#C9A227", D: "#D4771C", E: "#B33A2E" };

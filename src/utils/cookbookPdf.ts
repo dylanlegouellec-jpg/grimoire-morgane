@@ -1,4 +1,16 @@
 import { marginMm, pageDimensionsMm } from "../constants/cookbook";
+import type { jsPDF } from "jspdf";
+import type Html2Canvas from "html2canvas";
+
+// `constants/cookbook.js` reste en .js pour l'instant — la forme exacte de
+// la config (valeurs possibles de format/orientation/margin) y est déjà
+// validée par PAGE_DIMENSIONS_MM/PAGE_MARGINS, pas redupliquée ici en
+// littéraux stricts pour éviter que les deux dérivent l'un de l'autre.
+export interface CookbookConfig {
+  format: string;
+  orientation: string;
+  margin: string;
+}
 
 /* ------------------------------------------------------------------ */
 /*  LIVRE DE CUISINE — génération d'un vrai fichier .pdf                 */
@@ -35,7 +47,7 @@ const SCALE = 2;
 // l'image fait disparaître cette bordure blanche, sans coudre de bord
 // visible entre marge et contenu (même couleur des deux côtés).
 const PAGE_BACKGROUND_HEX = "#f6ecd2";
-const PAGE_BACKGROUND_RGB = [0xf6, 0xec, 0xd2];
+const PAGE_BACKGROUND_RGB: [number, number, number] = [0xf6, 0xec, 0xd2];
 
 // Jamais du contenu réel — quelques px d'arrondi (html2canvas capture la
 // taille réellement mise en page par le navigateur, arrondie au pixel
@@ -62,7 +74,7 @@ const ROUNDING_TOLERANCE_PX = 4;
 // exactement le problème signalé.
 const ATOMIC_SELECTOR = "li, h3.cookbook-section-title, h2.cookbook-page-title, .cookbook-recipe-badges, .cookbook-recipe-group";
 
-function pageHeightPxFor(elementWidthPx, config) {
+function pageHeightPxFor(elementWidthPx: number, config: CookbookConfig): number {
   const pageMm = pageDimensionsMm(config);
   const m = marginMm(config.margin);
   const usableWidthMm = pageMm.width - m * 2;
@@ -79,7 +91,7 @@ function pageHeightPxFor(elementWidthPx, config) {
 // AUCUNE rasterisation nécessaire : utilisée aussi bien pour compter les
 // pages à l'avance (computeRecipeStartPages, table des matières) que pour
 // découper l'image capturée ensuite (addElementAsPdfPages).
-export function computeBreakpoints(element, pageHeightPx) {
+export function computeBreakpoints(element: Element, pageHeightPx: number): number[] {
   const rect = element.getBoundingClientRect();
   const totalHeight = rect.height;
 
@@ -118,7 +130,7 @@ export function computeBreakpoints(element, pageHeightPx) {
 // à calculer à l'avance les numéros de page de la table des matières (voir
 // computeRecipeStartPages ci-dessous), bien avant que la génération réelle
 // ne rastérise quoi que ce soit.
-function countPagesFor(element, config) {
+function countPagesFor(element: Element, config: CookbookConfig): number {
   const widthPx = element.getBoundingClientRect().width;
   const pageHeightPx = pageHeightPxFor(widthPx, config);
   return Math.max(1, computeBreakpoints(element, pageHeightPx).length - 1);
@@ -130,7 +142,7 @@ function countPagesFor(element, config) {
 // exactement ce que rend CookbookDocument.jsx). `containerEl` doit déjà
 // contenir ce DOM réel (peu importe que la table des matières affiche
 // encore ou non des numéros : leur ajout ne change pas sa hauteur).
-export function computeRecipeStartPages(containerEl, config, recipeCount) {
+export function computeRecipeStartPages(containerEl: Element, config: CookbookConfig, recipeCount: number): number[] {
   const pages = Array.from(containerEl.querySelectorAll(".cookbook-page"));
   const recipePages = recipeCount > 0 ? pages.slice(pages.length - recipeCount) : [];
   const headPages = recipeCount > 0 ? pages.slice(0, pages.length - recipeCount) : pages;
@@ -138,7 +150,7 @@ export function computeRecipeStartPages(containerEl, config, recipeCount) {
   let page = 1;
   headPages.forEach((p) => { page += countPagesFor(p, config); });
 
-  const starts = [];
+  const starts: number[] = [];
   recipePages.forEach((p) => {
     starts.push(page);
     page += countPagesFor(p, config);
@@ -150,7 +162,13 @@ export function computeRecipeStartPages(containerEl, config, recipeCount) {
 // d'ingrédients) peut être plus haute qu'une page PDF physique : on la
 // découpe alors selon les points de coupure calculés ci-dessus (jamais au
 // milieu d'un <li>/titre), chaque tranche posée sur sa propre page PDF.
-async function addElementAsPdfPages(pdf, html2canvas, element, config, { marginMmValue, isFirstPageOfDoc }) {
+async function addElementAsPdfPages(
+  pdf: jsPDF,
+  html2canvas: typeof Html2Canvas,
+  element: HTMLElement,
+  config: CookbookConfig,
+  { marginMmValue, isFirstPageOfDoc }: { marginMmValue: number; isFirstPageOfDoc: boolean }
+): Promise<void> {
   const widthPxCss = element.getBoundingClientRect().width;
   const pageHeightPxCss = pageHeightPxFor(widthPxCss, config);
   const breakpointsCss = computeBreakpoints(element, pageHeightPxCss);
@@ -176,8 +194,10 @@ async function addElementAsPdfPages(pdf, html2canvas, element, config, { marginM
     const sliceCanvas = document.createElement("canvas");
     sliceCanvas.width = canvas.width;
     sliceCanvas.height = sliceHeightPx;
-    sliceCanvas
-      .getContext("2d")
+    // Un <canvas> tout juste créé fournit toujours un contexte "2d" —
+    // jamais null en pratique (aucune raison connue de navigateur de le
+    // refuser sur ce type simple, contrairement à "webgl" par exemple).
+    (sliceCanvas.getContext("2d") as CanvasRenderingContext2D)
       .drawImage(canvas, 0, sliceTopPx, canvas.width, sliceHeightPx, 0, 0, canvas.width, sliceHeightPx);
 
     if (!(isFirstPageOfDoc && firstSlice)) pdf.addPage();
@@ -201,7 +221,7 @@ async function addElementAsPdfPages(pdf, html2canvas, element, config, { marginM
 // docRef) — DOIT être réellement mis en page (pas display:none) au
 // moment de l'appel, html2canvas ne peut pas rasteriser un élément que
 // le navigateur n'a jamais mis en page.
-export async function generateCookbookPdf(containerEl, config) {
+export async function generateCookbookPdf(containerEl: HTMLElement, config: CookbookConfig): Promise<Blob> {
   const [{ jsPDF }, { default: html2canvas }] = await Promise.all([import("jspdf"), import("html2canvas")]);
 
   // Attend que les polices web (Cinzel, EB Garamond...) soient chargées :
@@ -219,7 +239,7 @@ export async function generateCookbookPdf(containerEl, config) {
   });
   const marginMmValue = marginMm(config.margin);
 
-  const pages = Array.from(containerEl.querySelectorAll(".cookbook-page"));
+  const pages = Array.from(containerEl.querySelectorAll<HTMLElement>(".cookbook-page"));
   for (let i = 0; i < pages.length; i += 1) {
     // Séquentiel, jamais Promise.all : html2canvas doit rasteriser une page
     // à la fois (partage un même contexte de rendu interne), et jsPDF.addPage()
