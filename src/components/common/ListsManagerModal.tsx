@@ -7,6 +7,7 @@ import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motio
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
+import type { ShoppingList } from "../../hooks/useShoppingLists";
 
 // `scope` optionnel : quand fourni (voir AppShell.jsx, listes de courses),
 // `lists` n'est déjà qu'un sous-ensemble filtré par portée (household/
@@ -14,19 +15,30 @@ import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 // soit sans ambiguïté quelle portée on est en train de gérer. Omis, le
 // modal se comporte comme avant (titre générique, ex. gestionnaire de
 // recettes s'il en existait un autre usage).
-const SCOPE_TITLES = {
+const SCOPE_TITLES: Record<string, string> = {
   household: "Listes du foyer",
   personal: "Mes listes personnelles",
 };
 
-export default function ListsManagerModal({ lists, activeListId, scope, onOpen, onCreate, onRename, onDelete, onClose }) {
+interface ListsManagerModalProps {
+  lists: ShoppingList[];
+  activeListId: string | null;
+  scope?: string;
+  onOpen: (id: string) => void;
+  onCreate: () => void;
+  onRename: (id: string | null, name: string) => void;
+  onDelete: (id: string) => void;
+  onClose: () => void;
+}
+
+export default function ListsManagerModal({ lists, activeListId, scope, onOpen, onCreate, onRename, onDelete, onClose }: ListsManagerModalProps) {
   useBodyScrollLock(true);
-  const modalRef = useFocusTrap(onClose);
+  const modalRef = useFocusTrap<HTMLDivElement>(onClose);
   const sheet = useDismissibleSheet(onClose, { scrollRef: modalRef });
-  const [renamingId, setRenamingId] = useState(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
 
-  const startRename = (list) => {
+  const startRename = (list: ShoppingList) => {
     setRenamingId(list.id);
     setRenameValue(list.name);
   };
@@ -83,11 +95,10 @@ export default function ListsManagerModal({ lists, activeListId, scope, onOpen, 
             ))}
           </div>
         )}
-        <Seal tone="gold" onClick={() => { onCreate(); onClose(); }} style={{ marginTop: 16 }}>
+        <Seal tone="gold" onClick={() => { onCreate(); onClose(); }}>
           <Plus size={16} /> Nouvelle liste
         </Seal>
       </motion.div>
     </motion.div>
   );
 }
-

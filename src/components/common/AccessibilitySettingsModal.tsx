@@ -14,8 +14,15 @@ import { TEXT_SIZE_OPTIONS } from "./textSize";
 // RecipeForm, on ne change pas leur forme pour ne pas casser cet autre
 // consommateur. Ici, on ne garde que la valeur et on retraduit le libellé
 // via ces deux petites tables clé technique -> clé de traduction.
-const PRESS_DURATION_LABEL_KEYS = { 500: "settings.pressShort", 750: "settings.pressStandard", 1000: "settings.pressLong" };
-const TEXT_SIZE_LABEL_KEYS = { normal: "settings.textSizeNormal", large: "settings.textSizeLarge" };
+const PRESS_DURATION_LABEL_KEYS: Record<number, string> = { 500: "settings.pressShort", 750: "settings.pressStandard", 1000: "settings.pressLong" };
+const TEXT_SIZE_LABEL_KEYS: Record<string, string> = { normal: "settings.textSizeNormal", large: "settings.textSizeLarge" };
+
+interface AccessibilitySettingsModalProps {
+  pressDuration: number;
+  onSetPressDuration: (value: number) => void;
+  textSize: string;
+  onSetTextSize: (value: string) => void;
+}
 
 /* ------------------------------------------------------------------ */
 /*  SOUS-VUE "ACCESSIBILITÉ" — contenu seul, PAS de conteneur modal        */
@@ -31,16 +38,16 @@ export default function AccessibilitySettingsModal({
   onSetPressDuration,
   textSize,
   onSetTextSize,
-}) {
+}: AccessibilitySettingsModalProps) {
   const { t } = useTranslation();
   const [soundEffects, setSoundEffectsState] = useState(() => getStoredSoundEffects());
-  const setSoundEffects = (value) => {
+  const setSoundEffects = (value: boolean) => {
     storeSoundEffects(value);
     setSoundEffectsState(value);
     if (value) playClickSound();
   };
   const [hapticFeedback, setHapticFeedbackState] = useState(() => getStoredHapticFeedback());
-  const setHapticFeedback = (value) => {
+  const setHapticFeedback = (value: boolean) => {
     // Stocké AVANT le triggerHaptic de confirmation ci-dessous : celui-ci
     // relit ce même réglage (voir utils/haptics.js) — l'appeler avant
     // l'écriture le ferait juger "encore désactivé" et l'avaler en silence.
@@ -57,9 +64,9 @@ export default function AccessibilitySettingsModal({
       <p className="ios-group-title">{t("settings.pressDurationTitle")}</p>
       <div className="ios-group ios-group-padded">
         <SegmentedControl
-          options={PRESS_DURATION_OPTIONS.map(({ value }) => ({ value, label: t(PRESS_DURATION_LABEL_KEYS[value]) }))}
-          value={pressDuration}
-          onChange={onSetPressDuration}
+          options={PRESS_DURATION_OPTIONS.map(({ value }) => ({ value: String(value), label: t(PRESS_DURATION_LABEL_KEYS[value]) }))}
+          value={String(pressDuration)}
+          onChange={(v) => onSetPressDuration(Number(v))}
           ariaLabel={t("settings.pressDurationTitle")}
         />
       </div>

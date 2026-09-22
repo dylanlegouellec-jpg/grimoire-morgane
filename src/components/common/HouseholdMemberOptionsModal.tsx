@@ -11,6 +11,20 @@ import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
 
+interface HouseholdMemberLike {
+  role: string;
+  display_name?: string;
+  email?: string;
+  user_id: string;
+}
+
+interface HouseholdMemberOptionsModalProps {
+  member: HouseholdMemberLike;
+  householdId: string;
+  onClose: () => void;
+  onChanged: () => void;
+}
+
 /* ------------------------------------------------------------------ */
 /*  OPTIONS D'UN MEMBRE DU FOYER (déclenché par appui long, admins        */
 /*  seulement — voir HouseholdManagerModal.jsx) — changer son rôle ou le   */
@@ -20,10 +34,10 @@ import Seal from "./Seal";
 /*  refonte SQL, change_household_member_role / remove_household_member) : */
 /*  l'erreur renvoyée s'affiche simplement ici, jamais devinée côté client. */
 /* ------------------------------------------------------------------ */
-export default function HouseholdMemberOptionsModal({ member, householdId, onClose, onChanged }) {
+export default function HouseholdMemberOptionsModal({ member, householdId, onClose, onChanged }: HouseholdMemberOptionsModalProps) {
   const { t } = useTranslation();
   useBodyScrollLock(true);
-  const modalRef = useFocusTrap(onClose);
+  const modalRef = useFocusTrap<HTMLDivElement>(onClose);
   const sheet = useDismissibleSheet(onClose, { scrollRef: modalRef });
   const [busy, setBusy] = useState(false);
   const [confirmingRemove, setConfirmingRemove] = useState(false);
@@ -42,7 +56,7 @@ export default function HouseholdMemberOptionsModal({ member, householdId, onClo
       onChanged();
       onClose();
     } catch (err) {
-      setError((err && err.message) || t("household.requestActionFailedToast"));
+      setError((err instanceof Error && err.message) || t("household.requestActionFailedToast"));
       setBusy(false);
     }
   };
@@ -56,7 +70,7 @@ export default function HouseholdMemberOptionsModal({ member, householdId, onClo
       onChanged();
       onClose();
     } catch (err) {
-      setError((err && err.message) || t("household.requestActionFailedToast"));
+      setError((err instanceof Error && err.message) || t("household.requestActionFailedToast"));
       setBusy(false);
     }
   };
