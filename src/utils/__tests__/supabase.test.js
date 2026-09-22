@@ -96,7 +96,7 @@ describe("flushOfflineQueue", () => {
 
     const result = await flushOfflineQueue();
 
-    expect(result).toEqual({ flushed: 1, dropped: 0 });
+    expect(result).toEqual({ flushed: 1, dropped: 0, conflicts: [] });
     expect(getOfflineQueue()).toHaveLength(0);
   });
 
@@ -109,7 +109,7 @@ describe("flushOfflineQueue", () => {
       lastResult = await flushOfflineQueue();
     }
 
-    expect(lastResult).toEqual({ flushed: 0, dropped: 1 });
+    expect(lastResult).toEqual({ flushed: 0, dropped: 1, conflicts: [] });
     expect(getOfflineQueue()).toHaveLength(0);
   });
 
@@ -140,7 +140,78 @@ describe("flushOfflineQueue", () => {
     resolveFetch(jsonResponse({ status: 201, body: [{ id: "r1" }] }));
     const [first, second] = await Promise.all([firstCall, secondCall]);
 
-    expect(second).toEqual({ flushed: 0, dropped: 0 });
-    expect(first).toEqual({ flushed: 1, dropped: 0 });
+    expect(second).toEqual({ flushed: 0, dropped: 0, conflicts: [] });
+    expect(first).toEqual({ flushed: 1, dropped: 0, conflicts: [] });
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/*  CONFLITS app_state — pantry/basics/meal_plan sont un JSON complet     */
+/*  remplacé en bloc à chaque PATCH, jamais fusionné : rejouer une action  */
+/*  hors-ligne sans vérifier que le champ visé n'a pas changé côté serveur */
+/*  pendant la coupure écraserait silencieusement la modification faite    */
+/*  ailleurs entre-temps (audit "Offline-First & Synchronisation", point   */
+/*  1). `baseline` (voir hooks/useOfflineSync.js) porte la valeur que ce   */
+/*  client croyait être sur le serveur juste avant sa propre modification. */
+/* ------------------------------------------------------------------ */
+describe("flushOfflineQueue — conflits app_state", () => {
+  it("rejoue normalement quand la baseline correspond encore à la valeur serveur (pas de conflit)", async () => {
+    enqueueOfflineAction({
+      table: "app_state",
+      type: "app_state",
+      recordId: "h1",
+      payload: { meal_plan: [{ id: "m2" }] },
+      baseline: { meal_plan: [{ id: "m1" }] },
+    });
+    const fetchMock = vi
+      .fn()
+      // 1) vérification du conflit (loadAppState) : le serveur porte encore
+      //    exactement la baseline connue de ce client.
+      .mockResolvedValueOnce(jsonResponse({ body: [{ household_id: "h1", meal_plan: [{ id: "m1" }] }] }))
+      // 2) le PATCH réel, une fois l'absence de conflit confirmée.
+      .mockResolvedValueOnce(jsonResponse({ body: [{ household_id: "h1" }] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await flushOfflineQueue();
+
+    expect(result).toEqual({ flushed: 1, dropped: 0, conflicts: [] });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(getOfflineQueue()).toHaveLength(0);
+  });
+
+  it("abandonne l'action et le signale si un autre appareil a modifié le même champ pendant la coupure", async () => {
+    enqueueOfflineAction({
+      table: "app_state",
+      type: "app_state",
+      recordId: "h1",
+      payload: { meal_plan: [{ id: "m2" }] },
+      baseline: { meal_plan: [{ id: "m1" }] },
+    });
+    // Le serveur porte déjà une AUTRE valeur que la baseline connue de ce
+    // client — quelqu'un (ou un autre appareil) a modifié meal_plan
+    // pendant que celui-ci était hors-ligne.
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ body: [{ household_id: "h1", meal_plan: [{ id: "m3-autre-appareil" }] }] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await flushOfflineQueue();
+
+    expect(result).toEqual({ flushed: 0, dropped: 0, conflicts: [{ table: "app_state", keys: ["meal_plan"] }] });
+    // Un seul appel réseau : la vérification de conflit — jamais le PATCH
+    // qui aurait écrasé la modification de l'autre appareil.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(getOfflineQueue()).toHaveLength(0);
+  });
+
+  it("rejoue sans vérification une action déjà en file avant ce correctif (aucune baseline)", async () => {
+    enqueueOfflineAction({ table: "app_state", type: "app_state", recordId: "h1", payload: { basics: ["sel"] } });
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse({ body: [{ household_id: "h1" }] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await flushOfflineQueue();
+
+    expect(result).toEqual({ flushed: 1, dropped: 0, conflicts: [] });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

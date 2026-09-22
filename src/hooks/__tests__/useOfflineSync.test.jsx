@@ -159,7 +159,10 @@ describe("useOfflineSync — course écho Realtime vs. sauvegarde locale en atte
     // nécessaire pour que les mises à jour de rendu soient prises en compte.
     await vi.advanceTimersByTimeAsync(500);
 
-    expect(saveAppStateMock).toHaveBeenLastCalledWith("h1", { pantry: ["ail", "carottes"] });
+    // Troisième argument : la baseline (voir parseBaseline/findAppStateConflicts,
+    // ajoutés pour détecter un conflit au rejeu hors-ligne) — ici `[]`, la
+    // valeur chargée au démarrage par loadAppState (mocké plus haut).
+    expect(saveAppStateMock).toHaveBeenLastCalledWith("h1", { pantry: ["ail", "carottes"] }, { pantry: [] });
     expect(screen.getByTestId("pantry")).toHaveTextContent(JSON.stringify(["ail", "carottes"]));
 
     // Une fois la modification locale confirmée (plus rien en attente), un
