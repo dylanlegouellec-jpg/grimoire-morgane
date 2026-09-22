@@ -15,8 +15,10 @@ import {
 } from "../utils/auth";
 import { loadLocalCache } from "../utils/localCache";
 import { getCachedHouseholds, setCachedHouseholds, setCachedMembers } from "../utils/householdCache";
+import type { Session } from "@supabase/supabase-js";
+import type { Household } from "../utils/auth";
 
-function getStoredActiveHouseholdId() {
+function getStoredActiveHouseholdId(): string | null {
   // Écrit en continu par useOfflineSync (à chaque sauvegarde du cache
   // local) — lu ici une seule fois, au montage, comme repli hors-ligne :
   // voir la note dans useOfflineSync.js.
@@ -44,11 +46,11 @@ function getStoredActiveHouseholdId() {
 /*  disponible localement.                                               */
 /* ------------------------------------------------------------------ */
 export default function useSupabaseAuth() {
-  const [session, setSession] = useState(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [households, setHouseholds] = useState(() => getCachedHouseholds());
-  const [householdId, setHouseholdIdState] = useState(() => getStoredActiveHouseholdId());
+  const [households, setHouseholds] = useState<Household[]>(() => getCachedHouseholds() as Household[]);
+  const [householdId, setHouseholdIdState] = useState<string | null>(() => getStoredActiveHouseholdId());
   const [householdLoading, setHouseholdLoading] = useState(true);
 
   // Le choix explicite de l'utilisateur (bascule manuelle) prime sur
@@ -66,7 +68,7 @@ export default function useSupabaseAuth() {
       // sélecteur de foyers et leurs noms restent utilisables dans les
       // Réglages même hors-ligne, plutôt que vides/génériques.
       setCachedHouseholds(list);
-      let resolvedHouseholdId = null;
+      let resolvedHouseholdId: string | null = null;
       setHouseholdIdState((current) => {
         const preferred = manualChoiceRef.current || current;
         const stillValid = preferred && list.some((h) => h.id === preferred);
@@ -135,12 +137,12 @@ export default function useSupabaseAuth() {
     };
   }, [resolveHouseholds]);
 
-  const switchHousehold = useCallback((id) => {
+  const switchHousehold = useCallback((id: string) => {
     manualChoiceRef.current = id;
     setHouseholdIdState(id);
   }, []);
 
-  const createHousehold = useCallback(async (name) => {
+  const createHousehold = useCallback(async (name: string) => {
     const newId = await createHouseholdApi(name);
     await resolveHouseholds();
     manualChoiceRef.current = newId;
@@ -148,7 +150,7 @@ export default function useSupabaseAuth() {
     return newId;
   }, [resolveHouseholds]);
 
-  const renameHousehold = useCallback(async (id, name) => {
+  const renameHousehold = useCallback(async (id: string, name: string) => {
     await renameHouseholdApi(id, name);
     setHouseholds((prev) => {
       const next = prev.map((h) => (h.id === id ? { ...h, name: name.trim() } : h));
@@ -157,7 +159,7 @@ export default function useSupabaseAuth() {
     });
   }, []);
 
-  const deleteHousehold = useCallback(async (id) => {
+  const deleteHousehold = useCallback(async (id: string) => {
     await deleteHouseholdApi(id);
     await resolveHouseholds();
     // Si le foyer supprimé était le foyer actif, resolveHouseholds()
@@ -172,15 +174,15 @@ export default function useSupabaseAuth() {
   // ce foyer ne doit apparaître nulle part dans la liste ni devenir
   // sélectionnable (voir la refonte SQL, get_household_members ne
   // renvoie que les membres "approved").
-  const requestJoinHousehold = useCallback(async (id) => {
+  const requestJoinHousehold = useCallback(async (id: string) => {
     await requestJoinHouseholdApi(id);
   }, []);
 
-  const approveHouseholdMember = useCallback(async (householdId, userId) => {
+  const approveHouseholdMember = useCallback(async (householdId: string, userId: string) => {
     await approveHouseholdMemberApi(householdId, userId);
   }, []);
 
-  const rejectHouseholdMember = useCallback(async (householdId, userId) => {
+  const rejectHouseholdMember = useCallback(async (householdId: string, userId: string) => {
     await rejectHouseholdMemberApi(householdId, userId);
   }, []);
 

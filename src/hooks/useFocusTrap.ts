@@ -17,7 +17,7 @@ const FOCUSABLE_SELECTOR =
 // (forcément le nôtre : rien d'autre n'a pu s'intercaler entre les deux,
 // JS étant single-threadé) — les popstate suivants, eux, sont bien de
 // vrais retours.
-let suppressNextPopstate = false;
+let suppressNextPopstate: boolean = false;
 
 // Pile partagée des modales actuellement montées (leur id, dans l'ordre
 // d'ouverture) : popstate est un événement UNIQUE reçu par TOUTES à la
@@ -28,7 +28,7 @@ let suppressNextPopstate = false;
 // l'ignorent, laissant la plus récente se refermer normalement (et donc
 // se retirer de cette pile) avant qu'un retour suivant n'atteigne la
 // suivante.
-const modalStack = [];
+const modalStack: number[] = [];
 let nextModalId = 1;
 
 /* ------------------------------------------------------------------ */
@@ -46,8 +46,8 @@ let nextModalId = 1;
 /*  Usage : const modalRef = useFocusTrap(onClose);                        */
 /*          <div ref={modalRef} role="dialog" aria-modal="true" ...>        */
 /* ------------------------------------------------------------------ */
-export default function useFocusTrap(onClose) {
-  const containerRef = useRef(null);
+export default function useFocusTrap(onClose?: () => void) {
+  const containerRef = useRef<HTMLElement | null>(null);
   // Toujours la dernière fonction reçue, sans jamais faire redémarrer
   // l'effet ci-dessous (deps `[]` volontaire) : un `onClose` recréé à
   // chaque rendu du parent (cas courant, fonction fléchée inline) ne doit
@@ -59,7 +59,7 @@ export default function useFocusTrap(onClose) {
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return undefined;
-    const previouslyFocused = document.activeElement;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
 
     // Empile une entrée d'historique par modale ouverte : sans ça, le
     // bouton/geste "retour" Android (qui n'a rien à voir avec le clavier —
@@ -102,8 +102,8 @@ export default function useFocusTrap(onClose) {
     };
     window.addEventListener("popstate", handlePopState);
 
-    const getFocusable = () =>
-      Array.from(container.querySelectorAll(FOCUSABLE_SELECTOR)).filter((el) => el.offsetParent !== null);
+    const getFocusable = (): HTMLElement[] =>
+      Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter((el) => el.offsetParent !== null);
 
     // Ne vole pas le focus s'il est déjà posé quelque part dans la modale —
     // certaines (ex. HouseholdOptionsModal) posent un autoFocus sur un
@@ -114,7 +114,7 @@ export default function useFocusTrap(onClose) {
       (first || container).focus({ preventScroll: true });
     }
 
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
         if (onCloseRef.current) onCloseRef.current();

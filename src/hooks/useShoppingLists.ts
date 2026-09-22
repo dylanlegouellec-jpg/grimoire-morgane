@@ -3,6 +3,33 @@ import { SUPABASE_READY } from "../constants";
 import { nextId, guessAisle, ingredientKey, isShoppingListInScope, triggerHaptic } from "../utils/helpers";
 import { insertRow, updateRow, deleteRow, mapShoppingListToRow } from "../utils/supabase";
 import { getStoredShoppingScope, storeShoppingScope, getStoredActiveShoppingListId, storeActiveShoppingListId } from "../utils/localSettings";
+import type { ViewScope } from "../utils/localSettings";
+import type { Recipe } from "./useRecipes";
+
+export interface ShoppingItem {
+  id: string;
+  name: string;
+  qty: number;
+  unit: string;
+  checked: boolean;
+  aisle: string;
+}
+
+export interface ShoppingList {
+  id: string;
+  name: string;
+  items: ShoppingItem[];
+  scope: ViewScope;
+  userId: string | null;
+}
+
+interface UseShoppingListsParams {
+  householdId?: string | null;
+  userId?: string | null;
+  initialLists?: ShoppingList[];
+  initialActiveListId?: string | null;
+  showToast: (msg: string) => void;
+}
 
 /* ------------------------------------------------------------------ */
 /*  LISTES DE COURSES — état + actions                                 */
@@ -12,10 +39,10 @@ import { getStoredShoppingScope, storeShoppingScope, getStoredActiveShoppingList
 /*  à l'appareil (voir utils/localSettings.js), mais filtre ici un vrai    */
 /*  champ de données, contrairement au plan de repas.                      */
 /* ------------------------------------------------------------------ */
-export default function useShoppingLists({ householdId, userId, initialLists = [], initialActiveListId = null, showToast }) {
-  const [shoppingLists, setShoppingLists] = useState(initialLists);
-  const [activeListId, setActiveListId] = useState(initialActiveListId);
-  const [shoppingScope, setShoppingScopeState] = useState(() => getStoredShoppingScope());
+export default function useShoppingLists({ householdId, userId, initialLists = [], initialActiveListId = null, showToast }: UseShoppingListsParams) {
+  const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>(initialLists);
+  const [activeListId, setActiveListId] = useState<string | null>(initialActiveListId);
+  const [shoppingScope, setShoppingScopeState] = useState<ViewScope>(() => getStoredShoppingScope());
 
   const listsRef = useRef(shoppingLists);
   listsRef.current = shoppingLists;
@@ -26,7 +53,7 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
   const userIdRef = useRef(userId);
   userIdRef.current = userId;
 
-  const isListInScope = useCallback((list, scope) => (
+  const isListInScope = useCallback((list: ShoppingList, scope: ViewScope) => (
     isShoppingListInScope(list, scope, userIdRef.current)
   ), []);
 
@@ -36,7 +63,7 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
   // consultée sur cet appareil (voir getStoredActiveShoppingListId) — pour
   // qu'un aller-retour household -> personal -> household retombe sur la
   // même liste de chaque côté plutôt que sur la première trouvée.
-  const openShoppingList = useCallback((id) => {
+  const openShoppingList = useCallback((id: string | null) => {
     setActiveListId(id);
     storeActiveShoppingListId(shoppingScopeRef.current, id);
   }, []);
@@ -45,8 +72,8 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
   // sur la dernière liste connue de cette portée (mémoire ci-dessus), sinon
   // la première liste existante de cette portée, sinon aucune (l'utilisateur
   // devra en créer une — voir ShoppingView.jsx, état "aucune liste").
-  const setShoppingScope = useCallback((next) => {
-    const scope = next === "personal" ? "personal" : "household";
+  const setShoppingScope = useCallback((next: string) => {
+    const scope: ViewScope = next === "personal" ? "personal" : "household";
     setShoppingScopeState(scope);
     storeShoppingScope(scope);
     const candidates = listsRef.current.filter((l) => isListInScope(l, scope));
@@ -62,7 +89,7 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
   // première liste personnelle directement à "Liste 2" — le compteur
   // comptait les deux portées comme une seule séquence partagée alors
   // qu'elles sont numérotées indépendamment aux yeux de l'utilisateur.
-  const nextListName = useCallback((scope) => {
+  const nextListName = useCallback((scope: ViewScope) => {
     const nums = listsRef.current
       .filter((l) => isListInScope(l, scope))
       .map((l) => {
@@ -90,18 +117,18 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
   // optimiste (état local d'abord, réseau en tâche de fond ensuite). Renvoyer
   // l'id immédiatement aligne cette fonction sur ce même principe déjà
   // appliqué partout ailleurs dans ce hook.
-  const createShoppingList = useCallback((scopeArg, ownerIdArg) => {
-    const scope = (scopeArg || shoppingScopeRef.current) === "personal" ? "personal" : "household";
-    const ownerId = scope === "personal" ? (ownerIdArg || userIdRef.current) : null;
+  const createShoppingList = useCallback((scopeArg?: string, ownerIdArg?: string | null): string => {
+    const scope: ViewScope = (scopeArg || shoppingScopeRef.current) === "personal" ? "personal" : "household";
+    const ownerId = scope === "personal" ? (ownerIdArg || userIdRef.current || null) : null;
     const id = nextId();
     const name = nextListName(scope);
-    const newList = { id, name, items: [], scope, userId: ownerId };
+    const newList: ShoppingList = { id, name, items: [], scope, userId: ownerId };
     setShoppingLists((prev) => [...prev, newList]);
     setActiveListId(id);
     storeActiveShoppingListId(scope, id);
     triggerHaptic(15);
     if (SUPABASE_READY) {
-      insertRow("shopping_lists", mapShoppingListToRow(newList, householdId)).catch((err) => {
+      insertRow("shopping_lists", mapShoppingListToRow(newList as unknown as Record<string, unknown>, householdId)).catch((err) => {
         console.error(err);
         showToast("Échec de la création de la liste.");
       });
@@ -109,7 +136,7 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
     return id;
   }, [householdId, nextListName, showToast]);
 
-  const renameShoppingList = useCallback(async (id, name) => {
+  const renameShoppingList = useCallback(async (id: string, name: string) => {
     setShoppingLists((prev) => prev.map((l) => (l.id === id ? { ...l, name } : l)));
     if (SUPABASE_READY) {
       try {
@@ -121,7 +148,7 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
     }
   }, [showToast]);
 
-  const deleteShoppingList = useCallback(async (id) => {
+  const deleteShoppingList = useCallback(async (id: string) => {
     setShoppingLists((prev) => prev.filter((l) => l.id !== id));
     setActiveListId((cur) => (cur === id ? null : cur));
     triggerHaptic(30);
@@ -139,7 +166,7 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
   // besoin — c'est le point de passage commun de toutes les actions
   // ci-dessous, ce qui garantit qu'aucune ne peut désynchroniser l'état
   // local de ce qui part vers Supabase.
-  const withActiveList = useCallback((mutateFn) => {
+  const withActiveList = useCallback((mutateFn: (items: ShoppingItem[]) => ShoppingItem[]) => {
     let listId = activeListIdRef.current;
     if (!listId) listId = createShoppingList();
     setShoppingLists((prev) => {
@@ -152,11 +179,11 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
     });
   }, [createShoppingList]);
 
-  const addManualItem = useCallback((name) => {
+  const addManualItem = useCallback((name: string) => {
     return withActiveList((items) => [{ id: nextId(), name, qty: 1, unit: "", checked: false, aisle: guessAisle(name) }, ...items]);
   }, [withActiveList]);
 
-  const toggleShoppingItem = useCallback((id) => {
+  const toggleShoppingItem = useCallback((id: string) => {
     triggerHaptic(12);
     withActiveList((items) => items.map((it) => (it.id === id ? { ...it, checked: !it.checked } : it)));
   }, [withActiveList]);
@@ -164,12 +191,12 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
   // Suppression d'un seul article — geste de swipe gauche sur une ligne
   // (voir ShoppingItemRow.jsx), à distinguer de resetActiveList (vide
   // toute la liste).
-  const deleteShoppingItem = useCallback((id) => {
+  const deleteShoppingItem = useCallback((id: string) => {
     triggerHaptic(20);
     withActiveList((items) => items.filter((it) => it.id !== id));
   }, [withActiveList]);
 
-  const adjustShoppingQty = useCallback((id, delta) => {
+  const adjustShoppingQty = useCallback((id: string, delta: number) => {
     triggerHaptic(10);
     withActiveList((items) => items.map((it) => (it.id === id ? { ...it, qty: Math.max(0, Math.round((it.qty + delta) * 100) / 100) } : it)));
   }, [withActiveList]);
@@ -178,7 +205,7 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
   // passe jamais, la nouvelle feuille de quantité des courses (voir
   // QuantitySheet.jsx) le passe toujours, puisqu'elle laisse aussi choisir
   // l'unité.
-  const setShoppingItemQty = useCallback((id, value, unit) => {
+  const setShoppingItemQty = useCallback((id: string, value: number, unit?: string) => {
     withActiveList((items) => items.map((it) => (
       it.id === id ? { ...it, qty: Math.max(0, value), ...(unit !== undefined ? { unit } : {}) } : it
     )));
@@ -195,7 +222,7 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
   // la semaine) — on résout donc chaque id un par un plutôt que de passer
   // par recipes.filter(), qui ne garderait chaque recette qu'une seule
   // fois quel que soit le nombre de répétitions dans recipeIds.
-  const generateShoppingList = useCallback((recipes, recipeIds) => {
+  const generateShoppingList = useCallback((recipes: Recipe[], recipeIds: string[]) => {
     const recipeById = new Map(recipes.map((r) => [r.id, r]));
     withActiveList((items) => {
       const map = new Map(items.map((it) => [`${ingredientKey(it.name)}__${it.unit}`, { ...it }]));
@@ -203,10 +230,10 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
         const r = recipeById.get(id);
         if (!r) return;
         r.ingredients.forEach((ing) => {
-          if (ing.isSection) return;
+          if ("isSection" in ing) return;
           const key = `${ingredientKey(ing.name)}__${ing.unit}`;
           if (map.has(key)) {
-            map.get(key).qty += Number(ing.qty) || 0;
+            map.get(key)!.qty += Number(ing.qty) || 0;
           } else {
             map.set(key, { id: nextId(), name: ing.name, unit: ing.unit, qty: Number(ing.qty) || 0, checked: false, aisle: guessAisle(ing.name) });
           }
