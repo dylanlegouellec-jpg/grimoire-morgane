@@ -9,6 +9,16 @@ import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import Flourish from "../common/Flourish";
 
+interface MealSectionOptionsModalProps {
+  mealLabel: string;
+  reorderMode: boolean;
+  onToggleReorder: () => void;
+  onClose: () => void;
+  onAddMeal: () => void;
+  onMoveSection: () => void;
+  onDeleteSection: () => void;
+}
+
 /* ------------------------------------------------------------------ */
 /*  MENU D'ACTIONS SUR UN EN-TÊTE DE MOMENT ("DÉJEUNER", "DÎNER"…),       */
 /*  déclenché par l'appui long — voir PlanningMealGroup.jsx. Même            */
@@ -27,9 +37,9 @@ import Flourish from "../common/Flourish";
 /*  MoveMealSectionModal.jsx) pour reclasser toute la section vers un autre               */
 /*  moment de la journée.                                                                  */
 /* ------------------------------------------------------------------ */
-export default function MealSectionOptionsModal({ mealLabel, reorderMode, onToggleReorder, onClose, onAddMeal, onMoveSection, onDeleteSection }) {
+export default function MealSectionOptionsModal({ mealLabel, reorderMode, onToggleReorder, onClose, onAddMeal, onMoveSection, onDeleteSection }: MealSectionOptionsModalProps) {
   const { t } = useTranslation();
-  const modalRef = useFocusTrap(onClose);
+  const modalRef = useFocusTrap<HTMLDivElement>(onClose);
   const sheet = useDismissibleSheet(onClose, { scrollRef: modalRef });
   useBodyScrollLock(true);
 

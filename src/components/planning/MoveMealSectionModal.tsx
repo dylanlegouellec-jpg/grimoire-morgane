@@ -11,6 +11,13 @@ import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import Flourish from "../common/Flourish";
 import CategoryIcon from "../common/CategoryIcon";
 
+interface MoveMealSectionModalProps {
+  currentMealTypeKey: string;
+  sourceLabel?: string;
+  onClose: () => void;
+  onSelect: (key: string) => void;
+}
+
 /* ------------------------------------------------------------------ */
 /*  SÉLECTEUR DE MOMENT — "Changer le moment du repas" d'un en-tête de    */
 /*  moment (voir PlanningMealGroup.jsx/MealSectionOptionsModal.jsx), OU      */
@@ -27,15 +34,15 @@ import CategoryIcon from "../common/CategoryIcon";
 /*  l'affichage (regroupement par type de plat déjà en place, voir                   */
 /*  PlanningView.jsx/groupEntriesByCourse), sans code de fusion dédié ici.             */
 /* ------------------------------------------------------------------ */
-export default function MoveMealSectionModal({ currentMealTypeKey, sourceLabel, onClose, onSelect }) {
+export default function MoveMealSectionModal({ currentMealTypeKey, sourceLabel, onClose, onSelect }: MoveMealSectionModalProps) {
   const { t } = useTranslation();
-  const modalRef = useFocusTrap(onClose);
+  const modalRef = useFocusTrap<HTMLDivElement>(onClose);
   const sheet = useDismissibleSheet(onClose, { scrollRef: modalRef });
   useBodyScrollLock(true);
 
   const choices = MEAL_TYPES.filter((m) => m.key !== currentMealTypeKey);
 
-  const handlePick = (key) => {
+  const handlePick = (key: string) => {
     triggerHaptic(15);
     onSelect(key);
   };

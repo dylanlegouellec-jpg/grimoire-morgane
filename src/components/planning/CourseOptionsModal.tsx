@@ -9,6 +9,16 @@ import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import Flourish from "../common/Flourish";
 
+interface CourseOptionsModalProps {
+  label: string;
+  reorderMode: boolean;
+  onToggleReorder: () => void;
+  onClose: () => void;
+  onAdd: () => void;
+  onMoveToMeal: () => void;
+  onDeleteAll: () => void;
+}
+
 /* ------------------------------------------------------------------ */
 /*  MENU D'ACTIONS SUR UN EN-TÊTE DE SOUS-CATÉGORIE ("Entrées", "Plats"…, */
 /*  déclenché par l'appui long — voir PlanningCourseGroup.jsx) : même       */
@@ -23,9 +33,9 @@ import Flourish from "../common/Flourish";
 /*  restreint à CETTE SEULE sous-catégorie — les autres types de plat du          */
 /*  moment d'origine restent à leur place.                                        */
 /* ------------------------------------------------------------------ */
-export default function CourseOptionsModal({ label, reorderMode, onToggleReorder, onClose, onAdd, onMoveToMeal, onDeleteAll }) {
+export default function CourseOptionsModal({ label, reorderMode, onToggleReorder, onClose, onAdd, onMoveToMeal, onDeleteAll }: CourseOptionsModalProps) {
   const { t } = useTranslation();
-  const modalRef = useFocusTrap(onClose);
+  const modalRef = useFocusTrap<HTMLDivElement>(onClose);
   const sheet = useDismissibleSheet(onClose, { scrollRef: modalRef });
   useBodyScrollLock(true);
 
