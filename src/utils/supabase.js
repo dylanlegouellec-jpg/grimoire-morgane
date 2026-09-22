@@ -352,7 +352,7 @@ const MAX_ACTION_RETRIES = 5;
 let flushInFlight = false;
 
 export async function flushOfflineQueue() {
-  if (flushInFlight) return { flushed: 0, dropped: 0 };
+  if (flushInFlight) return { flushed: 0, dropped: 0, conflicts: [] };
   flushInFlight = true;
   try {
     return await runFlushOfflineQueue();
@@ -361,12 +361,53 @@ export async function flushOfflineQueue() {
   }
 }
 
+// Un seul champ (`app_state.pantry`/`.basics`/`.meal_plan`) est un JSON
+// complet remplacé en bloc à chaque PATCH, jamais fusionné ligne à ligne —
+// si un autre appareil l'a modifié PENDANT que celui-ci était hors-ligne,
+// rejouer notre PATCH écraserait purement et simplement son changement.
+// Renvoie les clés de `action.payload` dont la valeur serveur ACTUELLE ne
+// correspond plus à `action.baseline` (ce que ce client croyait être sur
+// le serveur au moment de la mise en file) — donc les clés réellement en
+// conflit, jamais un faux positif sur un champ que `patch` ne touche même
+// pas (ex. `pantry` modifié ailleurs ne bloque jamais un rejeu qui ne
+// portait que sur `meal_plan`, puisqu'on ne compare QUE les clés de
+// `payload`, pas la ligne entière ni sa colonne `updated_at`).
+async function findAppStateConflicts(householdId, payload, baseline) {
+  if (!baseline) return [];
+  const current = await loadAppState(householdId);
+  if (!current) return [];
+  // Une clé dont la baseline vaut `undefined` (pas encore de valeur connue
+  // avant le tout premier chargement réussi, voir parseBaseline dans
+  // hooks/useOfflineSync.js) n'a rien à comparer — l'ignorer plutôt que de
+  // la compter en conflit systématique face à n'importe quelle valeur
+  // serveur réelle.
+  return Object.keys(payload).filter(
+    (key) => baseline[key] !== undefined && JSON.stringify(current[key]) !== JSON.stringify(baseline[key])
+  );
+}
+
 async function runFlushOfflineQueue() {
   const queue = getOfflineQueue();
   let flushed = 0;
   let dropped = 0;
+  const conflicts = [];
   for (const action of queue) {
     try {
+      if (action.type === "app_state" && action.baseline) {
+        const conflictKeys = await findAppStateConflicts(action.recordId, action.payload, action.baseline);
+        if (conflictKeys.length) {
+          // Abandonnée comme une action définitivement irrécupérable (voir
+          // MAX_ACTION_RETRIES plus bas) : la retenter ne changerait rien,
+          // le conflit ne se résoudra pas tout seul. `conflicts` (distinct
+          // de `dropped`) permet à l'appelant (hooks/useOfflineSync.js) de
+          // prévenir précisément l'utilisateur ET de rafraîchir l'état
+          // depuis le serveur, plutôt que de laisser l'écran affiché ne
+          // plus correspondre à ce qui a réellement été conservé en base.
+          removeFromOfflineQueue(action.id);
+          conflicts.push({ table: action.table, keys: conflictKeys });
+          continue;
+        }
+      }
       if (action.type === "insert") {
         await supabaseRequest(action.table, { method: "POST", body: JSON.stringify([action.payload]) });
       } else if (action.type === "update") {
@@ -393,7 +434,7 @@ async function runFlushOfflineQueue() {
       break;
     }
   }
-  return { flushed, dropped };
+  return { flushed, dropped, conflicts };
 }
 
 export async function loadAppState(householdId) {
@@ -415,10 +456,20 @@ export async function loadAppState(householdId) {
 // Une vraie erreur applicative (RLS, 4xx...) n'est plus avalée non plus :
 // elle remonte à l'appelant (voir hooks/useOfflineSync.js) pour être
 // loguée et signalée à l'utilisateur.
-export async function saveAppState(householdId, patch) {
+// `baseline` (optionnel) : valeur de CHAQUE clé de `patch` telle que ce
+// client la croyait sur le serveur juste avant cette modification (voir
+// lastSyncedPantryRef/lastSyncedBasicsRef/lastSyncedMealPlanRef,
+// hooks/useOfflineSync.js) — sert uniquement si cette écriture finit mise
+// en file hors-ligne (voir runFlushOfflineQueue ci-dessous) : au retour du
+// réseau, comparer ce `baseline` à la valeur RÉELLE alors sur le serveur
+// permet de détecter qu'un autre appareil a modifié ce même champ pendant
+// la coupure, plutôt que d'écraser aveuglément son changement avec le
+// nôtre. Le chemin direct (déjà en ligne) ci-dessous ignore `baseline` :
+// il n'est utile qu'au rejeu, jamais à l'écriture immédiate.
+export async function saveAppState(householdId, patch, baseline) {
   if (!householdId) return;
   return withOfflineFallback(
-    { table: "app_state", type: "app_state", recordId: householdId, payload: patch },
+    { table: "app_state", type: "app_state", recordId: householdId, payload: patch, baseline },
     () => applyAppStatePatch(householdId, patch),
     undefined
   );

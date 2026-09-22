@@ -26,6 +26,22 @@ import { prefetchRecipeImages } from "../utils/imageCache";
 /*  de useRecipes/usePantry/useShoppingLists, qui eux ne connaissent      */
 /*  chacun que leur propre tranche et ses actions CRUD.                  */
 /* ------------------------------------------------------------------ */
+// `lastSyncedXRef.current` est stocké déjà sérialisé (comparaison JSON
+// bon marché à chaque rendu, voir les effets de sauvegarde plus bas) —
+// reparsé seulement ici, au moment de construire une baseline de conflit,
+// jamais dans le chemin chaud. `undefined` avant le tout premier
+// chargement (voir l'effet de chargement initial) : pas de baseline dans
+// ce cas, `saveAppState` traite alors cette écriture comme avant ce
+// correctif (aucune détection de conflit possible sans valeur de départ).
+function parseBaseline(serialized) {
+  if (serialized == null) return undefined;
+  try {
+    return JSON.parse(serialized);
+  } catch {
+    return undefined;
+  }
+}
+
 export default function useOfflineSync({
   authLoading,
   user,
@@ -259,7 +275,13 @@ export default function useOfflineSync({
       // auparavant, faisait croire cette sauvegarde "faite" même quand
       // elle avait échoué en silence, et aucun mécanisme ne la reprenait
       // jamais ensuite (voir utils/supabase.js, saveAppState).
-      saveAppState(householdId, { pantry })
+      // `lastSyncedPantryRef.current` n'est pas encore mis à jour à cet
+      // instant (voir le commentaire juste au-dessus) : il porte encore la
+      // dernière valeur que CE client croit être sur le serveur, exactement
+      // la baseline qu'il faut pour détecter un conflit si cette écriture
+      // finit mise en file hors-ligne (voir findAppStateConflicts,
+      // utils/supabase.js).
+      saveAppState(householdId, { pantry }, { pantry: parseBaseline(lastSyncedPantryRef.current) })
         .then(() => { lastSyncedPantryRef.current = serialized; pantryDirtyRef.current = false; })
         .catch((err) => {
           console.error("Échec de sauvegarde du frigo :", err);
@@ -278,7 +300,7 @@ export default function useOfflineSync({
     basicsDirtyRef.current = true;
     if (basicsSaveTimerRef.current) clearTimeout(basicsSaveTimerRef.current);
     basicsSaveTimerRef.current = setTimeout(() => {
-      saveAppState(householdId, { basics })
+      saveAppState(householdId, { basics }, { basics: parseBaseline(lastSyncedBasicsRef.current) })
         .then(() => { lastSyncedBasicsRef.current = serialized; basicsDirtyRef.current = false; })
         .catch((err) => {
           console.error("Échec de sauvegarde des basiques :", err);
@@ -294,7 +316,7 @@ export default function useOfflineSync({
     mealPlanDirtyRef.current = true;
     if (mealPlanSaveTimerRef.current) clearTimeout(mealPlanSaveTimerRef.current);
     mealPlanSaveTimerRef.current = setTimeout(() => {
-      saveAppState(householdId, { meal_plan: mealPlan })
+      saveAppState(householdId, { meal_plan: mealPlan }, { meal_plan: parseBaseline(lastSyncedMealPlanRef.current) })
         .then(() => { lastSyncedMealPlanRef.current = serialized; mealPlanDirtyRef.current = false; })
         .catch((err) => {
           console.error("Échec de sauvegarde du plan de repas :", err);
@@ -310,7 +332,7 @@ export default function useOfflineSync({
   // la plupart de ces appels ne trouvent donc rien à faire).
   const attemptFlush = useCallback(async () => {
     if (getOfflineQueueSize() === 0) return;
-    const { flushed, dropped } = await flushOfflineQueue();
+    const { flushed, dropped, conflicts } = await flushOfflineQueue();
     // Fait immédiatement disparaître le bandeau "N modification(s) en
     // attente" (voir AppShell.jsx) dès que la file est vide — jamais
     // laissé en l'état tant qu'un signal de reconnexion fiable est arrivé
@@ -319,11 +341,30 @@ export default function useOfflineSync({
     // dans utils/supabase.js : une action qui échoue sans cesse ne peut
     // plus bloquer indéfiniment tout le reste derrière elle).
     setOfflineQueueSize(getOfflineQueueSize());
+    // Un vrai conflit (voir findAppStateConflicts, utils/supabase.js) :
+    // un autre appareil a modifié le MÊME champ pendant que celui-ci était
+    // hors-ligne. La version locale vient d'être abandonnée plutôt que
+    // d'écraser la sienne — l'écran affiche donc encore, à cet instant,
+    // une valeur qui ne correspond plus à ce qui est réellement en base.
+    // Rafraîchir immédiatement depuis le serveur évite de laisser
+    // l'utilisateur continuer à agir sur une donnée fantôme.
+    if (conflicts && conflicts.length && householdId) {
+      try {
+        const state = await loadAppState(householdId);
+        if (state) {
+          if (Array.isArray(state.pantry)) { setPantry(state.pantry); lastSyncedPantryRef.current = JSON.stringify(state.pantry); }
+          if (state.basics) { setBasics(state.basics); lastSyncedBasicsRef.current = JSON.stringify(state.basics); }
+          if (Array.isArray(state.meal_plan)) { setMealPlan(state.meal_plan); lastSyncedMealPlanRef.current = JSON.stringify(state.meal_plan); }
+        }
+      } catch (err) {
+        console.error("Rafraîchissement après conflit impossible :", err);
+      }
+    }
     // Un seul appel à showToast : useToast.js n'affiche qu'un message à la
     // fois (pas de file d'attente) — appeler showToast deux fois de suite
     // ici aurait fait disparaître le premier message avant même qu'il ait
     // pu s'afficher, jamais vu par l'utilisateur.
-    if (flushed > 0 || dropped > 0) {
+    if (flushed > 0 || dropped > 0 || (conflicts && conflicts.length)) {
       const parts = [];
       if (flushed > 0) parts.push(`${flushed} modification(s) resynchronisée(s)`);
       if (dropped > 0) {
@@ -332,6 +373,11 @@ export default function useOfflineSync({
             ? `${dropped} abandonnées après plusieurs échecs`
             : "1 abandonnée après plusieurs échecs"
         );
+      }
+      if (conflicts && conflicts.length) {
+        const labels = { pantry: "le frigo", basics: "les basiques", meal_plan: "le plan de repas" };
+        const fields = [...new Set(conflicts.flatMap((c) => c.keys))].map((k) => labels[k] || k);
+        parts.push(`ta modification hors-ligne de ${fields.join(" et ")} n'a pas pu être conservée (modifié ailleurs entre-temps)`);
       }
       showToast(`${parts.join(", ")}.`);
     }
@@ -346,7 +392,7 @@ export default function useOfflineSync({
     } catch (err) {
       console.error("Rafraîchissement après reconnexion impossible :", err);
     }
-  }, [householdId, showToast, setRecipes, setShoppingLists]);
+  }, [householdId, showToast, setRecipes, setShoppingLists, setPantry, setBasics, setMealPlan]);
 
   // Réaction à un changement de statut de connexion RÉEL (voir
   // `connectionStatus`, hooks/useConnectionStatus.js — un vrai ping
