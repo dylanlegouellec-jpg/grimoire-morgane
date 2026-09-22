@@ -11,11 +11,32 @@ import Seal from "./Seal";
 import HouseholdOptionsModal from "./HouseholdOptionsModal";
 import HouseholdMemberOptionsModal from "./HouseholdMemberOptionsModal";
 import LeaveHouseholdConfirmModal from "./LeaveHouseholdConfirmModal";
+import type { Household } from "../../utils/auth";
+
+// Ligne renvoyée par les RPC de gestion de foyer (get_household_members,
+// get_pending_requests...) — champs exacts définis côté SQL, pas encore
+// répliqués ici en toute rigueur (même choix que HouseholdMember,
+// utils/auth.ts).
+interface HouseholdMemberLike {
+  user_id: string;
+  role: string;
+  display_name?: string;
+  email?: string;
+  avatar_url?: string;
+}
+
+interface HouseholdRowProps {
+  household: Household;
+  active: boolean;
+  pressDuration: number;
+  onSelect: (id: string) => void;
+  onOpenOptions: (household: Household) => void;
+}
 
 // Appui court = bascule vers ce foyer. Appui long = ouvre les options
 // (renommer / supprimer) — voir hooks/useLongPress.js.
-function HouseholdRow({ household, active, pressDuration, onSelect, onOpenOptions }) {
-  const { ref, handlers, wasLongPress, pressState } = useLongPress(() => onOpenOptions(household), pressDuration);
+function HouseholdRow({ household, active, pressDuration, onSelect, onOpenOptions }: HouseholdRowProps) {
+  const { ref, handlers, wasLongPress, pressState } = useLongPress<HTMLButtonElement>(() => onOpenOptions(household), pressDuration);
   return (
     <button
       type="button"
@@ -34,14 +55,22 @@ function HouseholdRow({ household, active, pressDuration, onSelect, onOpenOption
   );
 }
 
+interface MemberRowProps {
+  member: HouseholdMemberLike;
+  canManage: boolean;
+  pressDuration: number;
+  onOpenOptions: (member: HouseholdMemberLike) => void;
+  t: (key: string, vars?: Record<string, unknown>) => string;
+}
+
 // Appui long = ouvre les options de ce membre (changer son rôle / le
 // retirer) — réservé aux admins (voir `canManage`, passé par le parent en
 // fonction de son propre rôle). Extrait en composant séparé plutôt
 // qu'inline dans un .map() : useLongPress est un hook, il ne peut pas
 // être appelé un nombre de fois variable dans une boucle.
-function MemberRow({ member, canManage, pressDuration, onOpenOptions, t }) {
-  const { ref, handlers, wasLongPress, pressState } = useLongPress(
-    () => canManage && onOpenOptions(member),
+function MemberRow({ member, canManage, pressDuration, onOpenOptions, t }: MemberRowProps) {
+  const { ref, handlers, wasLongPress, pressState } = useLongPress<HTMLLIElement>(
+    () => { if (canManage) onOpenOptions(member); },
     pressDuration
   );
   return (
@@ -62,6 +91,28 @@ function MemberRow({ member, canManage, pressDuration, onOpenOptions, t }) {
       </span>
     </li>
   );
+}
+
+interface HouseholdManagerModalProps {
+  user: { id: string } | null;
+  householdId: string | null;
+  households: Household[];
+  pressDuration: number;
+  onSwitchHousehold: (id: string) => void;
+  onCreateHousehold: (name: string) => Promise<void>;
+  onRenameHousehold: (id: string, name: string) => Promise<void>;
+  onDeleteHousehold: (id: string) => Promise<void>;
+  onRequestJoinHousehold: (id: string) => Promise<void>;
+  onGetPendingHouseholdRequests: (householdId: string) => Promise<HouseholdMemberLike[]>;
+  onApproveHouseholdMember: (householdId: string | null, userId: string) => Promise<void>;
+  onRejectHouseholdMember: (householdId: string | null, userId: string) => Promise<void>;
+  onRefreshHouseholds?: () => void;
+  showToast?: (msg: string) => void;
+}
+
+interface AddStatus {
+  type: "ok" | "error";
+  message: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -90,10 +141,10 @@ export default function HouseholdManagerModal({
   onRejectHouseholdMember,
   onRefreshHouseholds,
   showToast,
-}) {
+}: HouseholdManagerModalProps) {
   const { t } = useTranslation();
 
-  const [optionsTarget, setOptionsTarget] = useState(null);
+  const [optionsTarget, setOptionsTarget] = useState<Household | null>(null);
 
   /* --- Création d'un nouveau foyer -------------------------------------- */
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -133,7 +184,7 @@ export default function HouseholdManagerModal({
       setJoinInput("");
     } catch (err) {
       console.error(err);
-      setJoinError((err && err.message) || t("household.joinRequestFailedToast"));
+      setJoinError((err instanceof Error && err.message) || t("household.joinRequestFailedToast"));
     } finally {
       setJoining(false);
     }
@@ -152,14 +203,14 @@ export default function HouseholdManagerModal({
   // Cache-first : on affiche immédiatement la dernière liste connue pour
   // ce foyer (utile hors-ligne), puis on la rafraîchit en tâche de fond
   // si le réseau répond — voir utils/householdCache.js.
-  const [members, setMembers] = useState(() => getCachedMembers(householdId));
+  const [members, setMembers] = useState<HouseholdMemberLike[]>(() => getCachedMembers(householdId) as HouseholdMemberLike[]);
   const [membersLoading, setMembersLoading] = useState(false);
   const [email, setEmail] = useState("");
-  const [addStatus, setAddStatus] = useState(null);
+  const [addStatus, setAddStatus] = useState<AddStatus | null>(null);
   const [addBusy, setAddBusy] = useState(false);
 
   useEffect(() => {
-    setMembers(getCachedMembers(householdId));
+    setMembers(getCachedMembers(householdId) as HouseholdMemberLike[]);
     if (!householdId) return undefined;
     let cancelled = false;
     setMembersLoading(true);
@@ -167,7 +218,7 @@ export default function HouseholdManagerModal({
       if (cancelled) return;
       setMembersLoading(false);
       if (list.length) {
-        setMembers(list);
+        setMembers(list as unknown as HouseholdMemberLike[]);
         setCachedMembers(householdId, list);
       }
       // Liste vide renvoyée (hors-ligne, erreur réseau) : on garde le
@@ -180,7 +231,7 @@ export default function HouseholdManagerModal({
 
   const refreshMembers = () => {
     getHouseholdMembers(householdId).then((list) => {
-      if (list.length) { setMembers(list); setCachedMembers(householdId, list); }
+      if (list.length) { setMembers(list as unknown as HouseholdMemberLike[]); setCachedMembers(householdId, list); }
     });
   };
 
@@ -189,18 +240,19 @@ export default function HouseholdManagerModal({
   // AUTRE membre : changer son rôle / le retirer (admins uniquement) —
   // voir MemberRow ci-dessus, qui n'autorise l'appui long que dans l'un
   // ou l'autre de ces deux cas.
-  const [memberOptionsTarget, setMemberOptionsTarget] = useState(null);
+  const [memberOptionsTarget, setMemberOptionsTarget] = useState<HouseholdMemberLike | null>(null);
   const isSelfTarget = Boolean(memberOptionsTarget && user && memberOptionsTarget.user_id === user.id);
 
   const handleLeaveHousehold = async () => {
+    if (!householdId) return;
     await leaveHousehold(householdId);
     onRefreshHouseholds && onRefreshHouseholds();
   };
 
   /* --- Demandes d'adhésion en attente (admin du foyer actif seulement) --- */
-  const [pendingRequests, setPendingRequests] = useState([]);
+  const [pendingRequests, setPendingRequests] = useState<HouseholdMemberLike[]>([]);
   const [pendingLoading, setPendingLoading] = useState(false);
-  const [pendingBusyId, setPendingBusyId] = useState(null);
+  const [pendingBusyId, setPendingBusyId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!householdId || !isAdmin) { setPendingRequests([]); return undefined; }
@@ -213,7 +265,7 @@ export default function HouseholdManagerModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [householdId, isAdmin]);
 
-  const handleApprove = async (userId) => {
+  const handleApprove = async (userId: string) => {
     if (pendingBusyId) return;
     setPendingBusyId(userId);
     try {
@@ -232,7 +284,7 @@ export default function HouseholdManagerModal({
     }
   };
 
-  const handleReject = async (userId) => {
+  const handleReject = async (userId: string) => {
     if (pendingBusyId) return;
     setPendingBusyId(userId);
     try {
@@ -258,11 +310,11 @@ export default function HouseholdManagerModal({
       setEmail("");
       const fresh = await getHouseholdMembers(householdId);
       if (fresh.length) {
-        setMembers(fresh);
+        setMembers(fresh as unknown as HouseholdMemberLike[]);
         setCachedMembers(householdId, fresh);
       }
     } catch (err) {
-      setAddStatus({ type: "error", message: (err && err.message) || t("household.addFailedToast") });
+      setAddStatus({ type: "error", message: (err instanceof Error && err.message) || t("household.addFailedToast") });
     } finally {
       setAddBusy(false);
     }
@@ -352,7 +404,7 @@ export default function HouseholdManagerModal({
                   height={180}
                 />
                 <div className="household-add-row">
-                  <input type="text" value={inviteLink} readOnly className="household-email-input" onClick={(e) => e.target.select()} />
+                  <input type="text" value={inviteLink} readOnly className="household-email-input" onClick={(e) => e.currentTarget.select()} />
                   <button type="button" className="seal seal-gold" onClick={copyInviteLink}>
                     <Copy size={16} /> {t("household.copyLink")}
                   </button>
@@ -419,7 +471,7 @@ export default function HouseholdManagerModal({
               <MemberRow
                 key={m.user_id}
                 member={m}
-                canManage={isAdmin || (user && m.user_id === user.id)}
+                canManage={Boolean(isAdmin || (user && m.user_id === user.id))}
                 pressDuration={pressDuration}
                 onOpenOptions={setMemberOptionsTarget}
                 t={t}
@@ -471,7 +523,7 @@ export default function HouseholdManagerModal({
             ) : (
               <HouseholdMemberOptionsModal
                 member={memberOptionsTarget}
-                householdId={householdId}
+                householdId={householdId || ""}
                 onChanged={refreshMembers}
                 onClose={() => setMemberOptionsTarget(null)}
               />
