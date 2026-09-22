@@ -1,4 +1,6 @@
 import { Beef, Carrot, CupSoda, Milk, Package, SprayCan, Wheat } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import type { NormalizedIngredient, Ingredient } from "./ingredients";
 
 /* ------------------------------------------------------------------ */
 /*  RAYONS DE COURSES                                                  */
@@ -16,7 +18,15 @@ import { Beef, Carrot, CupSoda, Milk, Package, SprayCan, Wheat } from "lucide-re
 /*  composant qui l'affiche (voir aisleVectorIcon ci-dessous).                */
 /* ------------------------------------------------------------------ */
 
-export const AISLES = [
+interface AisleDef {
+  key: string;
+  label: string;
+  icon: string;
+  vectorIcon: LucideIcon;
+  test: RegExp;
+}
+
+export const AISLES: AisleDef[] = [
   {
     key: "fruits-legumes", label: "Fruits & Légumes", icon: "🥦", vectorIcon: Carrot,
     // "\bail\b" (double frontière) : "ail" seul en fin de mot matchait
@@ -55,15 +65,15 @@ export const AISLES = [
 
 export const DEFAULT_AISLE_LABEL = "Autre";
 const DEFAULT_AISLE_ICON = "📦";
-const DEFAULT_AISLE_VECTOR_ICON = Package;
-const AISLE_ICON_BY_LABEL = AISLES.reduce((acc, a) => {
+const DEFAULT_AISLE_VECTOR_ICON: LucideIcon = Package;
+const AISLE_ICON_BY_LABEL: Record<string, string> = AISLES.reduce((acc, a) => {
   acc[a.label] = a.icon;
   return acc;
-}, { [DEFAULT_AISLE_LABEL]: DEFAULT_AISLE_ICON });
-const AISLE_VECTOR_ICON_BY_LABEL = AISLES.reduce((acc, a) => {
+}, { [DEFAULT_AISLE_LABEL]: DEFAULT_AISLE_ICON } as Record<string, string>);
+const AISLE_VECTOR_ICON_BY_LABEL: Record<string, LucideIcon> = AISLES.reduce((acc, a) => {
   acc[a.label] = a.vectorIcon;
   return acc;
-}, { [DEFAULT_AISLE_LABEL]: DEFAULT_AISLE_VECTOR_ICON });
+}, { [DEFAULT_AISLE_LABEL]: DEFAULT_AISLE_VECTOR_ICON } as Record<string, LucideIcon>);
 
 // Ordre par défaut des rayons (celui de la liste AISLES ci-dessus, "Autre"
 // toujours en dernier) — sert de repli dans ShoppingView.jsx tant qu'aucun
@@ -72,7 +82,7 @@ const AISLE_VECTOR_ICON_BY_LABEL = AISLES.reduce((acc, a) => {
 // nouveau rayon ajouté à AISLES après coup).
 export const DEFAULT_AISLE_ORDER = [...AISLES.map((a) => a.label), DEFAULT_AISLE_LABEL];
 
-export function guessAisle(name) {
+export function guessAisle(name: string): string {
   const found = AISLES.find((a) => a.test.test(name));
   return found ? found.label : DEFAULT_AISLE_LABEL;
 }
@@ -80,13 +90,13 @@ export function guessAisle(name) {
 // Résout l'icône d'un rayon à l'affichage (voir ShoppingView.jsx) — repli
 // sur l'icône "Autre" pour tout libellé inconnu (ancien rayon, avant une
 // évolution de la liste ci-dessus).
-export function aisleIcon(label) {
+export function aisleIcon(label: string): string {
   return AISLE_ICON_BY_LABEL[label] || DEFAULT_AISLE_ICON;
 }
 
 // Équivalent vectoriel de aisleIcon() ci-dessus — voir Réglages > Apparence
 // > "Style des icônes".
-export function aisleVectorIcon(label) {
+export function aisleVectorIcon(label: string): LucideIcon {
   return AISLE_VECTOR_ICON_BY_LABEL[label] || DEFAULT_AISLE_VECTOR_ICON;
 }
 
@@ -94,24 +104,36 @@ export function aisleVectorIcon(label) {
 /*  SECTIONS STRUCTURANTES (ingrédients / étapes groupés par titre)    */
 /* ------------------------------------------------------------------ */
 
-export function groupIngredients(ingredients = []) {
-  const groups = [];
-  let current = { title: null, items: [] };
+export interface IngredientGroup {
+  title: string | null;
+  items: Ingredient[];
+}
+
+export function groupIngredients(ingredients: NormalizedIngredient[] = []): IngredientGroup[] {
+  const groups: IngredientGroup[] = [];
+  let current: IngredientGroup = { title: null, items: [] };
   ingredients.forEach((ing) => {
-    if (ing && ing.isSection) {
+    if (ing && "isSection" in ing && ing.isSection) {
       if (current.items.length || current.title) groups.push(current);
       current = { title: ing.title, items: [] };
     } else if (ing) {
-      current.items.push(ing);
+      current.items.push(ing as Ingredient);
     }
   });
   groups.push(current);
   return groups.filter((g) => g.items.length || g.title);
 }
 
-export function groupSteps(steps = []) {
-  const groups = [];
-  let current = { title: null, steps: [] };
+export type StepEntry = string | { isSection: true; title: string };
+
+export interface StepGroup {
+  title: string | null;
+  steps: string[];
+}
+
+export function groupSteps(steps: StepEntry[] = []): StepGroup[] {
+  const groups: StepGroup[] = [];
+  let current: StepGroup = { title: null, steps: [] };
   steps.forEach((s) => {
     if (s && typeof s === "object" && s.isSection) {
       if (current.steps.length || current.title) groups.push(current);
@@ -124,7 +146,7 @@ export function groupSteps(steps = []) {
   return groups.filter((g) => g.steps.length || g.title);
 }
 
-export function parseDurationMinutes(text = "") {
+export function parseDurationMinutes(text: string = ""): number | null {
   try {
     const hMatch = text.match(/(\d+)\s*h\s*(\d{1,2})?/i);
     if (hMatch) {
@@ -147,7 +169,7 @@ export function parseDurationMinutes(text = "") {
 // (CookbookDocument.jsx) — signalé par l'utilisateur : un temps de repos
 // long (ex. 1440 min pour un tiramisu à réserver une nuit) s'affichait
 // en un seul bloc "1440 min" au lieu d'un format lisible ("1 j").
-export function formatDurationMinutes(totalMinutes) {
+export function formatDurationMinutes(totalMinutes: number): string {
   const mins = Math.max(0, Math.round(Number(totalMinutes) || 0));
   const days = Math.floor(mins / 1440);
   const h = Math.floor((mins % 1440) / 60);
@@ -168,7 +190,7 @@ export function formatDurationMinutes(totalMinutes) {
 // d'écrasement — un compteur en mémoire qui repartait de 100 à chaque
 // session finissait par régénérer des ids déjà utilisés dans Supabase).
 let idFallbackCounter = 0;
-export function nextId() {
+export function nextId(): string {
   try {
     if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
       return `r-${crypto.randomUUID()}`;
@@ -184,23 +206,23 @@ export function nextId() {
 /*  PARTAGE, IMPORT / EXPORT (codes recette)                           */
 /* ------------------------------------------------------------------ */
 
-export function encodeRecipeCode(recipe) {
+export function encodeRecipeCode(recipe: unknown): string {
   try {
     return btoa(unescape(encodeURIComponent(JSON.stringify(recipe))));
   } catch {
     return "";
   }
 }
-export function decodeRecipeCode(code) {
+export function decodeRecipeCode(code: string): Record<string, unknown> | null {
   try {
-    const obj = JSON.parse(decodeURIComponent(escape(atob(code.trim()))));
+    const obj = JSON.parse(decodeURIComponent(escape(atob(code.trim())))) as Record<string, unknown> | null;
     if (obj && typeof obj === "object" && obj.title) return obj;
     return null;
   } catch {
     return null;
   }
 }
-export function buildImportLink(code) {
+export function buildImportLink(code: string): string {
   try {
     return `${window.location.origin}${window.location.pathname}?import=${code}`;
   } catch {
@@ -215,7 +237,7 @@ export function buildImportLink(code) {
 // au reste du grimoire — juste la recette, encodée intégralement dans
 // l'URL elle-même (voir main.jsx) : aucune requête réseau, aucune table
 // Supabase dédiée à créer pour ça.
-export function buildRecipeShareLink(recipe) {
+export function buildRecipeShareLink(recipe: unknown): string {
   try {
     const code = encodeRecipeCode(recipe);
     if (!code) return "";
@@ -233,7 +255,12 @@ export function buildRecipeShareLink(recipe) {
 // Retourne "shared" | "downloaded" | "cancelled" | false (échec), pour que
 // l'appelant puisse afficher le bon message (pas de toast "téléchargée !"
 // après un partage réussi, par exemple).
-export async function shareOrDownloadBlob(blob, filename, shareTitle, mimeType) {
+export async function shareOrDownloadBlob(
+  blob: Blob | null,
+  filename: string,
+  shareTitle: string,
+  mimeType: string
+): Promise<"shared" | "downloaded" | "cancelled" | false> {
   if (!blob) return false;
   try {
     const file = new File([blob], filename, { type: mimeType });
@@ -242,7 +269,7 @@ export async function shareOrDownloadBlob(blob, filename, shareTitle, mimeType) 
       return "shared";
     }
   } catch (err) {
-    if (err && err.name === "AbortError") return "cancelled";
+    if (err instanceof Error && err.name === "AbortError") return "cancelled";
     // toute autre erreur : on bascule sur le téléchargement direct ci-dessous
   }
   try {
@@ -262,7 +289,7 @@ export async function shareOrDownloadBlob(blob, filename, shareTitle, mimeType) 
 // Lien d'invitation à un foyer — voir ?join_household=... (useOfflineSync.js,
 // JoinHouseholdConfirmModal.jsx) et son pendant QR code
 // (HouseholdManagerModal.jsx, buildQrCodeUrl ci-dessous).
-export function buildHouseholdInviteLink(householdId) {
+export function buildHouseholdInviteLink(householdId: string): string {
   try {
     return `${window.location.origin}${window.location.pathname}?join_household=${householdId}`;
   } catch {
@@ -272,7 +299,7 @@ export function buildHouseholdInviteLink(householdId) {
 // Extrait un uuid de foyer depuis soit un lien complet
 // (?join_household=<id>), soit un id brut collé directement — même
 // tolérance que extractCodeFromInput ci-dessous pour les codes de recette.
-export function extractHouseholdIdFromInput(raw) {
+export function extractHouseholdIdFromInput(raw: string): string {
   const trimmed = (raw || "").trim();
   try {
     const url = new URL(trimmed);
@@ -288,10 +315,10 @@ export function extractHouseholdIdFromInput(raw) {
 // QR n'est installée dans ce projet et npm install n'est pas disponible
 // dans cet environnement). L'URL du lien d'invitation transite donc par ce
 // service tiers pour être transformée en image.
-export function buildQrCodeUrl(data, size = 200) {
+export function buildQrCodeUrl(data: string, size: number = 200): string {
   return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(data)}`;
 }
-export function extractCodeFromInput(raw) {
+export function extractCodeFromInput(raw: string): string {
   const trimmed = (raw || "").trim();
   try {
     const url = new URL(trimmed);
@@ -307,7 +334,7 @@ export function extractCodeFromInput(raw) {
 /*  NORMALISATION, SLUGIFY, HAPTIQUE, IMPRIMERIE                       */
 /* ------------------------------------------------------------------ */
 
-export async function copyText(text) {
+export async function copyText(text: string): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text);
     return true;
@@ -322,7 +349,7 @@ export async function copyText(text) {
 // inclus) vit désormais dans utils/haptics.js — voir ce fichier pour le
 // détail et pour triggerHapticFeedback (variante avec repli visuel).
 export { triggerHaptic } from "./haptics";
-export function normalize(str) {
+export function normalize(str?: string | null): string {
   return (str || "")
     .toString()
     .normalize("NFD")
@@ -330,14 +357,14 @@ export function normalize(str) {
     .toLowerCase()
     .trim();
 }
-export function singularizeFr(word) {
+export function singularizeFr(word?: string | null): string {
   const w = (word || "").trim();
   if (/eaux$/i.test(w)) return w.replace(/eaux$/i, "eau");
   if (/aux$/i.test(w)) return w.replace(/aux$/i, "al");
   if (/s$/i.test(w) && w.length > 3) return w.replace(/s$/i, "");
   return w;
 }
-export function ingredientKey(name) {
+export function ingredientKey(name?: string | null): string {
   return normalize(singularizeFr(name));
 }
 // Partagé entre useShoppingLists.js (filtrage à l'affichage) et
@@ -346,21 +373,29 @@ export function ingredientKey(name) {
 // choisissait la dernière liste créée TOUS SCOPES CONFONDUS, sans jamais
 // vérifier qu'elle correspondait à la portée (foyer/personnel) affichée à
 // l'écran.
-export function isShoppingListInScope(list, scope, userId) {
+export function isShoppingListInScope(
+  list: { scope?: string | null; userId?: string | null },
+  scope: string,
+  userId?: string | null
+): boolean {
   return scope === "personal"
     ? list.scope === "personal" && list.userId === userId
     : list.scope !== "personal";
 }
-export function isSucre(recipe) {
+interface CategorizedRecipe {
+  category?: string | null;
+}
+
+export function isSucre(recipe: CategorizedRecipe | null | undefined) {
   return normalize(recipe && recipe.category) === "sucre";
 }
-export function categoryLabel(recipe) {
+export function categoryLabel(recipe: CategorizedRecipe | null | undefined) {
   return isSucre(recipe) ? "Sucré" : "Salé";
 }
-export function categoryClass(recipe) {
+export function categoryClass(recipe: CategorizedRecipe | null | undefined) {
   return isSucre(recipe) ? "chip-sucre" : "chip-sale";
 }
-export function slugify(s) {
+export function slugify(s?: string | null): string {
   return (
     (s || "recette")
       .toLowerCase()
@@ -370,10 +405,40 @@ export function slugify(s) {
       .replace(/(^-|-$)/g, "") || "recette"
   );
 }
-export function escapeHtml(str) {
-  return String(str).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+export function escapeHtml(str: unknown): string {
+  return String(str).replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" } as Record<string, string>)[c]
+  );
 }
-export function buildPrintHTML(recipe, servings, ingredients, options = {}) {
+
+// Recette telle que consommée par l'impression papier (window.print via
+// iframe, voir triggerPrint/openPrintFallback ci-dessous) — seulement les
+// champs effectivement lus ici, pas le modèle Recipe complet.
+export interface PrintableRecipe {
+  title: string;
+  time?: number;
+  category?: string | null;
+  notes?: string | null;
+  imageUrl?: string | null;
+  carbs?: number | null;
+  steps: StepEntry[];
+}
+
+export interface PrintOptions {
+  includePhoto?: boolean;
+  includeNutriscore?: boolean;
+  includeNotes?: boolean;
+  nutriGrade?: string | null;
+  nutriColor?: string;
+}
+
+export function buildPrintHTML(
+  recipe: PrintableRecipe,
+  servings: number,
+  ingredients: NormalizedIngredient[],
+  options: PrintOptions = {}
+): string {
   const {
     includePhoto = true,
     includeNutriscore = true,
@@ -462,7 +527,7 @@ export function buildPrintHTML(recipe, servings, ingredients, options = {}) {
 </body></html>`;
 }
 
-export function openPrintFallback(html) {
+export function openPrintFallback(html: string): boolean {
   try {
     const win = window.open("", "_blank");
     if (!win) return false;
@@ -478,7 +543,7 @@ export function openPrintFallback(html) {
   }
 }
 
-export function triggerPrint(html) {
+export function triggerPrint(html: string): void {
   try {
     const iframe = document.createElement("iframe");
     iframe.setAttribute("aria-hidden", "true");
@@ -491,7 +556,11 @@ export function triggerPrint(html) {
     iframe.style.visibility = "hidden";
     document.body.appendChild(iframe);
 
-    const doc = iframe.contentWindow.document;
+    // Un iframe fraîchement créé et attaché au DOM possède toujours un
+    // contentWindow synchrone (jamais null à ce stade précis) — le cast
+    // évite d'introduire une vérification absente de la version d'origine.
+    const contentWindow = iframe.contentWindow as Window;
+    const doc = contentWindow.document;
     doc.open();
     doc.write(html);
     doc.close();
@@ -502,8 +571,8 @@ export function triggerPrint(html) {
     setTimeout(() => {
       let printed = false;
       try {
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
+        contentWindow.focus();
+        contentWindow.print();
         printed = true;
       } catch (err) {
         console.error("Impression iframe impossible :", err);

@@ -1,5 +1,29 @@
 import { groupIngredients, groupSteps, categoryLabel } from "./helpers";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "./nutriscore";
+import type { StepEntry } from "./helpers";
+import type { NormalizedIngredient, Ingredient } from "./ingredients";
+import type { NutriscoreGrade } from "./nutriscoreClient";
+
+// Recette telle que consommée par le générateur de carte Canvas —
+// seulement les champs effectivement lus ici, pas le modèle Recipe complet.
+interface CanvasRecipe {
+  title?: string;
+  time?: number;
+  category?: string | null;
+  steps: StepEntry[];
+  notes?: string | null;
+  imageUrl?: string | null;
+  nutriscoreGrade?: NutriscoreGrade | null;
+}
+
+type ThemeName = "light" | "dark";
+
+interface GenerateCardOptions {
+  includePhoto?: boolean;
+  includeNutriscore?: boolean;
+  includeNotes?: boolean;
+  theme?: ThemeName;
+}
 
 /* ------------------------------------------------------------------ */
 /*  CARTE DE RECETTE — GÉNÉRATEUR CANVAS NATIF (aucune dépendance)      */
@@ -45,10 +69,12 @@ const PALETTES = {
   },
 };
 
-const FONT_TITLE = (size) => `700 ${size}px 'Cinzel Decorative', 'Cinzel', Georgia, serif`;
-const FONT_LABEL = (size) => `600 ${size}px 'Cinzel', Georgia, serif`;
-const FONT_BODY = (size) => `400 ${size}px 'EB Garamond', Georgia, serif`;
-const FONT_BODY_ITALIC = (size) => `italic 400 ${size}px 'EB Garamond', Georgia, serif`;
+type Palette = typeof PALETTES.light;
+
+const FONT_TITLE = (size: number) => `700 ${size}px 'Cinzel Decorative', 'Cinzel', Georgia, serif`;
+const FONT_LABEL = (size: number) => `600 ${size}px 'Cinzel', Georgia, serif`;
+const FONT_BODY = (size: number) => `400 ${size}px 'EB Garamond', Georgia, serif`;
+const FONT_BODY_ITALIC = (size: number) => `italic 400 ${size}px 'EB Garamond', Georgia, serif`;
 
 // Charge les polices maison avant de mesurer/dessiner — sans ça, le tout
 // premier rendu (avant que le navigateur ait fini de charger les
@@ -80,13 +106,13 @@ async function ensureFonts() {
 // (elle a déjà été récupérée avec succès pour qu'on en arrive là) — un
 // filet de sécurité pour tout hébergeur d'image qui n'enverrait pas ces
 // en-têtes, sans coût perceptible quand ils sont déjà présents.
-async function loadImageViaBlob(url) {
+async function loadImageViaBlob(url: string): Promise<HTMLImageElement | null> {
   try {
     const res = await fetch(url, { mode: "cors" });
     if (!res.ok) return null;
     const blob = await res.blob();
     const objectUrl = URL.createObjectURL(blob);
-    return await new Promise((resolve) => {
+    return await new Promise<HTMLImageElement | null>((resolve) => {
       const img = new Image();
       img.onload = () => resolve(img);
       img.onerror = () => resolve(null);
@@ -97,7 +123,7 @@ async function loadImageViaBlob(url) {
   }
 }
 
-function loadImageDirect(url) {
+function loadImageDirect(url: string): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     try {
       const img = new Image();
@@ -111,16 +137,16 @@ function loadImageDirect(url) {
   });
 }
 
-async function loadImage(url) {
+async function loadImage(url: string): Promise<HTMLImageElement | null> {
   const viaBlob = await loadImageViaBlob(url);
   if (viaBlob) return viaBlob;
   return loadImageDirect(url);
 }
 
-function wrapText(ctx, text, maxWidth) {
+function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
   const words = String(text || "").split(/\s+/).filter(Boolean);
   if (!words.length) return [];
-  const lines = [];
+  const lines: string[] = [];
   let line = "";
   words.forEach((word) => {
     const test = line ? `${line} ${word}` : word;
@@ -135,7 +161,7 @@ function wrapText(ctx, text, maxWidth) {
   return lines;
 }
 
-function roundRectPath(ctx, x, y, w, h, r) {
+function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
   const radius = Math.max(0, Math.min(r, w / 2, h / 2));
   ctx.beginPath();
   ctx.moveTo(x + radius, y);
@@ -146,10 +172,17 @@ function roundRectPath(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-function drawCoverImage(ctx, img, dx, dy, dw, dh) {
+function drawCoverImage(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  dx: number,
+  dy: number,
+  dw: number,
+  dh: number
+): void {
   const srcRatio = img.width / img.height;
   const dstRatio = dw / dh;
-  let sx, sy, sw, sh;
+  let sx: number, sy: number, sw: number, sh: number;
   if (srcRatio > dstRatio) {
     sh = img.height;
     sw = sh * dstRatio;
@@ -164,17 +197,51 @@ function drawCoverImage(ctx, img, dx, dy, dw, dh) {
   ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
 }
 
+// Blocs de mise en page produits par buildBlocks/layoutItemGroups ci-dessous
+// et consommés par drawBlocks — un seul et même vocabulaire de blocs partagé
+// entre la passe de MESURE (canvas jetable) et la passe de DESSIN (canvas
+// final), pour ne jamais se désynchroniser (voir le commentaire de fichier
+// en tête).
+type Block =
+  | { type: "topPad" | "spacer" | "bottomPad"; height: number }
+  | { type: "photo"; height: number }
+  | { type: "badgeRow"; height: number; nutriGrade: NutriscoreGrade | null }
+  | { type: "title"; lines: string[]; height: number }
+  | { type: "meta"; text: string; height: number }
+  | { type: "flourish"; height: number }
+  | { type: "sectionHeader"; text: string; height: number }
+  | { type: "subHeader"; text: string; height: number }
+  | { type: "item"; marker: string; lines: string[]; indent: number; height: number }
+  | { type: "notes"; lines: string[]; height: number }
+  | { type: "footer"; height: number };
+
+interface ItemGroupInput {
+  title: string | null;
+  items: (Ingredient | string)[];
+}
+
+interface LayoutItemGroupsOptions {
+  indent: number;
+  itemLineHeight: number;
+  subHeaderLineHeight: number;
+  numbered: boolean;
+}
+
 // Prépare une liste d'items (ingrédients ou étapes, avec ou sans
 // sous-sections) en blocs de mise en page : titres de groupe + lignes de
 // texte pré-enroulées (avec indentation en drapeau pour la puce/le
 // numéro), sans rien dessiner — sert à la fois à mesurer et à dessiner.
-function layoutItemGroups(ctx, groups, { indent, itemLineHeight, subHeaderLineHeight, numbered }) {
-  const blocks = [];
+function layoutItemGroups(
+  ctx: CanvasRenderingContext2D,
+  groups: ItemGroupInput[],
+  { indent, itemLineHeight, subHeaderLineHeight, numbered }: LayoutItemGroupsOptions
+): Block[] {
+  const blocks: Block[] = [];
   groups.forEach((g) => {
     if (g.title) {
       blocks.push({ type: "subHeader", text: g.title, height: subHeaderLineHeight });
     }
-    const rawItems = g.items || g.steps || [];
+    const rawItems = g.items || [];
     rawItems.forEach((raw, idx) => {
       const text = typeof raw === "string" ? raw : [raw.qty, raw.unit].filter(Boolean).join(" ") + (raw.name ? ` ${raw.name}` : "");
       ctx.font = FONT_BODY(27);
@@ -192,10 +259,22 @@ function layoutItemGroups(ctx, groups, { indent, itemLineHeight, subHeaderLineHe
   return blocks;
 }
 
-function buildBlocks(ctx, { recipe, servings, ingredients, nutriGrade, photoImg, includeNotes }) {
-  const blocks = [];
+interface BuildBlocksParams {
+  recipe: CanvasRecipe;
+  servings: number;
+  ingredients: NormalizedIngredient[];
+  nutriGrade: NutriscoreGrade | null;
+  photoImg: HTMLImageElement | null;
+  includeNotes: boolean;
+}
+
+function buildBlocks(
+  ctx: CanvasRenderingContext2D,
+  { recipe, servings, ingredients, nutriGrade, photoImg, includeNotes }: BuildBlocksParams
+): { blocks: Block[]; totalHeight: number } {
+  const blocks: Block[] = [];
   let totalHeight = 0;
-  const push = (block) => { blocks.push(block); totalHeight += block.height; };
+  const push = (block: Block) => { blocks.push(block); totalHeight += block.height; };
 
   push({ type: "topPad", height: MARGIN * 0.7 });
 
@@ -231,7 +310,12 @@ function buildBlocks(ctx, { recipe, servings, ingredients, nutriGrade, photoImg,
   push({ type: "spacer", height: 34 });
   push({ type: "sectionHeader", text: "Préparation", height: 50 });
   push({ type: "spacer", height: 8 });
-  const stepGroups = groupSteps(recipe.steps).map((g) => ({ title: g.title, items: g.steps.map((s) => (typeof s === "string" ? s : s.text || s.title || "")) }));
+  const stepGroups = groupSteps(recipe.steps).map((g) => ({
+    title: g.title,
+    items: g.steps.map((s: string | { text?: string; title?: string }) =>
+      typeof s === "string" ? s : s.text || s.title || ""
+    ),
+  }));
   layoutItemGroups(ctx, stepGroups, {
     indent: NUMBER_INDENT,
     itemLineHeight: 40,
@@ -255,7 +339,14 @@ function buildBlocks(ctx, { recipe, servings, ingredients, nutriGrade, photoImg,
   return { blocks, totalHeight };
 }
 
-function drawBlocks(ctx, blocks, palette, canvasWidth, canvasHeight, { photoImg, recipe }) {
+function drawBlocks(
+  ctx: CanvasRenderingContext2D,
+  blocks: Block[],
+  palette: Palette,
+  canvasWidth: number,
+  canvasHeight: number,
+  { photoImg, recipe }: { photoImg: HTMLImageElement | null; recipe: CanvasRecipe }
+): void {
   ctx.fillStyle = palette.bg;
   ctx.fillRect(0, 0, canvasWidth, canvasHeight);
   ctx.textBaseline = "alphabetic";
@@ -434,18 +525,28 @@ function drawBlocks(ctx, blocks, palette, canvasWidth, canvasHeight, { photoImg,
 // les navigateurs — dans ce cas on régénère automatiquement SANS la
 // photo plutôt que d'échouer complètement, et on le signale à l'appelant
 // via photoIncluded pour qu'il prévienne l'utilisateur.
-export async function generateRecipeCardPng(recipe, servings, ingredients, options = {}) {
+export interface GeneratedRecipeCard {
+  blob: Blob | null;
+  photoIncluded: boolean;
+}
+
+export async function generateRecipeCardPng(
+  recipe: CanvasRecipe,
+  servings: number,
+  ingredients: NormalizedIngredient[],
+  options: GenerateCardOptions = {}
+): Promise<GeneratedRecipeCard> {
   const { includePhoto = true, includeNutriscore = true, includeNotes = true, theme = "light" } = options;
   const palette = PALETTES[theme] || PALETTES.light;
 
   await ensureFonts();
 
-  const nutriGrade = includeNutriscore
-    ? (recipe.nutriscoreGrade || estimateNutriscoreLocal(ingredients, recipe.category))
+  const nutriGrade: NutriscoreGrade | null = includeNutriscore
+    ? recipe.nutriscoreGrade || estimateNutriscoreLocal(ingredients, recipe.category ?? undefined)
     : null;
 
-  const renderOnce = async (withPhoto) => {
-    let photoImg = null;
+  const renderOnce = async (withPhoto: boolean): Promise<{ blob: Blob | null; photoImg: HTMLImageElement | null }> => {
+    let photoImg: HTMLImageElement | null = null;
     if (withPhoto && recipe.imageUrl) {
       photoImg = await loadImage(recipe.imageUrl);
     }
@@ -453,7 +554,10 @@ export async function generateRecipeCardPng(recipe, servings, ingredients, optio
     const measureCanvas = document.createElement("canvas");
     measureCanvas.width = CARD_WIDTH;
     measureCanvas.height = 10;
-    const measureCtx = measureCanvas.getContext("2d");
+    // Un canvas fraîchement créé fournit toujours un contexte 2d (jamais
+    // null) — le cast évite d'introduire une vérification absente de la
+    // version d'origine (même choix que cookbookPdf.ts).
+    const measureCtx = measureCanvas.getContext("2d") as CanvasRenderingContext2D;
     const { blocks, totalHeight } = buildBlocks(measureCtx, {
       recipe, servings, ingredients, nutriGrade, photoImg, includeNotes,
     });
@@ -461,10 +565,10 @@ export async function generateRecipeCardPng(recipe, servings, ingredients, optio
     const canvas = document.createElement("canvas");
     canvas.width = CARD_WIDTH;
     canvas.height = Math.max(1, Math.ceil(totalHeight));
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
     drawBlocks(ctx, blocks, palette, canvas.width, canvas.height, { photoImg, recipe });
 
-    const blob = await new Promise((resolve) => {
+    const blob = await new Promise<Blob | null>((resolve) => {
       try {
         canvas.toBlob((b) => resolve(b), "image/png", 0.95);
       } catch {
