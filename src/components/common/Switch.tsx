@@ -1,6 +1,12 @@
 import { triggerHaptic } from "../../utils/helpers";
 
-export default function Switch({ checked, onChange, label }) {
+interface SwitchProps {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label?: string;
+}
+
+export default function Switch({ checked, onChange, label }: SwitchProps) {
   return (
     <button
       type="button"

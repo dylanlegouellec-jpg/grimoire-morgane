@@ -1,6 +1,11 @@
 import { useEffect, useRef } from "react";
 import { useMotionValue, animate, useReducedMotion } from "motion/react";
 
+interface AnimatedNumberProps {
+  value: number;
+  className?: string;
+}
+
 /* ------------------------------------------------------------------ */
 /*  NOMBRE ANIMÉ — anime la transition entre deux valeurs numériques      */
 /*  (ex. compteur de portions, "X/Y articles") au lieu de sauter             */
@@ -12,9 +17,9 @@ import { useMotionValue, animate, useReducedMotion } from "motion/react";
 /*  "Math.round" : ce composant n'affiche que des entiers (portions, nombre         */
 /*  d'articles...) — jamais appelé avec une valeur à décimales dans cette app.       */
 /* ------------------------------------------------------------------ */
-export default function AnimatedNumber({ value, className }) {
+export default function AnimatedNumber({ value, className }: AnimatedNumberProps) {
   const prefersReducedMotion = useReducedMotion();
-  const spanRef = useRef(null);
+  const spanRef = useRef<HTMLSpanElement>(null);
   const motionVal = useMotionValue(value);
   const mountedValueRef = useRef(value);
 
@@ -30,9 +35,9 @@ export default function AnimatedNumber({ value, className }) {
   }, [value, prefersReducedMotion, motionVal]);
 
   useEffect(() => {
-    if (spanRef.current) spanRef.current.textContent = Math.round(motionVal.get());
+    if (spanRef.current) spanRef.current.textContent = String(Math.round(motionVal.get()));
     return motionVal.on("change", (latest) => {
-      if (spanRef.current) spanRef.current.textContent = Math.round(latest);
+      if (spanRef.current) spanRef.current.textContent = String(Math.round(latest));
     });
   }, [motionVal]);
 

@@ -3,11 +3,19 @@ import { motion } from "motion/react";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
 import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
+import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 
-export default function DeleteConfirmModal({ recipe, onConfirm, onCancel }) {
-  const modalRef = useFocusTrap(onCancel);
+interface ImportConfirmModalProps {
+  recipe: { title: string };
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+export default function ImportConfirmModal({ recipe, onConfirm, onCancel }: ImportConfirmModalProps) {
+  useBodyScrollLock(true);
+  const modalRef = useFocusTrap<HTMLDivElement>(onCancel);
   const sheet = useDismissibleSheet(onCancel, { scrollRef: modalRef });
   return (
     <motion.div className="modal-backdrop" onClick={onCancel} {...MODAL_BACKDROP_MOTION}>
@@ -21,17 +29,16 @@ export default function DeleteConfirmModal({ recipe, onConfirm, onCancel }) {
         {...sheet.panHandlers}
       >
         <button className="modal-close" onClick={onCancel} aria-label="Fermer"><X size={20} /></button>
-        <h2 className="dropcap-title">Supprimer la recette ?</h2>
+        <h2 className="dropcap-title">Nouvelle recette reçue</h2>
         <Flourish />
         <p className="hint" style={{ fontStyle: "normal" }}>
-          Voulez-vous vraiment supprimer <strong>{recipe.title}</strong> de ton Grimoire ? Cette action est définitive.
+          Ajouter <strong>{recipe.title}</strong> à ton Grimoire ?
         </p>
         <div className="cookmode-nav" style={{ marginTop: 16 }}>
           <Seal tone="gold" onClick={onCancel}>Annuler</Seal>
-          <Seal tone="gold" onClick={onConfirm} haptic={30}>Supprimer</Seal>
+          <Seal tone="gold" onClick={onConfirm}>Ajouter</Seal>
         </div>
       </motion.div>
     </motion.div>
   );
 }
-
