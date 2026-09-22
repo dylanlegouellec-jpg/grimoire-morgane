@@ -33,10 +33,33 @@ import { DEFAULT_COURSE_TYPE, mealTypeHasCourse } from "../utils/planning";
 /*  par PlanningView, jamais comme "personal" — rétrocompatible sans            */
 /*  migration nécessaire. */
 /* ------------------------------------------------------------------ */
-export default function useMealPlan({ initialMealPlan = [] }) {
-  const [mealPlan, setMealPlan] = useState(() => (Array.isArray(initialMealPlan) ? initialMealPlan : []));
+export interface MealPlanEntry {
+  id: string;
+  date: string;
+  mealType: string;
+  courseType: string | null;
+  recipeId: string | null;
+  customTitle: string | null;
+  scope: "household" | "personal";
+  userId: string | null;
+}
 
-  const addMealPlanEntry = useCallback((date, mealType, recipeId, customTitle = null, scope = "household", userId = null, courseType = DEFAULT_COURSE_TYPE) => {
+interface UseMealPlanParams {
+  initialMealPlan?: MealPlanEntry[];
+}
+
+export default function useMealPlan({ initialMealPlan = [] }: UseMealPlanParams) {
+  const [mealPlan, setMealPlan] = useState<MealPlanEntry[]>(() => (Array.isArray(initialMealPlan) ? initialMealPlan : []));
+
+  const addMealPlanEntry = useCallback((
+    date: string,
+    mealType: string,
+    recipeId: string | null,
+    customTitle: string | null = null,
+    scope: "household" | "personal" = "household",
+    userId: string | null = null,
+    courseType: string | null = DEFAULT_COURSE_TYPE
+  ) => {
     triggerHaptic(15);
     setMealPlan((prev) => [
       ...prev,
@@ -58,7 +81,7 @@ export default function useMealPlan({ initialMealPlan = [] }) {
     ]);
   }, []);
 
-  const removeMealPlanEntry = useCallback((id) => {
+  const removeMealPlanEntry = useCallback((id: string) => {
     triggerHaptic(20);
     setMealPlan((prev) => prev.filter((e) => e.id !== id));
   }, []);
@@ -66,7 +89,7 @@ export default function useMealPlan({ initialMealPlan = [] }) {
   // Suppression groupée — menu "Tout supprimer" d'un sous-groupe de type de
   // plat entier (voir PlanningCourseGroup.jsx) : un seul setMealPlan/haptique
   // pour tout le groupe plutôt qu'un removeMealPlanEntry par entrée.
-  const removeMealPlanEntries = useCallback((ids) => {
+  const removeMealPlanEntries = useCallback((ids: string[]) => {
     triggerHaptic(20);
     const idSet = new Set(ids);
     setMealPlan((prev) => prev.filter((e) => !idSet.has(e.id)));
@@ -76,7 +99,7 @@ export default function useMealPlan({ initialMealPlan = [] }) {
   // "Modifier" ouvert par l'appui long sur une ligne, PlanningMealItem.jsx)
   // sans toucher à sa date ni à son moment — ceux-là restent fixes, seul
   // le contenu du plat change.
-  const updateMealPlanEntry = useCallback((id, updates) => {
+  const updateMealPlanEntry = useCallback((id: string, updates: Partial<MealPlanEntry>) => {
     triggerHaptic(15);
     setMealPlan((prev) => prev.map((e) => (e.id === id ? { ...e, ...updates } : e)));
   }, []);
@@ -91,12 +114,12 @@ export default function useMealPlan({ initialMealPlan = [] }) {
   // concernées suffit à changer leur ordre affiché, sans rien déplacer
   // d'autre. `orderedIds` doit contenir exactement les ids d'un même
   // sous-groupe, dans le nouvel ordre voulu.
-  const reorderMealPlanEntries = useCallback((orderedIds) => {
+  const reorderMealPlanEntries = useCallback((orderedIds: string[]) => {
     triggerHaptic(12);
     setMealPlan((prev) => {
       const idSet = new Set(orderedIds);
       const byId = new Map(prev.map((e) => [e.id, e]));
-      const reordered = orderedIds.map((id) => byId.get(id)).filter(Boolean);
+      const reordered = orderedIds.map((id) => byId.get(id)).filter((e): e is MealPlanEntry => Boolean(e));
       let cursor = 0;
       return prev.map((e) => (idSet.has(e.id) ? reordered[cursor++] : e));
     });
@@ -115,7 +138,7 @@ export default function useMealPlan({ initialMealPlan = [] }) {
   // déplacées via le même regroupement par type de plat déjà appliqué à
   // l'affichage (voir PlanningView.jsx, groupEntriesByCourse) — une
   // "fusion" propre entre les deux sections, sans code de fusion dédié.
-  const moveMealPlanSection = useCallback((entryIds, newMealType) => {
+  const moveMealPlanSection = useCallback((entryIds: string[], newMealType: string) => {
     triggerHaptic(15);
     const idSet = new Set(entryIds);
     const targetHasCourse = mealTypeHasCourse(newMealType);
