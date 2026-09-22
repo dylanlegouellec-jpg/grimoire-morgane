@@ -6,7 +6,7 @@
 /*  de concaténation (déterminant pour la cascade CSS entre fichiers).  */
 /* ------------------------------------------------------------------ */
 
-export const FRIDGE_CSS = `
+export const FRIDGE_CSS: string = `
 /* --- Mon Frigo ---------------------------------------------------------
    Compteur global, accordéons par catégorie (au lieu du nuage de puces
    en vrac), et une liste "Réalisable avec ton frigo" triée par niveau de

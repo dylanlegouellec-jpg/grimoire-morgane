@@ -6,7 +6,7 @@
 /*  de concaténation (déterminant pour la cascade CSS entre fichiers).  */
 /* ------------------------------------------------------------------ */
 
-export const THEME_CSS = `
+export const THEME_CSS: string = `
 :root {
   --parchment: #f1e6c8;
   --parchment-deep: #e6d5a8;

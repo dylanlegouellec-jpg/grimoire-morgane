@@ -3,7 +3,7 @@
 /*  et mini console de logs (voir DiagnosticsPanelModal.jsx).           */
 /* ------------------------------------------------------------------ */
 
-export const DIAGNOSTICS_CSS = `
+export const DIAGNOSTICS_CSS: string = `
 .diagnostics-metrics { display: flex; flex-direction: column; gap: 10px; }
 .diagnostics-metric { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .diagnostics-metric-label { color: var(--ink-soft); font-size: 0.92rem; }

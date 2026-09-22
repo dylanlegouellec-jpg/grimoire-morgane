@@ -6,7 +6,7 @@
 /*  de concaténation (déterminant pour la cascade CSS entre fichiers).  */
 /* ------------------------------------------------------------------ */
 
-export const RESPONSIVE_CSS = `
+export const RESPONSIVE_CSS: string = `
 /* ==================================================================== */
 /*  MODE PAYSAGE (mobiles/tablettes en rotation, écrans larges)         */
 /*  Sidebar fixe à gauche (titre, recherche, filtres, navigation) +     */

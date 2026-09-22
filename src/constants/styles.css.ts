@@ -35,7 +35,7 @@ import { ONBOARDING_CSS } from "./styles/onboarding.css";
 import { COOKBOOK_CSS } from "./styles/cookbook.css";
 import { DIAGNOSTICS_CSS } from "./styles/diagnostics.css";
 
-export const CSS = [
+export const CSS: string = [
   THEME_CSS,
   SHELL_CSS,
   RECIPE_CARDS_CSS,

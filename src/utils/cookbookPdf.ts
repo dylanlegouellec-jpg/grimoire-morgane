@@ -1,15 +1,15 @@
 import { marginMm, pageDimensionsMm } from "../constants/cookbook";
+import type { PageFormat, PageOrientation, PageMarginId } from "../constants/cookbook";
 import type { jsPDF } from "jspdf";
 import type Html2Canvas from "html2canvas";
 
-// `constants/cookbook.js` reste en .js pour l'instant — la forme exacte de
-// la config (valeurs possibles de format/orientation/margin) y est déjà
-// validée par PAGE_DIMENSIONS_MM/PAGE_MARGINS, pas redupliquée ici en
-// littéraux stricts pour éviter que les deux dérivent l'un de l'autre.
+// Réutilise les types de valeurs valides définis dans constants/cookbook.ts
+// (désormais lui aussi en TypeScript) plutôt que de redupliquer ici des
+// littéraux stricts qui pourraient dériver de la source de vérité.
 export interface CookbookConfig {
-  format: string;
-  orientation: string;
-  margin: string;
+  format: PageFormat;
+  orientation: PageOrientation;
+  margin: PageMarginId;
 }
 
 /* ------------------------------------------------------------------ */

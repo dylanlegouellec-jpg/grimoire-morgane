@@ -11,7 +11,7 @@
 /*  le balisage entre aperçu et impression réelle.                                 */
 /* ------------------------------------------------------------------ */
 
-export const COOKBOOK_CSS = `
+export const COOKBOOK_CSS: string = `
 /* --- Éditeur (CookbookBuilderModal.jsx) --- */
 .cookbook-color-row { display: flex; gap: 10px; flex-wrap: wrap; padding: 4px 2px; }
 .cookbook-color-swatch {

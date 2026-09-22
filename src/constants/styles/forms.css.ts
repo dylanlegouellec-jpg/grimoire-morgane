@@ -6,7 +6,7 @@
 /*  de concaténation (déterminant pour la cascade CSS entre fichiers).  */
 /* ------------------------------------------------------------------ */
 
-export const FORMS_CSS = `
+export const FORMS_CSS: string = `
 .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; font-size: 0.82rem; color: var(--ink-soft); font-family: 'Cinzel', serif; letter-spacing: 0.3px; max-width: 100%; }
 .field input, .field select, .field textarea {
   font-family: 'EB Garamond', serif; font-size: 1rem; color: var(--ink);

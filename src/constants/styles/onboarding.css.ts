@@ -1,4 +1,4 @@
-export const ONBOARDING_CSS = `
+export const ONBOARDING_CSS: string = `
 /* ------------------------------------------------------------------ */
 /*  TUTORIEL GUIDÉ (ONBOARDING) — voir components/onboarding/            */
 /*  OnboardingTour.jsx pour la logique (mesure/positionnement du trou,    */

@@ -12,7 +12,9 @@
 /*     seule leur AFFICHAGE se traduit via ce dictionnaire.                  */
 /* ------------------------------------------------------------------ */
 
-export const translations = {
+export type TranslationTree = { [key: string]: string | TranslationTree };
+
+export const translations: Record<"fr" | "en", TranslationTree> = {
   fr: {
     nav: {
       recettes: "Recettes",
