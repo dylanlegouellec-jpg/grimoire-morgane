@@ -17,11 +17,14 @@ import { getStoredSoundEffects } from "./localSettings";
 /*  façon.                                                                     */
 /* ------------------------------------------------------------------ */
 
-let sharedContext = null;
+let sharedContext: AudioContext | null = null;
 
-function getAudioContext() {
+// `webkitAudioContext` : préfixe historique de Safari/anciens WebKit, jamais
+// entré dans lib.dom.d.ts — le cast est nécessaire ici, pas une négligence
+// de typage.
+function getAudioContext(): AudioContext | null {
   if (typeof window === "undefined") return null;
-  const Ctor = window.AudioContext || window.webkitAudioContext;
+  const Ctor = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!Ctor) return null;
   if (!sharedContext) {
     try {
@@ -40,7 +43,13 @@ function getAudioContext() {
 // descente douce) pour éviter tout "clic" numérique brutal — volume
 // volontairement très faible : un accusé de réception discret, jamais un
 // vrai bip qui distrairait.
-function playTone(frequency, { duration = 0.09, startTime = 0, peakVolume = 0.05 } = {}) {
+interface PlayToneOptions {
+  duration?: number;
+  startTime?: number;
+  peakVolume?: number;
+}
+
+function playTone(frequency: number, { duration = 0.09, startTime = 0, peakVolume = 0.05 }: PlayToneOptions = {}): void {
   const ctx = getAudioContext();
   if (!ctx) return;
   try {
@@ -68,14 +77,14 @@ function playTone(frequency, { duration = 0.09, startTime = 0, peakVolume = 0.05
 // Clic court, nettement audible (pas juste un souffle) — navigation basse,
 // boutons d'action, et désormais tout élément cliquable de l'app (voir
 // initAudioOnFirstTouch ci-dessous).
-export function playClickSound() {
+export function playClickSound(): void {
   if (!getStoredSoundEffects()) return;
   playTone(720, { duration: 0.08, peakVolume: 0.14 });
 }
 
 // Double note ascendante (440Hz -> 880Hz) — validation d'une recette ou
 // d'une étape (ex. "Sceller la recette", fin d'étape en Mode Cuisine).
-export function playSuccessSound() {
+export function playSuccessSound(): void {
   if (!getStoredSoundEffects()) return;
   playTone(440, { duration: 0.1, peakVolume: 0.06 });
   playTone(880, { duration: 0.14, startTime: 0.09, peakVolume: 0.06 });
@@ -102,7 +111,7 @@ export function playSuccessSound() {
 const CLICKABLE_SELECTOR = 'button, a, input[type="checkbox"], .clickable';
 let audioInitialized = false;
 
-export function initAudioOnFirstTouch() {
+export function initAudioOnFirstTouch(): void {
   if (typeof document === "undefined" || audioInitialized) return;
   audioInitialized = true;
 
@@ -113,8 +122,13 @@ export function initAudioOnFirstTouch() {
   document.addEventListener(
     "click",
     (e) => {
-      const target = e.target && e.target.closest ? e.target.closest(CLICKABLE_SELECTOR) : null;
-      if (!target || target.disabled) return;
+      const eventTarget = e.target as Element | null;
+      const target = eventTarget && eventTarget.closest ? eventTarget.closest(CLICKABLE_SELECTOR) : null;
+      // `.disabled` n'existe pas sur Element en général (seulement sur les
+      // contrôles de formulaire, ex. <button disabled>) — CLICKABLE_SELECTOR
+      // peut matcher <a> ou .clickable, qui ne l'ont jamais : `undefined` y
+      // est alors toujours faux, comportement identique à avant.
+      if (!target || (target as HTMLButtonElement).disabled) return;
       playClickSound();
     },
     true // phase de capture : indépendant d'un éventuel stopPropagation() posé plus bas dans l'arbre

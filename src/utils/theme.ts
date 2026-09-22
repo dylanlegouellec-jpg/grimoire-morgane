@@ -1,9 +1,12 @@
 /* ------------------------------------------------------------------ */
 /*  THÈME (Clair / Sombre / Système)                                   */
 /* ------------------------------------------------------------------ */
+export type ThemeSetting = "light" | "dark" | "system";
+export type ResolvedTheme = "light" | "dark";
+
 const STORAGE_KEY = "grimoire_theme"; // "light" | "dark" | "system"
 
-export function getStoredTheme() {
+export function getStoredTheme(): ThemeSetting {
   try {
     const v = localStorage.getItem(STORAGE_KEY);
     if (v === "light" || v === "dark" || v === "system") return v;
@@ -13,7 +16,7 @@ export function getStoredTheme() {
   return "system";
 }
 
-export function storeTheme(theme) {
+export function storeTheme(theme: ThemeSetting): void {
   try {
     localStorage.setItem(STORAGE_KEY, theme);
   } catch {
@@ -21,12 +24,12 @@ export function storeTheme(theme) {
   }
 }
 
-function systemPrefersDark() {
+function systemPrefersDark(): boolean {
   return typeof window !== "undefined" && !!window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
 }
 
 // Résout "light" / "dark" / "system" vers la valeur effective "light" | "dark".
-export function resolveTheme(theme) {
+export function resolveTheme(theme: ThemeSetting): ResolvedTheme {
   if (theme === "dark") return "dark";
   if (theme === "light") return "light";
   return systemPrefersDark() ? "dark" : "light";
@@ -37,7 +40,7 @@ export function resolveTheme(theme) {
 // démarrage), la feuille de style vient à peine d'être posée et une lecture
 // via getComputedStyle serait fragile (dépend de l'ordre de chargement),
 // alors qu'une balise <meta> HTML, elle, doit être correcte immédiatement.
-const THEME_COLOR_META = { light: "#f1e6c8", dark: "#1c1917" };
+const THEME_COLOR_META: Record<ResolvedTheme, string> = { light: "#f1e6c8", dark: "#1c1917" };
 
 // REGRESSION (2e round) : muter juste `content` sur la balise <meta>
 // EXISTANTE (comportement d'origine de cette fonction) ne suffit pas
@@ -51,11 +54,11 @@ const THEME_COLOR_META = { light: "#f1e6c8", dark: "#1c1917" };
 // chargement de la page — on force donc iOS à la revoir "neuve" en
 // remplaçant intégralement le nœud (clone + valeur, puis substitution)
 // plutôt qu'en modifiant l'existant en place.
-function replaceThemeColorMeta(color) {
+function replaceThemeColorMeta(color: string): void {
   if (typeof document === "undefined") return;
   const meta = document.querySelector('meta[name="theme-color"]');
   if (!meta) return;
-  const fresh = meta.cloneNode(true);
+  const fresh = meta.cloneNode(true) as Element;
   fresh.setAttribute("content", color);
   meta.replaceWith(fresh);
 }
@@ -67,7 +70,7 @@ function replaceThemeColorMeta(color) {
 // fond de l'app plutôt qu'une couleur figée à la construction de la page,
 // qui décroche dès que l'utilisateur choisit un thème différent de celui
 // de son système.
-export function applyTheme(theme) {
+export function applyTheme(theme: ThemeSetting): ResolvedTheme {
   const resolved = resolveTheme(theme);
   if (typeof document !== "undefined" && document.documentElement) {
     document.documentElement.setAttribute("data-theme", resolved);
@@ -84,7 +87,7 @@ export function applyTheme(theme) {
 // correspond à rien de visible à l'écran. Prend directement une couleur
 // hexadécimale plutôt qu'un thème — à l'appelant de restaurer ensuite le
 // thème réel (voir applyTheme) une fois son propre fond retiré.
-export function overrideStatusBarColor(color) {
+export function overrideStatusBarColor(color: string): void {
   replaceThemeColorMeta(color);
 }
 
@@ -105,23 +108,35 @@ export function overrideStatusBarColor(color) {
 // conflit avec la couleur du mode cuisine, elle-même indépendante de ce
 // thème), ceci ne change jamais la valeur logique — donc rien à
 // réconcilier avec CookMode.jsx.
-export function refreshStatusBarColor() {
+export function refreshStatusBarColor(): void {
   if (typeof document === "undefined") return;
   const meta = document.querySelector('meta[name="theme-color"]');
   if (!meta) return;
-  replaceThemeColorMeta(meta.getAttribute("content"));
+  // Cette balise porte toujours un attribut "content" (posé par index.html
+  // puis jamais retiré, seulement remplacé — voir replaceThemeColorMeta) :
+  // le cast reflète cette garantie déjà implicite dans le code d'origine,
+  // pas une nouvelle hypothèse.
+  replaceThemeColorMeta(meta.getAttribute("content") as string);
 }
 
 // N'a d'effet que lorsque le thème choisi est "system" : réapplique le
 // thème à chaque bascule clair/sombre du système d'exploitation.
-export function watchSystemTheme(onChange) {
+export function watchSystemTheme(onChange: (theme: ResolvedTheme) => void): () => void {
   if (typeof window === "undefined" || !window.matchMedia) return () => {};
   const mq = window.matchMedia("(prefers-color-scheme: dark)");
   const handler = () => onChange(mq.matches ? "dark" : "light");
+  // addListener/removeListener : API dépréciée mais seule disponible sur le
+  // vieux Safari (voir le commentaire d'origine) — non typée dans
+  // lib.dom.d.ts moderne, d'où le cast.
+  type LegacyMediaQueryList = MediaQueryList & {
+    addListener?: (fn: () => void) => void;
+    removeListener?: (fn: () => void) => void;
+  };
+  const legacyMq = mq as LegacyMediaQueryList;
   if (mq.addEventListener) mq.addEventListener("change", handler);
-  else if (mq.addListener) mq.addListener(handler); // anciens navigateurs (vieux Safari)
+  else if (legacyMq.addListener) legacyMq.addListener(handler);
   return () => {
     if (mq.removeEventListener) mq.removeEventListener("change", handler);
-    else if (mq.removeListener) mq.removeListener(handler);
+    else if (legacyMq.removeListener) legacyMq.removeListener(handler);
   };
 }
