@@ -6,7 +6,7 @@
 /*  de concaténation (déterminant pour la cascade CSS entre fichiers).  */
 /* ------------------------------------------------------------------ */
 
-export const COOKMODE_CSS = `
+export const COOKMODE_CSS: string = `
 /* --- Mode cuisine --- */
 .cookmode-backdrop {
   position: fixed; inset: 0; z-index: 60; background: #2c221e;

@@ -6,7 +6,7 @@
 /*  de concaténation (déterminant pour la cascade CSS entre fichiers).  */
 /* ------------------------------------------------------------------ */
 
-export const MODALS_BASE_CSS = `
+export const MODALS_BASE_CSS: string = `
 /* --- Navigation basse : dock flottant façon iOS --------------------------
    Ne colle plus aux bords (avant : pleine largeur, voir l'historique git de
    ce fichier) — centrée avec une marge de chaque côté ET par rapport au bas

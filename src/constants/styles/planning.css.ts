@@ -6,7 +6,7 @@
 /*  de concaténation (déterminant pour la cascade CSS entre fichiers).  */
 /* ------------------------------------------------------------------ */
 
-export const PLANNING_CSS = `
+export const PLANNING_CSS: string = `
 /* ------------------------------------------------------------------ */
 /*  PLANIFICATION — plan de repas hebdomadaire (voir PlanningView.jsx)   */
 /* ------------------------------------------------------------------ */

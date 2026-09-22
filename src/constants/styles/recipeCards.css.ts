@@ -6,7 +6,7 @@
 /*  de concaténation (déterminant pour la cascade CSS entre fichiers).  */
 /* ------------------------------------------------------------------ */
 
-export const RECIPE_CARDS_CSS = `
+export const RECIPE_CARDS_CSS: string = `
 /* --- Cartes --- */
 .card {
   background: var(--surface);

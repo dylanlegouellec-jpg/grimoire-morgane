@@ -6,7 +6,7 @@
 /*  de concaténation (déterminant pour la cascade CSS entre fichiers).  */
 /* ------------------------------------------------------------------ */
 
-export const SETTINGS_IOS_CSS = `
+export const SETTINGS_IOS_CSS: string = `
 /* ------------------------------------------------------------------ */
 /*  RÉGLAGES — liste groupée façon iOS (Human Interface Guidelines)     */
 /*  Utilisé par SecretSettingsModal et ses sous-panneaux (Apparence &   */

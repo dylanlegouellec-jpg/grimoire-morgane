@@ -6,7 +6,7 @@
 /*  de concaténation (déterminant pour la cascade CSS entre fichiers).  */
 /* ------------------------------------------------------------------ */
 
-export const MISC_CSS = `
+export const MISC_CSS: string = `
 /* --- Flourish glissant (onglet Courses) --- */
 .flourish-swipe {
   cursor: grab; touch-action: pan-y; user-select: none;

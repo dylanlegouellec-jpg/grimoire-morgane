@@ -6,7 +6,7 @@
 /*  de concaténation (déterminant pour la cascade CSS entre fichiers).  */
 /* ------------------------------------------------------------------ */
 
-export const HOUSEHOLD_CSS = `
+export const HOUSEHOLD_CSS: string = `
 /* --- Panneau admin du foyer (Réglages secrets) --- */
 .household-add-row { display: flex; gap: 8px; align-items: center; }
 .household-email-input {

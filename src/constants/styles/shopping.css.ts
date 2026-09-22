@@ -6,7 +6,7 @@
 /*  de concaténation (déterminant pour la cascade CSS entre fichiers).  */
 /* ------------------------------------------------------------------ */
 
-export const SHOPPING_CSS = `
+export const SHOPPING_CSS: string = `
 /* --- Courses --- */
 /* Ligne "Liste 1  changer ▾" + toggle foyer/personnel (voir
    ShoppingView.jsx) : même principe que la ligne semaine de la

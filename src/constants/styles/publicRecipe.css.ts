@@ -5,7 +5,7 @@
 /*  n'a ni nav, ni en-tête, ni sidebar à faire tenir dans cette grille —     */
 /*  juste une seule carte recette centrée, quelle que soit la largeur.        */
 /* ------------------------------------------------------------------ */
-export const PUBLIC_RECIPE_CSS = `
+export const PUBLIC_RECIPE_CSS: string = `
 .public-recipe-page {
   font-family: 'EB Garamond', Georgia, serif;
   color: var(--ink);

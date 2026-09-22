@@ -6,7 +6,7 @@
 /*  de concaténation (déterminant pour la cascade CSS entre fichiers).  */
 /* ------------------------------------------------------------------ */
 
-export const SHELL_CSS = `
+export const SHELL_CSS: string = `
 .app-header {
   position: relative;
   text-align: center;
