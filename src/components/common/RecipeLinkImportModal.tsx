@@ -10,6 +10,13 @@ import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
 
+interface RecipeLinkImportModalProps {
+  onClose: () => void;
+  onCreateRecipe: () => void;
+}
+
+type Status = "idle" | "loading" | "done" | "error";
+
 /* ------------------------------------------------------------------ */
 /*  IMPORTER UNE RECETTE DEPUIS UN LIEN (Instagram/TikTok)              */
 /*  Aucune IA ici (pas de clé OpenAI à payer, sur demande explicite) :    */
@@ -20,12 +27,12 @@ import Seal from "./Seal";
 /*  ouvre directement le formulaire de création (voir onCreateRecipe, câblé      */
 /*  par AppShell sur le même mécanisme que le "+" habituel) pour coller.          */
 /* ------------------------------------------------------------------ */
-export default function RecipeLinkImportModal({ onClose, onCreateRecipe }) {
+export default function RecipeLinkImportModal({ onClose, onCreateRecipe }: RecipeLinkImportModalProps) {
   useBodyScrollLock(true);
-  const modalRef = useFocusTrap(onClose);
+  const modalRef = useFocusTrap<HTMLDivElement>(onClose);
   const sheet = useDismissibleSheet(onClose, { scrollRef: modalRef });
   const [url, setUrl] = useState("");
-  const [status, setStatus] = useState("idle"); // idle | loading | done | error
+  const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState("");
   const [caption, setCaption] = useState("");
   const [copied, setCopied] = useState(false);
@@ -41,7 +48,7 @@ export default function RecipeLinkImportModal({ onClose, onCreateRecipe }) {
       setCaption(data.caption);
       setStatus("done");
     } catch (err) {
-      setError((err && err.message) || "Récupération impossible.");
+      setError((err instanceof Error && err.message) || "Récupération impossible.");
       setStatus("error");
     }
   };
@@ -109,7 +116,7 @@ export default function RecipeLinkImportModal({ onClose, onCreateRecipe }) {
               rows={10}
               className="template-textarea"
               value={caption}
-              onClick={(e) => e.target.select()}
+              onClick={(e) => e.currentTarget.select()}
             />
             <div className="cookmode-nav" style={{ marginTop: 14 }}>
               <Seal tone="gold" onClick={handleCopy}>

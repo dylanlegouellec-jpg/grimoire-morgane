@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type ChangeEvent } from "react";
 import { motion } from "motion/react";
 import { Check, UserCircle2, X } from "lucide-react";
 import { saveProfile, uploadAvatar } from "../../utils/profile";
@@ -9,15 +9,40 @@ import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import Flourish from "./Flourish";
 
+interface ProfileEditorUser {
+  id: string;
+  email?: string;
+}
+
+// Ligne renvoyée par getProfile — champs exacts définis côté SQL, pas
+// encore répliqués ici en toute rigueur (même choix que ProfileRow,
+// utils/profile.ts).
+interface ProfileEditorProfile {
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  display_name?: string;
+  birth_date?: string | null;
+  avatar_url?: string;
+}
+
+interface ProfileEditorProps {
+  user: ProfileEditorUser;
+  profile: ProfileEditorProfile | null;
+  onClose: () => void;
+  onSaved?: (patch: Partial<ProfileEditorProfile>) => void;
+  showToast?: (msg: string) => void;
+}
+
 /* ------------------------------------------------------------------ */
 /*  MODIFIER LE PROFIL — sous-modale ouverte depuis la carte de profil  */
 /*  en tête des Réglages (bouton "Modifier le profil" ou appui long sur  */
 /*  l'avatar/le nom). Prénom, nom, surnom et photo — mêmes garanties      */
 /*  hors-ligne que le reste de l'app (voir utils/profile.js).             */
 /* ------------------------------------------------------------------ */
-export default function ProfileEditor({ user, profile, onClose, onSaved, showToast }) {
+export default function ProfileEditor({ user, profile, onClose, onSaved, showToast }: ProfileEditorProps) {
   useBodyScrollLock(true);
-  const modalRef = useFocusTrap(onClose);
+  const modalRef = useFocusTrap<HTMLDivElement>(onClose);
   const sheet = useDismissibleSheet(onClose, { scrollRef: modalRef });
 
   const [firstName, setFirstName] = useState((profile && profile.first_name) || "");
@@ -30,14 +55,14 @@ export default function ProfileEditor({ user, profile, onClose, onSaved, showToa
   const [avatarUrl, setAvatarUrl] = useState((profile && profile.avatar_url) || null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const fileRef = useRef(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const handleAvatarClick = () => {
     triggerHaptic(15);
     fileRef.current && fileRef.current.click();
   };
 
-  const handleAvatarChange = async (e) => {
+  const handleAvatarChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files && e.target.files[0];
     e.target.value = "";
     if (!file || !user) return;

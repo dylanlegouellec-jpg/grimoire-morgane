@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type ChangeEvent } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "motion/react";
 import { Camera, ImageOff, Sparkles, Trash2, X } from "lucide-react";
@@ -10,6 +10,16 @@ import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import Flourish from "./Flourish";
+import type { Recipe } from "../../hooks/useRecipes";
+
+interface RecipeOptionsModalProps {
+  recipe: Recipe;
+  onClose: () => void;
+  onUpdateRecipe: (recipe: Recipe) => void;
+  onRequestDelete: (recipe: Recipe) => void;
+  householdId: string | null;
+  showToast?: (msg: string) => void;
+}
 
 /* ------------------------------------------------------------------ */
 /*  MENU D'ACTIONS SUR UNE RECETTE (déclenché par l'appui long)        */
@@ -18,12 +28,12 @@ import Flourish from "./Flourish";
 /*  (voir MODAL_SHEET_MOTION.exit) ait le temps de jouer avant le vrai   */
 /*  démontage.                                                          */
 /* ------------------------------------------------------------------ */
-export default function RecipeOptionsModal({ recipe, onClose, onUpdateRecipe, onRequestDelete, householdId, showToast }) {
-  const fileInputRef = useRef(null);
+export default function RecipeOptionsModal({ recipe, onClose, onUpdateRecipe, onRequestDelete, householdId, showToast }: RecipeOptionsModalProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [generating, setGenerating] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState(null);
-  const modalRef = useFocusTrap(onClose);
+  const [error, setError] = useState<string | null>(null);
+  const modalRef = useFocusTrap<HTMLDivElement>(onClose);
   const sheet = useDismissibleSheet(onClose, { scrollRef: modalRef });
 
   // Fige le <body> tant que ce menu est ouvert (même hook que RecipeDetail.jsx).
@@ -35,7 +45,7 @@ export default function RecipeOptionsModal({ recipe, onClose, onUpdateRecipe, on
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = async (e) => {
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files && e.target.files[0];
     e.target.value = ""; // permet de reprendre la même photo une prochaine fois
     if (!file) return;
