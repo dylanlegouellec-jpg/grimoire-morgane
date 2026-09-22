@@ -22,8 +22,17 @@ import { useEffect, useState } from "react";
 /*  modale visible. Avec un compteur partagé, le <body> n'est figé qu'au    */
 /*  passage 0→1 et restauré qu'au retour 1→0, quel que soit l'ordre         */
 /*  d'ouverture/fermeture des modales. */
+interface BodyStyleSnapshot {
+  position: string;
+  top: string;
+  left: string;
+  width: string;
+  touchAction: string;
+  overscrollBehavior: string;
+}
+
 let lockCount = 0;
-let savedBodyStyle = null;
+let savedBodyStyle: BodyStyleSnapshot | null = null;
 let savedScrollY = 0;
 
 // Abonnés à useIsAnyModalOpen ci-dessous — notifiés à chaque franchissement
@@ -36,14 +45,14 @@ let savedScrollY = 0;
 // PlanningCourseGroup -> PlanningMealItem), ce compteur déjà partagé par
 // TOUTES les modales de l'app (voir plus haut) donne directement ce
 // signal "au moins une modale ouverte" sans plomberie supplémentaire.
-const listeners = new Set();
+const listeners = new Set<(open: boolean) => void>();
 
-function notifyListeners() {
+function notifyListeners(): void {
   const open = lockCount > 0;
   listeners.forEach((fn) => fn(open));
 }
 
-function lockBody() {
+function lockBody(): void {
   if (lockCount === 0) {
     savedScrollY = window.scrollY || window.pageYOffset || 0;
     const body = document.body;
@@ -66,7 +75,7 @@ function lockBody() {
   if (lockCount === 1) notifyListeners();
 }
 
-function unlockBody() {
+function unlockBody(): void {
   lockCount = Math.max(0, lockCount - 1);
   if (lockCount === 0 && savedBodyStyle) {
     const body = document.body;
@@ -82,7 +91,7 @@ function unlockBody() {
   }
 }
 
-export default function useBodyScrollLock(active = true) {
+export default function useBodyScrollLock(active: boolean = true): void {
   useEffect(() => {
     if (!active) return undefined;
     lockBody();
@@ -96,8 +105,8 @@ export default function useBodyScrollLock(active = true) {
 // que useBodyScrollLock ci-dessus, donc toujours cohérent avec le verrou de
 // scroll du fond déjà en place : si le fond est gelé, ce booléen vaut déjà
 // `true`, sans readjustement séparé à maintenir.
-export function useIsAnyModalOpen() {
-  const [open, setOpen] = useState(() => lockCount > 0);
+export function useIsAnyModalOpen(): boolean {
+  const [open, setOpen] = useState<boolean>(() => lockCount > 0);
   useEffect(() => {
     // Resynchronise au montage : lockCount a pu changer entre le rendu de
     // cet appelant et l'exécution de cet effet (ex. une modale déjà montée

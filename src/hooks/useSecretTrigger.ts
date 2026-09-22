@@ -1,12 +1,23 @@
 import { useRef } from "react";
+import type { CSSProperties } from "react";
 
 /* ------------------------------------------------------------------ */
 /*  DÉCLENCHEUR SECRET (triple-clic ou appui long 2s)                  */
 /* ------------------------------------------------------------------ */
 
-export default function useSecretTrigger(onTrigger) {
-  const clicksRef = useRef({ count: 0, timer: null });
-  const pressTimerRef = useRef(null);
+interface SecretTriggerHandlers {
+  onClick: () => void;
+  onMouseDown: () => void;
+  onMouseUp: () => void;
+  onMouseLeave: () => void;
+  onTouchStart: () => void;
+  onTouchEnd: () => void;
+  style: CSSProperties;
+}
+
+export default function useSecretTrigger(onTrigger: () => void): SecretTriggerHandlers {
+  const clicksRef = useRef<{ count: number; timer: ReturnType<typeof setTimeout> | null }>({ count: 0, timer: null });
+  const pressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const registerClick = () => {
     clicksRef.current.count += 1;
