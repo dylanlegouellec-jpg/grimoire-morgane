@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { triggerHapticFeedback } from "../utils/haptics";
+import type { MouseEvent as ReactMouseEvent } from "react";
+
+// Couvre à la fois un vrai TouchEvent natif (addEventListener ci-dessous) et
+// un MouseEvent React (handlers.onMouseDown ci-dessous) — seuls les deux
+// champs effectivement lus ici, jamais le type DOM/React complet (les deux
+// diffèrent trop pour être unifiés autrement sans generics superflus).
+interface PressEventLike {
+  touches?: ArrayLike<{ clientX: number; clientY: number }>;
+  currentTarget?: EventTarget | null;
+}
 
 /* ------------------------------------------------------------------ */
 /*  APPUI LONG — geste générique                                       */
@@ -45,14 +55,16 @@ const PRESS_VISUAL_DELAY_MS = 100;
 // toujours sûr ici.
 const TOUCH_LISTENER_OPTS = { passive: true };
 
-export default function useLongPress(onLongPress, pressDuration = 750) {
-  const nodeRef = useRef(null);
-  const timer = useRef(null);
-  const visualTimer = useRef(null);
+export type PressState = "idle" | "pressing" | "fired";
+
+export default function useLongPress(onLongPress: () => void, pressDuration: number = 750) {
+  const nodeRef = useRef<HTMLElement | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const visualTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fired = useRef(false);
-  const startPos = useRef(null);
+  const startPos = useRef<{ x: number; y: number } | null>(null);
   const startScrollY = useRef(0);
-  const [pressState, setPressState] = useState("idle");
+  const [pressState, setPressState] = useState<PressState>("idle");
 
   // Toujours les dernières valeurs reçues, sans jamais recréer/réattacher
   // les écouteurs tactiles natifs ci-dessous (même principe que
@@ -76,7 +88,7 @@ export default function useLongPress(onLongPress, pressDuration = 750) {
     setPressState((s) => (s === "fired" ? s : "idle"));
   }, []);
 
-  const start = useCallback((e) => {
+  const start = useCallback((e?: PressEventLike) => {
     fired.current = false;
     startPos.current = e && e.touches && e.touches[0]
       ? { x: e.touches[0].clientX, y: e.touches[0].clientY }
@@ -103,12 +115,12 @@ export default function useLongPress(onLongPress, pressDuration = 750) {
       }
       fired.current = true;
       setPressState("fired");
-      triggerHapticFeedback(currentTarget, 20);
+      triggerHapticFeedback(currentTarget as Element | null, 20);
       onLongPressRef.current();
     }, pressDurationRef.current);
   }, [cancel]);
 
-  const move = useCallback((e) => {
+  const move = useCallback((e: PressEventLike) => {
     if (!startPos.current || !timer.current || !e.touches || !e.touches[0]) return;
     const dx = e.touches[0].clientX - startPos.current.x;
     const dy = e.touches[0].clientY - startPos.current.y;
@@ -122,11 +134,16 @@ export default function useLongPress(onLongPress, pressDuration = 750) {
     node.addEventListener("touchmove", move, TOUCH_LISTENER_OPTS);
     node.addEventListener("touchend", cancel, TOUCH_LISTENER_OPTS);
     node.addEventListener("touchcancel", cancel, TOUCH_LISTENER_OPTS);
+    // removeEventListener n'a besoin que de `capture` pour retrouver
+    // l'écouteur à retirer (le navigateur ignore `passive` ici) — le type
+    // DOM de son 3e argument est plus strict que celui d'addEventListener,
+    // d'où ce cast plutôt qu'un second objet d'options dupliqué.
+    const removeOpts = TOUCH_LISTENER_OPTS as unknown as EventListenerOptions;
     return () => {
-      node.removeEventListener("touchstart", start, TOUCH_LISTENER_OPTS);
-      node.removeEventListener("touchmove", move, TOUCH_LISTENER_OPTS);
-      node.removeEventListener("touchend", cancel, TOUCH_LISTENER_OPTS);
-      node.removeEventListener("touchcancel", cancel, TOUCH_LISTENER_OPTS);
+      node.removeEventListener("touchstart", start, removeOpts);
+      node.removeEventListener("touchmove", move, removeOpts);
+      node.removeEventListener("touchend", cancel, removeOpts);
+      node.removeEventListener("touchcancel", cancel, removeOpts);
     };
   }, [start, move, cancel]);
 
@@ -154,7 +171,7 @@ export default function useLongPress(onLongPress, pressDuration = 750) {
       onMouseDown: start,
       onMouseUp: cancel,
       onMouseLeave: cancel,
-      onContextMenu: (e) => e.preventDefault(),
+      onContextMenu: (e: ReactMouseEvent) => e.preventDefault(),
     },
     wasLongPress,
     pressState,
