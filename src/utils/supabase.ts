@@ -2,6 +2,19 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_READY } from "../constants";
 import { enqueueOfflineAction, getOfflineQueue, removeFromOfflineQueue, incrementOfflineActionFailCount } from "./offlineQueue";
 import { normalizeIngredientList } from "./ingredients";
 import { getSupabaseClient } from "./supabaseClient";
+import type { NewOfflineAction } from "./offlineQueue";
+
+// Marqueurs posés sur de vraies instances Error (jamais un type d'erreur à
+// part) pour que isRecoverableOffline/runFlushOfflineQueue ci-dessous
+// sachent, sans avoir à re-parser un message, si une erreur vient d'une
+// coupure réseau (offline/networkError/timeout) ou d'un vrai statut HTTP
+// (status) — mêmes champs qu'avant la conversion TypeScript, juste nommés.
+interface SupabaseRequestError extends Error {
+  offline?: boolean;
+  networkError?: boolean;
+  timeout?: boolean;
+  status?: number;
+}
 
 /* ------------------------------------------------------------------ */
 /*  SUPABASE (REST / PostgREST — aucun SDK externe requis)             */
@@ -42,7 +55,7 @@ export const APP_STATE_COLUMNS = "household_id,pantry,basics,meal_plan,updated_a
 // rapportent à `false` alors que Supabase reste parfaitement joignable
 // (l'app se déclarait alors "hors-ligne" à tort, sans même essayer). Dès
 // qu'un vrai ping a répondu au moins une fois, son résultat prime.
-let lastKnownReachable = null;
+let lastKnownReachable: boolean | null = null;
 
 // Bascule de simulation pour le Panneau de Diagnostics ("simuler le mode
 // hors-ligne") — jamais persistée (en mémoire seulement) : un rechargement
@@ -51,15 +64,15 @@ let lastKnownReachable = null;
 // test.
 let forceOfflineForDebug = false;
 
-export function setForceOfflineForDebug(value) {
+export function setForceOfflineForDebug(value: unknown): void {
   forceOfflineForDebug = Boolean(value);
 }
 
-export function isForceOfflineForDebug() {
+export function isForceOfflineForDebug(): boolean {
   return forceOfflineForDebug;
 }
 
-function isOffline() {
+function isOffline(): boolean {
   if (forceOfflineForDebug) return true;
   if (lastKnownReachable !== null) return !lastKnownReachable;
   return typeof navigator !== "undefined" && navigator.onLine === false;
@@ -78,7 +91,7 @@ function isOffline() {
 // rouge "hors ligne" alors que la connexion était parfaitement valide.
 // Seul un fetch qui échoue/expire (DNS, coupure réseau réelle) doit
 // compter comme injoignable.
-export async function pingSupabase() {
+export async function pingSupabase(): Promise<boolean> {
   if (!SUPABASE_READY) return false;
   if (forceOfflineForDebug) {
     lastKnownReachable = false;
@@ -139,7 +152,7 @@ export async function pingSupabase() {
 // ne résout à aucun utilisateur et se ferait systématiquement refuser
 // par RLS. Sans session (déconnecté), on retombe sur la clé anonyme :
 // la requête part quand même, mais RLS la bloquera — c'est voulu.
-async function getAuthToken() {
+async function getAuthToken(): Promise<string> {
   const client = getSupabaseClient();
   if (!client) return SUPABASE_ANON_KEY;
   const { data } = await client.auth.getSession();
@@ -150,7 +163,7 @@ async function getAuthToken() {
 // est abandonnée (AbortController) plutôt que laissée pendante — le même
 // pattern déjà utilisé côté Nutri-Score (voir utils/nutriscore.js), porté
 // ici pour couvrir aussi les écritures/lectures Supabase.
-async function fetchWithTimeout(url, options, ms) {
+async function fetchWithTimeout(url: string, options: RequestInit, ms: number): Promise<Response> {
   if (typeof fetch !== "function") throw new Error("fetch indisponible");
   const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
   const timer = controller ? setTimeout(() => controller.abort(), ms) : null;
@@ -161,16 +174,22 @@ async function fetchWithTimeout(url, options, ms) {
   }
 }
 
-async function supabaseRequest(path, options = {}) {
+// Retour volontairement non typé : cette couche REST générique renvoie
+// aussi bien un tableau de lignes qu'un objet unique ou `null` selon
+// l'appelant (fetchTable, insertRow, updateRow...) — chaque appelant
+// connaît la forme exacte de ce qu'il demande (voir mapRowToRecipe et
+// consorts plus bas, ainsi que profile.ts/auth.ts/planning.ts qui
+// indexent directement le résultat).
+async function supabaseRequest(path: string, options: RequestInit = {}): Promise<any> {
   if (!SUPABASE_READY) throw new Error("Supabase non configuré");
   if (isOffline()) {
-    const err = new Error(`Hors-ligne : ${path}`);
+    const err: SupabaseRequestError = new Error(`Hors-ligne : ${path}`);
     err.offline = true;
     throw err;
   }
 
   const token = await getAuthToken();
-  let res;
+  let res: Response;
   try {
     res = await fetchWithTimeout(
       `${SUPABASE_URL}/rest/v1/${path}`,
@@ -192,19 +211,20 @@ async function supabaseRequest(path, options = {}) {
     // deux cas, on classe l'erreur comme "réseau" pour que les fonctions
     // d'écriture sachent qu'elles peuvent basculer sur la file hors-ligne
     // plutôt que de la traiter comme une erreur applicative définitive.
-    const networkErr = new Error(
-      err && err.name === "AbortError"
+    const isAbort = err instanceof Error && err.name === "AbortError";
+    const networkErr: SupabaseRequestError = new Error(
+      isAbort
         ? `Délai dépassé (>${REQUEST_TIMEOUT_MS}ms) : ${path}`
         : `Réseau indisponible : ${path}`
     );
-    networkErr.timeout = err && err.name === "AbortError";
+    networkErr.timeout = isAbort;
     networkErr.networkError = true;
     throw networkErr;
   }
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    const httpErr = new Error(`Supabase ${res.status} : ${text}`);
+    const httpErr: SupabaseRequestError = new Error(`Supabase ${res.status} : ${text}`);
     httpErr.status = res.status;
     throw httpErr;
   }
@@ -213,7 +233,7 @@ async function supabaseRequest(path, options = {}) {
   return text ? JSON.parse(text) : null;
 }
 
-export async function fetchTable(table, query = `select=*`) {
+export async function fetchTable(table: string, query: string = `select=*`): Promise<any> {
   return supabaseRequest(`${table}?${query}`, { method: "GET" });
 }
 
@@ -224,7 +244,7 @@ export async function fetchTable(table, query = `select=*`) {
 // d'un `select=*` complet. Ne lève jamais : `null` signifie simplement
 // "indisponible" (hors-ligne, RLS, table absente...), un panneau de debug
 // n'a pas à faire planter le reste de l'app pour une métrique accessoire.
-export async function countTableRows(table) {
+export async function countTableRows(table: string): Promise<number | null> {
   if (!SUPABASE_READY || isOffline()) return null;
   try {
     const token = await getAuthToken();
@@ -250,15 +270,16 @@ export async function countTableRows(table) {
 // timeout) — pas si le serveur a répondu avec un vrai statut d'erreur
 // (400, 403 RLS, 409...) qui, lui, se reproduira à l'identique si on le
 // rejoue plus tard : mieux vaut le remonter tout de suite à l'appelant.
-function isRecoverableOffline(err) {
-  return Boolean(err && (err.offline || err.networkError));
+function isRecoverableOffline(err: unknown): boolean {
+  const e = err as SupabaseRequestError | null | undefined;
+  return Boolean(e && (e.offline || e.networkError));
 }
 
 // Exécute une écriture, et si elle échoue pour une raison réseau (hors-
 // ligne détecté à l'avance OU coupure/latence découverte pendant la
 // requête elle-même), l'empile pour rejeu automatique au retour du réseau
 // plutôt que de faire échouer l'action de l'utilisateur.
-async function withOfflineFallback(action, run, optimisticResult) {
+async function withOfflineFallback<T>(action: NewOfflineAction, run: () => Promise<T>, optimisticResult: T): Promise<T> {
   try {
     return await run();
   } catch (err) {
@@ -268,7 +289,7 @@ async function withOfflineFallback(action, run, optimisticResult) {
   }
 }
 
-export async function insertRow(table, row) {
+export async function insertRow(table: string, row: Record<string, unknown>) {
   return withOfflineFallback(
     { table, type: "insert", payload: row },
     async () => {
@@ -278,7 +299,7 @@ export async function insertRow(table, row) {
     row
   );
 }
-export async function updateRow(table, id, patch) {
+export async function updateRow(table: string, id: string, patch: Record<string, unknown>) {
   return withOfflineFallback(
     { table, type: "update", recordId: id, payload: patch },
     async () => {
@@ -291,7 +312,7 @@ export async function updateRow(table, id, patch) {
     { id, ...patch }
   );
 }
-export async function deleteRow(table, id) {
+export async function deleteRow(table: string, id: string): Promise<void> {
   return withOfflineFallback(
     { table, type: "delete", recordId: id },
     async () => {
@@ -306,7 +327,7 @@ export async function deleteRow(table, id) {
 // repli sur un POST. Partagé entre saveAppState (chemin direct) et
 // flushOfflineQueue (rejeu d'une action "app_state" mise en attente) pour
 // ne pas dupliquer cette logique PATCH-puis-POST.
-async function applyAppStatePatch(householdId, patch) {
+async function applyAppStatePatch(householdId: string, patch: Record<string, unknown>): Promise<void> {
   const rows = await supabaseRequest(`app_state?household_id=eq.${encodeURIComponent(householdId)}`, {
     method: "PATCH",
     body: JSON.stringify(patch),
@@ -351,7 +372,18 @@ const MAX_ACTION_RETRIES = 5;
 // connectivité, useConnectionStatus.js/inFlightRef).
 let flushInFlight = false;
 
-export async function flushOfflineQueue() {
+export interface OfflineConflict {
+  table: string;
+  keys: string[];
+}
+
+export interface FlushOfflineQueueResult {
+  flushed: number;
+  dropped: number;
+  conflicts: OfflineConflict[];
+}
+
+export async function flushOfflineQueue(): Promise<FlushOfflineQueueResult> {
   if (flushInFlight) return { flushed: 0, dropped: 0, conflicts: [] };
   flushInFlight = true;
   try {
@@ -372,7 +404,11 @@ export async function flushOfflineQueue() {
 // pas (ex. `pantry` modifié ailleurs ne bloque jamais un rejeu qui ne
 // portait que sur `meal_plan`, puisqu'on ne compare QUE les clés de
 // `payload`, pas la ligne entière ni sa colonne `updated_at`).
-async function findAppStateConflicts(householdId, payload, baseline) {
+async function findAppStateConflicts(
+  householdId: string | undefined,
+  payload: Record<string, unknown> | undefined,
+  baseline: Record<string, unknown> | undefined
+): Promise<string[]> {
   if (!baseline) return [];
   const current = await loadAppState(householdId);
   if (!current) return [];
@@ -380,17 +416,19 @@ async function findAppStateConflicts(householdId, payload, baseline) {
   // avant le tout premier chargement réussi, voir parseBaseline dans
   // hooks/useOfflineSync.js) n'a rien à comparer — l'ignorer plutôt que de
   // la compter en conflit systématique face à n'importe quelle valeur
-  // serveur réelle.
-  return Object.keys(payload).filter(
+  // serveur réelle. `payload` est toujours défini pour une action
+  // "app_state" (voir saveAppState) — le type plus large vient du type
+  // partagé OfflineAction, commun à tous les types d'action.
+  return Object.keys(payload as Record<string, unknown>).filter(
     (key) => baseline[key] !== undefined && JSON.stringify(current[key]) !== JSON.stringify(baseline[key])
   );
 }
 
-async function runFlushOfflineQueue() {
+async function runFlushOfflineQueue(): Promise<FlushOfflineQueueResult> {
   const queue = getOfflineQueue();
   let flushed = 0;
   let dropped = 0;
-  const conflicts = [];
+  const conflicts: OfflineConflict[] = [];
   for (const action of queue) {
     try {
       if (action.type === "app_state" && action.baseline) {
@@ -411,14 +449,14 @@ async function runFlushOfflineQueue() {
       if (action.type === "insert") {
         await supabaseRequest(action.table, { method: "POST", body: JSON.stringify([action.payload]) });
       } else if (action.type === "update") {
-        await supabaseRequest(`${action.table}?id=eq.${encodeURIComponent(action.recordId)}`, {
+        await supabaseRequest(`${action.table}?id=eq.${encodeURIComponent(action.recordId as string)}`, {
           method: "PATCH",
           body: JSON.stringify(action.payload),
         });
       } else if (action.type === "delete") {
-        await supabaseRequest(`${action.table}?id=eq.${encodeURIComponent(action.recordId)}`, { method: "DELETE" });
+        await supabaseRequest(`${action.table}?id=eq.${encodeURIComponent(action.recordId as string)}`, { method: "DELETE" });
       } else if (action.type === "app_state") {
-        await applyAppStatePatch(action.recordId, action.payload);
+        await applyAppStatePatch(action.recordId as string, action.payload as Record<string, unknown>);
       }
       removeFromOfflineQueue(action.id);
       flushed += 1;
@@ -437,7 +475,7 @@ async function runFlushOfflineQueue() {
   return { flushed, dropped, conflicts };
 }
 
-export async function loadAppState(householdId) {
+export async function loadAppState(householdId: string | null | undefined): Promise<any> {
   if (!householdId) return null;
   const rows = await fetchTable(
     "app_state",
@@ -466,7 +504,11 @@ export async function loadAppState(householdId) {
 // la coupure, plutôt que d'écraser aveuglément son changement avec le
 // nôtre. Le chemin direct (déjà en ligne) ci-dessous ignore `baseline` :
 // il n'est utile qu'au rejeu, jamais à l'écriture immédiate.
-export async function saveAppState(householdId, patch, baseline) {
+export async function saveAppState(
+  householdId: string | null | undefined,
+  patch: Record<string, unknown>,
+  baseline?: Record<string, unknown>
+): Promise<void> {
   if (!householdId) return;
   return withOfflineFallback(
     { table: "app_state", type: "app_state", recordId: householdId, payload: patch, baseline },
@@ -480,7 +522,7 @@ export async function saveAppState(householdId, patch, baseline) {
 /*  MAPPING LIGNES SQL <-> OBJETS APPLICATIFS                          */
 /* ------------------------------------------------------------------ */
 
-export function mapRowToRecipe(row) {
+export function mapRowToRecipe(row: Record<string, unknown>) {
   return {
     id: row.id,
     title: row.title,
@@ -506,7 +548,7 @@ export function mapRowToRecipe(row) {
     nutriscoreGrade: row.nutriscore_grade || null,
   };
 }
-export function mapRecipeToRow(recipe, householdId) {
+export function mapRecipeToRow(recipe: Record<string, unknown>, householdId?: string | null) {
   return {
     id: recipe.id,
     title: recipe.title,
@@ -528,7 +570,7 @@ export function mapRecipeToRow(recipe, householdId) {
     ...(householdId ? { household_id: householdId } : {}),
   };
 }
-export function mapRowToShoppingList(row) {
+export function mapRowToShoppingList(row: Record<string, unknown>) {
   return {
     id: row.id,
     name: row.name,
@@ -539,7 +581,7 @@ export function mapRowToShoppingList(row) {
     userId: row.user_id || null,
   };
 }
-export function mapShoppingListToRow(list, householdId) {
+export function mapShoppingListToRow(list: Record<string, unknown>, householdId?: string | null) {
   const scope = list.scope === "personal" ? "personal" : "household";
   return {
     id: list.id,
