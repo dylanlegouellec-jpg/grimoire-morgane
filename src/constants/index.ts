@@ -1,16 +1,30 @@
 import { BookOpen, CalendarDays, Refrigerator, ShoppingBasket } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import type { Ingredient } from "../utils/ingredients";
 
 /* ------------------------------------------------------------------ */
 /*  NAVIGATION : ONGLETS & FILTRES                                     */
 /* ------------------------------------------------------------------ */
 
-export const TABS = [
+interface TabDef {
+  key: string;
+  label: string;
+  icon: LucideIcon;
+}
+
+export const TABS: TabDef[] = [
   { key: "recettes", label: "Recettes", icon: BookOpen },
   { key: "plan", label: "Plan", icon: CalendarDays },
   { key: "frigo", label: "Mon Frigo", icon: Refrigerator },
   { key: "courses", label: "Courses", icon: ShoppingBasket },
 ];
-export const FILTERS = [
+
+interface FilterDef {
+  key: string;
+  label: string;
+}
+
+export const FILTERS: FilterDef[] = [
   { key: "tout", label: "Tout" },
   { key: "sale", label: "Salé" },
   { key: "sucre", label: "Sucré" },
@@ -31,7 +45,12 @@ export const FILTERS = [
 /*  .detail-hero-inset, recipeCards.css.js) — un bord doré/festonné/corné            */
 /*  n'a de sens que si le fond de la page reste visible tout autour.                   */
 /* ------------------------------------------------------------------ */
-export const HERO_TREATMENTS = [
+interface HeroTreatmentDef {
+  key: string;
+  label: string;
+}
+
+export const HERO_TREATMENTS: HeroTreatmentDef[] = [
   { key: "fondu", label: "Fondu" },
   { key: "cadre", label: "Cadre doré" },
   { key: "feston", label: "Bord festonné" },
@@ -49,7 +68,7 @@ export const DEFAULT_HERO_TREATMENT = "cadre";
 /*  BASIQUES PAR DÉFAUT (Mon Frigo)                                    */
 /* ------------------------------------------------------------------ */
 
-export const DEFAULT_BASICS = [
+export const DEFAULT_BASICS: string[] = [
   "Sel", "Poivre", "Huile d'olive", "Vinaigre", "Farine", "Sucre en poudre",
   "Sucre vanillé", "Levure chimique", "Maïzena", "Cacao en poudre", "Miel",
 ];
@@ -63,10 +82,10 @@ export const DEFAULT_BASICS = [
 // ⚠️ À compléter avec ton propre projet Supabase.
 // Tant que ces valeurs sont vides, l'app fonctionne en mémoire avec les
 // recettes de démonstration, sans planter.
-export const SUPABASE_URL = "https://mdvzdbbbueekrbzghetd.supabase.co";
-export const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kdnpkYmJidWVla3JiemdoZXRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY2ODA2ODcsImV4cCI6MjEwMjI1NjY4N30.nv1eLh9PViCPUk0OZ5herFMJyIcZuUgyJgETQz6IMis";
+export const SUPABASE_URL: string = "https://mdvzdbbbueekrbzghetd.supabase.co";
+export const SUPABASE_ANON_KEY: string = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kdnpkYmJidWVla3JiemdoZXRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY2ODA2ODcsImV4cCI6MjEwMjI1NjY4N30.nv1eLh9PViCPUk0OZ5herFMJyIcZuUgyJgETQz6IMis";
 
-export const SUPABASE_READY = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+export const SUPABASE_READY: boolean = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
 /*
   Schéma SQL attendu (à exécuter dans l'éditeur SQL de Supabase) :
@@ -109,7 +128,20 @@ export const SUPABASE_READY = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 /*  (utilisées tant que Supabase n'est pas configuré / accessible)     */
 /* ------------------------------------------------------------------ */
 
-export function demoRecipes() {
+export interface DemoRecipe {
+  id: string;
+  title: string;
+  category: "Salé" | "Sucré";
+  time: number;
+  servings: number;
+  carbs: number;
+  favorite: boolean;
+  illustrationKey: string;
+  ingredients: Ingredient[];
+  steps: string[];
+}
+
+export function demoRecipes(): DemoRecipe[] {
   return [
     {
       id: "r1",
