@@ -14,7 +14,7 @@ const PRESS_DURATION_KEY = "grimoire_press_duration";
 const DEFAULT_PRESS_DURATION = 750;
 const VALID_PRESS_DURATIONS = [500, 750, 1000];
 
-export function getStoredPressDuration() {
+export function getStoredPressDuration(): number {
   try {
     const v = Number(localStorage.getItem(PRESS_DURATION_KEY));
     if (VALID_PRESS_DURATIONS.includes(v)) return v;
@@ -24,7 +24,7 @@ export function getStoredPressDuration() {
   return DEFAULT_PRESS_DURATION;
 }
 
-export function storePressDuration(ms) {
+export function storePressDuration(ms: number): void {
   try {
     localStorage.setItem(PRESS_DURATION_KEY, String(ms));
   } catch {
@@ -35,7 +35,7 @@ export function storePressDuration(ms) {
 /* --- Badge Nutri-Score sur les cartes de recettes --------------------- */
 const SHOW_NUTRISCORE_KEY = "grimoire_show_nutriscore";
 
-export function getStoredShowNutriscore() {
+export function getStoredShowNutriscore(): boolean {
   try {
     const v = localStorage.getItem(SHOW_NUTRISCORE_KEY);
     if (v === "0") return false;
@@ -46,7 +46,7 @@ export function getStoredShowNutriscore() {
   return true;
 }
 
-export function storeShowNutriscore(value) {
+export function storeShowNutriscore(value: boolean): void {
   try {
     localStorage.setItem(SHOW_NUTRISCORE_KEY, value ? "1" : "0");
   } catch {
@@ -55,20 +55,22 @@ export function storeShowNutriscore(value) {
 }
 
 /* --- Taille du texte ("normal" | "large") ----------------------------- */
-const TEXT_SIZE_KEY = "grimoire_text_size";
-const VALID_TEXT_SIZES = ["normal", "large"];
+export type TextSize = "normal" | "large";
 
-export function getStoredTextSize() {
+const TEXT_SIZE_KEY = "grimoire_text_size";
+const VALID_TEXT_SIZES: TextSize[] = ["normal", "large"];
+
+export function getStoredTextSize(): TextSize {
   try {
     const v = localStorage.getItem(TEXT_SIZE_KEY);
-    if (VALID_TEXT_SIZES.includes(v)) return v;
+    if (v !== null && VALID_TEXT_SIZES.includes(v as TextSize)) return v as TextSize;
   } catch {
     /* repli ci-dessous */
   }
   return "normal";
 }
 
-export function storeTextSize(size) {
+export function storeTextSize(size: TextSize): void {
   try {
     localStorage.setItem(TEXT_SIZE_KEY, size);
   } catch {
@@ -79,7 +81,7 @@ export function storeTextSize(size) {
 // Applique la taille de texte sur <html data-text-size="..."> — même
 // principe que applyTheme() dans utils/theme.js (styles.css.js cible
 // html[data-text-size="large"] pour agrandir le rem de base).
-export function applyTextSize(size) {
+export function applyTextSize(size: TextSize): void {
   if (typeof document !== "undefined" && document.documentElement) {
     document.documentElement.setAttribute("data-text-size", size === "large" ? "large" : "normal");
   }
@@ -93,20 +95,22 @@ export function applyTextSize(size) {
    plus large que ce correctif. Le réglage est donc conservé (et prêt à
    être branché le jour où cette passe sera faite), sans prétendre à tort
    traduire quoi que ce soit aujourd'hui. */
-const LANGUAGE_KEY = "grimoire_language";
-const VALID_LANGUAGES = ["fr", "en"];
+export type Language = "fr" | "en";
 
-export function getStoredLanguage() {
+const LANGUAGE_KEY = "grimoire_language";
+const VALID_LANGUAGES: Language[] = ["fr", "en"];
+
+export function getStoredLanguage(): Language {
   try {
     const v = localStorage.getItem(LANGUAGE_KEY);
-    if (VALID_LANGUAGES.includes(v)) return v;
+    if (v !== null && VALID_LANGUAGES.includes(v as Language)) return v as Language;
   } catch {
     /* repli ci-dessous */
   }
   return "fr";
 }
 
-export function storeLanguage(lang) {
+export function storeLanguage(lang: Language): void {
   try {
     localStorage.setItem(LANGUAGE_KEY, lang);
   } catch {
@@ -120,7 +124,7 @@ export function storeLanguage(lang) {
    le compte d'un appareil à l'autre, juste qu'il soit mémorisé ici. */
 const SOUND_EFFECTS_KEY = "sound_effects_enabled";
 
-export function getStoredSoundEffects() {
+export function getStoredSoundEffects(): boolean {
   try {
     const v = localStorage.getItem(SOUND_EFFECTS_KEY);
     if (v === "0") return false;
@@ -131,7 +135,7 @@ export function getStoredSoundEffects() {
   return true; // activés par défaut
 }
 
-export function storeSoundEffects(value) {
+export function storeSoundEffects(value: boolean): void {
   try {
     localStorage.setItem(SOUND_EFFECTS_KEY, value ? "1" : "0");
   } catch {
@@ -149,7 +153,7 @@ export function storeSoundEffects(value) {
    effets sonores ci-dessus. */
 const HAPTIC_FEEDBACK_KEY = "haptic_feedback_enabled";
 
-export function getStoredHapticFeedback() {
+export function getStoredHapticFeedback(): boolean {
   try {
     const v = localStorage.getItem(HAPTIC_FEEDBACK_KEY);
     if (v === "0") return false;
@@ -160,7 +164,7 @@ export function getStoredHapticFeedback() {
   return true; // activé par défaut
 }
 
-export function storeHapticFeedback(value) {
+export function storeHapticFeedback(value: boolean): void {
   try {
     localStorage.setItem(HAPTIC_FEEDBACK_KEY, value ? "1" : "0");
   } catch {
@@ -176,7 +180,7 @@ export function storeHapticFeedback(value) {
 const NAV_OPACITY_KEY = "grimoire_nav_opacity";
 const DEFAULT_NAV_OPACITY = 0;
 
-export function getStoredNavOpacity() {
+export function getStoredNavOpacity(): number {
   try {
     const raw = localStorage.getItem(NAV_OPACITY_KEY);
     if (raw !== null) {
@@ -189,7 +193,7 @@ export function getStoredNavOpacity() {
   return DEFAULT_NAV_OPACITY;
 }
 
-export function storeNavOpacity(value) {
+export function storeNavOpacity(value: number): void {
   try {
     localStorage.setItem(NAV_OPACITY_KEY, String(value));
   } catch {
@@ -201,7 +205,7 @@ export function storeNavOpacity(value) {
 // sur la nav : la mise en page paysage redéfinit son fond de son côté (voir
 // responsive.css.js), le CSS reste ainsi seul juge de qui s'en sert. Même
 // principe qu'applyTheme()/applyTextSize(), qui posent un attribut.
-export function applyNavOpacity(value) {
+export function applyNavOpacity(value: number): void {
   if (typeof document !== "undefined" && document.documentElement) {
     document.documentElement.style.setProperty("--nav-opacity", String(value));
   }
@@ -213,20 +217,22 @@ export function applyNavOpacity(value) {
    une donnée de foyer — chaque membre peut préférer un onglet de départ
    différent sans que ça n'affecte les autres ni ne mérite une
    synchronisation. Voir PlanningView.jsx. */
-const PLANNING_SCOPE_KEY = "grimoire_planning_scope";
-const VALID_PLANNING_SCOPES = ["household", "personal"];
+export type ViewScope = "household" | "personal";
 
-export function getStoredPlanningScope() {
+const PLANNING_SCOPE_KEY = "grimoire_planning_scope";
+const VALID_PLANNING_SCOPES: ViewScope[] = ["household", "personal"];
+
+export function getStoredPlanningScope(): ViewScope {
   try {
     const v = localStorage.getItem(PLANNING_SCOPE_KEY);
-    if (VALID_PLANNING_SCOPES.includes(v)) return v;
+    if (v !== null && VALID_PLANNING_SCOPES.includes(v as ViewScope)) return v as ViewScope;
   } catch {
     /* repli ci-dessous */
   }
   return "household";
 }
 
-export function storePlanningScope(scope) {
+export function storePlanningScope(scope: ViewScope): void {
   try {
     localStorage.setItem(PLANNING_SCOPE_KEY, scope);
   } catch {
@@ -244,19 +250,19 @@ export function storePlanningScope(scope) {
    la dernière liste ouverte par portée, ci-dessous) — voir
    useShoppingLists.js. */
 const SHOPPING_SCOPE_KEY = "grimoire_shopping_scope";
-const VALID_SHOPPING_SCOPES = ["household", "personal"];
+const VALID_SHOPPING_SCOPES: ViewScope[] = ["household", "personal"];
 
-export function getStoredShoppingScope() {
+export function getStoredShoppingScope(): ViewScope {
   try {
     const v = localStorage.getItem(SHOPPING_SCOPE_KEY);
-    if (VALID_SHOPPING_SCOPES.includes(v)) return v;
+    if (v !== null && VALID_SHOPPING_SCOPES.includes(v as ViewScope)) return v as ViewScope;
   } catch {
     /* repli ci-dessous */
   }
   return "household";
 }
 
-export function storeShoppingScope(scope) {
+export function storeShoppingScope(scope: ViewScope): void {
   try {
     localStorage.setItem(SHOPPING_SCOPE_KEY, scope);
   } catch {
@@ -275,7 +281,7 @@ export function storeShoppingScope(scope) {
    encore. */
 const ONBOARDING_COMPLETED_KEY = "grimoire_onboarding_completed";
 
-export function getStoredOnboardingCompleted() {
+export function getStoredOnboardingCompleted(): boolean {
   try {
     return localStorage.getItem(ONBOARDING_COMPLETED_KEY) === "1";
   } catch {
@@ -284,7 +290,7 @@ export function getStoredOnboardingCompleted() {
   return false;
 }
 
-export function storeOnboardingCompleted(value) {
+export function storeOnboardingCompleted(value: boolean): void {
   try {
     localStorage.setItem(ONBOARDING_COMPLETED_KEY, value ? "1" : "0");
   } catch {
@@ -297,7 +303,7 @@ export function storeOnboardingCompleted(value) {
 // que la première de la liste à chaque fois.
 const SHOPPING_ACTIVE_LIST_PREFIX = "grimoire_shopping_active_list_";
 
-export function getStoredActiveShoppingListId(scope) {
+export function getStoredActiveShoppingListId(scope: string): string | null {
   try {
     return localStorage.getItem(SHOPPING_ACTIVE_LIST_PREFIX + scope) || null;
   } catch {
@@ -305,7 +311,7 @@ export function getStoredActiveShoppingListId(scope) {
   }
 }
 
-export function storeActiveShoppingListId(scope, id) {
+export function storeActiveShoppingListId(scope: string, id: string | null | undefined): void {
   try {
     if (id) localStorage.setItem(SHOPPING_ACTIVE_LIST_PREFIX + scope, id);
     else localStorage.removeItem(SHOPPING_ACTIVE_LIST_PREFIX + scope);
@@ -326,17 +332,17 @@ export function storeActiveShoppingListId(scope, id) {
    tableau mémorisé). */
 const AISLE_ORDER_KEY = "grimoire_aisle_order";
 
-export function getStoredAisleOrder() {
+export function getStoredAisleOrder(): string[] | null {
   try {
     const raw = localStorage.getItem(AISLE_ORDER_KEY);
     const parsed = raw ? JSON.parse(raw) : null;
-    return Array.isArray(parsed) ? parsed.filter((v) => typeof v === "string") : null;
+    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === "string") : null;
   } catch {
     return null;
   }
 }
 
-export function storeAisleOrder(order) {
+export function storeAisleOrder(order: string[]): void {
   try {
     localStorage.setItem(AISLE_ORDER_KEY, JSON.stringify(order));
   } catch {
@@ -351,17 +357,17 @@ export function storeAisleOrder(order) {
    HERO_TREATMENTS/DEFAULT_HERO_TREATMENT pour la liste des valeurs valides. */
 const HERO_TREATMENT_KEY = "grimoire_hero_treatment";
 
-export function getStoredHeroTreatment() {
+export function getStoredHeroTreatment(): string {
   try {
     const v = localStorage.getItem(HERO_TREATMENT_KEY);
-    if (HERO_TREATMENTS.some((t) => t.key === v)) return v;
+    if (v !== null && HERO_TREATMENTS.some((t) => t.key === v)) return v;
   } catch {
     /* repli ci-dessous */
   }
   return DEFAULT_HERO_TREATMENT;
 }
 
-export function storeHeroTreatment(key) {
+export function storeHeroTreatment(key: string): void {
   try {
     localStorage.setItem(HERO_TREATMENT_KEY, key);
   } catch {
@@ -374,21 +380,23 @@ export function storeHeroTreatment(key) {
    utils/profile.js (colonne `profiles.icon_style`) — voir
    GrimoireDeMorgane.jsx (setIconStyle) et contexts/IconStyleContext.jsx
    (useIconStyle(), qui redistribue la valeur à toute l'app). */
-const ICON_STYLE_KEY = "grimoire_icon_style";
-const VALID_ICON_STYLES = ["emoji", "vector"];
-export const DEFAULT_ICON_STYLE = "emoji";
+export type IconStyle = "emoji" | "vector";
 
-export function getStoredIconStyle() {
+const ICON_STYLE_KEY = "grimoire_icon_style";
+const VALID_ICON_STYLES: IconStyle[] = ["emoji", "vector"];
+export const DEFAULT_ICON_STYLE: IconStyle = "emoji";
+
+export function getStoredIconStyle(): IconStyle {
   try {
     const v = localStorage.getItem(ICON_STYLE_KEY);
-    if (VALID_ICON_STYLES.includes(v)) return v;
+    if (v !== null && VALID_ICON_STYLES.includes(v as IconStyle)) return v as IconStyle;
   } catch {
     /* repli ci-dessous */
   }
   return DEFAULT_ICON_STYLE;
 }
 
-export function storeIconStyle(style) {
+export function storeIconStyle(style: IconStyle): void {
   try {
     localStorage.setItem(ICON_STYLE_KEY, style);
   } catch {
