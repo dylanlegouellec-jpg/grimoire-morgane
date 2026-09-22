@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Activity, BookOpen, ChevronLeft, ChevronRight, Compass, Home, LogOut, Palette, Pencil, Save, SlidersHorizontal, UserCircle2, X } from "lucide-react";
 import { triggerHaptic } from "../../utils/helpers";
 import { getCachedProfile, getProfile } from "../../utils/profile";
+import type { ProfileRow } from "../../utils/profile";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
@@ -16,6 +17,64 @@ import AppearanceSettingsModal from "./AppearanceSettingsModal";
 import AccessibilitySettingsModal from "./AccessibilitySettingsModal";
 import DataBackupModal from "./DataBackupModal";
 import HouseholdManagerModal from "./HouseholdManagerModal";
+import type { Household } from "../../utils/auth";
+
+type SettingsView = "main" | "appearance" | "accessibility" | "backup" | "household";
+
+interface SecretSettingsModalUser {
+  id: string;
+  email?: string;
+}
+
+interface HouseholdMemberLike {
+  user_id: string;
+  role: string;
+  display_name?: string;
+  email?: string;
+  avatar_url?: string;
+}
+
+interface SecretSettingsModalProps {
+  onClose: () => void;
+  connectionStatus: string;
+  onExport: () => void;
+  onImportFile: (e: ChangeEvent<HTMLInputElement>) => void;
+  onImportTextRecipe: () => void;
+  onImportLink: () => void;
+  pressDuration: number;
+  onSetPressDuration: (value: number) => void;
+  theme: string;
+  onSetTheme: (value: string) => void;
+  language: string;
+  onSetLanguage: (value: string) => void;
+  showNutriscore: boolean;
+  onSetShowNutriscore: (value: boolean) => void;
+  navOpacity: number;
+  onSetNavOpacity: (value: number) => void;
+  heroTreatment: string;
+  onSetHeroTreatment: (value: string) => void;
+  iconStyle: string;
+  onSetIconStyle: (value: string) => void;
+  textSize: string;
+  onSetTextSize: (value: string) => void;
+  user: SecretSettingsModalUser | null;
+  householdId: string | null;
+  households: Household[];
+  onSwitchHousehold: (id: string) => void;
+  onCreateHousehold: (name: string) => Promise<void>;
+  onRenameHousehold: (id: string, name: string) => Promise<void>;
+  onDeleteHousehold: (id: string) => Promise<void>;
+  onRequestJoinHousehold: (id: string) => Promise<void>;
+  onGetPendingHouseholdRequests: (householdId: string) => Promise<HouseholdMemberLike[]>;
+  onApproveHouseholdMember: (householdId: string | null, userId: string) => Promise<void>;
+  onRejectHouseholdMember: (householdId: string | null, userId: string) => Promise<void>;
+  onRefreshHouseholds?: () => void;
+  showToast?: (msg: string) => void;
+  onSignOut: () => void;
+  onReplayOnboarding: () => void;
+  onOpenCookbookBuilder: () => void;
+  onOpenDiagnostics: () => void;
+}
 
 /* ------------------------------------------------------------------ */
 /*  RÉGLAGES SECRETS DU GRIMOIRE — liste groupée façon iOS (HIG)         */
@@ -78,15 +137,14 @@ export default function SecretSettingsModal({
   onReplayOnboarding,
   onOpenCookbookBuilder,
   onOpenDiagnostics,
-}) {
+}: SecretSettingsModalProps) {
   const { t } = useTranslation();
-  // 'main' | 'appearance' | 'accessibility' | 'backup' | 'household'
-  const [activeView, setActiveView] = useState("main");
+  const [activeView, setActiveView] = useState<SettingsView>("main");
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   // Cache-first (voir utils/profile.js) : la carte de profil s'affiche
   // instantanément avec la dernière valeur connue, même hors ligne, puis
   // se rafraîchit dès que le réseau répond.
-  const [profile, setProfile] = useState(() => getCachedProfile());
+  const [profile, setProfile] = useState<ProfileRow | null>(() => getCachedProfile());
 
   // Fige le <body> tant que ce menu est ouvert — UNE SEULE fois ici,
   // quelle que soit la vue active (les sous-vues ne l'appellent plus
@@ -120,13 +178,13 @@ export default function SecretSettingsModal({
   // démontage. Désactivé pendant que ProfileEditor (une autre feuille,
   // rendue comme descendant DOM de ce panneau) est ouvert par-dessus, pour
   // ne pas lui voler le geste.
-  const mainPanelRef = useRef(null);
+  const mainPanelRef = useRef<HTMLDivElement | null>(null);
   const mainSheet = useDismissibleSheet(onClose, {
     scrollRef: mainPanelRef,
     disabled: showProfileEditor,
   });
-  const mainFocusTrapRef = useFocusTrap(onClose);
-  const setMainPanelRef = (node) => {
+  const mainFocusTrapRef = useFocusTrap<HTMLDivElement>(onClose);
+  const setMainPanelRef = (node: HTMLDivElement | null) => {
     mainPanelRef.current = node;
     mainFocusTrapRef.current = node;
   };
@@ -147,15 +205,15 @@ export default function SecretSettingsModal({
   // long sur le second. Chacun ne connaît alors que son propre geste, ce
   // qui est de toute façon plus correct : un clic sur un bouton ne peut
   // provenir que d'un appui commencé SUR ce même bouton.
-  const avatarLongPress = useLongPress(() => { triggerHaptic(20); setShowProfileEditor(true); }, pressDuration);
-  const nameLongPress = useLongPress(() => { triggerHaptic(20); setShowProfileEditor(true); }, pressDuration);
-  const openProfileEditor = (longPress) => () => {
+  const avatarLongPress = useLongPress<HTMLButtonElement>(() => { triggerHaptic(20); setShowProfileEditor(true); }, pressDuration);
+  const nameLongPress = useLongPress<HTMLButtonElement>(() => { triggerHaptic(20); setShowProfileEditor(true); }, pressDuration);
+  const openProfileEditor = (longPress: typeof avatarLongPress) => () => {
     if (!longPress.wasLongPress()) { triggerHaptic(15); setShowProfileEditor(true); }
   };
 
-  const avatarUrl = profile && profile.avatar_url;
-  const displayName = (profile && (profile.username || profile.display_name))
-    || [profile && profile.first_name, profile && profile.last_name].filter(Boolean).join(" ").trim()
+  const avatarUrl = profile && (profile.avatar_url as string | undefined);
+  const displayName = (profile && ((profile.username as string | undefined) || (profile.display_name as string | undefined)))
+    || [profile && (profile.first_name as string | undefined), profile && (profile.last_name as string | undefined)].filter(Boolean).join(" ").trim()
     || (user && user.email)
     || "";
 
@@ -389,6 +447,11 @@ export default function SecretSettingsModal({
   );
 }
 
+interface SettingsSubPanelProps {
+  onBack: () => void;
+  children: ReactNode;
+}
+
 /* ------------------------------------------------------------------ */
 /*  SOUS-VUE EMPILÉE — vrai composant à part (comme RecipeForm dans        */
 /*  AppShell.jsx), PAS des hooks appelés depuis SecretSettingsModal :       */
@@ -401,16 +464,16 @@ export default function SecretSettingsModal({
 /*  vue (voir son rendu conditionnel dans SecretSettingsModal) fait tourner       */
 /*  ces effets au bon moment, à chaque fois.                                      */
 /* ------------------------------------------------------------------ */
-function SettingsSubPanel({ onBack, children }) {
+function SettingsSubPanel({ onBack, children }: SettingsSubPanelProps) {
   const { t } = useTranslation();
-  const panelRef = useRef(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
   // Fermeture (retour au panneau principal) animée nativement par
   // AnimatePresence (voir son appelant, SecretSettingsModal ci-dessus) —
   // `onBack` peut être appelé directement, plus besoin de l'ancien
   // hooks/useAnimatedClose.js.
   const sheet = useDismissibleSheet(onBack, { scrollRef: panelRef });
-  const focusTrapRef = useFocusTrap(onBack);
-  const setPanelRef = (node) => {
+  const focusTrapRef = useFocusTrap<HTMLDivElement>(onBack);
+  const setPanelRef = (node: HTMLDivElement | null) => {
     panelRef.current = node;
     focusTrapRef.current = node;
   };

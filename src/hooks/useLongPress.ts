@@ -57,8 +57,8 @@ const TOUCH_LISTENER_OPTS = { passive: true };
 
 export type PressState = "idle" | "pressing" | "fired";
 
-export default function useLongPress(onLongPress: () => void, pressDuration: number = 750) {
-  const nodeRef = useRef<HTMLElement | null>(null);
+export default function useLongPress<T extends HTMLElement = HTMLElement>(onLongPress: () => void, pressDuration: number = 750) {
+  const nodeRef = useRef<T | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const visualTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fired = useRef(false);

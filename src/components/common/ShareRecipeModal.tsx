@@ -23,6 +23,20 @@ import useFocusTrap from "../../hooks/useFocusTrap";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
 import Switch from "./Switch";
+import type { Recipe } from "../../hooks/useRecipes";
+import type { NormalizedIngredient } from "../../utils/ingredients";
+import type { NutriscoreGrade } from "../../utils/nutriscoreClient";
+
+interface ShareRecipeModalProps {
+  recipe: Recipe;
+  servings: number;
+  ingredients: NormalizedIngredient[];
+  onClose: () => void;
+  shareText: (text: string, label: string) => void;
+  showToast: (msg: string) => void;
+}
+
+type BusyState = "png" | "pdf" | "text" | null;
 
 // Construit un texte brut (pour navigator.share, qui n'accepte pas de HTML
 // mis en forme) reprenant la structure de la fiche : titre, ingrédients
@@ -33,7 +47,14 @@ import Switch from "./Switch";
 // partout ailleurs (RecipeDetail.jsx, CookMode.jsx...) — resté oublié ici
 // jusqu'ici, un partage en anglais renvoyait donc le texte tel quel en
 // français.
-function buildShareText(t, language, recipe, servings, ingredients, includeNotes) {
+function buildShareText(
+  t: (key: string, vars?: Record<string, unknown>) => string,
+  language: string,
+  recipe: Recipe,
+  servings: number,
+  ingredients: NormalizedIngredient[],
+  includeNotes: boolean
+): string {
   const lines = [translateRecipeText(recipe.title, language), "", t("share.shareTextIngredients")];
   groupIngredients(ingredients).forEach((g) => {
     if (g.title) lines.push(`— ${translateRecipeText(g.title, language)} —`);
@@ -49,7 +70,7 @@ function buildShareText(t, language, recipe, servings, ingredients, includeNotes
   return lines.join("\n");
 }
 
-function currentTheme() {
+function currentTheme(): "light" | "dark" {
   if (typeof document === "undefined" || !document.documentElement) return "light";
   return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
 }
@@ -61,18 +82,18 @@ function currentTheme() {
 // fiche recette elle-même — l'ajouter ici risquerait de faire réagir les
 // DEUX gestes à la fois sur le même mouvement de doigt. Fermeture via le
 // bouton "X" ou un tap sur le fond, comme avant.
-export default function ShareRecipeModal({ recipe, servings, ingredients, onClose, shareText, showToast }) {
-  const modalRef = useFocusTrap(onClose);
-  const pdfSheetRef = useRef(null);
+export default function ShareRecipeModal({ recipe, servings, ingredients, onClose, shareText, showToast }: ShareRecipeModalProps) {
+  const modalRef = useFocusTrap<HTMLDivElement>(onClose);
+  const pdfSheetRef = useRef<HTMLDivElement>(null);
   const hasPhoto = Boolean(recipe.imageUrl);
   const hasNotes = Boolean(recipe.notes);
   const [includePhoto, setIncludePhoto] = useState(hasPhoto);
   const [includeNutriscore, setIncludeNutriscore] = useState(true);
   const [includeNotes, setIncludeNotes] = useState(hasNotes);
-  const [busy, setBusy] = useState(null); // null | "png" | "pdf" | "text"
+  const [busy, setBusy] = useState<BusyState>(null);
 
-  const nutriGrade = recipe.nutriscoreGrade || estimateNutriscoreLocal(ingredients, recipe.category);
-  const nutriColor = NUTRI_COLORS[nutriGrade] || "#b3872a";
+  const nutriGrade = recipe.nutriscoreGrade || estimateNutriscoreLocal(ingredients, recipe.category ?? undefined);
+  const nutriColor = NUTRI_COLORS[nutriGrade as NutriscoreGrade] || "#b3872a";
   const { t, language } = useTranslation();
   // Portions/ingrédients tels qu'affichés à l'instant (déjà ajustés par le
   // curseur de portions de RecipeDetail) — même recette que celle utilisée
@@ -97,7 +118,6 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
       title: recipe.title,
       category: recipe.category,
       time: recipe.time,
-      prep_time: recipe.prep_time,
       servings,
       ingredients,
       steps: recipe.steps,
@@ -165,9 +185,9 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
     setBusy("pdf");
     try {
       const pdfConfig = {
-        format: "A4",
-        margin: "normal",
-        orientation: "portrait",
+        format: "A4" as const,
+        margin: "normal" as const,
+        orientation: "portrait" as const,
         showTime: true,
         showIngredients: true,
         showSteps: true,
@@ -175,6 +195,7 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
         showNotes: includeNotes,
         photoSize: includePhoto && hasPhoto ? "grande" : "aucune",
       };
+      if (!pdfSheetRef.current) return;
       const blob = await generateCookbookPdf(pdfSheetRef.current, pdfConfig);
       const result = await shareOrDownloadBlob(blob, `${slugify(recipe.title)}.pdf`, translateRecipeText(recipe.title, language), "application/pdf");
       if (result === "downloaded") showToast(t("share.sheetDownloadedToast"));
@@ -195,7 +216,7 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
     triggerHaptic(15);
     setBusy("png");
     try {
-      const { blob, photoIncluded } = await generateRecipeCardPng(recipe, servings, ingredients, {
+      const { blob, photoIncluded } = await generateRecipeCardPng({ ...recipe, nutriscoreGrade: recipe.nutriscoreGrade as NutriscoreGrade | null | undefined }, servings, ingredients, {
         includePhoto,
         includeNutriscore,
         includeNotes,
@@ -228,7 +249,7 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
           await navigator.share({ title: translateRecipeText(recipe.title, language), text });
           return;
         } catch (err) {
-          if (err && err.name === "AbortError") return;
+          if (err instanceof Error && err.name === "AbortError") return;
           // toute autre erreur : on bascule sur la copie presse-papiers ci-dessous
         }
       }
