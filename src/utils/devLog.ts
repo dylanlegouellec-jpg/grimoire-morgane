@@ -13,11 +13,22 @@
 /*  utile pour diagnostiquer un souci déjà survenu).                                */
 /* ------------------------------------------------------------------ */
 
-const MAX_ENTRIES = 200;
-const entries = [];
-const listeners = new Set();
+export type DevLogLevel = "log" | "warn" | "error" | "network";
 
-function notify() {
+export interface DevLogEntry {
+  id: string;
+  level: DevLogLevel;
+  message: string;
+  ts: number;
+}
+
+type DevLogListener = (entries: DevLogEntry[]) => void;
+
+const MAX_ENTRIES = 200;
+const entries: DevLogEntry[] = [];
+const listeners = new Set<DevLogListener>();
+
+function notify(): void {
   listeners.forEach((fn) => fn(entries));
 }
 
@@ -29,7 +40,7 @@ function notify() {
 // encore) — sans garde, chaque niveau rappelle le suivant indéfiniment
 // jusqu'à un dépassement de pile.
 let isPushing = false;
-function push(level, message) {
+function push(level: DevLogLevel, message: string): void {
   if (isPushing) return;
   isPushing = true;
   try {
@@ -41,7 +52,7 @@ function push(level, message) {
   }
 }
 
-function stringifyArg(arg) {
+function stringifyArg(arg: unknown): string {
   if (typeof arg === "string") return arg;
   if (arg instanceof Error) return arg.stack || arg.message;
   try {
@@ -53,7 +64,7 @@ function stringifyArg(arg) {
 
 let patched = false;
 
-export function installDevLog() {
+export function installDevLog(): void {
   if (patched || typeof window === "undefined") return;
   patched = true;
 
@@ -71,8 +82,8 @@ export function installDevLog() {
 
   if (typeof window.fetch === "function") {
     const originalFetch = window.fetch.bind(window);
-    window.fetch = async (...args) => {
-      const url = typeof args[0] === "string" ? args[0] : args[0] && args[0].url;
+    window.fetch = async (...args: Parameters<typeof fetch>) => {
+      const url = typeof args[0] === "string" ? args[0] : (args[0] as Request)?.url;
       try {
         const res = await originalFetch(...args);
         if (!res.ok) push("network", `${res.status} ${url}`);
@@ -85,16 +96,16 @@ export function installDevLog() {
   }
 }
 
-export function getDevLogEntries() {
+export function getDevLogEntries(): DevLogEntry[] {
   return entries.slice();
 }
 
-export function clearDevLog() {
+export function clearDevLog(): void {
   entries.length = 0;
   notify();
 }
 
-export function subscribeDevLog(fn) {
+export function subscribeDevLog(fn: DevLogListener): () => void {
   listeners.add(fn);
   return () => listeners.delete(fn);
 }

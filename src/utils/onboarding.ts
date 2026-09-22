@@ -24,7 +24,7 @@ import { fetchTable, insertRow, updateRow } from "./supabase";
 /*    ALTER TABLE profiles ADD COLUMN has_completed_onboarding boolean DEFAULT false;    */
 /* ------------------------------------------------------------------ */
 
-export async function getOnboardingCompletedFromProfile(userId) {
+export async function getOnboardingCompletedFromProfile(userId: string | null | undefined): Promise<boolean | null> {
   if (!userId) return null;
   try {
     const rows = await fetchTable(
@@ -42,7 +42,7 @@ export async function getOnboardingCompletedFromProfile(userId) {
   }
 }
 
-export async function saveOnboardingCompletedToProfile(userId, value) {
+export async function saveOnboardingCompletedToProfile(userId: string | null | undefined, value: boolean): Promise<void> {
   if (!userId) return;
   try {
     const existing = await fetchTable("profiles", `select=id&id=eq.${encodeURIComponent(userId)}`);
