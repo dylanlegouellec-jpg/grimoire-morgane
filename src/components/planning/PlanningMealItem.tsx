@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type PointerEvent } from "react";
 import { AnimatePresence, Reorder, useDragControls } from "motion/react";
 import { GripVertical } from "lucide-react";
 import { triggerHaptic } from "../../utils/haptics";
@@ -6,6 +6,25 @@ import useLongPress from "../../hooks/useLongPress";
 import MealOptionsModal from "./MealOptionsModal";
 
 const LONG_PRESS_DURATION_MS = 500;
+
+// Contrat minimal partagé par toute la chaîne planning/ — PlanningView.jsx
+// (pas encore migré) enrichit ses entrées avec des champs supplémentaires
+// (recette jointe, libellés...), mais seul `id` est réellement lu à
+// l'intérieur de ces composants de présentation : le reste transite via
+// `labelForEntry`/callbacks, jamais déstructuré ici.
+export interface MealEntryLike {
+  id: string;
+}
+
+interface PlanningMealItemProps {
+  entry: MealEntryLike;
+  bulleted: boolean;
+  label: string;
+  reorderMode: boolean;
+  onCommitOrder: () => void;
+  onEdit: (entry: MealEntryLike) => void;
+  onDelete: (entry: MealEntryLike) => void;
+}
 
 /* ------------------------------------------------------------------ */
 /*  LIGNE D'UN PLAT DANS LE PLAN (voir PlanningView.jsx) — extraite en   */
@@ -31,9 +50,9 @@ const LONG_PRESS_DURATION_MS = 500;
 /*  la ligne, qui doit rester libre pour l'appui long (menu Modifier/Supprimer) et               */
 /*  le clic normal, sans jamais déclencher de glissement par erreur.                               */
 /* ------------------------------------------------------------------ */
-export default function PlanningMealItem({ entry, bulleted, label, reorderMode, onCommitOrder, onEdit, onDelete }) {
+export default function PlanningMealItem({ entry, bulleted, label, reorderMode, onCommitOrder, onEdit, onDelete }: PlanningMealItemProps) {
   const [showOptions, setShowOptions] = useState(false);
-  const itemLongPress = useLongPress(() => setShowOptions(true), LONG_PRESS_DURATION_MS);
+  const itemLongPress = useLongPress<HTMLDivElement>(() => setShowOptions(true), LONG_PRESS_DURATION_MS);
   const dragControls = useDragControls();
 
   const closeOptions = () => {
@@ -41,7 +60,7 @@ export default function PlanningMealItem({ entry, bulleted, label, reorderMode, 
     itemLongPress.resetPressState();
   };
 
-  const startDrag = (e) => {
+  const startDrag = (e: PointerEvent<HTMLButtonElement>) => {
     triggerHaptic(15);
     dragControls.start(e);
   };
