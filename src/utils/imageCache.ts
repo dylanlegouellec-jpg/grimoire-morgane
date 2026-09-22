@@ -28,7 +28,14 @@ const PREFETCH_CONCURRENCY = 4;
 /*  requête déclenchée — il ne manquait que le déclenchement lui-même.                                  */
 /* ------------------------------------------------------------------ */
 
-async function isAlreadyCached(url) {
+// Seul le champ lu ici est typé — pas d'import d'un type Recipe complet
+// qui n'existe pas encore ailleurs dans le code (voir aiIllustration.ts,
+// même choix).
+interface ImageSourceRecipe {
+  imageUrl?: string | null;
+}
+
+async function isAlreadyCached(url: string): Promise<boolean> {
   if (typeof caches === "undefined") return false;
   for (const name of IMAGE_CACHE_NAMES) {
     try {
@@ -46,9 +53,9 @@ async function isAlreadyCached(url) {
 // reviendront au prochain affichage en ligne (voir prefetchRecipeImages),
 // mais l'app repasse hors-ligne à l'illustration vectorielle par défaut
 // tant qu'elles ne sont pas re-téléchargées.
-export async function clearImageCaches() {
+export async function clearImageCaches(): Promise<{ cleared: string[] }> {
   if (typeof caches === "undefined") return { cleared: [] };
-  const cleared = [];
+  const cleared: string[] = [];
   for (const name of IMAGE_CACHE_NAMES) {
     try {
       if (await caches.delete(name)) cleared.push(name);
@@ -59,9 +66,9 @@ export async function clearImageCaches() {
   return { cleared };
 }
 
-export async function getImageCacheEntryCounts() {
+export async function getImageCacheEntryCounts(): Promise<Record<string, number | null> | null> {
   if (typeof caches === "undefined") return null;
-  const counts = {};
+  const counts: Record<string, number | null> = {};
   for (const name of IMAGE_CACHE_NAMES) {
     try {
       const cache = await caches.open(name);
@@ -74,14 +81,16 @@ export async function getImageCacheEntryCounts() {
   return counts;
 }
 
-export async function prefetchRecipeImages(recipes) {
+export async function prefetchRecipeImages(recipes: ImageSourceRecipe[]): Promise<void> {
   if (typeof caches === "undefined" || typeof fetch === "undefined") return;
   if (!navigator.onLine) return; // aucune chance qu'un fetch aboutisse, inutile de le tenter hors-ligne
-  const urls = Array.from(new Set((recipes || []).map((r) => r && r.imageUrl).filter(Boolean)));
+  const urls = Array.from(
+    new Set((recipes || []).map((r) => r && r.imageUrl).filter((url): url is string => Boolean(url)))
+  );
   if (!urls.length) return;
 
   let index = 0;
-  async function worker() {
+  async function worker(): Promise<void> {
     while (index < urls.length) {
       const url = urls[index++];
       try {
