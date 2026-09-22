@@ -2,6 +2,13 @@ import { useCallback, useState } from "react";
 import { DEFAULT_BASICS } from "../constants";
 import { ingredientKey, triggerHaptic } from "../utils/helpers";
 
+interface UsePantryParams {
+  initialPantry?: string[];
+  initialBasics?: string[];
+  showToast: (msg: string) => void;
+  addManualItemToShoppingList?: (name: string) => Promise<void> | void;
+}
+
 /* ------------------------------------------------------------------ */
 /*  FRIGO — pantry (ingrédients variables), basiques, durée d'appui     */
 /*  État + actions uniquement. La persistance vers app_state (Supabase)  */
@@ -9,11 +16,11 @@ import { ingredientKey, triggerHaptic } from "../utils/helpers";
 /*  du code à savoir quand l'app est "ready" pour écrire sans écraser    */
 /*  un état serveur pas encore chargé — voir ce fichier pour le détail.  */
 /* ------------------------------------------------------------------ */
-export default function usePantry({ initialPantry, initialBasics, showToast, addManualItemToShoppingList }) {
-  const [pantry, setPantry] = useState(() => (Array.isArray(initialPantry) ? initialPantry : []));
-  const [basics, setBasics] = useState(() => (Array.isArray(initialBasics) ? initialBasics : DEFAULT_BASICS));
+export default function usePantry({ initialPantry, initialBasics, showToast, addManualItemToShoppingList }: UsePantryParams) {
+  const [pantry, setPantry] = useState<string[]>(() => (Array.isArray(initialPantry) ? initialPantry : []));
+  const [basics, setBasics] = useState<string[]>(() => (Array.isArray(initialBasics) ? initialBasics : DEFAULT_BASICS));
 
-  const moveBasicToVariable = useCallback((name) => {
+  const moveBasicToVariable = useCallback((name: string) => {
     const key = ingredientKey(name);
     setBasics((prev) => prev.filter((b) => b !== name));
     setPantry((prev) => (prev.includes(key) ? prev : [...prev, key]));
@@ -21,7 +28,7 @@ export default function usePantry({ initialPantry, initialBasics, showToast, add
     triggerHaptic(15);
   }, [showToast]);
 
-  const removeBasic = useCallback(async (name) => {
+  const removeBasic = useCallback(async (name: string) => {
     setBasics((prev) => prev.filter((b) => b !== name));
     if (addManualItemToShoppingList) await addManualItemToShoppingList(name);
     showToast(`${name} retiré des basiques et ajouté à la liste de courses.`);

@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import type { TouchEvent } from "react";
 
 /* ------------------------------------------------------------------ */
 /*  SWIPE HORIZONTAL GÉNÉRIQUE — verrouillage d'axe pour ne jamais        */
@@ -13,18 +14,18 @@ import { useRef } from "react";
 const AXIS_LOCK_THRESHOLD_PX = 10;
 const SWIPE_COMMIT_PX = 55;
 
-export default function useHorizontalSwipe(onSwipeLeft, onSwipeRight) {
-  const startRef = useRef(null);
-  const axisRef = useRef(null);
+export default function useHorizontalSwipe(onSwipeLeft: () => void, onSwipeRight: () => void) {
+  const startRef = useRef<{ x: number; y: number } | null>(null);
+  const axisRef = useRef<"x" | "y" | null>(null);
 
-  const onTouchStart = (e) => {
+  const onTouchStart = (e: TouchEvent) => {
     const t = e.touches && e.touches[0];
     if (!t) return;
     startRef.current = { x: t.clientX, y: t.clientY };
     axisRef.current = null;
   };
 
-  const onTouchMove = (e) => {
+  const onTouchMove = (e: TouchEvent) => {
     if (startRef.current == null || axisRef.current != null) return;
     const t = e.touches && e.touches[0];
     if (!t) return;
@@ -34,7 +35,7 @@ export default function useHorizontalSwipe(onSwipeLeft, onSwipeRight) {
     axisRef.current = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
   };
 
-  const onTouchEnd = (e) => {
+  const onTouchEnd = (e: TouchEvent) => {
     if (startRef.current == null || axisRef.current !== "x") {
       startRef.current = null;
       axisRef.current = null;

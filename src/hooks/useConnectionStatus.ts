@@ -30,7 +30,9 @@ import { pingSupabase } from "../utils/supabase";
 const PING_INTERVAL_MS = 30000;
 const RETRY_DELAY_MS = 4000;
 
-function initialStatus() {
+export type ConnectionStatus = "online" | "offline" | "checking";
+
+function initialStatus(): ConnectionStatus {
   // Toujours vérifié par un vrai ping avant de conclure quoi que ce soit —
   // même le tout premier rendu ne se fie plus à navigator.onLine (faux
   // positifs Android, voir le commentaire de fichier ci-dessus) : "checking"
@@ -39,11 +41,11 @@ function initialStatus() {
 }
 
 export default function useConnectionStatus() {
-  const [status, setStatus] = useState(initialStatus);
+  const [status, setStatus] = useState<ConnectionStatus>(initialStatus);
   const inFlightRef = useRef(false);
   const failureStreakRef = useRef(0);
-  const retryTimeoutRef = useRef(null);
-  const checkRef = useRef(() => {});
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const checkRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     if (!SUPABASE_READY) return undefined;
