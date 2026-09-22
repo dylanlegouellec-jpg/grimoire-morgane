@@ -8,19 +8,28 @@ import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
+import type { Household } from "../../utils/auth";
+
+interface HouseholdOptionsModalProps {
+  household: Household;
+  onClose: () => void;
+  onRename: (id: string, name: string) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+  isOnlyHousehold: boolean;
+}
 
 /* ------------------------------------------------------------------ */
 /*  OPTIONS D'UN FOYER (déclenché par appui long sur son nom)           */
 /*  Renommer (champ + validation) et Supprimer (avec confirmation) —    */
 /*  même esprit que RecipeOptionsModal pour les recettes.               */
 /* ------------------------------------------------------------------ */
-export default function HouseholdOptionsModal({ household, onClose, onRename, onDelete, isOnlyHousehold }) {
+export default function HouseholdOptionsModal({ household, onClose, onRename, onDelete, isOnlyHousehold }: HouseholdOptionsModalProps) {
   const [name, setName] = useState(household.name);
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [error, setError] = useState(null);
-  const modalRef = useFocusTrap(onClose);
+  const [error, setError] = useState<string | null>(null);
+  const modalRef = useFocusTrap<HTMLDivElement>(onClose);
   const sheet = useDismissibleSheet(onClose, { scrollRef: modalRef });
 
   useBodyScrollLock(true);
@@ -50,7 +59,7 @@ export default function HouseholdOptionsModal({ household, onClose, onRename, on
       onClose();
     } catch (err) {
       console.error(err);
-      setError((err && err.message) || "Échec de la suppression.");
+      setError((err instanceof Error && err.message) || "Échec de la suppression.");
       setDeleting(false);
     }
   };

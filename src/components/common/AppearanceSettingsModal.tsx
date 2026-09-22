@@ -6,6 +6,21 @@ import Switch from "./Switch";
 import HeroTreatmentPreview from "./HeroTreatmentPreview";
 import { LANGUAGE_OPTIONS } from "./language";
 
+interface AppearanceSettingsModalProps {
+  theme: string;
+  onSetTheme: (value: string) => void;
+  language: string;
+  onSetLanguage: (value: string) => void;
+  showNutriscore: boolean;
+  onSetShowNutriscore: (value: boolean) => void;
+  navOpacity: number;
+  onSetNavOpacity: (value: number) => void;
+  heroTreatment: string;
+  onSetHeroTreatment: (value: string) => void;
+  iconStyle: string;
+  onSetIconStyle: (value: string) => void;
+}
+
 /* ------------------------------------------------------------------ */
 /*  SOUS-VUE "APPARENCE & LANGUE" — contenu seul, voir la note dans          */
 /*  AccessibilitySettingsModal.jsx : rendu à l'intérieur de la coquille        */
@@ -24,7 +39,7 @@ export default function AppearanceSettingsModal({
   onSetHeroTreatment,
   iconStyle,
   onSetIconStyle,
-}) {
+}: AppearanceSettingsModalProps) {
   const { t } = useTranslation();
 
   const THEME_OPTIONS = [
