@@ -7,7 +7,7 @@
 // synchrone avec un tel geste. Ne redemande jamais si déjà accordée/refusée
 // ("default" = jamais demandé) — redemander sans arrêt agacerait pour rien
 // un utilisateur qui a déjà refusé une fois.
-export function requestNotificationPermission() {
+export function requestNotificationPermission(): void {
   if (typeof Notification === "undefined") return;
   if (Notification.permission === "default") {
     Notification.requestPermission().catch(() => {});
@@ -20,7 +20,7 @@ export function requestNotificationPermission() {
 // afficher une notification système. On tente donc d'abord cette voie,
 // avec repli sur le constructeur direct pour les environnements qui le
 // supportent (ex. en dev, où le service worker n'est pas toujours actif).
-export async function showLocalNotification(title, options) {
+export async function showLocalNotification(title: string, options?: NotificationOptions): Promise<void> {
   if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
   try {
     if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
