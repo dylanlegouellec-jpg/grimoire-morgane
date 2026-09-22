@@ -390,15 +390,17 @@ export const RECIPE_CARDS_CSS = `
      recalculé pour un conteneur qui n'existe plus, et atterrissait au
      milieu de l'écran au lieu de rester dans le coin). Un simple ancrage
      fixe au coin de l'écran, comme un FAB Material Design classique,
-     fonctionne correctement quel que soit le layout. "bottom: 132px" en
-     portrait (relevé depuis 96px : voir .bottom-nav, modalsBase.css.js,
-     désormais un dock flottant avec sa propre marge basse + sa hauteur à
-     dégager, pas juste une barre soudée au bord) laisse la place à la nav ;
-     la règle landscape plus bas la ramène à 24px puisque la nav passe en
-     colonne latérale statique dans ce mode et ne peut plus chevaucher. */
+     fonctionne correctement quel que soit le layout. "bottom: 112px" en
+     portrait (baissé depuis 132px à la demande de l'utilisateur — le bouton
+     chevauchait la ligne de contenu juste au-dessus de la nav ; voir
+     .bottom-nav, modalsBase.css.js, un dock flottant avec sa propre marge
+     basse + sa hauteur à dégager, pas juste une barre soudée au bord) laisse
+     la place à la nav ; la règle landscape plus bas la ramène à 24px
+     puisque la nav passe en colonne latérale statique dans ce mode et ne
+     peut plus chevaucher. */
   position: fixed;
   right: 24px;
-  bottom: 132px;
+  bottom: 112px;
   z-index: 50;
   width: 52px; height: 52px; border-radius: 50%;
   background: var(--chrome); color: var(--gold-light);
@@ -408,12 +410,13 @@ export const RECIPE_CARDS_CSS = `
   cursor: pointer;
 }
 /* Rapproché de la nav (plus agrandie, voir .bottom-nav dans
-   modalsBase.css.js), seulement en PWA installée : 100px au lieu du 96px du
-   navigateur normal — un espace resserré plutôt que le +10px complet qui
-   suivait exactement la nouvelle hauteur de la nav (trop d'écart demandé).
+   modalsBase.css.js), seulement en PWA installée : 124px au lieu du 112px
+   du navigateur normal (même écart de 12px conservé qu'avant l'ajustement
+   ci-dessus) — un espace resserré plutôt que le +10px complet qui suivait
+   exactement la nouvelle hauteur de la nav (trop d'écart demandé).
    ":where(...)" : voir le commentaire détaillé dans modalsBase.css.js —
    ramène la spécificité à zéro pour ne pas gagner contre la règle paysage
    juste au-dessus ("bottom: 24px") sur une tablette en PWA installée. */
-:where(html[data-standalone="true"]) .fab { bottom: 144px; }
+:where(html[data-standalone="true"]) .fab { bottom: 124px; }
 
 `;
