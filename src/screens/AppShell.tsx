@@ -53,7 +53,7 @@ const ViewLoadingFallback = () => (
   </div>
 );
 
-interface RecipesApi {
+export interface RecipesApi {
   recipes: Recipe[];
   saveRecipe: (recipe: Recipe) => void;
   importRecipe: (parsed: ParsedRecipe, label: string) => void;
@@ -63,7 +63,7 @@ interface RecipesApi {
   handleImportFile: (e: ChangeEvent<HTMLInputElement>) => void;
 }
 
-interface PantryApi {
+export interface PantryApi {
   pantry: string[];
   setPantry: Dispatch<SetStateAction<string[]>>;
   basics: string[];
@@ -72,7 +72,7 @@ interface PantryApi {
   resetPantry: () => void;
 }
 
-interface MealPlanApi {
+export interface MealPlanApi {
   mealPlan: MealPlanEntry[];
   addMealPlanEntry: (
     date: string,
@@ -90,7 +90,7 @@ interface MealPlanApi {
   moveMealPlanSection: (entryIds: string[], newMealType: string) => void;
 }
 
-interface ShoppingApi {
+export interface ShoppingApi {
   shoppingLists: ShoppingList[];
   visibleShoppingLists: ShoppingList[];
   activeListId: string | null;
@@ -109,7 +109,7 @@ interface ShoppingApi {
   resetActiveList: () => void;
 }
 
-interface SettingsApi {
+export interface SettingsApi {
   theme: string;
   setTheme: (value: string) => void;
   pressDuration: number;
@@ -131,12 +131,12 @@ interface SettingsApi {
   onboardingResolved: boolean;
 }
 
-interface HouseholdApiUser {
+export interface HouseholdApiUser {
   id: string;
   email?: string;
 }
 
-interface HouseholdMemberLike {
+export interface HouseholdMemberLike {
   user_id: string;
   role: string;
   display_name?: string;
@@ -144,7 +144,7 @@ interface HouseholdMemberLike {
   avatar_url?: string;
 }
 
-interface HouseholdApi {
+export interface HouseholdApi {
   user: HouseholdApiUser | null;
   householdId: string | null;
   households: Household[];
@@ -164,12 +164,12 @@ interface HouseholdApi {
 // aussi peu fiable que PublicRecipe (PublicRecipeView.tsx) : jamais
 // revalidée, seul `title` est garanti pour l'affichage de confirmation
 // (ImportConfirmModal).
-interface PendingImportRecipe {
+export interface PendingImportRecipe {
   title: string;
   [key: string]: unknown;
 }
 
-interface SyncApi {
+export interface SyncApi {
   offlineQueueSize: number;
   connectionStatus: string;
   onRetryConnection?: () => void;
