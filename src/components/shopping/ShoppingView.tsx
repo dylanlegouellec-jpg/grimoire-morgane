@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { AnimatePresence, motion, Reorder, useReducedMotion } from "motion/react";
 import { ChevronDown, Plus, ShoppingBasket, User, Users } from "lucide-react";
 import { DEFAULT_AISLE_ORDER, copyText } from "../../utils/helpers";
@@ -14,6 +15,8 @@ import RecipePickerModal from "./RecipePickerModal";
 import SwipeFlourish from "./SwipeFlourish";
 import ShoppingItemRow from "./ShoppingItemRow";
 import ShoppingAisleBlock from "./ShoppingAisleBlock";
+import type { Recipe } from "../../hooks/useRecipes";
+import type { ShoppingItem, ShoppingList } from "../../hooks/useShoppingLists";
 
 // "shopping.recap" reste une SEULE phrase traduite interpolée (voir
 // translations.js, "{bought}/{total} article{plural}...") — t() ne rend
@@ -24,7 +27,7 @@ import ShoppingAisleBlock from "./ShoppingAisleBlock";
 // déjà traduit sur les suites de chiffres : ça fonctionne quelle que soit la
 // langue ou la position des nombres dans la phrase, sans toucher aux clés
 // de traduction elles-mêmes.
-function withAnimatedNumbers(text) {
+function withAnimatedNumbers(text: string): ReactNode[] {
   return text.split(/(\d+)/).map((part, i) => (
     /^\d+$/.test(part) ? <AnimatedNumber key={i} value={Number(part)} /> : <Fragment key={i}>{part}</Fragment>
   ));
@@ -47,8 +50,25 @@ function withAnimatedNumbers(text) {
 // croisé entre elles pour trois constantes serait plus de bruit que
 // d'économie.
 const SCOPE_SWITCH_DURATION_S = 0.24;
-const SCOPE_SWITCH_EASE = [0.22, 1, 0.36, 1];
+const SCOPE_SWITCH_EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 const SCOPE_SWITCH_SLIDE_PX = 14;
+
+interface ShoppingViewProps {
+  recipes: Recipe[];
+  activeList: ShoppingList | null;
+  scope: string;
+  onChangeScope: (scope: string) => void;
+  onAddManualItem: (name: string) => void;
+  onToggleItem: (id: string) => void;
+  onAdjustQty: (id: string, delta: number) => void;
+  onSetItemQty: (id: string, qty: number, unit: string) => void;
+  onDeleteItem: (id: string) => void;
+  onGenerateFromRecipes: (ids: string[]) => void;
+  onResetActiveList: () => void;
+  onOpenManager: () => void;
+  showToast: (msg: string) => void;
+  pressDuration?: number;
+}
 
 export default function ShoppingView({
   recipes,
@@ -65,18 +85,18 @@ export default function ShoppingView({
   onOpenManager,
   showToast,
   pressDuration,
-}) {
+}: ShoppingViewProps) {
   const { t, dict, language } = useTranslation();
   const prefersReducedMotion = useReducedMotion();
   const [manualInput, setManualInput] = useState("");
-  const [wheelItem, setWheelItem] = useState(null);
+  const [wheelItem, setWheelItem] = useState<ShoppingItem | null>(null);
   const [showRecipePicker, setShowRecipePicker] = useState(false);
   const [showBought, setShowBought] = useState(false);
   // Ordre personnalisé des RAYONS (pas des articles), glissé-déposé par
   // en-tête de rayon (voir ShoppingAisleBlock.jsx) et mémorisé localement
   // sur cet appareil (utils/localSettings.js) — jamais synchronisé
   // Supabase, comme la portée du plan de repas.
-  const [aisleOrder, setAisleOrder] = useState(() => getStoredAisleOrder() || DEFAULT_AISLE_ORDER);
+  const [aisleOrder, setAisleOrder] = useState<string[]>(() => getStoredAisleOrder() || DEFAULT_AISLE_ORDER);
 
   const items = activeList ? activeList.items : [];
 
@@ -102,7 +122,7 @@ export default function ShoppingView({
   const { bought, grouped, aisleCount } = useMemo(() => {
     const unchecked = items.filter((i) => !i.checked);
     const bought = [...items.filter((i) => i.checked)].sort((a, b) => a.name.localeCompare(b.name, "fr"));
-    const grouped = unchecked.reduce((acc, item) => {
+    const grouped = unchecked.reduce<Record<string, ShoppingItem[]>>((acc, item) => {
       acc[item.aisle] = acc[item.aisle] || [];
       acc[item.aisle].push(item);
       return acc;
@@ -148,7 +168,7 @@ export default function ShoppingView({
     const lines = [`🛒 ${activeList ? activeList.name : t("shopping.defaultListName")} — Le Grimoire de Morgane`, ""];
     orderedAisleKeys.forEach((aisle) => {
       const list = grouped[aisle];
-      lines.push(`${dict.labels[aisle] || aisle} :`);
+      lines.push(`${(dict.labels as Record<string, string>)[aisle] || aisle} :`);
       list.forEach((it) => lines.push(`- ${Math.round(it.qty * 100) / 100}${it.unit ? ` ${it.unit}` : ""} ${translateRecipeText(it.name, language)}`));
       lines.push("");
     });
@@ -268,7 +288,7 @@ export default function ShoppingView({
                   key={aisle}
                   aisle={aisle}
                   list={grouped[aisle]}
-                  aisleLabel={dict.labels[aisle] || aisle}
+                  aisleLabel={(dict.labels as Record<string, string>)[aisle] || aisle}
                   onCommitOrder={commitAisleOrder}
                   itemProps={{
                     onToggle: onToggleItem,
