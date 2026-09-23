@@ -82,7 +82,7 @@ describe("countTableRows", () => {
     await primeOnline();
     const fetchMock = vi.fn().mockResolvedValueOnce({
       ok: true,
-      headers: { get: (name) => (name === "content-range" ? "0-0/42" : null) },
+      headers: { get: (name: string) => (name === "content-range" ? "0-0/42" : null) },
     });
     vi.stubGlobal("fetch", fetchMock);
 

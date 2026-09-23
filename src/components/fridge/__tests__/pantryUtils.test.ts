@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { normalizeIngredientLabel, categorizeIngredient, collectPantryOptions } from "../pantryUtils";
+import type { Recipe } from "../../../hooks/useRecipes";
 
 /* ------------------------------------------------------------------ */
 /*  RÉGRESSION : nettoyage de la liste "Mon Frigo" — signalé par           */
@@ -69,10 +70,13 @@ describe("categorizeIngredient — pas de collision de sous-chaîne", () => {
 });
 
 describe("collectPantryOptions — une seule option par ingrédient réel", () => {
-  const recipeWithVariants = (ingredientNames) => ({
-    id: "r1",
-    ingredients: ingredientNames.map((name, i) => ({ id: `i${i}`, name })),
-  });
+  // Seul `.ingredients` est lu par collectPantryOptions — cast plutôt
+  // qu'une Recipe complète, sans intérêt pour ce test.
+  const recipeWithVariants = (ingredientNames: string[]) =>
+    ({
+      id: "r1",
+      ingredients: ingredientNames.map((name, i) => ({ id: `i${i}`, name })),
+    }) as unknown as Recipe;
 
   it("ne produit qu'une seule option 'Œufs' pour toutes les déclinaisons présentes dans les recettes", () => {
     const recipes = [

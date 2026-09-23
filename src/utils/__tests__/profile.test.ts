@@ -19,7 +19,7 @@ import { saveProfile } from "../profile";
 /*  press_duration, qui passe par pressDurationToDb).                                 */
 /* ------------------------------------------------------------------ */
 
-function jsonResponse({ ok = true, status = 200, body = null } = {}) {
+function jsonResponse({ ok = true, status = 200, body = null }: { ok?: boolean; status?: number; body?: unknown } = {}) {
   return { ok, status, text: async () => (body === null ? "" : JSON.stringify(body)) };
 }
 
