@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import type { ChangeEvent, CSSProperties } from "react";
 import { motion } from "motion/react";
 import { Check, Download, Eye, Printer, X } from "lucide-react";
 import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
@@ -17,6 +18,7 @@ import {
   PHOTO_SIZES,
   TOC_MODES,
 } from "../../constants/cookbook";
+import type { CookbookBuilderConfig } from "../../constants/cookbook";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
@@ -24,16 +26,21 @@ import Flourish from "../common/Flourish";
 import Switch from "../common/Switch";
 import SegmentedControl from "../common/SegmentedControl";
 import CookbookDocument from "./CookbookDocument";
+import type { Recipe } from "../../hooks/useRecipes";
 
 // Même détection que ShareRecipeModal.jsx (doExportPDF) — dupliquée plutôt
 // qu'extraite en commun : ce petit test tient en une ligne et ShareRecipeModal
 // ne l'exporte pas, un partage forcé pour si peu aurait été plus de bruit
 // que la duplication elle-même.
-function isStandalonePWA() {
+function isStandalonePWA(): boolean {
   if (typeof window === "undefined") return false;
-  const iosStandalone = window.navigator && window.navigator.standalone;
+  const iosStandalone = (window.navigator as Navigator & { standalone?: boolean }).standalone;
   const mediaStandalone = typeof window.matchMedia === "function" && window.matchMedia("(display-mode: standalone)").matches;
   return Boolean(iosStandalone || mediaStandalone);
+}
+
+interface CookbookConfigPreviewProps {
+  config: CookbookBuilderConfig;
 }
 
 // Aperçu miniature TOUJOURS visible (pas besoin d'ouvrir "Aperçu en
@@ -46,12 +53,12 @@ function isStandalonePWA() {
 // pensée pour ~680px de large avec ses propres marges — la réduire
 // donnerait un rendu flou/à la mise en page tassée plutôt qu'une vraie
 // miniature lisible.
-function CookbookCoverPreview({ config }) {
+function CookbookCoverPreview({ config }: CookbookConfigPreviewProps) {
   const color = (COVER_COLORS.find((c) => c.id === config.coverColor) || COVER_COLORS[0]).value;
   return (
     <div
       className={`cookbook-cover-mini cookbook-cover-mini--${config.coverLayout}`}
-      style={{ "--cookbook-cover-color": color }}
+      style={{ "--cookbook-cover-color": color } as CSSProperties}
     >
       <div className="cookbook-cover-mini-flourish" aria-hidden="true">❦</div>
       <p className="cookbook-cover-mini-title">{config.coverTitle || "Le Grimoire de Morgane"}</p>
@@ -66,7 +73,7 @@ function CookbookCoverPreview({ config }) {
 // choisit pas quelle recette regarder) dont seule la STRUCTURE (photo,
 // colonnes, sections visibles) reflète les réglages en direct ; le contenu
 // (titre, lignes) reste volontairement un simple gabarit.
-function CookbookRecipePreview({ config }) {
+function CookbookRecipePreview({ config }: CookbookConfigPreviewProps) {
   return (
     <div className="cookbook-recipe-mini">
       {config.photoSize !== "aucune" && (
@@ -101,6 +108,12 @@ function CookbookRecipePreview({ config }) {
   );
 }
 
+interface CookbookBuilderModalProps {
+  recipes: Recipe[];
+  onClose: () => void;
+  showToast: (msg: string) => void;
+}
+
 /* ------------------------------------------------------------------ */
 /*  LIVRE DE CUISINE PDF — éditeur                                       */
 /*                                                                          */
@@ -122,26 +135,26 @@ function CookbookRecipePreview({ config }) {
 /*  ni "collections" ni "évaluation" (étoiles), qui n'existent pas dans le                */
 /*  modèle de données actuel (choix explicite de l'utilisateur).                          */
 /* ------------------------------------------------------------------ */
-export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
+export default function CookbookBuilderModal({ recipes, onClose, showToast }: CookbookBuilderModalProps) {
   const { t, language } = useTranslation();
-  const [config, setConfig] = useState(DEFAULT_COOKBOOK_CONFIG);
+  const [config, setConfig] = useState<CookbookBuilderConfig>(DEFAULT_COOKBOOK_CONFIG);
   const [showPreview, setShowPreview] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
-  const [pageStarts, setPageStarts] = useState({});
-  const docRef = useRef(null);
-  const sheetRef = useRef(null);
+  const [pageStarts, setPageStarts] = useState<Record<string, number>>({});
+  const docRef = useRef<HTMLDivElement | null>(null);
+  const sheetRef = useRef<HTMLDivElement | null>(null);
 
   useBodyScrollLock(true);
 
-  const panelRef = useRef(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
   const sheet = useDismissibleSheet(onClose, { scrollRef: panelRef, disabled: showPreview });
-  const focusTrapRef = useFocusTrap(onClose);
-  const setPanelRef = (node) => {
+  const focusTrapRef = useFocusTrap<HTMLDivElement>(onClose);
+  const setPanelRef = (node: HTMLDivElement | null) => {
     panelRef.current = node;
     focusTrapRef.current = node;
   };
 
-  const patch = (fields) => setConfig((c) => ({ ...c, ...fields }));
+  const patch = (fields: Partial<CookbookBuilderConfig>) => setConfig((c) => ({ ...c, ...fields }));
 
   const selectedRecipes = useMemo(() => {
     const list = Array.isArray(recipes) ? recipes : [];
@@ -156,7 +169,7 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
     return list;
   }, [recipes, config.selectionMode, config.selectionCategory, config.selectedIds]);
 
-  const toggleManualId = (id) => {
+  const toggleManualId = (id: string) => {
     triggerHaptic(10);
     setConfig((c) => ({
       ...c,
@@ -193,7 +206,7 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
     // La modale a pu être fermée/démontée pendant cette attente.
     if (!docRef.current || !sheetRef.current) return;
     const starts = computeRecipeStartPages(docRef.current, config, selectedRecipes.length);
-    const map = {};
+    const map: Record<string, number> = {};
     selectedRecipes.forEach((r, i) => { map[r.id] = starts[i]; });
     sheetRef.current.classList.remove("cookbook-print-sheet--rendering");
     if (hadPreview) sheetRef.current.classList.add("cookbook-print-sheet--preview");
@@ -252,7 +265,7 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
           });
           return;
         } catch (err) {
-          if (err && err.name === "AbortError") return;
+          if (err instanceof Error && err.name === "AbortError") return;
         }
       }
       downloadCookbookFile();
@@ -277,7 +290,7 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
     try {
       await refreshPageStarts();
       if (sheetRef.current) sheetRef.current.classList.add("cookbook-print-sheet--rendering");
-      const blob = await generateCookbookPdf(docRef.current, config);
+      const blob = await generateCookbookPdf(docRef.current as HTMLElement, config);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -325,7 +338,7 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
                   { value: "manual", label: t("cookbook.selectManual") },
                 ]}
                 value={config.selectionMode}
-                onChange={(v) => patch({ selectionMode: v })}
+                onChange={(v) => patch({ selectionMode: v as CookbookBuilderConfig["selectionMode"] })}
                 ariaLabel={t("cookbook.selectionTitle")}
               />
             </div>
@@ -337,7 +350,7 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
                     { value: "sucre", label: t("filters.sucre") },
                   ]}
                   value={config.selectionCategory}
-                  onChange={(v) => patch({ selectionCategory: v })}
+                  onChange={(v) => patch({ selectionCategory: v as CookbookBuilderConfig["selectionCategory"] })}
                   ariaLabel={t("cookbook.selectCategory")}
                 />
               </div>
@@ -377,7 +390,7 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
                   <input
                     type="text"
                     value={config.coverTitle}
-                    onChange={(e) => patch({ coverTitle: e.target.value })}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => patch({ coverTitle: e.target.value })}
                     placeholder="Le Grimoire de Morgane"
                   />
                 </label>
@@ -386,7 +399,7 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
                   <input
                     type="text"
                     value={config.coverSubtitle}
-                    onChange={(e) => patch({ coverSubtitle: e.target.value })}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => patch({ coverSubtitle: e.target.value })}
                     placeholder={t("cookbook.coverSubtitlePlaceholder")}
                   />
                 </label>
@@ -408,7 +421,7 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
                 <SegmentedControl
                   options={COVER_LAYOUTS.map((l) => ({ value: l, label: t(`cookbook.coverLayout.${l}`) }))}
                   value={config.coverLayout}
-                  onChange={(v) => patch({ coverLayout: v })}
+                  onChange={(v) => patch({ coverLayout: v as CookbookBuilderConfig["coverLayout"] })}
                   ariaLabel={t("cookbook.coverLayoutLabel")}
                 />
               </div>
@@ -422,7 +435,7 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
                 <SegmentedControl
                   options={PHOTO_SIZES.map((s) => ({ value: s, label: t(`cookbook.photoSize.${s}`) }))}
                   value={config.photoSize}
-                  onChange={(v) => patch({ photoSize: v })}
+                  onChange={(v) => patch({ photoSize: v as CookbookBuilderConfig["photoSize"] })}
                   ariaLabel={t("cookbook.photoSizeLabel")}
                 />
               </div>
@@ -456,7 +469,7 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
               <SegmentedControl
                 options={TOC_MODES.map((mode) => ({ value: mode, label: t(`cookbook.tocMode.${mode}`) }))}
                 value={config.tocMode}
-                onChange={(v) => patch({ tocMode: v })}
+                onChange={(v) => patch({ tocMode: v as CookbookBuilderConfig["tocMode"] })}
                 ariaLabel={t("cookbook.tocModeLabel")}
               />
             </div>
@@ -470,7 +483,7 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
               <SegmentedControl
                 options={PAGE_FORMATS.map((f) => ({ value: f, label: f }))}
                 value={config.format}
-                onChange={(v) => patch({ format: v })}
+                onChange={(v) => patch({ format: v as CookbookBuilderConfig["format"] })}
                 ariaLabel={t("cookbook.formatLabel")}
               />
             </div>
@@ -478,7 +491,7 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
               <SegmentedControl
                 options={PAGE_ORIENTATIONS.map((o) => ({ value: o, label: t(`cookbook.orientation.${o}`) }))}
                 value={config.orientation}
-                onChange={(v) => patch({ orientation: v })}
+                onChange={(v) => patch({ orientation: v as CookbookBuilderConfig["orientation"] })}
                 ariaLabel={t("cookbook.orientationLabel")}
               />
             </div>
@@ -486,7 +499,7 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }) {
               <SegmentedControl
                 options={PAGE_MARGINS.map((m) => ({ value: m.id, label: t(`cookbook.margin.${m.id}`) }))}
                 value={config.margin}
-                onChange={(v) => patch({ margin: v })}
+                onChange={(v) => patch({ margin: v as CookbookBuilderConfig["margin"] })}
                 ariaLabel={t("cookbook.marginLabel")}
               />
             </div>
