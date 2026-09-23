@@ -11,7 +11,12 @@ import { join, extname } from "node:path";
 /*  une variable non définie pendant les tests).                                    */
 /* ------------------------------------------------------------------ */
 
-const EXTENSIONS = new Set([".js", ".jsx"]);
+// .ts/.tsx ajoutés avec la migration TypeScript de tout src/ — sans eux,
+// ce compteur ne voyait plus que les quelques fichiers de test restés en
+// .js/.jsx (~2100 lignes), la quasi-totalité de l'app étant devenue
+// invisible pour lui du jour au lendemain malgré un vrai code qui, lui,
+// continuait de grossir normalement.
+const EXTENSIONS = new Set([".js", ".jsx", ".ts", ".tsx"]);
 const IGNORE_DIRS = new Set(["node_modules", "dist"]);
 
 export function countGrimoireLoc(rootDir) {
