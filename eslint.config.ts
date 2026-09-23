@@ -155,10 +155,11 @@ export default [
   },
   {
     // Même bloc Node que ci-dessus, pour les fichiers déjà convertis en
-    // TypeScript (api/, scripts/, vite.config.ts, vitest.config.ts —
-    // eslint.config.js lui-même reste en .js, voir son propre commentaire
-    // de fichier). Pas de linting "type-aware" ici non plus, même choix
-    // que pour le bloc src/**/*.{ts,tsx} plus haut.
+    // TypeScript (api/, scripts/, *.config.ts — ce fichier lui-même y
+    // compris, via jiti, seul ajout nécessaire côté outillage : ESLint
+    // 9.9+ détecte et charge un eslint.config.ts automatiquement dès que
+    // jiti est présent). Pas de linting "type-aware" ici non plus, même
+    // choix que pour le bloc src/**/*.{ts,tsx} plus haut.
     files: ["api/**/*.ts", "*.config.ts", "scripts/**/*.ts"],
     languageOptions: {
       ecmaVersion: "latest",
