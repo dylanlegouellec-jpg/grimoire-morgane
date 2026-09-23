@@ -3,6 +3,7 @@ import { render, screen, cleanup, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import CookbookBuilderModal from "../CookbookBuilderModal";
 import { LanguageProvider } from "../../../contexts/LanguageContext";
+import type { Recipe } from "../../../hooks/useRecipes";
 
 /* ------------------------------------------------------------------ */
 /*  RÉGRESSION : les trois modes de sélection ("Toutes" / "Par catégorie" /  */
@@ -15,7 +16,9 @@ import { LanguageProvider } from "../../../contexts/LanguageContext";
 /*  lui-même en dehors du compteur "sélectionnée(s)").                                */
 /* ------------------------------------------------------------------ */
 
-function makeRecipe(id, title, category) {
+// Fiches minimales (seuls ces champs comptent pour le filtrage testé ici)
+// — cast plutôt que des Recipe complètes, sans intérêt pour ce test.
+function makeRecipe(id: string, title: string, category: string) {
   return {
     id,
     title,
@@ -24,7 +27,7 @@ function makeRecipe(id, title, category) {
     servings: 2,
     ingredients: [{ qty: 1, unit: "", name: "Ingrédient" }],
     steps: ["Étape"],
-  };
+  } as unknown as Recipe;
 }
 
 const RECIPES = [
@@ -34,7 +37,7 @@ const RECIPES = [
 
 function renderModal(showToast = vi.fn()) {
   return render(
-    <LanguageProvider>
+    <LanguageProvider language="fr">
       <CookbookBuilderModal recipes={RECIPES} onClose={() => {}} showToast={showToast} />
     </LanguageProvider>
   );
