@@ -1,12 +1,15 @@
 import { useMemo, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import { Check, ChevronDown, Plus } from "lucide-react";
 import { ingredientKey } from "../../utils/helpers";
 import { triggerHaptic } from "../../utils/haptics";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { collectPantryOptions, missingIngredients, normalizeIngredientLabel, FRIDGE_CATEGORIES } from "./pantryUtils";
+import type { PantryOption } from "./pantryUtils";
 import DishArt from "../art/DishArt";
 import SwipeFlourish from "../shopping/SwipeFlourish";
 import CategoryIcon from "../common/CategoryIcon";
+import type { Recipe } from "../../hooks/useRecipes";
 
 // Icône des "basiques" (sel/poivre/huile...) — pas une vraie catégorie
 // FRIDGE_CATEGORIES, mais la même famille que "epices" (voir pantryUtils.js).
@@ -23,10 +26,22 @@ const MAX_MISSING_SHOWN = 4;
 // pour ne pas allonger la carte inutilement.
 const DETAIL_MISSING_THRESHOLD = 2;
 
-export default function FridgeView({ recipes, pantry, setPantry, basics, search, onMoveBasicToVariable, onRemoveBasic, onResetPantry, onOpen }) {
+interface FridgeViewProps {
+  recipes: Recipe[];
+  pantry: string[];
+  setPantry: Dispatch<SetStateAction<string[]>>;
+  basics: string[];
+  search: string;
+  onMoveBasicToVariable: (name: string) => void;
+  onRemoveBasic: (name: string) => void;
+  onResetPantry: () => void;
+  onOpen: (recipe: Recipe) => void;
+}
+
+export default function FridgeView({ recipes, pantry, setPantry, basics, search, onMoveBasicToVariable, onRemoveBasic, onResetPantry, onOpen }: FridgeViewProps) {
   const { t, dict } = useTranslation();
   const q = search.trim().toLowerCase();
-  const [openCategories, setOpenCategories] = useState(() => new Set());
+  const [openCategories, setOpenCategories] = useState<Set<string>>(() => new Set());
   const [showAllRecipes, setShowAllRecipes] = useState(false);
   const [showBasics, setShowBasics] = useState(true);
 
@@ -38,7 +53,7 @@ export default function FridgeView({ recipes, pantry, setPantry, basics, search,
   // contente de filtrer cette liste déjà construite).
   const options = useMemo(() => {
     const baseOptions = collectPantryOptions(recipes).filter((opt) => !basicKeys.includes(opt.key));
-    const extraFromPantry = pantry
+    const extraFromPantry: PantryOption[] = pantry
       .filter((key) => !baseOptions.some((o) => o.key === key) && !basicKeys.includes(key))
       .map((key) => ({ key, label: key.charAt(0).toUpperCase() + key.slice(1), category: "epicerie" }));
     return [...baseOptions, ...extraFromPantry];
@@ -49,11 +64,11 @@ export default function FridgeView({ recipes, pantry, setPantry, basics, search,
   const ownedSet = useMemo(() => new Set([...pantry, ...basicKeys]), [pantry, basicKeys]);
   const totalOwned = pantry.length + basics.length;
 
-  const toggle = (key) => {
+  const toggle = (key: string) => {
     triggerHaptic(12);
     setPantry((prev) => (prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key]));
   };
-  const toggleCategory = (key) => {
+  const toggleCategory = (key: string) => {
     triggerHaptic(10);
     setOpenCategories((prev) => {
       const next = new Set(prev);
@@ -71,7 +86,7 @@ export default function FridgeView({ recipes, pantry, setPantry, basics, search,
     setPantry((prev) => (prev.includes(key) ? prev : [...prev, key]));
   };
 
-  const grouped = FRIDGE_CATEGORIES.reduce((acc, cat) => { acc[cat.key] = []; return acc; }, {});
+  const grouped = FRIDGE_CATEGORIES.reduce<Record<string, PantryOption[]>>((acc, cat) => { acc[cat.key] = []; return acc; }, {});
   filteredOptions.forEach((opt) => { (grouped[opt.category] || grouped.epicerie).push(opt); });
 
   const sortedBasics = useMemo(() => [...basics].sort((a, b) => a.localeCompare(b, "fr")), [basics]);
@@ -160,7 +175,7 @@ export default function FridgeView({ recipes, pantry, setPantry, basics, search,
               <div className="fridge-category" key={cat.key}>
                 <button type="button" className="fridge-category-header" onClick={() => toggleCategory(cat.key)}>
                   <CategoryIcon className="fridge-category-icon" emoji={cat.icon} icon={cat.vectorIcon} />
-                  <span className="fridge-category-label">{dict.labels[cat.label] || cat.label}</span>
+                  <span className="fridge-category-label">{(dict.labels as Record<string, string>)[cat.label] || cat.label}</span>
                   <span className="fridge-category-count">{ownedInCategory}/{items.length}</span>
                   <ChevronDown size={16} className={`fridge-category-chevron ${isOpen ? "open" : ""}`} />
                 </button>
