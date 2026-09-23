@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 
 import { DEFAULT_BASICS, SUPABASE_READY, demoRecipes } from "./constants";
 import { loadLocalCache } from "./utils/localCache";
@@ -25,6 +26,8 @@ import {
 } from "./utils/localSettings";
 import { getProfile, saveProfile, pressDurationFromDb } from "./utils/profile";
 import { getOnboardingCompletedFromProfile, saveOnboardingCompletedToProfile } from "./utils/onboarding";
+import type { ThemeSetting } from "./utils/theme";
+import type { TextSize, Language, IconStyle } from "./utils/localSettings";
 
 import useSupabaseAuth from "./hooks/useSupabaseAuth";
 import useToast from "./hooks/useToast";
@@ -41,6 +44,17 @@ import LoginScreen from "./screens/LoginScreen";
 import AppShell from "./screens/AppShell";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { IconStyleProvider } from "./contexts/IconStyleContext";
+import type { Recipe } from "./hooks/useRecipes";
+import type { ShoppingList } from "./hooks/useShoppingLists";
+import type { MealPlanEntry } from "./hooks/useMealPlan";
+import type {
+  SettingsApi,
+  HouseholdApi,
+  HouseholdMemberLike,
+  SyncApi,
+  PendingImportRecipe,
+  ShoppingApi,
+} from "./screens/AppShell";
 
 // Reproduit le déséquilibre réel signalé en mode invité (4 recettes Salé /
 // 20 Sucré) pour rejouer fidèlement le bug de bascule de filtre — la
@@ -48,11 +62,11 @@ import { IconStyleProvider } from "./contexts/IconStyleContext";
 // hors-ligne normal quand Supabase est injoignable) est trop équilibrée
 // pour reproduire un filtre qui révèle très peu de cartes face à un autre
 // qui en révèle beaucoup.
-function buildGuestDemoRecipes() {
-  const base = demoRecipes();
+function buildGuestDemoRecipes(): Recipe[] {
+  const base = demoRecipes() as unknown as Recipe[];
   const sale = base.filter((r) => r.category === "Salé");
   const sucre = base.filter((r) => r.category === "Sucré");
-  const clone = (r, n) => ({ ...r, id: `${r.id}-g${n}`, title: `${r.title} ${n}` });
+  const clone = (r: Recipe, n: number): Recipe => ({ ...r, id: `${r.id}-g${n}`, title: `${r.title} ${n}` });
   const extraSale = Array.from({ length: Math.max(0, 4 - sale.length) }, (_, i) => clone(sale[i % sale.length], i + 1));
   const extraSucre = Array.from({ length: Math.max(0, 20 - sucre.length) }, (_, i) => clone(sucre[i % sucre.length], i + 1));
   return [...sale, ...extraSale, ...sucre, ...extraSucre];
@@ -71,7 +85,7 @@ export default function GrimoireDeMorgane() {
   // Lu une seule fois au montage : hydrate l'app instantanément avec les
   // dernières données connues, avant même que Supabase réponde (ou en
   // l'absence totale de réseau — coeur de l'offline-first).
-  const localCacheRef = useRef(null);
+  const localCacheRef = useRef<ReturnType<typeof loadLocalCache>>(null);
   if (localCacheRef.current === null) localCacheRef.current = loadLocalCache() || {};
   const localCache = localCacheRef.current;
 
@@ -83,7 +97,7 @@ export default function GrimoireDeMorgane() {
   // qui exigent une session valide). Sert uniquement à déboguer des bugs
   // d'affichage/animation sans avoir besoin des identifiants réels de
   // l'utilisateur — à retirer une fois le débogage terminé.
-  const isGuestModeRef = useRef(null);
+  const isGuestModeRef = useRef<boolean | null>(null);
   if (isGuestModeRef.current === null) {
     isGuestModeRef.current =
       typeof window !== "undefined" &&
@@ -133,7 +147,7 @@ export default function GrimoireDeMorgane() {
   // colonne dédiée dans `profiles`, donc rien à tirer/pousser côté compte
   // comme le font le thème et les trois réglages juste au-dessus.
   const [navOpacity, setNavOpacityState] = useState(() => getStoredNavOpacity());
-  const setNavOpacity = (value) => {
+  const setNavOpacity = (value: number) => {
     storeNavOpacity(value);
     setNavOpacityState(value);
   };
@@ -142,7 +156,7 @@ export default function GrimoireDeMorgane() {
   // chaque membre du foyer garde son propre choix (jamais partagé entre les
   // membres), mais le retrouve désormais aussi sur ses autres appareils.
   const [heroTreatment, setHeroTreatmentState] = useState(() => getStoredHeroTreatment());
-  const setHeroTreatment = (key) => {
+  const setHeroTreatment = (key: string) => {
     storeHeroTreatment(key);
     setHeroTreatmentState(key);
     if (user) saveProfile(user.id, { heroTreatment: key }).catch((err) => console.error("Sync habillage visuel impossible :", err));
@@ -151,32 +165,32 @@ export default function GrimoireDeMorgane() {
   // pour comment cette valeur redescend jusqu'aux icônes de catégorie
   // (rayons de courses, moments du Plan...) sans prop-drilling.
   const [iconStyle, setIconStyleState] = useState(() => getStoredIconStyle());
-  const setIconStyle = (style) => {
-    storeIconStyle(style);
-    setIconStyleState(style);
+  const setIconStyle = (style: string) => {
+    storeIconStyle(style as IconStyle);
+    setIconStyleState(style as IconStyle);
     if (user) saveProfile(user.id, { iconStyle: style }).catch((err) => console.error("Sync style des icônes impossible :", err));
   };
   // Réglage mémorisé localement uniquement (pas encore de vraie traduction
   // à synchroniser — voir la note dans utils/localSettings.js).
   const [language, setLanguageState] = useState(() => getStoredLanguage());
-  const setLanguage = (lang) => {
-    storeLanguage(lang);
-    setLanguageState(lang);
+  const setLanguage = (lang: string) => {
+    storeLanguage(lang as Language);
+    setLanguageState(lang as Language);
   };
 
-  const setPressDuration = (ms) => {
+  const setPressDuration = (ms: number) => {
     storePressDuration(ms);
     setPressDurationState(ms);
     if (user) saveProfile(user.id, { pressDuration: ms }).catch((err) => console.error("Sync appui long impossible :", err));
   };
-  const setShowNutriscore = (value) => {
+  const setShowNutriscore = (value: boolean) => {
     storeShowNutriscore(value);
     setShowNutriscoreState(value);
     if (user) saveProfile(user.id, { showNutriscore: value }).catch((err) => console.error("Sync badge Nutri-Score impossible :", err));
   };
-  const setTextSize = (size) => {
-    storeTextSize(size);
-    setTextSizeState(size);
+  const setTextSize = (size: string) => {
+    storeTextSize(size as TextSize);
+    setTextSizeState(size as TextSize);
     if (user) saveProfile(user.id, { textSize: size }).catch((err) => console.error("Sync taille de texte impossible :", err));
   };
 
@@ -194,7 +208,7 @@ export default function GrimoireDeMorgane() {
   // vraie absence d'affichage.
   const [hasCompletedOnboarding, setHasCompletedOnboardingState] = useState(() => getStoredOnboardingCompleted());
   const [onboardingResolved, setOnboardingResolved] = useState(false);
-  const setHasCompletedOnboarding = (value) => {
+  const setHasCompletedOnboarding = (value: boolean) => {
     storeOnboardingCompleted(value);
     setHasCompletedOnboardingState(value);
     if (user) saveOnboardingCompletedToProfile(user.id, value).catch((err) => console.error("Sync statut de tutoriel impossible :", err));
@@ -203,25 +217,25 @@ export default function GrimoireDeMorgane() {
   const recipesApi = useRecipes({
     householdId,
     initialRecipes: Array.isArray(localCache.recipes) && localCache.recipes.length
-      ? localCache.recipes
+      ? (localCache.recipes as Recipe[])
       : (isGuestMode ? buildGuestDemoRecipes() : []),
     showToast,
   });
   const shoppingApi = useShoppingLists({
     householdId,
     userId: user && user.id,
-    initialLists: Array.isArray(localCache.shoppingLists) ? localCache.shoppingLists : [],
+    initialLists: Array.isArray(localCache.shoppingLists) ? (localCache.shoppingLists as ShoppingList[]) : [],
     initialActiveListId: localCache.activeListId || null,
     showToast,
   });
   const pantryApi = usePantry({
-    initialPantry: Array.isArray(localCache.pantry) ? localCache.pantry : [],
-    initialBasics: Array.isArray(localCache.basics) ? localCache.basics : DEFAULT_BASICS,
+    initialPantry: Array.isArray(localCache.pantry) ? (localCache.pantry as string[]) : [],
+    initialBasics: Array.isArray(localCache.basics) ? (localCache.basics as string[]) : DEFAULT_BASICS,
     showToast,
     addManualItemToShoppingList: shoppingApi.addManualItem,
   });
   const mealPlanApi = useMealPlan({
-    initialMealPlan: Array.isArray(localCache.mealPlan) ? localCache.mealPlan : [],
+    initialMealPlan: Array.isArray(localCache.mealPlan) ? (localCache.mealPlan as MealPlanEntry[]) : [],
   });
 
   // Statut de connexion RÉEL (ping Supabase, pas juste navigator.onLine —
@@ -294,9 +308,9 @@ export default function GrimoireDeMorgane() {
     applyNavOpacity(navOpacity);
   }, [navOpacity]);
 
-  const setTheme = (nextTheme) => {
-    storeTheme(nextTheme);
-    setThemeState(nextTheme);
+  const setTheme = (nextTheme: string) => {
+    storeTheme(nextTheme as ThemeSetting);
+    setThemeState(nextTheme as ThemeSetting);
     if (user) saveProfile(user.id, { theme: nextTheme }).catch((err) => console.error("Sync thème impossible :", err));
   };
 
@@ -313,36 +327,36 @@ export default function GrimoireDeMorgane() {
   // empêche déjà tout nouvel appel tant que l'id du compte ne change pas
   // (ex. rafraîchissement de token, qui ne doit surtout pas re-tirer les
   // préférences par-dessus une modification locale toute fraîche).
-  const syncedUserIdRef = useRef(null);
+  const syncedUserIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (!user || syncedUserIdRef.current === user.id) return;
     syncedUserIdRef.current = user.id;
     getProfile(user.id).then((p) => {
       if (!p) return;
       if (p.theme) {
-        storeTheme(p.theme);
-        setThemeState(p.theme);
+        storeTheme(p.theme as ThemeSetting);
+        setThemeState(p.theme as ThemeSetting);
       }
       if (p.press_duration) {
-        const ms = pressDurationFromDb(p.press_duration);
+        const ms = pressDurationFromDb(p.press_duration as string);
         storePressDuration(ms);
         setPressDurationState(ms);
       }
       if (p.show_nutriscore !== null && p.show_nutriscore !== undefined) {
-        storeShowNutriscore(p.show_nutriscore);
-        setShowNutriscoreState(p.show_nutriscore);
+        storeShowNutriscore(p.show_nutriscore as boolean);
+        setShowNutriscoreState(p.show_nutriscore as boolean);
       }
       if (p.text_size) {
-        storeTextSize(p.text_size);
-        setTextSizeState(p.text_size);
+        storeTextSize(p.text_size as TextSize);
+        setTextSizeState(p.text_size as TextSize);
       }
       if (p.hero_treatment) {
-        storeHeroTreatment(p.hero_treatment);
-        setHeroTreatmentState(p.hero_treatment);
+        storeHeroTreatment(p.hero_treatment as string);
+        setHeroTreatmentState(p.hero_treatment as string);
       }
       if (p.icon_style) {
-        storeIconStyle(p.icon_style);
-        setIconStyleState(p.icon_style);
+        storeIconStyle(p.icon_style as IconStyle);
+        setIconStyleState(p.icon_style as IconStyle);
       }
     });
   }, [user]);
@@ -417,7 +431,7 @@ export default function GrimoireDeMorgane() {
   // locales, donc une nouvelle référence d'objet à chaque rendu de
   // GrimoireDeMorgane ne change rien à ce qui est réellement comparé plus
   // bas dans l'arbre (les valeurs primitives qu'ils contiennent).
-  const settingsApi = {
+  const settingsApi: SettingsApi = {
     theme,
     setTheme,
     pressDuration,
@@ -438,27 +452,37 @@ export default function GrimoireDeMorgane() {
     setHasCompletedOnboarding,
     onboardingResolved,
   };
-  const householdApi = {
+  const householdApi: HouseholdApi = {
     user,
     householdId,
     households,
     onSwitchHousehold: switchHousehold,
-    onCreateHousehold: createHousehold,
+    // createHousehold (utils/auth.ts) renvoie le nouvel id (utile en
+    // interne à useSupabaseAuth pour l'activer aussitôt) — jamais utilisé
+    // par les appelants de cette prop, qui n'attendent qu'un Promise<void>.
+    onCreateHousehold: async (name: string) => { await createHousehold(name); },
     onRenameHousehold: renameHousehold,
     onDeleteHousehold: deleteHousehold,
     onRequestJoinHousehold: requestJoinHousehold,
-    onGetPendingHouseholdRequests: getPendingHouseholdRequests,
-    onApproveHouseholdMember: approveHouseholdMember,
-    onRejectHouseholdMember: rejectHouseholdMember,
+    onGetPendingHouseholdRequests: getPendingHouseholdRequests as unknown as (householdId: string) => Promise<HouseholdMemberLike[]>,
+    // householdId n'est en pratique jamais null au moment où ces deux
+    // actions sont déclenchées (menu "Demandes en attente", visible
+    // seulement pour un foyer déjà résolu) — approveHouseholdMember/
+    // rejectHouseholdMember (utils/auth.ts) exigent un id non nul,
+    // contrairement à la prop SecretSettingsModal/HouseholdManagerModal,
+    // volontairement défensive (son propre householdId est bien
+    // `string | null`).
+    onApproveHouseholdMember: approveHouseholdMember as (householdId: string | null, userId: string) => Promise<void>,
+    onRejectHouseholdMember: rejectHouseholdMember as (householdId: string | null, userId: string) => Promise<void>,
     onRefreshHouseholds: refreshHouseholds,
     signOut,
   };
-  const syncApi = {
+  const syncApi: SyncApi = {
     offlineQueueSize: sync.offlineQueueSize,
     connectionStatus,
     onRetryConnection: recheckConnection,
-    pendingImport: sync.pendingImport,
-    setPendingImport: sync.setPendingImport,
+    pendingImport: sync.pendingImport as PendingImportRecipe | null,
+    setPendingImport: sync.setPendingImport as Dispatch<SetStateAction<PendingImportRecipe | null>>,
     pendingHouseholdJoin: sync.pendingHouseholdJoin,
     setPendingHouseholdJoin: sync.setPendingHouseholdJoin,
   };
@@ -470,7 +494,12 @@ export default function GrimoireDeMorgane() {
           recipesApi={recipesApi}
           pantryApi={pantryApi}
           mealPlanApi={mealPlanApi}
-          shoppingApi={shoppingApi}
+          // renameShoppingList (useShoppingLists.ts) exige un id non nul —
+          // ListsManagerModal.onRename reste défensivement typé
+          // `string | null` (son propre état `renamingId` transite par
+          // null entre deux renommages), jamais réellement appelé avec
+          // null en pratique.
+          shoppingApi={shoppingApi as unknown as ShoppingApi}
           settingsApi={settingsApi}
           householdApi={householdApi}
           syncApi={syncApi}

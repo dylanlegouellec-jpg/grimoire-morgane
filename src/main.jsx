@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import GrimoireDeMorgane from './GrimoireDeMorgane.jsx'
+import GrimoireDeMorgane from './GrimoireDeMorgane'
 import PublicRecipeView from './components/recipe/PublicRecipeView'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import { decodeRecipeCode } from './utils/helpers'
