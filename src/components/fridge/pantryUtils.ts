@@ -2,6 +2,7 @@ import { Beef, Carrot, Droplet, Milk, Wheat } from "lucide-react";
 import { ingredientKey } from "../../utils/helpers";
 import type { LucideIcon } from "lucide-react";
 import type { Recipe } from "../../hooks/useRecipes";
+import type { Ingredient } from "../../utils/ingredients";
 
 /* ------------------------------------------------------------------ */
 /*  VUE MON FRIGO — utilitaires de gestion des basiques & du pantry    */
@@ -211,8 +212,8 @@ export function collectPantryOptions(recipes: Recipe[]): PantryOption[] {
 // dessus : sans ça, cocher l'option canonique "Beurre" dans le frigo ne
 // suffirait pas à couvrir une recette dont l'ingrédient brut est "beurre
 // fondu" (clé de normalisation différente si on comparait le texte brut).
-export function missingIngredients(recipe: Recipe, ownedSet: Set<string>) {
-  return recipe.ingredients.filter((ing) => {
+export function missingIngredients(recipe: Recipe, ownedSet: Set<string>): Ingredient[] {
+  return recipe.ingredients.filter((ing): ing is Ingredient => {
     if ("isSection" in ing || !ing.name) return false;
     const label = normalizeIngredientLabel(ing.name);
     if (isIgnoredIngredient(label)) return false; // jamais "manquant"
