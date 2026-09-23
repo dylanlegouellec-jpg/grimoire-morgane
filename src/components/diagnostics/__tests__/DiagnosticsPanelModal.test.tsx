@@ -21,7 +21,7 @@ import { installDevLog } from "../../../utils/devLog";
 function renderModal(showToast = vi.fn()) {
   vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
   return render(
-    <LanguageProvider>
+    <LanguageProvider language="fr">
       <DiagnosticsPanelModal onClose={() => {}} showToast={showToast} onResetOnboarding={() => {}} />
     </LanguageProvider>
   );

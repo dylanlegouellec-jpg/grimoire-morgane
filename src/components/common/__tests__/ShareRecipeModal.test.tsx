@@ -13,12 +13,15 @@ import userEvent from "@testing-library/user-event";
 
 const generateCookbookPdfMock = vi.fn().mockResolvedValue(new Blob(["%PDF-1.4"], { type: "application/pdf" }));
 vi.mock("../../../utils/cookbookPdf", () => ({
-  generateCookbookPdf: (...args) => generateCookbookPdfMock(...args),
+  generateCookbookPdf: (...args: unknown[]) => generateCookbookPdfMock(...args),
 }));
 
 import ShareRecipeModal from "../ShareRecipeModal";
 import { LanguageProvider } from "../../../contexts/LanguageContext";
+import type { Recipe } from "../../../hooks/useRecipes";
 
+// Fiche minimale suffisante pour ce test (Fiche PDF ne lit que ces champs)
+// — cast plutôt qu'un objet Recipe complet, sans intérêt ici.
 const RECIPE = {
   id: "r1",
   title: "Tarte Tatin",
@@ -28,7 +31,7 @@ const RECIPE = {
   ingredients: [{ qty: 6, unit: "", name: "pommes" }],
   steps: ["Caraméliser", "Cuire au four"],
   imageUrl: "",
-};
+} as unknown as Recipe;
 
 function renderModal(showToast = vi.fn()) {
   return render(
