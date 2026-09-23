@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion, useMotionValue, animate } from "motion/react";
+import type { HTMLMotionProps } from "motion/react";
 
 /* ------------------------------------------------------------------ */
 /*  FLORILÈGE SWIPEABLE (geste tactile générique) — Framer Motion         */
@@ -21,21 +22,33 @@ import { motion, useMotionValue, animate } from "motion/react";
 /*  l'issue du geste (tap, glissement confirmé ou abandonné).                                    */
 /* ------------------------------------------------------------------ */
 const SWIPE_THRESHOLD_PX = 40;
-const RELEASE_SPRING = { type: "spring", stiffness: 500, damping: 30 };
+const RELEASE_SPRING = { type: "spring", stiffness: 500, damping: 30 } as const;
 
-export default function SwipeFlourish({ onSwipeRight, onSwipeLeft, onTap }) {
+type DivDragProps = HTMLMotionProps<"div">;
+type DragEventParam = Parameters<NonNullable<DivDragProps["onDrag"]>>[0];
+type DragInfoParam = Parameters<NonNullable<DivDragProps["onDrag"]>>[1];
+
+type SwipeHint = "right" | "left" | null;
+
+interface SwipeFlourishProps {
+  onSwipeRight: () => void;
+  onSwipeLeft: () => void;
+  onTap?: () => void;
+}
+
+export default function SwipeFlourish({ onSwipeRight, onSwipeLeft, onTap }: SwipeFlourishProps) {
   const x = useMotionValue(0);
   // Seul bout d'état React : la couleur d'indice (vert/rouge) ne change que
   // par PALIER (franchissement de ±24px), jamais en continu — pas besoin
   // qu'elle suive elle-même une MotionValue.
-  const [hint, setHint] = useState(null); // null | "right" | "left"
+  const [hint, setHint] = useState<SwipeHint>(null);
 
-  const handleDrag = (_event, info) => {
-    const next = info.offset.x > 24 ? "right" : info.offset.x < -24 ? "left" : null;
+  const handleDrag = (_event: DragEventParam, info: DragInfoParam) => {
+    const next: SwipeHint = info.offset.x > 24 ? "right" : info.offset.x < -24 ? "left" : null;
     if (next !== hint) setHint(next);
   };
 
-  const handleDragEnd = (_event, info) => {
+  const handleDragEnd = (_event: DragEventParam, info: DragInfoParam) => {
     setHint(null);
     animate(x, 0, RELEASE_SPRING);
     const dx = info.offset.x;
