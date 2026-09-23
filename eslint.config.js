@@ -34,8 +34,8 @@ export default [
       sourceType: "module",
       globals: {
         ...globals.browser,
-        // Injectée au build par Vite/Vitest (voir vite.config.js,
-        // vitest.config.js, scripts/countLoc.js) — jamais une vraie
+        // Injectée au build par Vite/Vitest (voir vite.config.ts,
+        // vitest.config.ts, scripts/countLoc.ts) — jamais une vraie
         // variable du bundle navigateur, juste une constante littérale
         // substituée à la compilation.
         __GRIMOIRE_LOC__: "readonly",
@@ -155,10 +155,11 @@ export default [
   },
   {
     // Même bloc Node que ci-dessus, pour les fichiers déjà convertis en
-    // TypeScript (api/ pour l'instant — scripts/ et les *.config.js
-    // suivront). Pas de linting "type-aware" ici non plus, même choix que
-    // pour le bloc src/**/*.{ts,tsx} plus haut.
-    files: ["api/**/*.ts"],
+    // TypeScript (api/, scripts/, vite.config.ts, vitest.config.ts —
+    // eslint.config.js lui-même reste en .js, voir son propre commentaire
+    // de fichier). Pas de linting "type-aware" ici non plus, même choix
+    // que pour le bloc src/**/*.{ts,tsx} plus haut.
+    files: ["api/**/*.ts", "*.config.ts", "scripts/**/*.ts"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",

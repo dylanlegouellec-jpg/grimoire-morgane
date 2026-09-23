@@ -2,10 +2,10 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
-import { countGrimoireLoc } from "./scripts/countLoc.js";
+import { countGrimoireLoc } from "./scripts/countLoc";
 
 // Calculé une seule fois au démarrage de Vite (dev ET build) — jamais dans
-// le navigateur, voir scripts/countLoc.js. `vitest.config.js` définit la
+// le navigateur, voir scripts/countLoc.ts. `vitest.config.ts` définit la
 // même constante de la même façon : les deux doivent rester synchronisés.
 const GRIMOIRE_LOC = countGrimoireLoc(fileURLToPath(new URL("./src", import.meta.url)));
 
