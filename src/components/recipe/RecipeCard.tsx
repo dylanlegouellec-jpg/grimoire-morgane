@@ -1,4 +1,4 @@
-import { memo, useLayoutEffect, useRef, useState } from "react";
+import { memo, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
 import { AnimatePresence, motion, useAnimate, useReducedMotion } from "motion/react";
 import { Clock, Heart, Users } from "lucide-react";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
@@ -9,12 +9,31 @@ import { translateRecipeText } from "../../utils/recipeTranslation";
 import useLongPress from "../../hooks/useLongPress";
 import DishArt from "../art/DishArt";
 import RecipeOptionsModal from "../common/RecipeOptionsModal";
+import type { Recipe } from "../../hooks/useRecipes";
+import type { NutriscoreGrade } from "../../utils/nutriscoreClient";
 
 // Même cubic-bezier que l'ancienne @keyframes cardEnter/cardEnterAlt (CSS),
 // remplacées par cet animate() Framer Motion impératif — voir le commentaire
 // juste avant l'effet ci-dessous pour le pourquoi de cette bascule.
-const CARD_ENTER_EASE = [0.22, 1, 0.36, 1];
+const CARD_ENTER_EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 const CARD_ENTER_DURATION_S = 0.42;
+
+interface RecipeCardProps {
+  recipe: Recipe;
+  hidden?: boolean;
+  filterGeneration?: number;
+  suppressMorph?: boolean;
+  onOpen: (recipe: Recipe) => void;
+  isOpenRecipe?: boolean;
+  onToggleFavorite: (id: string) => void;
+  onRequestDelete: (recipe: Recipe) => void;
+  onUpdateRecipe: (recipe: Recipe) => void;
+  enterDelay?: number;
+  pressDuration?: number;
+  showNutriscore?: boolean;
+  householdId: string | null;
+  showToast?: (msg: string) => void;
+}
 
 function RecipeCard({
   recipe,
@@ -31,13 +50,13 @@ function RecipeCard({
   showNutriscore = true,
   householdId,
   showToast,
-}) {
+}: RecipeCardProps) {
   // Le Nutri-Score est calculé UNE FOIS côté serveur à la création/édition
   // de la recette (voir utils/nutriscoreClient.js + api/nutriscore.js) et
   // stocké dans recipe.nutriscoreGrade — plus aucun appel réseau ici.
   // Le repli local ne sert que pour les recettes qui n'ont pas encore ce
   // champ (démo, recettes créées avant l'ajout de la colonne).
-  const nutri = recipe.nutriscoreGrade || estimateNutriscoreLocal(recipe.ingredients, recipe.category);
+  const nutri = (recipe.nutriscoreGrade || estimateNutriscoreLocal(recipe.ingredients, recipe.category)) as NutriscoreGrade;
   const { language, dict } = useTranslation();
   const [showOptions, setShowOptions] = useState(false);
 
@@ -49,7 +68,7 @@ function RecipeCard({
   // seule implémentation partagée élimine ce risque : l'animation
   // d'enfoncement/rebond (voir .press-anim dans styles.css.js) est
   // désormais identique, pas seulement similaire.
-  const cardLongPress = useLongPress(() => setShowOptions(true), pressDuration);
+  const cardLongPress = useLongPress<HTMLDivElement>(() => setShowOptions(true), pressDuration);
   const prefersReducedMotion = useReducedMotion();
 
   const handleClick = () => {
@@ -63,7 +82,7 @@ function RecipeCard({
   // annoncé comme un contrôle par un lecteur d'écran. role="button" +
   // tabIndex + ce gestionnaire clavier (Entrée/Espace, comportement natif
   // d'un vrai bouton) comblent les deux à la main.
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       handleClick();
@@ -192,7 +211,7 @@ function RecipeCard({
           </motion.div>
           <div className="card-body">
             <div className="card-top-row">
-              <span className={`chip ${categoryClass(recipe)}`}>{dict.labels[categoryLabel(recipe)] || categoryLabel(recipe)}</span>
+              <span className={`chip ${categoryClass(recipe)}`}>{(dict.labels as Record<string, string>)[categoryLabel(recipe)] || categoryLabel(recipe)}</span>
               {showNutriscore && (
                 <span className="nutri-badge" style={{ background: NUTRI_COLORS[nutri] }}>{nutri}</span>
               )}
