@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
+import type { ReactNode } from "react";
 import useFocusTrap from "../useFocusTrap";
 
 /* ------------------------------------------------------------------ */
@@ -15,12 +16,22 @@ import useFocusTrap from "../useFocusTrap";
 /*  APRÈS que celui de la modale la plus externe ait déjà consommé le               */
 /*  drapeau de suppression partagé.                                                  */
 /* ------------------------------------------------------------------ */
-function Modal({ onClose, children }) {
-  const ref = useFocusTrap(onClose);
+function Modal({ onClose, children }: { onClose: () => void; children?: ReactNode }) {
+  const ref = useFocusTrap<HTMLDivElement>(onClose);
   return <div ref={ref} tabIndex={-1}>{children}</div>;
 }
 
-function Stack({ innerOpen, onOuterClose, onMiddleClose, onInnerClose }) {
+function Stack({
+  innerOpen,
+  onOuterClose,
+  onMiddleClose,
+  onInnerClose,
+}: {
+  innerOpen: boolean;
+  onOuterClose: () => void;
+  onMiddleClose: () => void;
+  onInnerClose: () => void;
+}) {
   return (
     <Modal onClose={onOuterClose}>
       <Modal onClose={onMiddleClose}>

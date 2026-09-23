@@ -72,12 +72,12 @@ describe("buildRecipeShareLink", () => {
     expect(link).toContain("?recette=");
     expect(link).not.toContain("?import=");
 
-    const code = new URL(link).searchParams.get("recette");
+    const code = new URL(link).searchParams.get("recette")!;
     expect(decodeRecipeCode(code)).toEqual(recipe);
   });
 
   it("renvoie une chaîne vide si la recette ne peut pas être encodée", () => {
-    const circular = {};
+    const circular: Record<string, unknown> = {};
     circular.self = circular; // JSON.stringify lève sur une référence circulaire
     expect(buildRecipeShareLink(circular)).toBe("");
   });
