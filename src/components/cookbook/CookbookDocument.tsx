@@ -1,8 +1,13 @@
+import type { CSSProperties } from "react";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { translateRecipeText } from "../../utils/recipeTranslation";
 import { categoryLabel, groupIngredients, groupSteps, formatDurationMinutes } from "../../utils/helpers";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
 import { COVER_COLORS, marginMm, pageDimensionsMm } from "../../constants/cookbook";
+import type { CookbookBuilderConfig, PhotoSize, TocMode } from "../../constants/cookbook";
+import type { Recipe } from "../../hooks/useRecipes";
+import type { Ingredient } from "../../utils/ingredients";
+import type { NutriscoreGrade } from "../../utils/nutriscoreClient";
 
 /* ------------------------------------------------------------------ */
 /*  LIVRE DE CUISINE — document partagé aperçu/impression                */
@@ -15,7 +20,9 @@ import { COVER_COLORS, marginMm, pageDimensionsMm } from "../../constants/cookbo
 /*  ShareRecipeModal.jsx, étendu ici à un document multi-recettes.                */
 /* ------------------------------------------------------------------ */
 
-function coverColorValue(id) {
+type TranslateFn = (key: string, vars?: Record<string, unknown>) => string;
+
+function coverColorValue(id: string): string {
   return (COVER_COLORS.find((c) => c.id === id) || COVER_COLORS[0]).value;
 }
 
@@ -26,7 +33,7 @@ function coverColorValue(id) {
 // "càc de curry" plutôt que unité "c. à café" + nom "curry"). Jamais
 // appliqué si une unité existe déjà (elle est alors déjà correcte).
 const LEADING_SPOON_UNIT = /^c\.?\s?[aà]\.?\s?(c|s)\.?\s+(?:de\s+|d['’])?/i;
-function splitLeadingSpoonUnit(unit, name) {
+function splitLeadingSpoonUnit(unit: string, name: string): { unit: string; name: string } {
   if (unit || typeof name !== "string") return { unit, name };
   const trimmed = name.trim();
   const match = LEADING_SPOON_UNIT.exec(trimmed);
@@ -39,19 +46,24 @@ function splitLeadingSpoonUnit(unit, name) {
 // quantité sans unité (signalé par l'utilisateur : "10 — feuilles de
 // brick" devient "10 feuilles de brick") : ce tiret ne sépare rien tant
 // qu'il n'y a pas d'unité à distinguer du nom.
-export function formatIngredientLine(it, language) {
+export function formatIngredientLine(it: Ingredient, language: string): string {
   const { unit, name } = splitLeadingSpoonUnit(it.unit, it.name);
   const translatedName = translateRecipeText(name, language);
   if (!unit) return `${it.qty} ${translatedName}`.trim();
   return `${it.qty} ${translateRecipeText(unit, language)} — ${translatedName}`;
 }
 
-function CoverPage({ config, pageNumber }) {
+interface CoverPageProps {
+  config: CookbookBuilderConfig;
+  pageNumber: number | null;
+}
+
+function CoverPage({ config, pageNumber }: CoverPageProps) {
   const color = coverColorValue(config.coverColor);
   return (
     <section
       className={`cookbook-page cookbook-cover cookbook-cover--${config.coverLayout}`}
-      style={{ "--cookbook-cover-color": color }}
+      style={{ "--cookbook-cover-color": color } as CSSProperties}
     >
       <div className="cookbook-cover-flourish" aria-hidden="true">❦</div>
       <h1 className="cookbook-cover-title">{config.coverTitle || "Le Grimoire de Morgane"}</h1>
@@ -66,7 +78,7 @@ function CoverPage({ config, pageNumber }) {
 // voir filters.sale/filters.sucre) pour une table des matières "par
 // chapitres" plutôt qu'une liste à plat — un chapitre sans recette (aucune
 // recette Sucrée sélectionnée, par ex.) n'apparaît simplement pas.
-function groupByCategory(recipes) {
+function groupByCategory(recipes: Recipe[]) {
   const sale = recipes.filter((r) => categoryLabel(r) !== "Sucré");
   const sucre = recipes.filter((r) => categoryLabel(r) === "Sucré");
   return [
@@ -75,7 +87,17 @@ function groupByCategory(recipes) {
   ].filter((chapter) => chapter.recipes.length > 0);
 }
 
-function TocPage({ recipes, t, language, pageNumber, runningTitle, pageStarts, tocMode }) {
+interface TocPageProps {
+  recipes: Recipe[];
+  t: TranslateFn;
+  language: string;
+  pageNumber: number | null;
+  runningTitle: string;
+  pageStarts: Record<string, number> | null | undefined;
+  tocMode: TocMode;
+}
+
+function TocPage({ recipes, t, language, pageNumber, runningTitle, pageStarts, tocMode }: TocPageProps) {
   const chapters = groupByCategory(recipes);
   return (
     <section className="cookbook-page cookbook-toc">
@@ -115,6 +137,30 @@ function TocPage({ recipes, t, language, pageNumber, runningTitle, pageStarts, t
   );
 }
 
+// Sous-ensemble de CookbookBuilderConfig effectivement utilisé par cette
+// page — ShareRecipeModal.jsx (rendu hors-écran d'une seule recette pour
+// "Fiche PDF") ne construit que ces six champs, jamais un config complet
+// de livre de cuisine (pas de couverture/table des matières pour une seule
+// fiche).
+interface RecipePageConfig {
+  photoSize: PhotoSize;
+  showIngredients: boolean;
+  showSteps: boolean;
+  showNotes: boolean;
+  showNutrition: boolean;
+  showTime: boolean;
+}
+
+interface RecipePageProps {
+  recipe: Recipe;
+  config: RecipePageConfig;
+  t: TranslateFn;
+  language: string;
+  pageNumber: number | null;
+  isLast: boolean;
+  runningTitle: string;
+}
+
 // Exporté : réutilisé tel quel par ShareRecipeModal.jsx (bouton "Fiche
 // PDF" d'une recette isolée) — plutôt que de dupliquer ce balisage une
 // troisième fois (déjà repris une fois pour PublicRecipeView.jsx), le
@@ -122,12 +168,12 @@ function TocPage({ recipes, t, language, pageNumber, runningTitle, pageStarts, t
 // à la génération PDF d'une recette seule (voir utils/cookbookPdf.js,
 // generateCookbookPdf, qui n'a besoin que d'un ou plusieurs éléments
 // `.cookbook-page` dans un conteneur, peu importe qu'il y en ait 12 ou 1).
-export function RecipePage({ recipe, config, t, language, pageNumber, isLast, runningTitle }) {
+export function RecipePage({ recipe, config, t, language, pageNumber, isLast, runningTitle }: RecipePageProps) {
   const servings = Number(recipe.servings) || 1;
   const ingredients = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
   const steps = Array.isArray(recipe.steps) ? recipe.steps : [];
   const isSucreCat = categoryLabel(recipe) === "Sucré";
-  const nutriGrade = recipe.nutriscoreGrade || estimateNutriscoreLocal(ingredients, recipe.category);
+  const nutriGrade = (recipe.nutriscoreGrade || estimateNutriscoreLocal(ingredients, recipe.category)) as NutriscoreGrade;
   const nutriColor = NUTRI_COLORS[nutriGrade] || "#b3872a";
   const hasPhoto = Boolean(recipe.imageUrl) && config.photoSize !== "aucune";
 
@@ -165,7 +211,7 @@ export function RecipePage({ recipe, config, t, language, pageNumber, isLast, ru
               espacé/majuscule que les puces de catégorie et la table des
               matières un peu plus haut dans ce fichier, plutôt que des
               pictogrammes qui détonnaient avec le reste du document. */}
-          <span>{formatDurationMinutes(recipe.time || recipe.prep_time || 0)}</span>
+          <span>{formatDurationMinutes(recipe.time || 0)}</span>
           <span className="cookbook-recipe-meta-dot" aria-hidden="true" />
           <span>{servings} {t("share.servingsShort")}</span>
         </div>
@@ -224,10 +270,16 @@ export function RecipePage({ recipe, config, t, language, pageNumber, isLast, ru
   );
 }
 
+interface CookbookDocumentProps {
+  recipes: Recipe[];
+  config: CookbookBuilderConfig;
+  pageStarts?: Record<string, number> | null;
+}
+
 // `recipes` : déjà filtrées/triées par l'appelant (voir CookbookBuilderModal,
 // selectionMode "all"/"category"/"manual") — ce composant ne fait plus que
 // mettre en page la sélection qu'on lui donne.
-export default function CookbookDocument({ recipes, config, pageStarts }) {
+export default function CookbookDocument({ recipes, config, pageStarts }: CookbookDocumentProps) {
   const { t, language } = useTranslation();
   const list = Array.isArray(recipes) ? recipes : [];
   const runningTitle = config.coverTitle || "Le Grimoire de Morgane";
