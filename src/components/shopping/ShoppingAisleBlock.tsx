@@ -1,9 +1,27 @@
 import { AnimatePresence, Reorder, useDragControls } from "motion/react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import { GripVertical } from "lucide-react";
 import { aisleIcon, aisleVectorIcon } from "../../utils/helpers";
 import { triggerHaptic } from "../../utils/haptics";
 import CategoryIcon from "../common/CategoryIcon";
 import ShoppingItemRow from "./ShoppingItemRow";
+import type { ShoppingItem } from "../../hooks/useShoppingLists";
+
+interface ShoppingItemRowSharedProps {
+  onToggle: (id: string) => void;
+  onAdjust?: (id: string, delta: number) => void;
+  onDelete?: (id: string) => void;
+  onOpenWheel: (item: ShoppingItem) => void;
+  pressDuration?: number;
+}
+
+interface ShoppingAisleBlockProps {
+  aisle: string;
+  list: ShoppingItem[];
+  aisleLabel: string;
+  onCommitOrder: () => void;
+  itemProps: ShoppingItemRowSharedProps;
+}
 
 /* ------------------------------------------------------------------ */
 /*  BLOC D'UN RAYON DE COURSES (voir ShoppingView.jsx) — extrait en         */
@@ -19,9 +37,9 @@ import ShoppingItemRow from "./ShoppingItemRow";
 /*  DANS leur rayon exactement comme avant, ce composant ne touche jamais à            */
 /*  leur ordre — `list` arrive déjà triée par ShoppingView.jsx.                          */
 /* ------------------------------------------------------------------ */
-export default function ShoppingAisleBlock({ aisle, list, aisleLabel, onCommitOrder, itemProps }) {
+export default function ShoppingAisleBlock({ aisle, list, aisleLabel, onCommitOrder, itemProps }: ShoppingAisleBlockProps) {
   const dragControls = useDragControls();
-  const startDrag = (e) => { triggerHaptic(15); dragControls.start(e); };
+  const startDrag = (e: ReactPointerEvent<HTMLButtonElement>) => { triggerHaptic(15); dragControls.start(e); };
   // Un seul retour haptique + une seule écriture localStorage, au
   // relâchement — voir ShoppingView.jsx pour pourquoi l'état affiché,
   // lui, se met à jour en direct pendant tout le glissement (onReorder).

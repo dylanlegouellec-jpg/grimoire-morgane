@@ -10,6 +10,13 @@ import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import Flourish from "../common/Flourish";
 import Seal from "../common/Seal";
+import type { Recipe } from "../../hooks/useRecipes";
+
+interface RecipePickerModalProps {
+  recipes: Recipe[];
+  onGenerate: (ids: string[]) => void;
+  onClose: () => void;
+}
 
 /* ------------------------------------------------------------------ */
 /*  GÉNÉRER LA LISTE DE COURSES À PARTIR DE RECETTES — bottom sheet      */
@@ -18,9 +25,9 @@ import Seal from "../common/Seal";
 /*  existante se fait côté hook — voir generateShoppingList dans           */
 /*  hooks/useShoppingLists.js.                                             */
 /* ------------------------------------------------------------------ */
-export default function RecipePickerModal({ recipes, onGenerate, onClose }) {
+export default function RecipePickerModal({ recipes, onGenerate, onClose }: RecipePickerModalProps) {
   useBodyScrollLock(true);
-  const modalRef = useFocusTrap(onClose);
+  const modalRef = useFocusTrap<HTMLDivElement>(onClose);
   // scrollRef pointe sur .recipe-picker-body (le corps défilant), PAS sur
   // la modale elle-même : celle-ci ne défile jamais (mise en page flex,
   // voir shopping.css.js), c'est son corps interne qui déborde. Avec
@@ -28,12 +35,12 @@ export default function RecipePickerModal({ recipes, onGenerate, onClose }) {
   // n'a jamais de scrollTop propre), transformant tout tirage vers le bas
   // dans la liste — même en plein milieu d'un défilement normal — en
   // fermeture involontaire.
-  const bodyRef = useRef(null);
+  const bodyRef = useRef<HTMLDivElement | null>(null);
   const sheet = useDismissibleSheet(onClose, { scrollRef: bodyRef });
-  const [selected, setSelected] = useState([]);
+  const [selected, setSelected] = useState<string[]>([]);
   const [filter, setFilter] = useState("tout");
 
-  const toggleRecipe = (id) => {
+  const toggleRecipe = (id: string) => {
     triggerHaptic(10);
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };

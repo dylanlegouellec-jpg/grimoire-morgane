@@ -1,10 +1,12 @@
 import { memo, useRef } from "react";
 import { motion, useMotionValue, animate, useReducedMotion } from "motion/react";
+import type { HTMLMotionProps } from "motion/react";
 import { Check, Minus, Plus, Trash2 } from "lucide-react";
 import { triggerHaptic } from "../../utils/haptics";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { translateRecipeText } from "../../utils/recipeTranslation";
 import useLongPress from "../../hooks/useLongPress";
+import type { ShoppingItem } from "../../hooks/useShoppingLists";
 
 /* ------------------------------------------------------------------ */
 /*  LIGNE D'ARTICLE — tap pour cocher, appui long pour la molette de     */
@@ -36,7 +38,7 @@ import useLongPress from "../../hooks/useLongPress";
 /*  commence, exactement comme avant.                                                                                */
 /* ------------------------------------------------------------------ */
 const SWIPE_COMMIT_PX = 72;
-const RELEASE_SPRING = { type: "spring", stiffness: 500, damping: 30 };
+const RELEASE_SPRING = { type: "spring", stiffness: 500, damping: 30 } as const;
 // Sortie de liste (suppression ou coche) : fondu + léger rétrécissement,
 // pas de translation — la remontée des articles suivants pour combler le
 // vide vient déjà de "layout" ci-dessous (voir <AnimatePresence
@@ -44,16 +46,30 @@ const RELEASE_SPRING = { type: "spring", stiffness: 500, damping: 30 };
 // le début de sa sortie pour que ses voisins glissent tout de suite, sans
 // attendre la fin de son fondu).
 const EXIT_VARIANT = { opacity: 0, scale: 0.92 };
-const EXIT_TRANSITION = { duration: 0.2, ease: [0.22, 1, 0.36, 1] };
+const EXIT_TRANSITION: { duration: number; ease: [number, number, number, number] } = { duration: 0.2, ease: [0.22, 1, 0.36, 1] };
 
-function ShoppingItemRow({ item, checked, onToggle, onAdjust, onDelete, onOpenWheel, pressDuration }) {
+type DivDragProps = HTMLMotionProps<"div">;
+type DragEventParam = Parameters<NonNullable<DivDragProps["onDrag"]>>[0];
+type DragInfoParam = Parameters<NonNullable<DivDragProps["onDrag"]>>[1];
+
+interface ShoppingItemRowProps {
+  item: ShoppingItem;
+  checked: boolean;
+  onToggle: (id: string) => void;
+  onAdjust?: (id: string, delta: number) => void;
+  onDelete?: (id: string) => void;
+  onOpenWheel: (item: ShoppingItem) => void;
+  pressDuration?: number;
+}
+
+function ShoppingItemRow({ item, checked, onToggle, onAdjust, onDelete, onOpenWheel, pressDuration }: ShoppingItemRowProps) {
   const { language } = useTranslation();
   const x = useMotionValue(0);
   const prefersReducedMotion = useReducedMotion();
   // useLongPress déclenche déjà lui-même un retour haptique à l'ouverture
   // (voir hooks/useLongPress.js, triggerHapticFeedback) — pas besoin de le
   // dupliquer ici comme le faisait l'ancien minuteur maison.
-  const itemLongPress = useLongPress(() => onOpenWheel(item), pressDuration);
+  const itemLongPress = useLongPress<HTMLDivElement>(() => onOpenWheel(item), pressDuration);
   // Le navigateur émet quand même un événement "click" natif juste après le
   // relâchement d'un VRAI swipe (Framer ne le supprime pas lui-même, à la
   // différence de son propre système de tap) — sans ce garde-fou, un swipe
@@ -63,7 +79,7 @@ function ShoppingItemRow({ item, checked, onToggle, onAdjust, onDelete, onOpenWh
   // arriver avant que handleDragEnd n'ait fini de s'exécuter.
   const lastDragDxRef = useRef(0);
 
-  const handleDrag = (_event, info) => { lastDragDxRef.current = info.offset.x; };
+  const handleDrag = (_event: DragEventParam, info: DragInfoParam) => { lastDragDxRef.current = info.offset.x; };
 
   const handleClick = () => {
     if (itemLongPress.wasLongPress()) return;
@@ -74,7 +90,7 @@ function ShoppingItemRow({ item, checked, onToggle, onAdjust, onDelete, onOpenWh
     onToggle(item.id);
   };
 
-  const handleDragEnd = (_event, info) => {
+  const handleDragEnd = (_event: DragEventParam, info: DragInfoParam) => {
     animate(x, 0, RELEASE_SPRING);
     const dx = info.offset.x;
     if (Math.abs(dx) <= SWIPE_COMMIT_PX) return;
