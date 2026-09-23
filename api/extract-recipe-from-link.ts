@@ -22,11 +22,29 @@
 /*    TextTemplateImportModal.jsx).                                                              */
 /* ------------------------------------------------------------------ */
 
+// Vercel invoque ce handler avec de vrais VercelRequest/VercelResponse,
+// bien plus riches — seuls les champs effectivement utilisés ici sont
+// modélisés, pour ne pas dépendre de @vercel/node (voir le commentaire de
+// nutrition-estimate.ts : chaque fonction reste volontairement autonome).
+interface ApiRequest {
+  method?: string;
+  body?: { url?: unknown } | null;
+}
+interface ApiResponse {
+  status(code: number): { json(body: unknown): void };
+}
+
+interface CaptionMeta {
+  description: string;
+  title: string;
+  image: string;
+}
+
 const FETCH_TIMEOUT_MS = 8000;
 
 const ALLOWED_HOSTS = [/(^|\.)instagram\.com$/i, /(^|\.)tiktok\.com$/i, /(^|\.)vm\.tiktok\.com$/i];
 
-function isAllowedUrl(raw) {
+function isAllowedUrl(raw: string): boolean {
   try {
     const u = new URL(raw);
     if (!/^https?:$/.test(u.protocol)) return false;
@@ -36,7 +54,7 @@ function isAllowedUrl(raw) {
   }
 }
 
-async function fetchWithTimeout(url, options, ms) {
+async function fetchWithTimeout(url: string, options: RequestInit, ms: number): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   try {
@@ -46,7 +64,7 @@ async function fetchWithTimeout(url, options, ms) {
   }
 }
 
-function decodeHtmlEntities(str) {
+function decodeHtmlEntities(str: string): string {
   return str
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
@@ -55,7 +73,7 @@ function decodeHtmlEntities(str) {
     .replace(/&gt;/g, ">");
 }
 
-function extractMeta(html, property) {
+function extractMeta(html: string, property: string): string {
   const patterns = [
     new RegExp(`<meta[^>]+property=["']${property}["'][^>]+content=["']([^"']*)["']`, "i"),
     new RegExp(`<meta[^>]+content=["']([^"']*)["'][^>]+property=["']${property}["']`, "i"),
@@ -67,7 +85,7 @@ function extractMeta(html, property) {
   return "";
 }
 
-async function fetchCaptionViaTikTokOEmbed(url) {
+async function fetchCaptionViaTikTokOEmbed(url: string): Promise<CaptionMeta> {
   const res = await fetchWithTimeout(
     `https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`,
     {},
@@ -79,7 +97,7 @@ async function fetchCaptionViaTikTokOEmbed(url) {
   return { description: data.title, title: "", image: data.thumbnail_url || "" };
 }
 
-async function fetchCaptionViaScraping(url) {
+async function fetchCaptionViaScraping(url: string): Promise<CaptionMeta> {
   const res = await fetchWithTimeout(
     url,
     {
@@ -102,7 +120,7 @@ async function fetchCaptionViaScraping(url) {
   };
 }
 
-function isTikTokUrl(raw) {
+function isTikTokUrl(raw: string): boolean {
   try {
     return /(^|\.)tiktok\.com$/i.test(new URL(raw).hostname);
   } catch {
@@ -110,11 +128,11 @@ function isTikTokUrl(raw) {
   }
 }
 
-async function fetchCaption(url) {
+async function fetchCaption(url: string): Promise<CaptionMeta> {
   return isTikTokUrl(url) ? fetchCaptionViaTikTokOEmbed(url) : fetchCaptionViaScraping(url);
 }
 
-export default async function handler(req, res) {
+export default async function handler(req: ApiRequest, res: ApiResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Méthode non autorisée" });
   }

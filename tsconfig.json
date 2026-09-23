@@ -13,5 +13,5 @@
     "checkJs": false,
     "strict": true
   },
-  "include": ["src"]
+  "include": ["src", "api"]
 }
