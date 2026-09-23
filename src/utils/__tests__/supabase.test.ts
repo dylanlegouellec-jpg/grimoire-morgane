@@ -25,7 +25,7 @@ import { enqueueOfflineAction, getOfflineQueue, clearOfflineQueue } from "../off
 /*     suite), risquant de rejouer deux fois la même action en attente.      */
 /* ------------------------------------------------------------------ */
 
-function jsonResponse({ ok = true, status = 200, body = null } = {}) {
+function jsonResponse({ ok = true, status = 200, body = null }: { ok?: boolean; status?: number; body?: unknown } = {}) {
   return { ok, status, text: async () => (body === null ? "" : JSON.stringify(body)) };
 }
 
@@ -115,7 +115,7 @@ describe("flushOfflineQueue", () => {
 
   it("ignore un second appel déclenché pendant qu'un premier flush est encore en cours", async () => {
     enqueueOfflineAction({ table: "recipes", type: "insert", payload: { title: "Tarte" } });
-    let resolveFetch;
+    let resolveFetch: ((value: unknown) => void) | undefined;
     vi.stubGlobal(
       "fetch",
       vi.fn(() => new Promise((resolve) => { resolveFetch = resolve; }))
@@ -137,7 +137,7 @@ describe("flushOfflineQueue", () => {
     await vi.waitFor(() => {
       if (typeof resolveFetch !== "function") throw new Error("fetch pas encore appelé");
     });
-    resolveFetch(jsonResponse({ status: 201, body: [{ id: "r1" }] }));
+    resolveFetch!(jsonResponse({ status: 201, body: [{ id: "r1" }] }));
     const [first, second] = await Promise.all([firstCall, secondCall]);
 
     expect(second).toEqual({ flushed: 0, dropped: 0, conflicts: [] });
