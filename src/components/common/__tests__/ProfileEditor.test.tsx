@@ -11,7 +11,7 @@ import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/re
 
 const saveProfileMock = vi.fn().mockResolvedValue({});
 vi.mock("../../../utils/profile", () => ({
-  saveProfile: (...args) => saveProfileMock(...args),
+  saveProfile: (...args: unknown[]) => saveProfileMock(...args),
   uploadAvatar: vi.fn(),
 }));
 
@@ -29,12 +29,12 @@ describe("ProfileEditor — date de naissance", () => {
     render(
       <ProfileEditor user={USER} profile={{ birth_date: "2000-05-14T00:00:00" }} onClose={() => {}} />
     );
-    expect(screen.getByLabelText("Date de naissance").value).toBe("2000-05-14");
+    expect((screen.getByLabelText("Date de naissance") as HTMLInputElement).value).toBe("2000-05-14");
   });
 
   it("part d'un champ vide quand le profil n'a pas encore de date de naissance", () => {
     render(<ProfileEditor user={USER} profile={{}} onClose={() => {}} />);
-    expect(screen.getByLabelText("Date de naissance").value).toBe("");
+    expect((screen.getByLabelText("Date de naissance") as HTMLInputElement).value).toBe("");
   });
 
   it("transmet la date saisie à saveProfile() lors de l'enregistrement", async () => {
