@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+/// <reference types="vite-plugin-pwa/client" />
 
 // Injecté au build par Vite (voir vite.config.js, `define`, et
 // scripts/countLoc.js) — jamais une vraie variable du bundle navigateur,

@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import GrimoireDeMorgane from './GrimoireDeMorgane'
 import PublicRecipeView from './components/recipe/PublicRecipeView'
+import type { PublicRecipe } from './components/recipe/PublicRecipeView'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import { decodeRecipeCode } from './utils/helpers'
 // Supprime ou commente cette ligne si le fichier n'existe pas :
@@ -67,7 +68,8 @@ registerSW({ immediate: true })
 // attribut sur <html>, comme data-theme/data-text-size (voir
 // utils/theme.js, utils/localSettings.js) : un simple sélecteur CSS suffit
 // alors, sans dépendre du support du média par le moteur de rendu.
-if (window.navigator.standalone || window.matchMedia("(display-mode: standalone)").matches) {
+const navigatorStandalone = (window.navigator as Navigator & { standalone?: boolean }).standalone;
+if (navigatorStandalone || window.matchMedia("(display-mode: standalone)").matches) {
   document.documentElement.setAttribute("data-standalone", "true");
 }
 
@@ -100,8 +102,9 @@ if (/Android/i.test(navigator.userAgent)) {
 // resynchroniser en continu sur window.visualViewport (hauteur ET
 // décalage réels) permet à la modale de rester correctement cadrée dans
 // l'espace effectivement visible au-dessus du clavier.
-if (window.visualViewport) {
-  const vv = window.visualViewport;
+const visualViewport = window.visualViewport;
+if (visualViewport) {
+  const vv = visualViewport;
   // Écart au-delà duquel on considère qu'un clavier est réellement ouvert,
   // pas juste la barre d'adresse de Safari qui se rétracte/réapparaît (ce
   // qu'un simple tirage tactile prolongé déclenche déjà, même sans aucun
@@ -147,7 +150,7 @@ initAudioOnFirstTouch()
 // donner accès à rien d'autre que cette seule recette, ni déclencher la
 // moindre requête vers le reste du Grimoire.
 let isShareLink = false;
-let sharedRecipe = null;
+let sharedRecipe: PublicRecipe | null = null;
 try {
   const code = new URLSearchParams(window.location.search).get("recette");
   if (code) {
@@ -156,7 +159,7 @@ try {
     // normale : ce serait montrer le reste du Grimoire à quelqu'un qui n'a
     // cliqué que pour voir UNE recette précise.
     isShareLink = true;
-    sharedRecipe = decodeRecipeCode(code);
+    sharedRecipe = decodeRecipeCode(code) as unknown as PublicRecipe | null;
   }
 } catch {
   /* pas d'URL exploitable, tant pis — GrimoireDeMorgane prend le relais */
@@ -168,7 +171,7 @@ try {
 // TOUTE l'app sur un écran blanc, sans aucun message ni moyen de
 // récupérer sans fermer/rouvrir l'app. Voir ErrorBoundary.jsx pour le
 // filet plus ciblé, par onglet, posé à l'intérieur d'AppShell.jsx.
-ReactDOM.createRoot(document.getElementById('root')).render(
+ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>
       {isShareLink ? <PublicRecipeView recipe={sharedRecipe} /> : <GrimoireDeMorgane />}
