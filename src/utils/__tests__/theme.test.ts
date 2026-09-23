@@ -1,6 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { applyTheme, overrideStatusBarColor, refreshStatusBarColor } from "../theme";
 
+// applyTheme()/overrideStatusBarColor()/refreshStatusBarColor() garantissent
+// tous les trois qu'une seule balise <meta name="theme-color"> existe à la
+// fois (voir leurs commentaires respectifs, theme.ts) — cast direct plutôt
+// qu'un narrowage répété à chaque appel dans ce fichier.
+function themeColorMeta(): HTMLMetaElement | null {
+  return document.querySelector('meta[name="theme-color"]');
+}
+
 /* ------------------------------------------------------------------ */
 /*  RÉGRESSION : "en haut de mon écran c'est pas la même teinte" — la      */
 /*  balise <meta name="theme-color"> (utilisée par iOS/Android pour         */
@@ -23,13 +31,13 @@ describe("applyTheme — synchronise <meta name=\"theme-color\">", () => {
 
   it("pose la couleur claire pour le thème 'light'", () => {
     applyTheme("light");
-    expect(document.querySelector('meta[name="theme-color"]').content).toBe("#f1e6c8");
+    expect(themeColorMeta()!.content).toBe("#f1e6c8");
     expect(document.documentElement.getAttribute("data-theme")).toBe("light");
   });
 
   it("pose la couleur sombre pour le thème 'dark', même si le système reste clair", () => {
     applyTheme("dark");
-    expect(document.querySelector('meta[name="theme-color"]').content).toBe("#1c1917");
+    expect(themeColorMeta()!.content).toBe("#1c1917");
     expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
   });
 
@@ -39,11 +47,11 @@ describe("applyTheme — synchronise <meta name=\"theme-color\">", () => {
   });
 
   it("remplace le nœud <meta> plutôt que de muter son attribut en place (repli iOS PWA)", () => {
-    const before = document.querySelector('meta[name="theme-color"]');
+    const before = themeColorMeta();
     applyTheme("dark");
-    const after = document.querySelector('meta[name="theme-color"]');
+    const after = themeColorMeta();
     expect(after).not.toBe(before);
-    expect(after.content).toBe("#1c1917");
+    expect(after!.content).toBe("#1c1917");
     expect(document.querySelectorAll('meta[name="theme-color"]').length).toBe(1);
   });
 });
@@ -68,13 +76,13 @@ describe("overrideStatusBarColor — impose une teinte hors du thème réel", ()
 
   it("pose la couleur demandée sur la balise <meta theme-color>", () => {
     overrideStatusBarColor("#2c221e");
-    expect(document.querySelector('meta[name="theme-color"]').content).toBe("#2c221e");
+    expect(themeColorMeta()!.content).toBe("#2c221e");
   });
 
   it("remplace le nœud <meta>, comme applyTheme() (repli iOS PWA)", () => {
-    const before = document.querySelector('meta[name="theme-color"]');
+    const before = themeColorMeta();
     overrideStatusBarColor("#2c221e");
-    const after = document.querySelector('meta[name="theme-color"]');
+    const after = themeColorMeta();
     expect(after).not.toBe(before);
     expect(document.querySelectorAll('meta[name="theme-color"]').length).toBe(1);
   });
@@ -105,13 +113,13 @@ describe("refreshStatusBarColor — réaffiche la couleur déjà déclarée", ()
 
   it("conserve la valeur actuelle de la balise <meta theme-color>", () => {
     refreshStatusBarColor();
-    expect(document.querySelector('meta[name="theme-color"]').content).toBe("#2c221e");
+    expect(themeColorMeta()!.content).toBe("#2c221e");
   });
 
   it("remplace tout de même le nœud <meta> (repli iOS PWA)", () => {
-    const before = document.querySelector('meta[name="theme-color"]');
+    const before = themeColorMeta();
     refreshStatusBarColor();
-    const after = document.querySelector('meta[name="theme-color"]');
+    const after = themeColorMeta();
     expect(after).not.toBe(before);
     expect(document.querySelectorAll('meta[name="theme-color"]').length).toBe(1);
   });

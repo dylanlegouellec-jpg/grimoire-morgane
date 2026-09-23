@@ -3,6 +3,8 @@ import { render, screen } from "@testing-library/react";
 import CookbookDocument, { formatIngredientLine } from "../CookbookDocument";
 import { LanguageProvider } from "../../../contexts/LanguageContext";
 import { DEFAULT_COOKBOOK_CONFIG } from "../../../constants/cookbook";
+import type { TocMode } from "../../../constants/cookbook";
+import type { Recipe } from "../../../hooks/useRecipes";
 
 /* ------------------------------------------------------------------ */
 /*  RÉGRESSION : signalé par l'utilisateur avec des exemples concrets       */
@@ -42,17 +44,19 @@ describe("formatIngredientLine", () => {
 /*  "chapitres seuls" qui masque le détail recette par recette.                 */
 /* ------------------------------------------------------------------ */
 
-function makeRecipe(id, title, category) {
-  return { id, title, category, time: 10, servings: 2, ingredients: [], steps: ["Étape"] };
+// Fiches minimales (seuls ces champs comptent ici) — cast plutôt que des
+// Recipe complètes, sans intérêt pour ces tests.
+function makeRecipe(id: string, title: string, category: string) {
+  return { id, title, category, time: 10, servings: 2, ingredients: [], steps: ["Étape"] } as unknown as Recipe;
 }
 const RECIPES = [
   makeRecipe("r1", "Poulet rôti", "Salé"),
   makeRecipe("r2", "Fondant au chocolat", "Sucré"),
 ];
 
-function renderDocument(tocMode) {
+function renderDocument(tocMode: TocMode) {
   return render(
-    <LanguageProvider>
+    <LanguageProvider language="fr">
       <CookbookDocument recipes={RECIPES} config={{ ...DEFAULT_COOKBOOK_CONFIG, tocMode }} />
     </LanguageProvider>
   );
@@ -88,14 +92,14 @@ describe("CookbookDocument — table des matières par chapitres", () => {
 describe("CookbookDocument — ligne temps/portions de la page recette", () => {
   it("n'affiche plus les anciennes icônes ⏱/👥 et sépare temps/portions par un point typographique", () => {
     render(
-      <LanguageProvider>
+      <LanguageProvider language="fr">
         <CookbookDocument
-          recipes={[{ id: "r1", title: "Tiramisu", category: "Sucré", time: 1440, servings: 6, ingredients: [], steps: ["Étape"] }]}
+          recipes={[{ id: "r1", title: "Tiramisu", category: "Sucré", time: 1440, servings: 6, ingredients: [], steps: ["Étape"] } as unknown as Recipe]}
           config={{ ...DEFAULT_COOKBOOK_CONFIG, tocMode: "aucune", showTime: true }}
         />
       </LanguageProvider>
     );
-    const meta = document.querySelector(".cookbook-recipe-meta");
+    const meta = document.querySelector(".cookbook-recipe-meta")!;
     expect(meta).toBeInTheDocument();
     expect(meta.textContent).not.toContain("⏱");
     expect(meta.textContent).not.toContain("👥");
@@ -104,14 +108,14 @@ describe("CookbookDocument — ligne temps/portions de la page recette", () => {
 
   it("affiche un temps de repos long (1440 min) en jours plutôt qu'en minutes brutes", () => {
     render(
-      <LanguageProvider>
+      <LanguageProvider language="fr">
         <CookbookDocument
-          recipes={[{ id: "r1", title: "Tiramisu", category: "Sucré", time: 1440, servings: 6, ingredients: [], steps: ["Étape"] }]}
+          recipes={[{ id: "r1", title: "Tiramisu", category: "Sucré", time: 1440, servings: 6, ingredients: [], steps: ["Étape"] } as unknown as Recipe]}
           config={{ ...DEFAULT_COOKBOOK_CONFIG, tocMode: "aucune", showTime: true }}
         />
       </LanguageProvider>
     );
-    const meta = document.querySelector(".cookbook-recipe-meta");
+    const meta = document.querySelector(".cookbook-recipe-meta")!;
     expect(meta.textContent).toContain("1 j");
     expect(meta.textContent).not.toContain("1440");
   });
@@ -129,7 +133,7 @@ describe("CookbookDocument — ligne temps/portions de la page recette", () => {
 describe("CookbookDocument — regroupement sous-titre + liste (pagination PDF)", () => {
   it("pose .cookbook-recipe-group sur chaque groupe d'étapes ET d'ingrédients, sous-titré ou non", () => {
     render(
-      <LanguageProvider>
+      <LanguageProvider language="fr">
         <CookbookDocument
           recipes={[{
             id: "r1",
@@ -139,14 +143,14 @@ describe("CookbookDocument — regroupement sous-titre + liste (pagination PDF)"
             servings: 4,
             ingredients: [{ isSection: true, title: "Biscuit" }, { qty: 4, unit: "", name: "oeufs" }],
             steps: [{ isSection: true, title: "Montage" }, "Etaler la chantilly.", "Rouler la bûche."],
-          }]}
+          } as unknown as Recipe]}
           config={{ ...DEFAULT_COOKBOOK_CONFIG, tocMode: "aucune" }}
         />
       </LanguageProvider>
     );
     const groups = document.querySelectorAll(".cookbook-recipe-group");
     expect(groups.length).toBeGreaterThanOrEqual(2);
-    const montageGroup = Array.from(groups).find((g) => g.textContent.includes("Montage"));
+    const montageGroup = Array.from(groups).find((g) => g.textContent?.includes("Montage"))!;
     expect(montageGroup).toBeTruthy();
     expect(montageGroup.textContent).toContain("Rouler la bûche");
   });

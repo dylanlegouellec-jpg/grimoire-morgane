@@ -35,7 +35,7 @@ describe("offlineQueue", () => {
     enqueueOfflineAction({ table: "recipes", type: "insert", payload: { title: "2" } });
     enqueueOfflineAction({ table: "recipes", type: "insert", payload: { title: "3" } });
     const queue = getOfflineQueue();
-    expect(queue.map((a) => a.payload.title)).toEqual(["1", "2", "3"]);
+    expect(queue.map((a) => a.payload!.title)).toEqual(["1", "2", "3"]);
   });
 
   it("getOfflineQueueSize reflète le nombre d'actions en attente", () => {
@@ -52,7 +52,7 @@ describe("offlineQueue", () => {
     removeFromOfflineQueue(toRemove.id);
     const remaining = getOfflineQueue();
     expect(remaining).toHaveLength(1);
-    expect(remaining[0].payload.title).toBe("garder");
+    expect(remaining[0].payload!.title).toBe("garder");
   });
 
   it("incrementOfflineActionFailCount incrémente et persiste le compteur d'échecs d'une seule action", () => {
@@ -64,9 +64,9 @@ describe("offlineQueue", () => {
     expect(incrementOfflineActionFailCount(actionA.id)).toBe(2);
 
     const queue = getOfflineQueue();
-    expect(queue.find((a) => a.id === actionA.id).failCount).toBe(2);
+    expect(queue.find((a) => a.id === actionA.id)!.failCount).toBe(2);
     // L'action B n'a jamais été touchée : son compteur reste intact.
-    expect(queue.find((a) => a.id === actionB.id).failCount).toBe(0);
+    expect(queue.find((a) => a.id === actionB.id)!.failCount).toBe(0);
   });
 
   it("incrementOfflineActionFailCount renvoie 0 pour un id inconnu, sans rien modifier", () => {
@@ -112,7 +112,7 @@ describe("offlineQueue — repli mémoire si localStorage échoue", () => {
     // L'action reste lisible malgré l'échec d'écriture localStorage — plus
     // le silence total d'avant (aucun repli réel derrière le commentaire).
     expect(fresh.getOfflineQueue()).toHaveLength(1);
-    expect(fresh.getOfflineQueue()[0].payload.title).toBe("Perdue ?");
+    expect(fresh.getOfflineQueue()[0].payload!.title).toBe("Perdue ?");
     expect(consoleErrorSpy).toHaveBeenCalled();
 
     // Le repli fait foi pour tout le reste de la session, pas seulement le
