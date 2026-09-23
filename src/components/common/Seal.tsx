@@ -1,5 +1,6 @@
 import type { MouseEvent, ReactNode } from "react";
 import { triggerHaptic } from "../../utils/helpers";
+import type { VibratePattern } from "../../utils/haptics";
 
 interface SealProps {
   children: ReactNode;
@@ -7,7 +8,7 @@ interface SealProps {
   tone?: string;
   disabled?: boolean;
   type?: "button" | "submit" | "reset";
-  haptic?: number;
+  haptic?: VibratePattern;
 }
 
 // Le clic sonore n'est plus déclenché ici : un écouteur global délégué

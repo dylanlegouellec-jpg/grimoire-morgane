@@ -29,7 +29,7 @@ const CAN_VIBRATE = typeof navigator !== "undefined" && typeof navigator.vibrate
 
 // Même type que le premier argument de Navigator.vibrate() : un nombre de
 // ms, ou un motif [on, off, on, ...].
-type VibratePattern = number | number[];
+export type VibratePattern = number | number[];
 
 // À utiliser si un appelant a besoin d'adapter son comportement selon la
 // disponibilité d'un vrai vibreur matériel (ex. insister moins sur le

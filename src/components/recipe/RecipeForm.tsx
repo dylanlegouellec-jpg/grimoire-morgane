@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import type { ChangeEvent, Dispatch, FormEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, SetStateAction } from "react";
 import { AnimatePresence, motion, Reorder, useDragControls } from "motion/react";
 import { ChevronDown, Sparkles, Wand2, X } from "lucide-react";
 import { nextId, extractCodeFromInput, decodeRecipeCode, triggerHaptic, formatDurationMinutes } from "../../utils/helpers";
@@ -17,6 +18,7 @@ import Flourish from "../common/Flourish";
 import Seal from "../common/Seal";
 import WheelPickerModal from "../common/WheelPickerModal";
 import UnsavedChangesModal from "../common/UnsavedChangesModal";
+import type { Recipe } from "../../hooks/useRecipes";
 
 /* ------------------------------------------------------------------ */
 /*  UNITÉS DISPONIBLES POUR LES INGRÉDIENTS                            */
@@ -35,6 +37,31 @@ export const UNIT_OPTIONS = [
   { value: "", label: "Sans unité" },
 ];
 
+interface IngredientSectionRow {
+  id: string;
+  isSection: true;
+  title: string;
+}
+interface IngredientDataRow {
+  id: string;
+  isSection?: false;
+  qty: string | number;
+  unit: string;
+  name: string;
+}
+type IngredientRowT = IngredientSectionRow | IngredientDataRow;
+
+interface StepSectionRow {
+  id: string;
+  isSection: true;
+  title: string;
+}
+interface StepDataRow {
+  id: string;
+  isSection?: false;
+  text: string;
+}
+type StepRowT = StepSectionRow | StepDataRow;
 
 /* ------------------------------------------------------------------ */
 /*  RANGÉE D'INGRÉDIENT/D'ÉTAPE RÉORDONNABLE — extraite en composant       */
@@ -57,9 +84,16 @@ export const UNIT_OPTIONS = [
 /*  glissement via `dragControls.start(e)` — jamais un simple clic dans un champ                         */
 /*  texte/liste déroulante de la rangée, qui doit rester utilisable normalement.                           */
 /* ------------------------------------------------------------------ */
-function IngredientRow({ row, onUpdateRow, onRemoveRow, canRemove }) {
+interface IngredientRowProps {
+  row: IngredientRowT;
+  onUpdateRow: (id: string, field: string, value: string) => void;
+  onRemoveRow: (id: string) => void;
+  canRemove: boolean;
+}
+
+function IngredientRow({ row, onUpdateRow, onRemoveRow, canRemove }: IngredientRowProps) {
   const dragControls = useDragControls();
-  const startDrag = (e) => { triggerHaptic(15); dragControls.start(e); };
+  const startDrag = (e: ReactPointerEvent<HTMLButtonElement>) => { triggerHaptic(15); dragControls.start(e); };
   const commitDrag = () => triggerHaptic(12);
 
   if (row.isSection) {
@@ -114,9 +148,17 @@ function IngredientRow({ row, onUpdateRow, onRemoveRow, canRemove }) {
   );
 }
 
-function StepRow({ row, idx, onUpdateRow, onRemoveRow, canRemove }) {
+interface StepRowProps {
+  row: StepRowT;
+  idx: number;
+  onUpdateRow: (id: string, field: string, value: string) => void;
+  onRemoveRow: (id: string) => void;
+  canRemove: boolean;
+}
+
+function StepRow({ row, idx, onUpdateRow, onRemoveRow, canRemove }: StepRowProps) {
   const dragControls = useDragControls();
-  const startDrag = (e) => { triggerHaptic(15); dragControls.start(e); };
+  const startDrag = (e: ReactPointerEvent<HTMLButtonElement>) => { triggerHaptic(15); dragControls.start(e); };
   const commitDrag = () => triggerHaptic(12);
 
   if (row.isSection) {
@@ -154,49 +196,68 @@ function StepRow({ row, idx, onUpdateRow, onRemoveRow, canRemove }) {
   );
 }
 
+interface RecipeFormProps {
+  onClose: () => void;
+  onSave: (recipe: Recipe) => void;
+  onDelete: (id: string) => void;
+  initialRecipe?: Recipe | null;
+  pressDuration?: number;
+}
+
+interface LongPressAddHandlers {
+  onClick: () => void;
+  onTouchStart: () => void;
+  onTouchEnd: () => void;
+  onTouchMove: () => void;
+  onMouseDown: () => void;
+  onMouseUp: () => void;
+  onMouseLeave: () => void;
+  onContextMenu: (e: ReactMouseEvent<HTMLButtonElement>) => void;
+}
+
 /* ------------------------------------------------------------------ */
 /*  FORMULAIRE DE RECETTE (création / édition)                         */
 /* ------------------------------------------------------------------ */
 
-export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, pressDuration = 750 }) {
+export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, pressDuration = 750 }: RecipeFormProps) {
   useBodyScrollLock(true);
   const isEdit = !!initialRecipe;
-  const [title, setTitle] = useState(initialRecipe ? initialRecipe.title : "");
-  const [category, setCategory] = useState(initialRecipe ? initialRecipe.category : "Salé");
-  const [time, setTime] = useState(initialRecipe ? initialRecipe.time : 30);
-  const [servings, setServings] = useState(initialRecipe ? initialRecipe.servings : 4);
-  const [calories, setCalories] = useState(initialRecipe && initialRecipe.calories ? initialRecipe.calories : "");
-  const [protein, setProtein] = useState(initialRecipe && initialRecipe.protein ? initialRecipe.protein : "");
-  const [carbs, setCarbs] = useState(initialRecipe && initialRecipe.carbs ? initialRecipe.carbs : "");
-  const [fat, setFat] = useState(initialRecipe && initialRecipe.fat ? initialRecipe.fat : "");
+  const [title, setTitle] = useState<string>(initialRecipe ? initialRecipe.title : "");
+  const [category, setCategory] = useState<string>(initialRecipe ? initialRecipe.category : "Salé");
+  const [time, setTime] = useState<number>(initialRecipe ? initialRecipe.time : 30);
+  const [servings, setServings] = useState<number>(initialRecipe ? initialRecipe.servings : 4);
+  const [calories, setCalories] = useState<string | number>(initialRecipe && initialRecipe.calories ? initialRecipe.calories : "");
+  const [protein, setProtein] = useState<string | number>(initialRecipe && initialRecipe.protein ? initialRecipe.protein : "");
+  const [carbs, setCarbs] = useState<string | number>(initialRecipe && initialRecipe.carbs ? initialRecipe.carbs : "");
+  const [fat, setFat] = useState<string | number>(initialRecipe && initialRecipe.fat ? initialRecipe.fat : "");
   // Repliée par défaut, sauf si la recette a déjà au moins une valeur
   // nutritionnelle renseignée (édition) — pas de raison de la cacher dans
   // ce cas, l'utilisateur voudra probablement la voir/corriger d'emblée.
-  const [showNutrition, setShowNutrition] = useState(
+  const [showNutrition, setShowNutrition] = useState<boolean>(
     Boolean(initialRecipe && (initialRecipe.calories || initialRecipe.protein || initialRecipe.carbs || initialRecipe.fat))
   );
   const [estimatingNutrition, setEstimatingNutrition] = useState(false);
   const [nutritionError, setNutritionError] = useState("");
-  const [notes, setNotes] = useState(initialRecipe && initialRecipe.notes ? initialRecipe.notes : "");
+  const [notes, setNotes] = useState<string>(initialRecipe && initialRecipe.notes ? initialRecipe.notes : "");
   const rowIdRef = useRef(0);
   const newRowId = () => `ing-${rowIdRef.current++}`;
-  const [ingredientRows, setIngredientRows] = useState(() =>
+  const [ingredientRows, setIngredientRows] = useState<IngredientRowT[]>(() =>
     initialRecipe && initialRecipe.ingredients.length
-      ? initialRecipe.ingredients.map((i) =>
-          i.isSection
+      ? initialRecipe.ingredients.map((i): IngredientRowT =>
+          "isSection" in i
             ? { id: newRowId(), isSection: true, title: i.title }
-            : { id: newRowId(), qty: i.qty, unit: i.unit, name: i.name }
+            : { id: newRowId(), qty: i.qty ?? "", unit: i.unit, name: i.name }
         )
       : [{ id: newRowId(), qty: "", unit: "g", name: "" }]
   );
   const stepIdRef = useRef(0);
   const newStepId = () => `step-${stepIdRef.current++}`;
-  const [stepRows, setStepRows] = useState(() =>
+  const [stepRows, setStepRows] = useState<StepRowT[]>(() =>
     initialRecipe && initialRecipe.steps.length
-      ? initialRecipe.steps.map((s) =>
-          s && typeof s === "object" && s.isSection
+      ? initialRecipe.steps.map((s): StepRowT =>
+          typeof s === "object" && s.isSection
             ? { id: newStepId(), isSection: true, title: s.title }
-            : { id: newStepId(), text: s }
+            : { id: newStepId(), text: s as string }
         )
       : [{ id: newStepId(), text: "" }]
   );
@@ -220,7 +281,7 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
       ingredients: ingredientRows.map((r) => (r.isSection ? { isSection: true, title: r.title } : { qty: r.qty, unit: r.unit, name: r.name })),
       steps: stepRows.map((r) => (r.isSection ? { isSection: true, title: r.title } : { text: r.text })),
     });
-  const initialSnapshotRef = useRef(null);
+  const initialSnapshotRef = useRef<string | null>(null);
   if (initialSnapshotRef.current === null) initialSnapshotRef.current = buildSnapshot();
   const isDirty = initialSnapshotRef.current !== buildSnapshot();
 
@@ -237,7 +298,7 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
   // ou la boîte de dialogue "non enregistré" est ouverte par-dessus — même
   // raison que dans SecretSettingsModal.jsx (évite qu'un tirage à
   // l'intérieur de ce sous-composant ne remonte jusqu'ici).
-  const formRef = useRef(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
   const sheet = useDismissibleSheet(attemptClose, {
     scrollRef: formRef,
     disabled: showUnsavedConfirm || showTimeWheel || showServingsWheel,
@@ -245,8 +306,8 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
   // Même principe de fusion de refs que SecretSettingsModal/RecipeDetail :
   // formRef sert déjà au geste de fermeture, le piège à focus a besoin du
   // même conteneur pour Échap/Tab — combinées dans setFormRef.
-  const focusTrapRef = useFocusTrap(attemptClose);
-  const setFormRef = (node) => {
+  const focusTrapRef = useFocusTrap<HTMLFormElement>(attemptClose);
+  const setFormRef = (node: HTMLFormElement | null) => {
     formRef.current = node;
     focusTrapRef.current = node;
   };
@@ -261,12 +322,12 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
     triggerHaptic([20, 30, 20]);
     setIngredientRows((prev) => [...prev, { id: newRowId(), isSection: true, title: "" }]);
   };
-  const removeIngredientRow = (id) => {
+  const removeIngredientRow = (id: string) => {
     triggerHaptic(15);
     setIngredientRows((prev) => (prev.length > 1 ? prev.filter((r) => r.id !== id) : prev));
   };
-  const updateIngredientRow = (id, field, value) => {
-    setIngredientRows((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
+  const updateIngredientRow = (id: string, field: string, value: string) => {
+    setIngredientRows((prev) => prev.map((r) => (r.id === id ? ({ ...r, [field]: value } as IngredientRowT) : r)));
   };
 
   const addStepRow = () => {
@@ -277,17 +338,17 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
     triggerHaptic([20, 30, 20]);
     setStepRows((prev) => [...prev, { id: newStepId(), isSection: true, title: "" }]);
   };
-  const removeStepRow = (id) => {
+  const removeStepRow = (id: string) => {
     triggerHaptic(15);
     setStepRows((prev) => (prev.length > 1 ? prev.filter((r) => r.id !== id) : prev));
   };
-  const updateStepRow = (id, field, value) => {
-    setStepRows((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
+  const updateStepRow = (id: string, field: string, value: string) => {
+    setStepRows((prev) => prev.map((r) => (r.id === id ? ({ ...r, [field]: value } as StepRowT) : r)));
   };
 
   // Maintenir "+ Ajouter…" pendant le temps d'appui configuré ajoute un titre de section.
-  const useLongPressAdd = (onShortPress, onLongPress, duration) => {
-    const timer = useRef(null);
+  const useLongPressAdd = (onShortPress: () => void, onLongPress: () => void, duration: number): LongPressAddHandlers => {
+    const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const fired = useRef(false);
     const start = () => {
       fired.current = false;
@@ -339,7 +400,8 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
   // inputMode="decimal"> ci-dessous (clavier numérique conservé sur
   // mobile, mais AUCUN filtrage natif du caractère) : la virgule arrive
   // bien jusqu'ici, où on la convertit nous-mêmes.
-  const onDecimalChange = (setter) => (e) => setter(e.target.value.replace(",", "."));
+  const onDecimalChange = (setter: Dispatch<SetStateAction<string | number>>) => (e: ChangeEvent<HTMLInputElement>) =>
+    setter(e.target.value.replace(",", "."));
 
   const handleEstimateNutrition = async () => {
     if (estimatingNutrition) return;
@@ -361,7 +423,7 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
     }
   };
 
-  const submit = async (e) => {
+  const submit = async (e: { preventDefault: () => void }) => {
     e.preventDefault();
     if (!canSubmit || saving) {
       if (!canSubmit) setFormError("Il manque le nom, les ingrédients ou les étapes de la recette.");
@@ -370,16 +432,16 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
     const ingredients = buildIngredientsFromRows();
     const steps = stepRows
       .filter((r) => (r.isSection ? r.title.trim() : r.text.trim()))
-      .map((r) => (r.isSection ? { isSection: true, title: r.title.trim() } : r.text.trim()));
-    const toNumberOrNull = (v) => (v !== "" && !Number.isNaN(Number(v)) ? Number(v) : null);
+      .map((r) => (r.isSection ? { isSection: true as const, title: r.title.trim() } : r.text.trim()));
+    const toNumberOrNull = (v: string | number): number | null => (v !== "" && !Number.isNaN(Number(v)) ? Number(v) : null);
     const carbsValue = toNumberOrNull(carbs);
     const caloriesValue = toNumberOrNull(calories);
     const proteinValue = toNumberOrNull(protein);
     const fatValue = toNumberOrNull(fat);
-    const titleChanged = isEdit && initialRecipe.title !== title.trim();
+    const titleChanged = isEdit && initialRecipe!.title !== title.trim();
     const illustrationKey =
-      isEdit && initialRecipe.illustrationKey && !titleChanged
-        ? initialRecipe.illustrationKey
+      isEdit && initialRecipe!.illustrationKey && !titleChanged
+        ? initialRecipe!.illustrationKey
         : resolveIllustrationKey({ title: title.trim(), category });
 
     setSaving(true);
@@ -390,7 +452,7 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
     const nutriscoreGrade = await fetchNutriscoreGrade(ingredients, category);
 
     onSave({
-      id: isEdit ? initialRecipe.id : nextId(),
+      id: isEdit ? initialRecipe!.id : nextId(),
       title: title.trim(),
       category,
       time: Number(time) || 30,
@@ -401,12 +463,12 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
       fat: fatValue,
       notes: notes.trim() || null,
       illustrationKey,
-      favorite: isEdit ? !!initialRecipe.favorite : false,
+      favorite: isEdit ? !!initialRecipe!.favorite : false,
       ingredients,
       steps,
       nutriscoreGrade,
-      imageUrl: isEdit ? initialRecipe.imageUrl || null : null,
-      imageSource: isEdit ? initialRecipe.imageSource || null : null,
+      imageUrl: isEdit ? initialRecipe!.imageUrl || null : null,
+      imageSource: isEdit ? initialRecipe!.imageSource || null : null,
     });
     playSuccessSound();
     setSaving(false);
@@ -420,7 +482,7 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
       setImportError("Ce code ne semble pas valide.");
       return;
     }
-    onSave({ ...parsed, id: nextId(), favorite: false });
+    onSave({ ...parsed, id: nextId(), favorite: false } as unknown as Recipe);
     onClose();
   };
 
@@ -590,7 +652,7 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
             <button
               type="button"
               className="link-btn delete-recipe-btn"
-              onClick={() => { triggerHaptic(30); onDelete(initialRecipe.id); onClose(); }}
+              onClick={() => { triggerHaptic(30); onDelete(initialRecipe!.id); onClose(); }}
             >
               Supprimer cette recette
             </button>
@@ -636,4 +698,3 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
     </>
   );
 }
-
