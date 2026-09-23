@@ -19,11 +19,27 @@ import type { WorkboxPlugin } from "workbox-core";
 // réseau n'est de toute façon jamais mis en cache (cacheableResponse
 // n'accepte que les statuts 0/200 ci-dessous) : rien ne force donc jamais
 // une réponse cassée à ressortir du cache pour une entrée déjà normalisée.
-function ignoreCacheBustParam(paramName: string): WorkboxPlugin {
+//
+// RÉGRESSION (corrigée ici) : la première version passait "retry" en
+// paramètre d'une fonction fabrique englobante, capturé par closure dans
+// `cacheKeyWillBeUsed` — invisible dans le code source de ce fichier,
+// mais generateSW (vite-plugin-pwa/workbox-build) sérialise chaque
+// fonction de `runtimeCaching` isolément via `Function.prototype.
+// toString()` pour l'écrire telle quelle dans le service worker statique
+// généré, SANS jamais capturer les variables de portée englobante d'une
+// closure. Résultat vérifié dans dist/sw.js : `paramName` s'y retrouvait
+// comme identifiant libre, jamais défini dans ce fichier — une ReferenceError
+// à CHAQUE appel de cacheKeyWillBeUsed (lecture ET écriture), qui a cassé
+// le chargement de absolument toutes les images (Supabase Storage ET
+// Pollinations), quel que soit l'état du réseau, dès l'activation de ce
+// nouveau service worker. Plus aucune valeur ne doit venir d'une portée
+// englobante ici : "retry" est donc écrit en dur, directement à l'intérieur
+// de la fonction elle-même, pour survivre intacte à cette sérialisation.
+function ignoreRetryCacheBust(): WorkboxPlugin {
   return {
     cacheKeyWillBeUsed: async ({ request }) => {
       const url = new URL(request.url);
-      url.searchParams.delete(paramName);
+      url.searchParams.delete("retry");
       return url.toString();
     },
   };
@@ -153,7 +169,7 @@ export default defineConfig({
               cacheName: "supabase-storage-images-v2",
               expiration: { maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 },
               cacheableResponse: { statuses: [0, 200] },
-              plugins: [ignoreCacheBustParam("retry")],
+              plugins: [ignoreRetryCacheBust()],
             },
           },
           {
@@ -172,7 +188,7 @@ export default defineConfig({
               cacheName: "pollinations-images-v2",
               expiration: { maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 },
               cacheableResponse: { statuses: [0, 200] },
-              plugins: [ignoreCacheBustParam("retry")],
+              plugins: [ignoreRetryCacheBust()],
             },
           },
         ],
