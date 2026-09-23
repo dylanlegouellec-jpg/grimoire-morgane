@@ -34,6 +34,12 @@ export default function StepTimer({ minutes }: StepTimerProps) {
       }, 1000);
     }
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    // `seconds` lu seulement pour la condition de démarrage (`seconds > 0`)
+    // au moment où l'effet tourne — le décompte lui-même passe par la forme
+    // updater de setSeconds ci-dessus, qui lit toujours la valeur à jour
+    // sans avoir besoin de relancer l'effet à chaque tick. L'ajouter aux
+    // dépendances détruirait et recréerait l'intervalle chaque seconde.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running, minutes]);
 
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;

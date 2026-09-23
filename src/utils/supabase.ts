@@ -179,7 +179,10 @@ async function fetchWithTimeout(url: string, options: RequestInit, ms: number): 
 // l'appelant (fetchTable, insertRow, updateRow...) — chaque appelant
 // connaît la forme exacte de ce qu'il demande (voir mapRowToRecipe et
 // consorts plus bas, ainsi que profile.ts/auth.ts/planning.ts qui
-// indexent directement le résultat).
+// indexent directement le résultat). `unknown` casserait tous ces
+// appelants (indexation directe sans re-narrowage) pour un gain nul —
+// la vraie sûreté de type est déjà côté appelant, pas ici.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function supabaseRequest(path: string, options: RequestInit = {}): Promise<any> {
   if (!SUPABASE_READY) throw new Error("Supabase non configuré");
   if (isOffline()) {
@@ -233,6 +236,8 @@ async function supabaseRequest(path: string, options: RequestInit = {}): Promise
   return text ? JSON.parse(text) : null;
 }
 
+// Même choix volontaire que supabaseRequest ci-dessus (voir son commentaire).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function fetchTable(table: string, query: string = `select=*`): Promise<any> {
   return supabaseRequest(`${table}?${query}`, { method: "GET" });
 }
@@ -475,6 +480,8 @@ async function runFlushOfflineQueue(): Promise<FlushOfflineQueueResult> {
   return { flushed, dropped, conflicts };
 }
 
+// Même choix volontaire que supabaseRequest ci-dessus (voir son commentaire).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function loadAppState(householdId: string | null | undefined): Promise<any> {
   if (!householdId) return null;
   const rows = await fetchTable(
