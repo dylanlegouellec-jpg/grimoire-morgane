@@ -11,7 +11,7 @@
 /*  doré/festonné/corné n'a de sens que si le fond de la page reste visible     */
 /*  tout autour.                                                                 */
 /* ------------------------------------------------------------------ */
-export function heroTreatmentClassName(treatment) {
+export function heroTreatmentClassName(treatment?: string | null): string {
   if (treatment === "cadre") return "detail-hero-inset hero-treat-cadre";
   if (treatment === "fondu" || !treatment) return "";
   return "detail-hero-inset";
@@ -21,11 +21,15 @@ export function heroTreatmentClassName(treatment) {
 // superposer À LA PHOTO plutôt que de rester dans le flux normal en
 // dessous (voir RecipeDetail.jsx, qui rend alors HeroLegendCaption ici
 // plutôt que son bloc chip+titre habituel).
-export function isLegendTreatment(treatment) {
+export function isLegendTreatment(treatment?: string | null): boolean {
   return treatment === "legende";
 }
 
-export default function HeroTreatment({ treatment }) {
+interface HeroTreatmentProps {
+  treatment?: string | null;
+}
+
+export default function HeroTreatment({ treatment }: HeroTreatmentProps) {
   switch (treatment) {
     case "cadre":
       return (

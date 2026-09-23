@@ -83,7 +83,6 @@ export default function WheelPickerModal({ title, hint, columns, onSave, onClose
               step={c.step || 1}
               dark={false}
               suffix={c.suffix}
-              onSettle={undefined}
             />
           ))}
         </div>

@@ -1,19 +1,23 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type MouseEvent } from "react";
 import { Clock, Pause, Play } from "lucide-react";
 import { requestNotificationPermission, showLocalNotification } from "../../utils/notifications";
 
-export default function StepTimer({ minutes }) {
+interface StepTimerProps {
+  minutes: number;
+}
+
+export default function StepTimer({ minutes }: StepTimerProps) {
   const fullSeconds = minutes * 60;
   const [seconds, setSeconds] = useState(fullSeconds);
   const [running, setRunning] = useState(false);
-  const intervalRef = useRef(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (running && seconds > 0) {
       intervalRef.current = setInterval(() => {
         setSeconds((s) => {
           if (s <= 1) {
-            clearInterval(intervalRef.current);
+            if (intervalRef.current) clearInterval(intervalRef.current);
             setRunning(false);
             // Pour prévenir même quand le téléphone est ailleurs/l'écran
             // éteint — l'ancien état "Terminé !" sur l'écran ne sert à rien
@@ -29,10 +33,10 @@ export default function StepTimer({ minutes }) {
         });
       }, 1000);
     }
-    return () => clearInterval(intervalRef.current);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [running, minutes]);
 
-  const fmt = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   const Icon = seconds === 0 ? Clock : running ? Pause : seconds === fullSeconds ? Clock : Play;
   const label =
     seconds === 0
@@ -47,7 +51,7 @@ export default function StepTimer({ minutes }) {
     <button
       type="button"
       className={`step-timer-btn ${running ? "running" : ""} ${seconds === 0 ? "done" : ""}`}
-      onClick={(e) => {
+      onClick={(e: MouseEvent<HTMLButtonElement>) => {
         e.stopPropagation();
         setRunning((r) => {
           const next = !r;
@@ -63,4 +67,3 @@ export default function StepTimer({ minutes }) {
     </button>
   );
 }
-
