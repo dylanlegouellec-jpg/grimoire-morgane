@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { BookOpen, CalendarDays, Refrigerator, ShoppingBasket, Sparkles } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { MODAL_BACKDROP_MOTION } from "../../constants/motion";
 import { triggerHaptic } from "../../utils/haptics";
@@ -12,12 +13,36 @@ import Seal from "../common/Seal";
 // Un pas par onglet principal, dans l'ordre de la barre de nav (voir
 // constants/index.js, TABS) — icône reprise à l'identique pour que la
 // carte explicative fasse écho au bouton mis en avant juste en dessous.
-const TAB_STEPS = [
+const TAB_STEPS: { tabKey: string; Icon: LucideIcon }[] = [
   { tabKey: "recettes", Icon: BookOpen },
   { tabKey: "plan", Icon: CalendarDays },
   { tabKey: "frigo", Icon: Refrigerator },
   { tabKey: "courses", Icon: ShoppingBasket },
 ];
+
+interface OnboardingStep {
+  tabKey: string | null;
+  Icon: LucideIcon;
+  titleKey: string;
+  bodyKey: string;
+}
+
+interface Hole {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+  // Jamais utilisé en pratique : uniquement pour satisfaire structurellement
+  // le type `animate` de Framer Motion (motion.div), qui autorise aussi des
+  // variables CSS ("--xxx") en clé dynamique.
+  [key: `--${string}`]: number;
+}
+
+interface OnboardingTourProps {
+  currentTab: string;
+  changeTab: (tab: string) => void;
+  onFinish: () => void;
+}
 
 /* ------------------------------------------------------------------ */
 /*  TUTORIEL GUIDÉ (ONBOARDING) — surcouche "spotlight" plein écran      */
@@ -51,11 +76,11 @@ const TAB_STEPS = [
 /*  modalsBase.css.js) : la même logique fonctionne sans aucune condition                                              */
 /*  supplémentaire sur ces trois variantes.                                                                               */
 /* ------------------------------------------------------------------ */
-export default function OnboardingTour({ currentTab, changeTab, onFinish }) {
+export default function OnboardingTour({ currentTab, changeTab, onFinish }: OnboardingTourProps) {
   const { t } = useTranslation();
   const prefersReducedMotion = useReducedMotion();
   const [stepIndex, setStepIndex] = useState(0);
-  const [hole, setHole] = useState(null); // { top, left, width, height } en px, ou null tant que non mesuré
+  const [hole, setHole] = useState<Hole | null>(null); // { top, left, width, height } en px, ou null tant que non mesuré
   // Onglet actif AVANT l'ouverture du tuto, capturé UNE FOIS au montage —
   // restauré à la fermeture (croix, "Passer", Échap/retour Android, ou fin
   // normale) : le tuto change l'onglet affiché pour illustrer chaque étape
@@ -63,7 +88,7 @@ export default function OnboardingTour({ currentTab, changeTab, onFinish }) {
   // différent de celui d'où il est parti une fois refermé.
   const initialTabRef = useRef(currentTab);
 
-  const steps = [
+  const steps: OnboardingStep[] = [
     { tabKey: null, Icon: Sparkles, titleKey: "onboarding.welcomeTitle", bodyKey: "onboarding.welcomeBody" },
     ...TAB_STEPS.map(({ tabKey, Icon }) => ({
       tabKey,
@@ -120,7 +145,7 @@ export default function OnboardingTour({ currentTab, changeTab, onFinish }) {
   // Piège à focus + Échap/retour Android : ferme comme "Passer" (voir plus
   // bas) — un retour arrière au clavier/matériel n'est jamais interprété
   // comme "j'ai terminé le tuto".
-  const focusTrapRef = useFocusTrap(close);
+  const focusTrapRef = useFocusTrap<HTMLDivElement>(close);
   useBodyScrollLock(true);
 
   const goNext = () => {
@@ -140,7 +165,7 @@ export default function OnboardingTour({ currentTab, changeTab, onFinish }) {
   // première mesure (useLayoutEffect ci-dessus, quasi instantané), un point
   // central provisoire de taille nulle produit exactement le même rendu que
   // l'étape de bienvenue une fois mesurée.
-  const holeStyle = hole || { top: window.innerHeight / 2, left: window.innerWidth / 2, width: 0, height: 0 };
+  const holeStyle: Hole = hole || { top: window.innerHeight / 2, left: window.innerWidth / 2, width: 0, height: 0 };
 
   return (
     <motion.div
