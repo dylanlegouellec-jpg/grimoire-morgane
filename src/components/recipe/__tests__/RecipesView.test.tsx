@@ -4,6 +4,7 @@ import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import RecipesView from "../RecipesView";
 import { LanguageProvider } from "../../../contexts/LanguageContext";
+import type { Recipe } from "../../../hooks/useRecipes";
 
 // L'animation d'entrée des cartes (RecipeCard.jsx) est désormais un
 // animate() Framer Motion impératif (useAnimate), pas un changement de
@@ -41,7 +42,9 @@ vi.mock("motion/react", async () => {
 /*  plutôt que de laisser la régression passer inaperçue.                                   */
 /* ------------------------------------------------------------------ */
 
-function makeRecipe(id, title, category, favorite = false) {
+// Fiches minimales (seuls ces champs comptent ici) — cast plutôt que des
+// Recipe complètes, sans intérêt pour ces tests.
+function makeRecipe(id: string, title: string, category: string, favorite = false) {
   return {
     id,
     title,
@@ -52,7 +55,7 @@ function makeRecipe(id, title, category, favorite = false) {
     favorite,
     ingredients: [{ qty: 1, unit: "", name: "Ingrédient" }],
     steps: ["Étape"],
-  };
+  } as unknown as Recipe;
 }
 
 const RECIPES = [
@@ -88,6 +91,7 @@ function Harness({ initialFilter = "tout" }) {
         onToggleFavorite={noop}
         onAddRequest={noop}
         onOpen={noop}
+        openRecipeId={null}
         onRequestDelete={noop}
         onUpdateRecipe={noop}
         pressDuration={750}
@@ -114,8 +118,8 @@ describe("RecipesView — filtrage sans démontage", () => {
 
   it("masque via display:none les cartes hors filtre plutôt que de les retirer du DOM", () => {
     render(<Harness initialFilter="sale" />);
-    const sucreCard = screen.getByText("Fondant au chocolat").closest(".recipe-card");
-    const saleCard = screen.getByText("Poulet rôti").closest(".recipe-card");
+    const sucreCard = screen.getByText("Fondant au chocolat").closest(".recipe-card") as HTMLElement;
+    const saleCard = screen.getByText("Poulet rôti").closest(".recipe-card") as HTMLElement;
     expect(sucreCard.style.display).toBe("none");
     expect(saleCard.style.display).not.toBe("none");
   });
@@ -147,7 +151,7 @@ describe("RecipesView — filtrage sans démontage", () => {
     render(<Harness initialFilter="tout" />);
     // .card-fade-wrap (pas .recipe-card lui-même) : c'est cet enfant dédié
     // qui reçoit le fondu/zoom d'entrée (voir RecipeCard.jsx).
-    const fadeNode = screen.getByText("Crêpes bretonnes").closest(".recipe-card").querySelector(".card-fade-wrap");
+    const fadeNode = screen.getByText("Crêpes bretonnes").closest(".recipe-card")!.querySelector(".card-fade-wrap");
     animateSpy.mockClear(); // ignore l'appel du montage initial
 
     await user.click(screen.getByText("go-sucre"));
@@ -158,7 +162,7 @@ describe("RecipesView — filtrage sans démontage", () => {
   it("rejoue l'animation d'entrée pour une carte qui redevient visible après avoir été masquée", async () => {
     const user = userEvent.setup();
     render(<Harness initialFilter="tout" />);
-    const fadeNode = screen.getByText("Fondant au chocolat").closest(".recipe-card").querySelector(".card-fade-wrap");
+    const fadeNode = screen.getByText("Fondant au chocolat").closest(".recipe-card")!.querySelector(".card-fade-wrap");
 
     await user.click(screen.getByText("go-sale")); // Fondant (Sucré) passe masqué
     animateSpy.mockClear();

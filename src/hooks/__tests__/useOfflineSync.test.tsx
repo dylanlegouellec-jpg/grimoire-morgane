@@ -1,7 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import { render, screen, waitFor, act } from "@testing-library/react";
 import useOfflineSync from "../useOfflineSync";
+import type { Recipe } from "../useRecipes";
+import type { ShoppingList } from "../useShoppingLists";
+import type { MealPlanEntry } from "../useMealPlan";
+
+// Payload d'un événement Realtime "app_state" tel que livré par le SDK
+// Supabase réel (voir useOfflineSync.ts) — seuls les champs lus par le
+// hook sont modélisés ici.
+interface AppStateRealtimePayload {
+  eventType: string;
+  new: { pantry: string[]; basics: string[]; meal_plan: unknown[] };
+}
 
 /* ------------------------------------------------------------------ */
 /*  RÉGRESSION : "je coche un ingrédient du frigo et parfois ça le       */
@@ -14,15 +26,15 @@ import useOfflineSync from "../useOfflineSync";
 /*  soit lui-même parti.                                                     */
 /* ------------------------------------------------------------------ */
 
-let capturedAppStateHandler = null;
-const saveAppStateMock = vi.fn(() => Promise.resolve());
+let capturedAppStateHandler: ((payload: AppStateRealtimePayload) => void) | null = null;
+const saveAppStateMock = vi.fn((..._args: unknown[]) => Promise.resolve());
 
 vi.mock("../../utils/supabase", () => ({
   fetchTable: vi.fn(() => Promise.resolve([])),
   loadAppState: vi.fn(() => Promise.resolve({ pantry: [], basics: [], meal_plan: [] })),
-  saveAppState: (...args) => saveAppStateMock(...args),
-  mapRowToRecipe: (r) => r,
-  mapRowToShoppingList: (r) => r,
+  saveAppState: (...args: unknown[]) => saveAppStateMock(...args),
+  mapRowToRecipe: (r: unknown) => r,
+  mapRowToShoppingList: (r: unknown) => r,
   flushOfflineQueue: vi.fn(() => Promise.resolve({ flushed: 0, dropped: 0 })),
   RECIPE_COLUMNS: "*",
   SHOPPING_LIST_COLUMNS: "*",
@@ -31,7 +43,7 @@ vi.mock("../../utils/supabase", () => ({
 vi.mock("../../utils/supabaseClient", () => ({
   getSupabaseClient: () => {
     const channel = {
-      on: (_event, config, handler) => {
+      on: (_event: string, config: { table: string }, handler: (payload: AppStateRealtimePayload) => void) => {
         if (config.table === "app_state") capturedAppStateHandler = handler;
         return channel;
       },
@@ -71,15 +83,15 @@ vi.mock("../../constants", () => ({
 // renvoie le même objet `session.user` tant que la session ne change pas).
 const STABLE_USER = { id: "u1" };
 
-let externalSetPantry = null;
+let externalSetPantry: Dispatch<SetStateAction<string[]>> | null = null;
 
 function Harness() {
-  const [pantry, setPantry] = useState([]);
-  const [basics, setBasics] = useState([]);
-  const [mealPlan, setMealPlan] = useState([]);
-  const [recipes, setRecipes] = useState([]);
-  const [shoppingLists, setShoppingLists] = useState([]);
-  const [activeListId, setActiveListId] = useState(null);
+  const [pantry, setPantry] = useState<string[]>([]);
+  const [basics, setBasics] = useState<string[]>([]);
+  const [mealPlan, setMealPlan] = useState<MealPlanEntry[]>([]);
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>([]);
+  const [activeListId, setActiveListId] = useState<string | null>(null);
   externalSetPantry = setPantry;
 
   const { ready } = useOfflineSync({
@@ -132,20 +144,20 @@ describe("useOfflineSync — course écho Realtime vs. sauvegarde locale en atte
     vi.useFakeTimers();
 
     // Coche "Ail" — programme une sauvegarde différée (400ms).
-    act(() => { externalSetPantry(["ail"]); });
+    act(() => { externalSetPantry!(["ail"]); });
     act(() => { vi.advanceTimersByTime(100); }); // toujours dans la fenêtre de debounce
 
     // Coche "Carottes" juste après, avant que le PATCH précédent ne soit
     // parti — reproduit l'usage normal de l'écran Frigo (cocher plusieurs
     // ingrédients de suite).
-    act(() => { externalSetPantry(["ail", "carottes"]); });
+    act(() => { externalSetPantry!(["ail", "carottes"]); });
 
     // Un événement Realtime arrive maintenant, porteur d'une valeur DÉJÀ
     // dépassée par cette dernière modification locale (ex. l'écho d'une
     // sauvegarde antérieure encore en vol). Avant le correctif, ceci
     // effaçait "carottes" de l'état affiché.
     act(() => {
-      capturedAppStateHandler({ eventType: "UPDATE", new: { pantry: ["ail"], basics: [], meal_plan: [] } });
+      capturedAppStateHandler!({ eventType: "UPDATE", new: { pantry: ["ail"], basics: [], meal_plan: [] } });
     });
 
     expect(screen.getByTestId("pantry")).toHaveTextContent(JSON.stringify(["ail", "carottes"]));
@@ -169,7 +181,7 @@ describe("useOfflineSync — course écho Realtime vs. sauvegarde locale en atte
     // événement Realtime légitime (autre appareil) doit de nouveau
     // s'appliquer normalement.
     act(() => {
-      capturedAppStateHandler({
+      capturedAppStateHandler!({
         eventType: "UPDATE",
         new: { pantry: ["ail", "carottes", "poulet"], basics: [], meal_plan: [] },
       });
