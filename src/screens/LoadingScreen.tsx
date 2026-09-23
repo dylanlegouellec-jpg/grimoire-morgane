@@ -4,7 +4,12 @@ import { CSS } from "../constants/styles.css";
 /* ------------------------------------------------------------------ */
 /*  ÉCRAN DE CHARGEMENT (générique, plusieurs messages possibles)      */
 /* ------------------------------------------------------------------ */
-export default function LoadingScreen({ message }) {
+
+interface LoadingScreenProps {
+  message: string;
+}
+
+export default function LoadingScreen({ message }: LoadingScreenProps) {
   return (
     <div className="loading-screen">
       <style>{CSS}</style>

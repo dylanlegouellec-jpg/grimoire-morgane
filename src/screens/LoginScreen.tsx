@@ -5,7 +5,14 @@ import { Seal } from "../components/common";
 /* ------------------------------------------------------------------ */
 /*  ÉCRAN DE CONNEXION (Google via Supabase Auth)                      */
 /* ------------------------------------------------------------------ */
-export default function LoginScreen({ signInWithGoogle, showToast, toast }) {
+
+interface LoginScreenProps {
+  signInWithGoogle: () => Promise<void>;
+  showToast: (msg: string) => void;
+  toast?: string | null;
+}
+
+export default function LoginScreen({ signInWithGoogle, showToast, toast }: LoginScreenProps) {
   return (
     <div className="loading-screen login-screen">
       <style>{CSS}</style>
@@ -17,9 +24,9 @@ export default function LoginScreen({ signInWithGoogle, showToast, toast }) {
         tone="gold"
         onClick={() => {
           triggerHaptic(15);
-          signInWithGoogle().catch((err) => {
+          signInWithGoogle().catch((err: unknown) => {
             console.error(err);
-            showToast((err && err.message) || "Connexion impossible.");
+            showToast((err instanceof Error && err.message) || "Connexion impossible.");
           });
         }}
       >
