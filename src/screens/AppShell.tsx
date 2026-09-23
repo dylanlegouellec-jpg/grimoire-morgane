@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, lazy, Suspense } from "react";
+import type { ChangeEvent, Dispatch, SetStateAction } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Heart, Search, Settings, Wand2 } from "lucide-react";
 
@@ -11,6 +12,12 @@ import { useTranslation } from "../contexts/LanguageContext";
 import { NavButton } from "../components/common";
 import ErrorBoundary from "../components/common/ErrorBoundary";
 import { RecipesView, RecipeForm, RecipeDetail, CookMode } from "../components/recipe";
+import type { Recipe } from "../hooks/useRecipes";
+import type { MealPlanEntry } from "../hooks/useMealPlan";
+import type { ShoppingList } from "../hooks/useShoppingLists";
+import type { Household } from "../utils/auth";
+import type { ViewScope } from "../utils/localSettings";
+import type { ParsedRecipe } from "../utils/templateParser";
 
 // Chargés à la demande (React.lazy), importés directement depuis leur
 // fichier — jamais depuis le barrel components/*/index.js, qui est déjà
@@ -46,6 +53,144 @@ const ViewLoadingFallback = () => (
   </div>
 );
 
+interface RecipesApi {
+  recipes: Recipe[];
+  saveRecipe: (recipe: Recipe) => void;
+  importRecipe: (parsed: ParsedRecipe, label: string) => void;
+  deleteRecipe: (id: string) => void;
+  toggleFavorite: (id: string) => void;
+  exportGrimoire: () => void;
+  handleImportFile: (e: ChangeEvent<HTMLInputElement>) => void;
+}
+
+interface PantryApi {
+  pantry: string[];
+  setPantry: Dispatch<SetStateAction<string[]>>;
+  basics: string[];
+  moveBasicToVariable: (name: string) => void;
+  removeBasic: (name: string) => void;
+  resetPantry: () => void;
+}
+
+interface MealPlanApi {
+  mealPlan: MealPlanEntry[];
+  addMealPlanEntry: (
+    date: string,
+    mealType: string,
+    recipeId: string | null,
+    customTitle: string | null,
+    scope: "household" | "personal",
+    userId: string | null,
+    courseType: string | null
+  ) => void;
+  removeMealPlanEntry: (id: string) => void;
+  removeMealPlanEntries: (ids: string[]) => void;
+  updateMealPlanEntry: (id: string, updates: Partial<MealPlanEntry>) => void;
+  reorderMealPlanEntries: (orderedIds: string[]) => void;
+  moveMealPlanSection: (entryIds: string[], newMealType: string) => void;
+}
+
+interface ShoppingApi {
+  shoppingLists: ShoppingList[];
+  visibleShoppingLists: ShoppingList[];
+  activeListId: string | null;
+  openShoppingList: (id: string) => void;
+  shoppingScope: ViewScope;
+  setShoppingScope: (scope: string) => void;
+  createShoppingList: () => void;
+  renameShoppingList: (id: string | null, name: string) => void;
+  deleteShoppingList: (id: string) => void;
+  addManualItem: (name: string) => void;
+  toggleShoppingItem: (id: string) => void;
+  deleteShoppingItem: (id: string) => void;
+  adjustShoppingQty: (id: string, delta: number) => void;
+  setShoppingItemQty: (id: string, qty: number, unit: string) => void;
+  generateShoppingList: (recipes: Recipe[], ids: string[]) => void;
+  resetActiveList: () => void;
+}
+
+interface SettingsApi {
+  theme: string;
+  setTheme: (value: string) => void;
+  pressDuration: number;
+  setPressDuration: (value: number) => void;
+  showNutriscore: boolean;
+  setShowNutriscore: (value: boolean) => void;
+  navOpacity: number;
+  setNavOpacity: (value: number) => void;
+  heroTreatment: string;
+  setHeroTreatment: (value: string) => void;
+  iconStyle: string;
+  setIconStyle: (value: string) => void;
+  textSize: string;
+  setTextSize: (value: string) => void;
+  language: string;
+  setLanguage: (value: string) => void;
+  hasCompletedOnboarding: boolean;
+  setHasCompletedOnboarding: (value: boolean) => void;
+  onboardingResolved: boolean;
+}
+
+interface HouseholdApiUser {
+  id: string;
+  email?: string;
+}
+
+interface HouseholdMemberLike {
+  user_id: string;
+  role: string;
+  display_name?: string;
+  email?: string;
+  avatar_url?: string;
+}
+
+interface HouseholdApi {
+  user: HouseholdApiUser | null;
+  householdId: string | null;
+  households: Household[];
+  onSwitchHousehold: (id: string) => void;
+  onCreateHousehold: (name: string) => Promise<void>;
+  onRenameHousehold: (id: string, name: string) => Promise<void>;
+  onDeleteHousehold: (id: string) => Promise<void>;
+  onRequestJoinHousehold: (id: string) => Promise<void>;
+  onGetPendingHouseholdRequests: (householdId: string) => Promise<HouseholdMemberLike[]>;
+  onApproveHouseholdMember: (householdId: string | null, userId: string) => Promise<void>;
+  onRejectHouseholdMember: (householdId: string | null, userId: string) => Promise<void>;
+  onRefreshHouseholds?: () => void;
+  signOut: () => void;
+}
+
+// Recette décodée depuis un lien/code reçu (voir GrimoireDeMorgane.jsx) —
+// aussi peu fiable que PublicRecipe (PublicRecipeView.tsx) : jamais
+// revalidée, seul `title` est garanti pour l'affichage de confirmation
+// (ImportConfirmModal).
+interface PendingImportRecipe {
+  title: string;
+  [key: string]: unknown;
+}
+
+interface SyncApi {
+  offlineQueueSize: number;
+  connectionStatus: string;
+  onRetryConnection?: () => void;
+  pendingImport: PendingImportRecipe | null;
+  setPendingImport: Dispatch<SetStateAction<PendingImportRecipe | null>>;
+  pendingHouseholdJoin: string | null;
+  setPendingHouseholdJoin: Dispatch<SetStateAction<string | null>>;
+}
+
+interface AppShellProps {
+  recipesApi: RecipesApi;
+  pantryApi: PantryApi;
+  mealPlanApi: MealPlanApi;
+  shoppingApi: ShoppingApi;
+  settingsApi: SettingsApi;
+  householdApi: HouseholdApi;
+  syncApi: SyncApi;
+  toast?: string | null;
+  showToast: (msg: string) => void;
+}
+
 /* ------------------------------------------------------------------ */
 /*  COQUILLE APPLICATIVE — onglets, modales, gestes                    */
 /*  Ne connaît que ce que les hooks lui exposent (recettes, frigo,      */
@@ -69,7 +214,7 @@ export default function AppShell({
   syncApi,
   toast,
   showToast,
-}) {
+}: AppShellProps) {
   const { recipes, saveRecipe, importRecipe, deleteRecipe, toggleFavorite, exportGrimoire, handleImportFile } = recipesApi;
   const { pantry, setPantry, basics, moveBasicToVariable, removeBasic, resetPantry } = pantryApi;
   const { mealPlan, addMealPlanEntry, removeMealPlanEntry, removeMealPlanEntries, updateMealPlanEntry, reorderMealPlanEntries, moveMealPlanSection } = mealPlanApi;
@@ -147,8 +292,8 @@ export default function AppShell({
   // une fois pour toutes : `changeTab` est le seul point d'entrée qui
   // touche `tab`, pour que ce calcul ne puisse pas être oublié à un
   // endroit et pas un autre.
-  const [tabDirection, setTabDirection] = useState("forward");
-  const changeTab = useCallback((nextKey) => {
+  const [tabDirection, setTabDirection] = useState<"forward" | "backward">("forward");
+  const changeTab = useCallback((nextKey: string) => {
     setTab((prevKey) => {
       if (nextKey === prevKey) return prevKey;
       const prevIndex = TABS.findIndex((tb) => tb.key === prevKey);
@@ -161,11 +306,11 @@ export default function AppShell({
   const [search, setSearch] = useState("");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [fridgeSearch, setFridgeSearch] = useState("");
-  const [formTarget, setFormTarget] = useState(null); // null | 'new' | recipe object
-  const [openRecipe, setOpenRecipe] = useState(null);
-  const [cookingRecipe, setCookingRecipe] = useState(null);
-  const [textModal, setTextModal] = useState(null);
-  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [formTarget, setFormTarget] = useState<Recipe | "new" | null>(null); // null | 'new' | recipe object
+  const [openRecipe, setOpenRecipe] = useState<Recipe | null>(null);
+  const [cookingRecipe, setCookingRecipe] = useState<Recipe | null>(null);
+  const [textModal, setTextModal] = useState<{ title: string; text: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Recipe | null>(null);
   const [showTemplateImport, setShowTemplateImport] = useState(false);
   const [showLinkImport, setShowLinkImport] = useState(false);
   const [showSecretSettings, setShowSecretSettings] = useState(false);
@@ -233,8 +378,8 @@ export default function AppShell({
   // appel — ce composant n'a pas à connaître ce détail de stockage.
   const resetOnboarding = () => setHasCompletedOnboarding(false);
 
-  const touchStart = useRef(null);
-  const appContentRef = useRef(null);
+  const touchStart = useRef<{ x: number; y: number; scrollY: number } | null>(null);
+  const appContentRef = useRef<HTMLElement | null>(null);
 
   // Photo de profil affichée dans le bouton de réglages de l'en-tête —
   // cache-first (voir utils/profile.js) : s'affiche instantanément avec la
@@ -249,9 +394,9 @@ export default function AppShell({
     getProfile(user.id).then((p) => { if (!cancelled && p) setHeaderProfile(p); });
     return () => { cancelled = true; };
   }, [user]);
-  const headerAvatarUrl = headerProfile && headerProfile.avatar_url;
+  const headerAvatarUrl = (headerProfile && (headerProfile.avatar_url as string | undefined)) || null;
 
-  const shareText = async (text, label) => {
+  const shareText = async (text: string, label: string) => {
     const ok = await copyText(text);
     if (ok) showToast(t("app.copiedSuffix", { label }));
     else setTextModal({ title: label, text });
@@ -259,7 +404,7 @@ export default function AppShell({
 
   const confirmPendingImport = () => {
     if (!pendingImport) return;
-    saveRecipe({ ...pendingImport, id: nextId(), favorite: false });
+    saveRecipe({ ...pendingImport, id: nextId(), favorite: false } as unknown as Recipe);
     setPendingImport(null);
     showToast(t("app.recipeAdded"));
   };
@@ -327,10 +472,10 @@ export default function AppShell({
   useEffect(() => {
     const node = appContentRef.current;
     if (!node) return undefined;
-    const handleTouchStart = (e) => {
+    const handleTouchStart = (e: TouchEvent) => {
       touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, scrollY: window.scrollY };
     };
-    const handleTouchEnd = (e) => {
+    const handleTouchEnd = (e: TouchEvent) => {
       const start = touchStart.current;
       touchStart.current = null;
       if (start == null || tabRef.current !== "recettes") return;
@@ -347,9 +492,13 @@ export default function AppShell({
     const opts = { passive: true };
     node.addEventListener("touchstart", handleTouchStart, opts);
     node.addEventListener("touchend", handleTouchEnd, opts);
+    // Le DOM du 3e argument de removeEventListener (EventListenerOptions)
+    // est plus strict que celui d'addEventListener (AddEventListenerOptions,
+    // qui seul déclare `passive`) — même repli que useLongPress.ts.
+    const removeOpts = opts as unknown as EventListenerOptions;
     return () => {
-      node.removeEventListener("touchstart", handleTouchStart, opts);
-      node.removeEventListener("touchend", handleTouchEnd, opts);
+      node.removeEventListener("touchstart", handleTouchStart, removeOpts);
+      node.removeEventListener("touchend", handleTouchEnd, removeOpts);
     };
   }, [setFilter]);
 
@@ -564,7 +713,7 @@ export default function AppShell({
             Icon={Icon}
             active={tab === key}
             onSelect={() => changeTab(key)}
-            onLongPress={key === "courses" && shoppingLists.length > 0 ? () => setShowListsManager(true) : null}
+            onLongPress={key === "courses" && shoppingLists.length > 0 ? () => setShowListsManager(true) : undefined}
             pressDuration={pressDuration}
           />
         ))}
@@ -665,7 +814,7 @@ export default function AppShell({
           <Suspense fallback={null}>
             <TextTemplateImportModal
               onClose={() => setShowTemplateImport(false)}
-              onImport={(parsed) => importRecipe(parsed, t("app.sheetImported"))}
+              onImport={(parsed) => { if (parsed) importRecipe(parsed, t("app.sheetImported")); }}
             />
           </Suspense>
         )}
