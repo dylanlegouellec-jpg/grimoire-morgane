@@ -153,4 +153,27 @@ export default [
       ...js.configs.recommended.rules,
     },
   },
+  {
+    // Même bloc Node que ci-dessus, pour les fichiers déjà convertis en
+    // TypeScript (api/ pour l'instant — scripts/ et les *.config.js
+    // suivront). Pas de linting "type-aware" ici non plus, même choix que
+    // pour le bloc src/**/*.{ts,tsx} plus haut.
+    files: ["api/**/*.ts"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      parser: tseslint.parser,
+      globals: globals.node,
+    },
+    plugins: {
+      "@typescript-eslint": tseslint.plugin,
+    },
+    rules: {
+      ...js.configs.recommended.rules,
+      ...tseslint.configs.recommended.reduce((acc, cfg) => ({ ...acc, ...cfg.rules }), {}),
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+      "no-undef": "off",
+    },
+  },
 ];

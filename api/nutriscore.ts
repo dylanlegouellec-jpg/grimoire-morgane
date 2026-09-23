@@ -17,6 +17,37 @@
 /*  ingrédient dans une même session de rédaction).                       */
 /* ------------------------------------------------------------------ */
 
+// Vercel invoque ce handler avec de vrais VercelRequest/VercelResponse,
+// bien plus riches — seuls les champs effectivement utilisés ici sont
+// modélisés, pour ne pas dépendre de @vercel/node (voir le commentaire de
+// nutrition-estimate.ts : chaque fonction reste volontairement autonome).
+interface ApiRequest {
+  method?: string;
+  body?: { ingredients?: unknown; category?: unknown } | null;
+}
+interface ApiResponse {
+  status(code: number): { json(body: unknown): void };
+}
+
+interface IngredientInput {
+  name?: string;
+  qty?: number | string;
+  unit?: string;
+  isSection?: boolean;
+  title?: string;
+}
+
+interface NutriProfile {
+  sugars: number;
+  satFat: number;
+  energy: number;
+  sodiumMg: number;
+  fiber: number;
+  protein: number;
+}
+
+type NutriGrade = "A" | "B" | "C" | "D" | "E";
+
 const OFF_SEARCH_URL = process.env.OFF_PROXY_URL || "https://world.openfoodfacts.org/cgi/search.pl";
 const FETCH_TIMEOUT_MS = 2500;
 const STOPWORDS = new Set(["de", "du", "des", "la", "le", "les", "un", "une", "et", "au", "aux", "en", "à"]);
@@ -25,23 +56,23 @@ const CIRCUIT_FAILURE_THRESHOLD = 3;
 const CIRCUIT_COOLDOWN_MS = 2 * 60 * 1000;
 let consecutiveFailures = 0;
 let circuitOpenUntil = 0;
-const memoryCache = new Map(); // nom normalisé -> profil nutritionnel | null
+const memoryCache = new Map<string, NutriProfile | null>();
 
-function isCircuitOpen() {
+function isCircuitOpen(): boolean {
   return Date.now() < circuitOpenUntil;
 }
-function recordFetchSuccess() {
+function recordFetchSuccess(): void {
   consecutiveFailures = 0;
   circuitOpenUntil = 0;
 }
-function recordFetchFailure() {
+function recordFetchFailure(): void {
   consecutiveFailures += 1;
   if (consecutiveFailures >= CIRCUIT_FAILURE_THRESHOLD) {
     circuitOpenUntil = Date.now() + CIRCUIT_COOLDOWN_MS;
   }
 }
 
-function normalize(str) {
+function normalize(str: unknown): string {
   return (str || "")
     .toString()
     .normalize("NFD")
@@ -50,7 +81,7 @@ function normalize(str) {
     .trim();
 }
 
-async function fetchWithTimeout(url, ms) {
+async function fetchWithTimeout(url: string, ms: number): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   try {
@@ -60,12 +91,12 @@ async function fetchWithTimeout(url, ms) {
   }
 }
 
-function significantTokens(name) {
+function significantTokens(name: string): string[] {
   return normalize(name)
     .split(/[^a-z0-9]+/i)
     .filter((t) => t.length > 2 && !STOPWORDS.has(t));
 }
-function isRelevantMatch(ingredientName, productName) {
+function isRelevantMatch(ingredientName: string, productName: unknown): boolean {
   const tokens = significantTokens(ingredientName);
   if (!tokens.length) return false;
   const prodNorm = normalize(productName || "");
@@ -73,7 +104,7 @@ function isRelevantMatch(ingredientName, productName) {
   return tokens.some((t) => prodNorm.includes(t));
 }
 
-function extractProfile(nutriments) {
+function extractProfile(nutriments: Record<string, unknown> | null | undefined): NutriProfile | null {
   if (!nutriments) return null;
   const sugars = Number(nutriments["sugars_100g"]);
   const satFat = Number(nutriments["saturated-fat_100g"]);
@@ -99,13 +130,13 @@ function extractProfile(nutriments) {
   };
 }
 
-async function lookupIngredientOnline(name) {
+async function lookupIngredientOnline(name: string): Promise<NutriProfile | null> {
   const key = normalize(name);
   if (!key) return null;
-  if (memoryCache.has(key)) return memoryCache.get(key);
+  if (memoryCache.has(key)) return memoryCache.get(key) ?? null;
   if (isCircuitOpen()) return null;
 
-  let res;
+  let res: Response | undefined;
   try {
     const params = new URLSearchParams({
       search_terms: name,
@@ -126,7 +157,7 @@ async function lookupIngredientOnline(name) {
     const data = await res.json();
     const products = Array.isArray(data && data.products) ? data.products : [];
 
-    let profile = null;
+    let profile: NutriProfile | null = null;
     for (const product of products) {
       if (!isRelevantMatch(name, product.product_name)) continue;
       const candidate = extractProfile(product.nutriments);
@@ -165,11 +196,11 @@ const PIECE_WEIGHTS = [
   { test: /avocat/i, grams: 170 },
 ];
 const DEFAULT_PIECE_GRAMS = 60;
-function estimatePieceWeight(name) {
-  const found = PIECE_WEIGHTS.find((p) => p.test.test(name));
+function estimatePieceWeight(name: string | undefined): number {
+  const found = PIECE_WEIGHTS.find((p) => p.test.test(name || ""));
   return found ? found.grams : DEFAULT_PIECE_GRAMS;
 }
-function estimateGrams(ing) {
+function estimateGrams(ing: IngredientInput): number {
   const qty = Number(ing.qty) || 0;
   if (qty <= 0) return 0;
   const u = normalize(ing.unit || "");
@@ -208,24 +239,24 @@ const NUTRI_CATEGORIES = [
 const FRUIT_VEG_LABELS = new Set(["légume", "fruit", "fibre/légumineuse"]);
 const RICH_DESSERT_MARKERS = /beurre|crème|creme|sucre|miel|chocolat|caramel|mascarpone|confiture|p[aâ]te à tartiner|nutella|lait concentré|sirop|cr[eè]me fra[iî]che/i;
 
-function isDessertCategory(category) {
+function isDessertCategory(category: unknown): boolean {
   return normalize(category || "").startsWith("sucr");
 }
-function localImpactFor(ing) {
-  const match = NUTRI_CATEGORIES.find((c) => c.test.test(ing.name));
+function localImpactFor(ing: IngredientInput): { impact: number; label: string } | null {
+  const match = NUTRI_CATEGORIES.find((c) => c.test.test(ing.name || ""));
   return match ? { impact: match.impact, label: match.label } : null;
 }
-function scoreToGradeLocal(score) {
+function scoreToGradeLocal(score: number): NutriGrade {
   if (score >= 10) return "A";
   if (score >= 3) return "B";
   if (score >= -4) return "C";
   if (score >= -12) return "D";
   return "E";
 }
-function computeLocalGrade(items, grams) {
+function computeLocalGrade(items: IngredientInput[], grams: number[]): NutriGrade {
   const totalGrams = grams.reduce((a, b) => a + b, 0);
   let score = 0;
-  const positiveKinds = new Set();
+  const positiveKinds = new Set<string>();
   items.forEach((ing, i) => {
     const info = localImpactFor(ing);
     if (!info) return;
@@ -237,21 +268,23 @@ function computeLocalGrade(items, grams) {
   score += positiveKinds.size * 1.5;
   return scoreToGradeLocal(score);
 }
-function applyDessertSafetyNet(grade, items, category) {
+function applyDessertSafetyNet(grade: NutriGrade, items: IngredientInput[], category: unknown): NutriGrade {
   if (!isDessertCategory(category)) return grade;
   if (grade !== "A" && grade !== "B") return grade;
-  const hasRichMarker = items.some((ing) => RICH_DESSERT_MARKERS.test(ing.name));
+  const hasRichMarker = items.some((ing) => RICH_DESSERT_MARKERS.test(ing.name || ""));
   return hasRichMarker ? "C" : grade;
 }
-function estimateNutriscoreLocal(ingredients, category) {
-  const items = (ingredients || []).filter((ing) => ing && !ing.isSection && ing.name);
+function estimateNutriscoreLocal(ingredients: unknown, category: unknown): NutriGrade {
+  const items = (Array.isArray(ingredients) ? ingredients : []).filter(
+    (ing: IngredientInput) => ing && !ing.isSection && ing.name
+  );
   if (!items.length) return "C";
   const grams = items.map(estimateGrams);
   const grade = computeLocalGrade(items, grams);
   return applyDessertSafetyNet(grade, items, category);
 }
 
-function pointsFromThresholds(value, thresholds) {
+function pointsFromThresholds(value: number, thresholds: number[]): number {
   let pts = 0;
   for (const t of thresholds) {
     if (value > t) pts += 1;
@@ -265,20 +298,20 @@ const SATFAT_THRESHOLDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 const SODIUM_MG_THRESHOLDS = [90, 180, 270, 360, 450, 540, 630, 720, 810, 900];
 const FIBER_THRESHOLDS = [0.9, 1.9, 2.8, 3.7, 4.7];
 const PROTEIN_THRESHOLDS = [1.6, 3.2, 4.8, 6.4, 8.0];
-function fruitVegPoints(pct) {
+function fruitVegPoints(pct: number): number {
   if (pct >= 80) return 5;
   if (pct >= 60) return 2;
   if (pct >= 40) return 1;
   return 0;
 }
-function scoreToGradeOfficial(score) {
+function scoreToGradeOfficial(score: number): NutriGrade {
   if (score <= -1) return "A";
   if (score <= 2) return "B";
   if (score <= 10) return "C";
   if (score <= 18) return "D";
   return "E";
 }
-function gradeFromProfile(profile, fruitVegPct) {
+function gradeFromProfile(profile: NutriProfile, fruitVegPct: number): NutriGrade {
   const energyPts = pointsFromThresholds(profile.energy, ENERGY_KCAL_THRESHOLDS);
   const sugarsPts = pointsFromThresholds(profile.sugars, SUGARS_THRESHOLDS);
   const satFatPts = pointsFromThresholds(profile.satFat, SATFAT_THRESHOLDS);
@@ -293,13 +326,15 @@ function gradeFromProfile(profile, fruitVegPct) {
 
 const ONLINE_COVERAGE_THRESHOLD = 0.4;
 
-async function estimateNutriscore(ingredients, category) {
-  const items = (ingredients || []).filter((ing) => ing && !ing.isSection && ing.name);
+async function estimateNutriscore(ingredients: unknown, category: unknown): Promise<NutriGrade> {
+  const items = (Array.isArray(ingredients) ? ingredients : []).filter(
+    (ing: IngredientInput) => ing && !ing.isSection && ing.name
+  );
   if (!items.length) return "C";
 
   const grams = items.map(estimateGrams);
   const totalGrams = grams.reduce((a, b) => a + b, 0);
-  const profiles = await Promise.all(items.map((ing) => lookupIngredientOnline(ing.name)));
+  const profiles = await Promise.all(items.map((ing) => lookupIngredientOnline(ing.name || "")));
 
   let coveredGrams = 0;
   let sugars = 0, satFat = 0, energy = 0, sodiumMg = 0, fiber = 0, protein = 0;
@@ -341,7 +376,7 @@ async function estimateNutriscore(ingredients, category) {
 /* ------------------------------------------------------------------ */
 /*  HANDLER                                                             */
 /* ------------------------------------------------------------------ */
-export default async function handler(req, res) {
+export default async function handler(req: ApiRequest, res: ApiResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Méthode non autorisée" });
   }

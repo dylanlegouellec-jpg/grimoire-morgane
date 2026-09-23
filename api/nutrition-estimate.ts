@@ -13,6 +13,33 @@
 /*  indépendamment, pas de dépendance croisée entre fichiers api/*.js.     */
 /* ------------------------------------------------------------------ */
 
+// Vercel invoque ce handler avec de vrais VercelRequest/VercelResponse,
+// bien plus riches — seuls les champs effectivement utilisés ici sont
+// modélisés, pour ne pas dépendre de @vercel/node (chaque fonction reste
+// volontairement autonome, voir le commentaire de fichier plus haut).
+interface ApiRequest {
+  method?: string;
+  body?: { ingredients?: unknown; servings?: unknown } | null;
+}
+interface ApiResponse {
+  status(code: number): { json(body: unknown): void };
+}
+
+interface IngredientInput {
+  name?: string;
+  qty?: number | string;
+  unit?: string;
+  isSection?: boolean;
+  title?: string;
+}
+
+interface NutritionProfile {
+  energy: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
 const OFF_SEARCH_URL = process.env.OFF_PROXY_URL || "https://world.openfoodfacts.org/cgi/search.pl";
 const FETCH_TIMEOUT_MS = 2500;
 const STOPWORDS = new Set(["de", "du", "des", "la", "le", "les", "un", "une", "et", "au", "aux", "en", "à"]);
@@ -21,23 +48,23 @@ const CIRCUIT_FAILURE_THRESHOLD = 3;
 const CIRCUIT_COOLDOWN_MS = 2 * 60 * 1000;
 let consecutiveFailures = 0;
 let circuitOpenUntil = 0;
-const memoryCache = new Map(); // nom normalisé -> profil nutritionnel | null
+const memoryCache = new Map<string, NutritionProfile | null>();
 
-function isCircuitOpen() {
+function isCircuitOpen(): boolean {
   return Date.now() < circuitOpenUntil;
 }
-function recordFetchSuccess() {
+function recordFetchSuccess(): void {
   consecutiveFailures = 0;
   circuitOpenUntil = 0;
 }
-function recordFetchFailure() {
+function recordFetchFailure(): void {
   consecutiveFailures += 1;
   if (consecutiveFailures >= CIRCUIT_FAILURE_THRESHOLD) {
     circuitOpenUntil = Date.now() + CIRCUIT_COOLDOWN_MS;
   }
 }
 
-function normalize(str) {
+function normalize(str: unknown): string {
   return (str || "")
     .toString()
     .normalize("NFD")
@@ -46,7 +73,7 @@ function normalize(str) {
     .trim();
 }
 
-async function fetchWithTimeout(url, ms) {
+async function fetchWithTimeout(url: string, ms: number): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   try {
@@ -56,12 +83,12 @@ async function fetchWithTimeout(url, ms) {
   }
 }
 
-function significantTokens(name) {
+function significantTokens(name: string): string[] {
   return normalize(name)
     .split(/[^a-z0-9]+/i)
     .filter((t) => t.length > 2 && !STOPWORDS.has(t));
 }
-function isRelevantMatch(ingredientName, productName) {
+function isRelevantMatch(ingredientName: string, productName: unknown): boolean {
   const tokens = significantTokens(ingredientName);
   if (!tokens.length) return false;
   const prodNorm = normalize(productName || "");
@@ -73,7 +100,7 @@ function isRelevantMatch(ingredientName, productName) {
 // saturées/énergie/sodium pour le barème officiel), on récupère ici les 4
 // macros affichées dans le formulaire : calories, protéines, glucides,
 // lipides — tous "pour 100g" côté Open Food Facts.
-function extractProfile(nutriments) {
+function extractProfile(nutriments: Record<string, unknown> | null | undefined): NutritionProfile | null {
   if (!nutriments) return null;
   const energy = Number(nutriments["energy-kcal_100g"]);
   const protein = Number(nutriments["proteins_100g"]);
@@ -97,7 +124,7 @@ function extractProfile(nutriments) {
 /*  ("sucre glace") ne soit jamais masquée par une plus générique           */
 /*  ("sucre") testée avant elle.                                            */
 /* ------------------------------------------------------------------ */
-const LOCAL_NUTRITION_TABLE = [
+const LOCAL_NUTRITION_TABLE: [string, NutritionProfile][] = [
   ["sucre glace", { energy: 389, protein: 0, carbs: 100, fat: 0 }],
   ["sucre roux", { energy: 380, protein: 0, carbs: 98, fat: 0 }],
   ["sucre vanille", { energy: 387, protein: 0, carbs: 100, fat: 0 }],
@@ -137,17 +164,17 @@ const LOCAL_NUTRITION_TABLE = [
 // normalize() partagé plus bas, utilisé pour d'autres correspondances où
 // ce repli n'est pas forcément souhaitable) : "œuf" et "oeuf" doivent
 // tous deux atteindre l'entrée "oeuf" ci-dessus.
-function normalizeForLocalTable(name) {
+function normalizeForLocalTable(name: unknown): string {
   return normalize(name).replace(/œ/g, "oe").replace(/æ/g, "ae");
 }
-function escapeRegExpLocal(str) {
+function escapeRegExpLocal(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 // Correspondance par mot/expression entière (avec un simple "s" de
 // pluriel toléré) plutôt que par sous-chaîne brute : "farine" doit
 // matcher "farine" et "farines", mais jamais, par exemple, un ingrédient
 // qui contiendrait la chaîne par hasard au milieu d'un autre mot.
-function lookupLocalNutrition(rawName) {
+function lookupLocalNutrition(rawName: unknown): NutritionProfile | null {
   const key = normalizeForLocalTable(rawName);
   if (!key) return null;
   for (const [entryKey, profile] of LOCAL_NUTRITION_TABLE) {
@@ -157,13 +184,13 @@ function lookupLocalNutrition(rawName) {
   return null;
 }
 
-async function lookupIngredientOnline(name) {
+async function lookupIngredientOnline(name: string): Promise<NutritionProfile | null> {
   const key = normalize(name);
   if (!key) return null;
-  if (memoryCache.has(key)) return memoryCache.get(key);
+  if (memoryCache.has(key)) return memoryCache.get(key) ?? null;
   if (isCircuitOpen()) return null;
 
-  let res;
+  let res: Response | undefined;
   try {
     const params = new URLSearchParams({
       search_terms: name,
@@ -184,7 +211,7 @@ async function lookupIngredientOnline(name) {
     const data = await res.json();
     const products = Array.isArray(data && data.products) ? data.products : [];
 
-    let profile = null;
+    let profile: NutritionProfile | null = null;
     for (const product of products) {
       if (!isRelevantMatch(name, product.product_name)) continue;
       const candidate = extractProfile(product.nutriments);
@@ -224,11 +251,11 @@ const PIECE_WEIGHTS = [
   { test: /avocat/i, grams: 170 },
 ];
 const DEFAULT_PIECE_GRAMS = 60;
-function estimatePieceWeight(name) {
-  const found = PIECE_WEIGHTS.find((p) => p.test.test(name));
+function estimatePieceWeight(name: string | undefined): number {
+  const found = PIECE_WEIGHTS.find((p) => p.test.test(name || ""));
   return found ? found.grams : DEFAULT_PIECE_GRAMS;
 }
-function estimateGrams(ing) {
+function estimateGrams(ing: IngredientInput): number {
   const qty = Number(ing.qty) || 0;
   if (qty <= 0) return 0;
   const u = normalize(ing.unit || "");
@@ -251,8 +278,17 @@ const ONLINE_COVERAGE_THRESHOLD = 0.3;
 // Retourne les totaux PAR PORTION, ou `null` si trop peu d'ingrédients ont
 // pu être identifiés en ligne pour donner un résultat crédible (mieux vaut
 // ne rien pré-remplir que d'afficher un chiffre fantaisiste).
-async function estimateNutrition(ingredients, servings) {
-  const items = (ingredients || []).filter((ing) => ing && !ing.isSection && ing.name);
+interface NutritionResult {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
+async function estimateNutrition(ingredients: unknown, servings: unknown): Promise<NutritionResult | null> {
+  const items = (Array.isArray(ingredients) ? ingredients : []).filter(
+    (ing: IngredientInput) => ing && !ing.isSection && ing.name
+  );
   if (!items.length) return null;
 
   const grams = items.map(estimateGrams);
@@ -264,14 +300,14 @@ async function estimateNutrition(ingredients, servings) {
     items.map((ing) => {
       const local = lookupLocalNutrition(ing.name);
       if (local) return local;
-      return lookupIngredientOnline(ing.name);
+      return lookupIngredientOnline(ing.name || "");
     })
   );
 
   let coveredGrams = 0;
   let energy = 0, protein = 0, carbs = 0, fat = 0;
 
-  items.forEach((ing, i) => {
+  items.forEach((_ing, i) => {
     const profile = profiles[i];
     const w = grams[i];
     if (!profile || w <= 0) return;
@@ -297,7 +333,7 @@ async function estimateNutrition(ingredients, servings) {
 /* ------------------------------------------------------------------ */
 /*  HANDLER                                                             */
 /* ------------------------------------------------------------------ */
-export default async function handler(req, res) {
+export default async function handler(req: ApiRequest, res: ApiResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Méthode non autorisée" });
   }

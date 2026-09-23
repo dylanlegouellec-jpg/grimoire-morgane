@@ -1,8 +1,20 @@
+// Vercel invoque ce handler avec de vrais VercelRequest/VercelResponse,
+// bien plus riches — seuls les champs effectivement utilisés ici sont
+// modélisés, pour ne pas dépendre de @vercel/node (voir le commentaire de
+// nutrition-estimate.ts : chaque fonction reste volontairement autonome).
+interface ApiRequest {
+  method?: string;
+  body?: { title?: unknown; category?: unknown } | null;
+}
+interface ApiResponse {
+  status(code: number): { json(body: unknown): void };
+}
+
 // Débarrasse le titre de tout caractère qui pourrait perturber le prompt
 // ou l'URL (guillemets, retours à la ligne, crochets...) tout en gardant
 // les lettres accentuées, chiffres, espaces, apostrophes et tirets — un
 // titre de recette français reste lisible une fois nettoyé.
-function sanitizeTitle(title) {
+function sanitizeTitle(title: unknown): string {
   return String(title || '')
     .normalize('NFC')
     .replace(/[\r\n\t]+/g, ' ')
@@ -24,7 +36,7 @@ const DISH_DESCRIPTION_OVERRIDES = [
   { test: /cr[eê]pes?/i, description: 'thin French crepes stack with golden edges' },
 ];
 
-function resolveDishDescription(title) {
+function resolveDishDescription(title: string): string {
   const override = DISH_DESCRIPTION_OVERRIDES.find((o) => o.test.test(title));
   return override ? override.description : title;
 }
@@ -38,7 +50,7 @@ const BREAD_LIKE_SWEET = /pains?\s+au\s+lait|brioche|viennoiserie|croissant/i;
 // Habillage stylistique commun à toutes les photos — vocabulaire de
 // photographie culinaire professionnelle plutôt que le simple titre brut,
 // pour des résultats bien plus qualitatifs et cohérents entre eux.
-function buildStyledPrompt(title, category) {
+function buildStyledPrompt(title: string, category: unknown): string {
   const dishDescription = resolveDishDescription(title);
 
   const flavor = category === 'Sucré'
@@ -61,7 +73,7 @@ function buildStyledPrompt(title, category) {
   ].join(', ');
 }
 
-export default async function handler(req, res) {
+export default async function handler(req: ApiRequest, res: ApiResponse) {
   // On s'assure que c'est bien une requête POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Méthode non autorisée' });
