@@ -40,7 +40,7 @@ import { getDevLogEntries, clearDevLog, subscribeDevLog } from "../../utils/devL
 /*  le permettrait, hors de portée d'une clé publiée côté client.                            */
 /* ------------------------------------------------------------------ */
 
-function formatBytes(bytes) {
+function formatBytes(bytes: number | null | undefined): string {
   if (bytes == null || Number.isNaN(bytes)) return "—";
   if (bytes < 1024) return `${bytes} o`;
   const units = ["Ko", "Mo", "Go"];
@@ -53,11 +53,11 @@ function formatBytes(bytes) {
   return `${value.toFixed(1)} ${units[unitIndex]}`;
 }
 
-function localStorageByteSize() {
+function localStorageByteSize(): number | null {
   try {
     let total = 0;
     for (let i = 0; i < localStorage.length; i += 1) {
-      const key = localStorage.key(i);
+      const key = localStorage.key(i) as string;
       const value = localStorage.getItem(key) || "";
       total += (key.length + value.length) * 2; // UTF-16 : 2 octets/caractère
     }
@@ -70,14 +70,14 @@ function localStorageByteSize() {
 // requestAnimationFrame existe en jsdom (voir les tests), mais un compteur
 // de FPS n'a de sens que dans un vrai navigateur qui peint réellement des
 // frames — désactivé pendant les tests via le paramètre `active`.
-function useFpsCounter(active) {
-  const [fps, setFps] = useState(null);
+function useFpsCounter(active: boolean): number | null {
+  const [fps, setFps] = useState<number | null>(null);
   useEffect(() => {
     if (!active || typeof requestAnimationFrame !== "function") return undefined;
     let frameCount = 0;
     let lastSample = performance.now();
-    let raf;
-    const tick = (now) => {
+    let raf: number;
+    const tick = (now: number) => {
       frameCount += 1;
       const elapsed = now - lastSample;
       if (elapsed >= 500) {
@@ -93,11 +93,18 @@ function useFpsCounter(active) {
   return fps;
 }
 
-function fpsTone(fps) {
+function fpsTone(fps: number | null): string {
   if (fps == null) return "";
   if (fps >= 50) return "diagnostics-tone-good";
   if (fps >= 30) return "diagnostics-tone-warn";
   return "diagnostics-tone-bad";
+}
+
+interface ConfirmButtonProps {
+  label: string;
+  armedLabel: string;
+  onConfirm: () => void;
+  danger?: boolean;
 }
 
 // Bouton d'action destructive à double confirmation : un premier clic
@@ -106,7 +113,7 @@ function fpsTone(fps) {
 // modale de confirmation empilée par-dessus ce panneau déjà lui-même une
 // modale, pour un geste qui doit rester rapide sur un panneau de debug.
 const ARM_TIMEOUT_MS = 4000;
-function ConfirmButton({ label, armedLabel, onConfirm, danger }) {
+function ConfirmButton({ label, armedLabel, onConfirm, danger }: ConfirmButtonProps) {
   const [armed, setArmed] = useState(false);
   useEffect(() => {
     if (!armed) return undefined;
@@ -132,18 +139,33 @@ function ConfirmButton({ label, armedLabel, onConfirm, danger }) {
   );
 }
 
-export default function DiagnosticsPanelModal({ onClose, showToast, onResetOnboarding }) {
+interface DiagnosticsPanelModalProps {
+  onClose: () => void;
+  showToast: (msg: string) => void;
+  onResetOnboarding?: () => void;
+}
+
+interface TableCounts {
+  recipes: number | null | undefined;
+  shopping_lists: number | null | undefined;
+}
+
+type PerformanceWithMemory = Performance & {
+  memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number };
+};
+
+export default function DiagnosticsPanelModal({ onClose, showToast, onResetOnboarding }: DiagnosticsPanelModalProps) {
   const { t } = useTranslation();
-  const focusTrapRef = useFocusTrap(onClose);
+  const focusTrapRef = useFocusTrap<HTMLDivElement>(onClose);
   const sheet = useDismissibleSheet(onClose, { scrollRef: focusTrapRef });
-  const setPanelRef = (node) => { focusTrapRef.current = node; };
+  const setPanelRef = (node: HTMLDivElement | null) => { focusTrapRef.current = node; };
 
   const fps = useFpsCounter(true);
-  const memory = typeof performance !== "undefined" ? performance.memory : null;
+  const memory = typeof performance !== "undefined" ? (performance as PerformanceWithMemory).memory : undefined;
 
-  const [storageEstimate, setStorageEstimate] = useState(null);
-  const [localBytes, setLocalBytes] = useState(null);
-  const [imageCacheCounts, setImageCacheCounts] = useState(null);
+  const [storageEstimate, setStorageEstimate] = useState<StorageEstimate | null>(null);
+  const [localBytes, setLocalBytes] = useState<number | null>(null);
+  const [imageCacheCounts, setImageCacheCounts] = useState<Record<string, number | null> | null>(null);
   const refreshStorage = () => {
     if (typeof navigator !== "undefined" && navigator.storage && navigator.storage.estimate) {
       navigator.storage.estimate().then(setStorageEstimate).catch(() => setStorageEstimate(null));
@@ -154,7 +176,7 @@ export default function DiagnosticsPanelModal({ onClose, showToast, onResetOnboa
   useEffect(refreshStorage, []);
 
   const connection = useConnectionStatus();
-  const [latencyMs, setLatencyMs] = useState(null);
+  const [latencyMs, setLatencyMs] = useState<number | null>(null);
   const [testingLatency, setTestingLatency] = useState(false);
   const testLatency = async () => {
     setTestingLatency(true);
@@ -166,7 +188,7 @@ export default function DiagnosticsPanelModal({ onClose, showToast, onResetOnboa
   };
 
   const [queueSize, setQueueSize] = useState(() => getOfflineQueueSize());
-  const [tableCounts, setTableCounts] = useState({ recipes: undefined, shopping_lists: undefined });
+  const [tableCounts, setTableCounts] = useState<TableCounts>({ recipes: undefined, shopping_lists: undefined });
   useEffect(() => {
     if (!SUPABASE_READY) return;
     countTableRows("recipes").then((n) => setTableCounts((prev) => ({ ...prev, recipes: n })));
@@ -174,7 +196,7 @@ export default function DiagnosticsPanelModal({ onClose, showToast, onResetOnboa
   }, []);
 
   const [forceOffline, setForceOffline] = useState(() => isForceOfflineForDebug());
-  const toggleForceOffline = (next) => {
+  const toggleForceOffline = (next: boolean) => {
     setForceOfflineForDebug(next);
     setForceOffline(next);
     connection.recheck();
@@ -252,7 +274,7 @@ export default function DiagnosticsPanelModal({ onClose, showToast, onResetOnboa
                 <span className="diagnostics-metric-label">{t("diagnostics.imageCacheEntries")}</span>
                 <span className="diagnostics-metric-value">
                   {imageCacheCounts
-                    ? Object.values(imageCacheCounts).reduce((sum, n) => sum + (n || 0), 0)
+                    ? Object.values(imageCacheCounts).reduce((sum: number, n) => sum + (n || 0), 0)
                     : "…"}
                 </span>
               </div>
