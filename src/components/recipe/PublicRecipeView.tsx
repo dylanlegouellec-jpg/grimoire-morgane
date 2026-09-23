@@ -7,6 +7,26 @@ import { translateRecipeText } from "../../utils/recipeTranslation";
 import { categoryLabel, groupIngredients, groupSteps, formatDurationMinutes } from "../../utils/helpers";
 import { formatIngredientLine } from "../cookbook/CookbookDocument";
 import { NUTRI_COLORS } from "../../utils/nutriscore";
+import type { NormalizedIngredient } from "../../utils/ingredients";
+import type { StepEntry } from "../../utils/helpers";
+import type { NutriscoreGrade } from "../../utils/nutriscoreClient";
+
+// Décodée depuis le lien de partage (voir decodeRecipeCode, utils/helpers.ts)
+// — donnée non fiable par nature (encodée côté client par n'importe quel
+// auteur de recette, jamais revalidée côté serveur) : tous les champs
+// restent optionnels, chacun affiché défensivement ci-dessous.
+interface PublicRecipe {
+  title: string;
+  category?: string | null;
+  time?: number;
+  prep_time?: number;
+  servings?: number | string;
+  ingredients?: NormalizedIngredient[];
+  steps?: StepEntry[];
+  notes?: string | null;
+  imageUrl?: string | null;
+  nutriscoreGrade?: string | null;
+}
 
 /* ------------------------------------------------------------------ */
 /*  VUE PUBLIQUE D'UNE SEULE RECETTE — lien de partage (voir            */
@@ -36,7 +56,7 @@ import { NUTRI_COLORS } from "../../utils/nutriscore";
 /*  livre relié, qui n'ont pas de sens pour une seule recette isolée.                                                     */
 /* ------------------------------------------------------------------ */
 
-function RecipeContent({ recipe }) {
+function RecipeContent({ recipe }: { recipe: PublicRecipe }) {
   const { t, language } = useTranslation();
   const servings = Number(recipe.servings) || 1;
   const ingredients = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
@@ -44,7 +64,7 @@ function RecipeContent({ recipe }) {
   const isSucreCat = categoryLabel(recipe) === "Sucré";
   const hasPhoto = Boolean(recipe.imageUrl);
   const nutriGrade = recipe.nutriscoreGrade;
-  const nutriColor = NUTRI_COLORS[nutriGrade] || "#b3872a";
+  const nutriColor = NUTRI_COLORS[nutriGrade as NutriscoreGrade] || "#b3872a";
 
   useEffect(() => {
     try {
@@ -120,7 +140,11 @@ function InvalidLink() {
   );
 }
 
-export default function PublicRecipeView({ recipe }) {
+interface PublicRecipeViewProps {
+  recipe: PublicRecipe | null;
+}
+
+export default function PublicRecipeView({ recipe }: PublicRecipeViewProps) {
   return (
     <LanguageProvider language={getStoredLanguage()}>
       <div className="public-recipe-page">

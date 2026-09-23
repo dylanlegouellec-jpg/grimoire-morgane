@@ -7,6 +7,13 @@ import { overrideStatusBarColor } from "../../utils/theme";
 import Seal from "../common/Seal";
 import StepTimer from "./StepTimer";
 import PortionBadge from "./PortionBadge";
+import type { Recipe } from "../../hooks/useRecipes";
+
+interface CookModeProps {
+  recipe: Recipe;
+  onClose: () => void;
+  pressDuration?: number;
+}
 
 // Contrairement à RecipeDetail.jsx/RecipeForm.jsx, ce composant ne passait
 // jusqu'ici AUCUN texte de recette (titre, ingrédients, étapes) — ni les
@@ -14,7 +21,7 @@ import PortionBadge from "./PortionBadge";
 // par translateRecipeText()/t() : tout restait en français quelle que soit
 // la langue choisie dans les Réglages, y compris pendant la préparation
 // elle-même (l'écran le plus consulté d'une recette en cuisinant).
-export default function CookMode({ recipe, onClose, pressDuration = 750 }) {
+export default function CookMode({ recipe, onClose, pressDuration = 750 }: CookModeProps) {
   const { t, language } = useTranslation();
   const groups = groupSteps(recipe.steps);
   const [groupIndex, setGroupIndex] = useState(0);
@@ -24,7 +31,7 @@ export default function CookMode({ recipe, onClose, pressDuration = 750 }) {
 
   const currentGroup = groups[groupIndex] || { title: null, steps: [] };
   const currentDone = done[groupIndex] || [];
-  const toggleDone = (i) => {
+  const toggleDone = (i: number) => {
     triggerHaptic(12);
     setDone((prev) => prev.map((g, gi) => (gi === groupIndex ? g.map((d, si) => (si === i ? !d : d)) : g)));
   };
@@ -37,7 +44,7 @@ export default function CookMode({ recipe, onClose, pressDuration = 750 }) {
   const baseServings = Number(recipe.servings) || 1;
   const ratio = servings / baseServings;
   const scaledIngredients = recipe.ingredients.map((ing) =>
-    ing.isSection ? ing : { ...ing, qty: Math.round(ing.qty * ratio * 100) / 100 }
+    "isSection" in ing ? ing : { ...ing, qty: Math.round(ing.qty * ratio * 100) / 100 }
   );
 
   // Le mode cuisine est sombre et doit bloquer tout scroll de l'arrière-plan :
@@ -113,7 +120,7 @@ export default function CookMode({ recipe, onClose, pressDuration = 750 }) {
           <div className="cookmode-ingredients">
             <ul>
               {scaledIngredients.map((ing, i) =>
-                ing.isSection ? (
+                "isSection" in ing ? (
                   <li key={i} className="ingredient-section-title">{translateRecipeText(ing.title, language)}</li>
                 ) : (
                   <li key={i}>{ing.qty} {ing.unit ? `${translateRecipeText(ing.unit, language)} ` : ""}— {translateRecipeText(ing.name, language)}</li>
@@ -160,4 +167,3 @@ export default function CookMode({ recipe, onClose, pressDuration = 750 }) {
     </div>
   );
 }
-
