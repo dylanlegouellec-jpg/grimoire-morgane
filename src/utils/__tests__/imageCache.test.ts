@@ -15,9 +15,9 @@ afterEach(() => {
 
 describe("clearImageCaches", () => {
   it("supprime les deux caches d'images connus et rapporte ceux réellement supprimés", async () => {
-    const deleted = [];
+    const deleted: string[] = [];
     vi.stubGlobal("caches", {
-      delete: vi.fn(async (name) => {
+      delete: vi.fn(async (name: string) => {
         deleted.push(name);
         return true;
       }),

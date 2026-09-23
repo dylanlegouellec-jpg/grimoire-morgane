@@ -10,8 +10,9 @@ import { computeBreakpoints } from "../cookbookPdf";
 /*  son sommet, le renvoyant entièrement à la page suivante.                     */
 /* ------------------------------------------------------------------ */
 
-function mockRect(el, top, bottom) {
-  el.getBoundingClientRect = () => ({ top, bottom, height: bottom - top, left: 0, right: 100, width: 100 });
+function mockRect(el: HTMLElement, top: number, bottom: number) {
+  el.getBoundingClientRect = () =>
+    ({ top, bottom, height: bottom - top, left: 0, right: 100, width: 100 }) as DOMRect;
 }
 
 describe("computeBreakpoints", () => {
