@@ -4,6 +4,24 @@ import { Plus } from "lucide-react";
 import { normalize, triggerHaptic } from "../../utils/helpers";
 import { useTranslation } from "../../contexts/LanguageContext";
 import RecipeCard from "./RecipeCard";
+import type { Recipe } from "../../hooks/useRecipes";
+
+interface RecipesViewProps {
+  recipes: Recipe[];
+  filter: string;
+  search: string;
+  favoritesOnly: boolean;
+  onToggleFavorite: (id: string) => void;
+  onAddRequest: () => void;
+  onOpen: (recipe: Recipe) => void;
+  openRecipeId: string | null;
+  onRequestDelete: (recipe: Recipe) => void;
+  onUpdateRecipe: (recipe: Recipe) => void;
+  pressDuration?: number;
+  showNutriscore?: boolean;
+  householdId: string | null;
+  showToast?: (msg: string) => void;
+}
 
 export default function RecipesView({
   recipes,
@@ -20,7 +38,7 @@ export default function RecipesView({
   showNutriscore,
   householdId,
   showToast,
-}) {
+}: RecipesViewProps) {
   const { t } = useTranslation();
   const q = search.trim().toLowerCase();
 
@@ -56,14 +74,14 @@ export default function RecipesView({
   // visible, chaque filtre retrouve son propre échelonnement 0,50,100...ms
   // quel que soit son effectif.
   const { visibleIds, visibleIndexById } = useMemo(() => {
-    const ids = new Set();
-    const indexById = new Map();
+    const ids = new Set<string>();
+    const indexById = new Map<string, number>();
     sorted.forEach((r) => {
       if (filter !== "tout" && normalize(r.category) !== filter) return;
       if (favoritesOnly && !r.favorite) return;
       if (q) {
         const inTitle = r.title.toLowerCase().includes(q);
-        const inIngredients = r.ingredients.some((ing) => !ing.isSection && ing.name.toLowerCase().includes(q));
+        const inIngredients = r.ingredients.some((ing) => !("isSection" in ing) && ing.name.toLowerCase().includes(q));
         if (!inTitle && !inIngredients) return;
       }
       indexById.set(r.id, ids.size);
