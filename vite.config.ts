@@ -3,6 +3,31 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 import { countGrimoireLoc } from "./scripts/countLoc";
+import type { WorkboxPlugin } from "workbox-core";
+
+// DishArt.tsx (handleImgError) retente une image en échec avec un
+// paramètre anti-cache `?retry=<timestamp>`, jamais réutilisé deux fois —
+// sans ceci, cette URL matche quand même les règles CacheFirst ci-dessous
+// (elles ne filtrent que sur host/chemin, jamais sur la query string) et
+// s'y retrouve mise en cache comme une entrée à part entière, permanente,
+// qui ne sera plus jamais redemandée. Résultat mesuré : le compteur
+// "Images en cache" du Panneau de Diagnostics grimpe sans fin au fil des
+// ratés réseau, sans le moindre rapport avec le nombre réel de recettes
+// illustrées. Ce plugin Workbox normalise la clé de cache (lecture ET
+// écriture) en retirant ce paramètre : la version d'origine et sa
+// tentative retentée retombent alors sur la même entrée. Un vrai échec
+// réseau n'est de toute façon jamais mis en cache (cacheableResponse
+// n'accepte que les statuts 0/200 ci-dessous) : rien ne force donc jamais
+// une réponse cassée à ressortir du cache pour une entrée déjà normalisée.
+function ignoreCacheBustParam(paramName: string): WorkboxPlugin {
+  return {
+    cacheKeyWillBeUsed: async ({ request }) => {
+      const url = new URL(request.url);
+      url.searchParams.delete(paramName);
+      return url.toString();
+    },
+  };
+}
 
 // Calculé une seule fois au démarrage de Vite (dev ET build) — jamais dans
 // le navigateur, voir scripts/countLoc.ts. `vitest.config.ts` définit la
@@ -128,6 +153,7 @@ export default defineConfig({
               cacheName: "supabase-storage-images-v2",
               expiration: { maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 },
               cacheableResponse: { statuses: [0, 200] },
+              plugins: [ignoreCacheBustParam("retry")],
             },
           },
           {
@@ -146,6 +172,7 @@ export default defineConfig({
               cacheName: "pollinations-images-v2",
               expiration: { maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 },
               cacheableResponse: { statuses: [0, 200] },
+              plugins: [ignoreCacheBustParam("retry")],
             },
           },
         ],
