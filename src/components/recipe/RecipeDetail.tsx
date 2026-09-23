@@ -1,4 +1,4 @@
-import { useState, useRef, lazy, Suspense } from "react";
+import { useState, useRef, lazy, Suspense, type RefObject, type WheelEvent, type TouchEvent } from "react";
 import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform, useInView } from "motion/react";
 import { ChefHat, Clock, Minus, Plus, Share2, Users, Wheat, X } from "lucide-react";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
@@ -16,6 +16,9 @@ import Seal from "../common/Seal";
 import CategoryIcon from "../common/CategoryIcon";
 import AnimatedNumber from "../common/AnimatedNumber";
 import HeroTreatment, { heroTreatmentClassName, isLegendTreatment } from "./HeroTreatment";
+import type { Recipe } from "../../hooks/useRecipes";
+import type { StepEntry } from "../../utils/helpers";
+import type { NutriscoreGrade } from "../../utils/nutriscoreClient";
 
 // Chargée à la demande : RecipeDetail est monté dès qu'on ouvre une seule
 // recette (voir AppShell.jsx), mais partager n'est qu'une action parmi
@@ -31,7 +34,14 @@ const HERO_PARALLAX_RANGE_PX = 24;
 
 const FADE_ITEM_HIDDEN = { opacity: 0, y: 10 };
 const FADE_ITEM_VISIBLE = { opacity: 1, y: 0 };
-const FADE_ITEM_TRANSITION = { duration: 0.35, ease: [0.22, 1, 0.36, 1] };
+const FADE_ITEM_TRANSITION = { duration: 0.35, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] };
+
+interface FadeInItemProps {
+  root: RefObject<HTMLElement | null>;
+  reducedMotion?: boolean | null;
+  className?: string;
+  children: React.ReactNode;
+}
 
 // Ingrédient/étape qui apparaît en fondu dès qu'il entre dans la zone
 // visible du panneau qui défile ("root", voir RecipeDetail -> scrollRef) —
@@ -43,8 +53,8 @@ const FADE_ITEM_TRANSITION = { duration: 0.35, ease: [0.22, 1, 0.36, 1] };
 // useInView() est un hook et ne peut pas être appelé un nombre variable de
 // fois à l'intérieur d'une boucle — même contrainte que useDragControls()
 // pour IngredientRow/StepRow (voir RecipeForm.jsx).
-function FadeInItem({ root, reducedMotion, className, children }) {
-  const ref = useRef(null);
+function FadeInItem({ root, reducedMotion, className, children }: FadeInItemProps) {
+  const ref = useRef<HTMLLIElement>(null);
   const inView = useInView(ref, { root, once: true, margin: "0px 0px -60px 0px" });
   if (reducedMotion) {
     return <li className={className}>{children}</li>;
@@ -62,18 +72,51 @@ function FadeInItem({ root, reducedMotion, className, children }) {
   );
 }
 
-export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareText, showToast, showNutriscore = true, heroTreatment = DEFAULT_HERO_TREATMENT }) {
+// Formes d'ingrédient/étape gérées défensivement ci-dessous, en plus de
+// NormalizedIngredient/StepEntry "propres" (déjà normalisés à l'écriture,
+// voir utils/ingredients.ts) — jamais supprimées ici pour ne pas changer le
+// comportement existant face à d'éventuelles données plus anciennes/moins
+// strictes (ex. `amount` au lieu de `qty`, une étape `{ text }` plutôt
+// qu'une simple chaîne).
+interface LooseIngredient {
+  isSection?: boolean;
+  title?: string;
+  qty?: number | string | null;
+  amount?: number | string | null;
+  unit?: string;
+  name?: string;
+}
+type FlexibleIngredient = string | LooseIngredient;
+
+interface LooseStep {
+  text?: string;
+  title?: string;
+}
+type FlexibleStep = string | LooseStep;
+
+interface RecipeDetailProps {
+  recipe: Recipe | null;
+  onClose: () => void;
+  onCook?: (recipe: Recipe) => void;
+  onEdit?: (recipe: Recipe) => void;
+  shareText: (text: string, label: string) => void;
+  showToast: (msg: string) => void;
+  showNutriscore?: boolean;
+  heroTreatment?: string;
+}
+
+export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareText, showToast, showNutriscore = true, heroTreatment = DEFAULT_HERO_TREATMENT }: RecipeDetailProps) {
   // Sécurisation du nombre de portions initiales
   const baseServings = Number(recipe?.servings) || 1;
   const [servings, setServings] = useState(() => baseServings);
   const [showShare, setShowShare] = useState(false);
-  const scrollRef = useRef(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   // Trois refs à poser sur le même conteneur (scrollRef pour le geste de
   // fermeture par glissement ET pour l'appui prolongé en bas de page,
   // celle du piège à focus pour Échap/Tab) — combinées dans setScrollRef un
   // peu plus bas, un seul <div ref=...> ne pouvant recevoir qu'une seule
   // ref (même principe que SecretSettingsModal).
-  const focusTrapRef = useFocusTrap(onClose);
+  const focusTrapRef = useFocusTrap<HTMLDivElement>(onClose);
   // "Tirer pour fermer" (voir useDismissibleSheet.js — remplace l'ancienne
   // logique maison de ce fichier, qui dupliquait ce que ce hook partagé
   // fait déjà pour ~25 autres modales). Reste géré ICI, pas seulement dans
@@ -82,12 +125,12 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
   // partagent le même conteneur scrollable, mais concernent des bords
   // opposés (haut/bas) et ne peuvent jamais se déclencher en même temps.
   const sheet = useDismissibleSheet(onClose, { scrollRef });
-  const setScrollRef = (node) => {
+  const setScrollRef = (node: HTMLDivElement | null) => {
     scrollRef.current = node;
     focusTrapRef.current = node;
   };
   const overscrollRef = useRef(0);
-  const touchYRef = useRef(null);
+  const touchYRef = useRef<number | null>(null);
   // Parallax léger sur la photo pendant le défilement du panneau : la photo
   // se déplace un peu MOINS vite que le contenu qui défile autour d'elle,
   // donnant une impression de profondeur au lieu de suivre le scroll au
@@ -97,7 +140,7 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
   // quitte l'écran, jamais après. N'a d'effet que dans la mise en page
   // mobile à une colonne (voir responsive.css.js) : en paysage/desktop, la
   // colonne photo est fixe et ne défile pas, "scrollYProgress" reste à 0.
-  const heroRef = useRef(null);
+  const heroRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress: heroScrollProgress } = useScroll({
     container: scrollRef,
     target: heroRef,
@@ -106,10 +149,10 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
   const heroImageY = useTransform(heroScrollProgress, [0, 1], [0, HERO_PARALLAX_RANGE_PX]);
 
   // Garantit qu'ingredients est toujours un tableau
-  const rawIngredients = Array.isArray(recipe?.ingredients) ? recipe.ingredients : [];
+  const rawIngredients: FlexibleIngredient[] = Array.isArray(recipe?.ingredients) ? (recipe.ingredients as unknown as FlexibleIngredient[]) : [];
   // Même principe que RecipeCard : valeur stockée, calculée une seule
   // fois côté serveur à la création/édition — aucun appel réseau ici.
-  const nutri = recipe?.nutriscoreGrade || estimateNutriscoreLocal(rawIngredients, recipe?.category);
+  const nutri = (recipe?.nutriscoreGrade || estimateNutriscoreLocal(rawIngredients as never, recipe?.category)) as NutriscoreGrade;
   const { language, dict } = useTranslation();
   const prefersReducedMotion = useReducedMotion();
 
@@ -125,10 +168,10 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
   const ratio = servings / baseServings;
 
   // Rendu et calcul robuste des ingrédients (gère les chaînes brutes et les objets de section)
-  const scaledIngredients = rawIngredients.map((ing) => {
+  const scaledIngredients: FlexibleIngredient[] = rawIngredients.map((ing) => {
     if (typeof ing === "string") return ing;
     if (ing?.isSection) return ing;
-    
+
     const qty = Number(ing?.qty || ing?.amount) || 0;
     return {
       ...ing,
@@ -141,7 +184,7 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
     if (onEdit) onEdit(recipe);
   };
 
-  const handleWheel = (e) => {
+  const handleWheel = (e: WheelEvent<HTMLDivElement>) => {
     const el = scrollRef.current;
     if (!el) return;
     const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 4;
@@ -165,11 +208,11 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
   // sur l'élément plus bas), `{...sheet.panHandlers}` finissait par
   // remplacer purement et simplement ces deux gestionnaires-ci, désactivant
   // le "tirer pour éditer" en bas de page (régression signalée).
-  const handleTouchStart = (e) => {
+  const handleTouchStart = (e: TouchEvent<HTMLDivElement>) => {
     touchYRef.current = e.touches[0].clientY;
   };
 
-  const handleTouchMove = (e) => {
+  const handleTouchMove = (e: TouchEvent<HTMLDivElement>) => {
     const el = scrollRef.current;
     if (!el || touchYRef.current == null) return;
     const currentY = e.touches[0].clientY;
@@ -185,17 +228,17 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
     }
   };
 
-  const safeSteps = Array.isArray(recipe.steps) ? recipe.steps : [];
+  const safeSteps: FlexibleStep[] = Array.isArray(recipe.steps) ? (recipe.steps as unknown as FlexibleStep[]) : [];
 
   // Fait tourner les deux systèmes de geste tactile en même temps sur ce
   // même nœud (voir commentaire au-dessus de handleTouchStart) — sans ça,
   // `{...sheet.panHandlers}` écrase silencieusement onTouchStart/onTouchMove
   // ci-dessus rien qu'en étant étalé après eux dans le JSX.
-  const composedTouchStart = (e) => {
+  const composedTouchStart = (e: TouchEvent<HTMLDivElement>) => {
     handleTouchStart(e);
     sheet.panHandlers.onTouchStart(e);
   };
-  const composedTouchMove = (e) => {
+  const composedTouchMove = (e: TouchEvent<HTMLDivElement>) => {
     handleTouchMove(e);
     sheet.panHandlers.onTouchMove(e);
   };
@@ -242,7 +285,7 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
               {isLegendTreatment(heroTreatment) && (
                 <div className="hero-legende-caption">
                   <div className="card-top-row">
-                    <span className={`chip ${categoryClass(recipe)}`}>{dict.labels[categoryLabel(recipe)] || categoryLabel(recipe)}</span>
+                    <span className={`chip ${categoryClass(recipe)}`}>{(dict.labels as Record<string, string>)[categoryLabel(recipe)] || categoryLabel(recipe)}</span>
                     {showNutriscore && (
                       <span className="nutri-badge" style={{ background: NUTRI_COLORS[nutri] }}>{nutri}</span>
                     )}
@@ -254,7 +297,7 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
             {!isLegendTreatment(heroTreatment) && (
               <>
                 <div className="card-top-row" style={{ marginTop: 4 }}>
-                  <span className={`chip ${categoryClass(recipe)}`}>{dict.labels[categoryLabel(recipe)] || categoryLabel(recipe)}</span>
+                  <span className={`chip ${categoryClass(recipe)}`}>{(dict.labels as Record<string, string>)[categoryLabel(recipe)] || categoryLabel(recipe)}</span>
                   {showNutriscore && (
                     <span className="nutri-badge" style={{ background: NUTRI_COLORS[nutri] }}>{nutri}</span>
                   )}
@@ -263,7 +306,7 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
               </>
             )}
             <div className="card-meta" style={{ marginBottom: 10 }}>
-              <span><Clock size={13} /> {recipe.time || recipe.prep_time || 0} min</span>
+              <span><Clock size={13} /> {recipe.time || 0} min</span>
               {recipe.carbs ? (
                 <span className="carbs-badge"><CategoryIcon emoji="🍞" icon={Wheat} size={13} /> {Math.round(recipe.carbs * servings)} g glucides</span>
               ) : null}
@@ -301,7 +344,7 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
                 if (ing?.isSection) {
                   return (
                     <FadeInItem key={i} root={scrollRef} reducedMotion={prefersReducedMotion} className="ingredient-section-title">
-                      {translateRecipeText(ing.title, language)}
+                      {translateRecipeText(ing.title || "", language)}
                     </FadeInItem>
                   );
                 }
@@ -313,13 +356,13 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
               })}
             </ul>
             <h4>Préparation</h4>
-            {groupSteps(safeSteps).map((group, gi) => (
+            {groupSteps(safeSteps as unknown as StepEntry[]).map((group, gi) => (
               <div key={gi} className="steps-group">
                 {group.title && <h5 className="steps-group-title">{translateRecipeText(group.title, language)}</h5>}
                 <ol className="steps-list">
                   {group.steps.map((s, si) => (
                     <FadeInItem key={si} root={scrollRef} reducedMotion={prefersReducedMotion}>
-                      {translateRecipeText(typeof s === "string" ? s : s.text || s.title, language)}
+                      {translateRecipeText(typeof s === "string" ? s : (s as unknown as LooseStep).text || (s as unknown as LooseStep).title || "", language)}
                     </FadeInItem>
                   ))}
                 </ol>
@@ -342,7 +385,7 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
             <ShareRecipeModal
               recipe={recipe}
               servings={servings}
-              ingredients={scaledIngredients}
+              ingredients={scaledIngredients as never}
               onClose={() => setShowShare(false)}
               shareText={shareText}
               showToast={showToast}
