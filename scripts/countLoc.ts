@@ -6,7 +6,7 @@ import { join, extname } from "node:path";
 /*  Panneau de Diagnostics (Réglages > Développeur). Calculé une seule     */
 /*  fois AU BUILD (ici, jamais dans le navigateur : le code source n'est     */
 /*  pas accessible à l'app une fois servie) et injecté comme constante         */
-/*  littérale via `define` (voir vite.config.js ET vitest.config.js — les       */
+/*  littérale via `define` (voir vite.config.ts ET vitest.config.ts — les       */
 /*  deux doivent rester synchronisés, sans quoi `__GRIMOIRE_LOC__` serait          */
 /*  une variable non définie pendant les tests).                                    */
 /* ------------------------------------------------------------------ */
@@ -19,9 +19,9 @@ import { join, extname } from "node:path";
 const EXTENSIONS = new Set([".js", ".jsx", ".ts", ".tsx"]);
 const IGNORE_DIRS = new Set(["node_modules", "dist"]);
 
-export function countGrimoireLoc(rootDir) {
+export function countGrimoireLoc(rootDir: string): number {
   let total = 0;
-  function walk(dir) {
+  function walk(dir: string): void {
     for (const entry of readdirSync(dir)) {
       if (IGNORE_DIRS.has(entry)) continue;
       const fullPath = join(dir, entry);

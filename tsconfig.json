@@ -13,5 +13,5 @@
     "checkJs": false,
     "strict": true
   },
-  "include": ["src", "api"]
+  "include": ["src", "api", "scripts", "vite.config.ts", "vitest.config.ts"]
 }
