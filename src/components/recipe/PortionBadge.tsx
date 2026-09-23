@@ -1,11 +1,19 @@
-import { useState, useRef } from "react";
+import { useState, useRef, type MouseEvent } from "react";
 import { triggerHaptic } from "../../utils/helpers";
 import PortionWheel from "./PortionWheel";
 import Seal from "../common/Seal";
 
-export default function PortionBadge({ value, onChange, pressDuration = 750 }) {
-  const [pressPhase, setPressPhase] = useState("idle"); // idle | charging | open
-  const timerRef = useRef(null);
+type PressPhase = "idle" | "charging" | "open";
+
+interface PortionBadgeProps {
+  value: number;
+  onChange: (value: number) => void;
+  pressDuration?: number;
+}
+
+export default function PortionBadge({ value, onChange, pressDuration = 750 }: PortionBadgeProps) {
+  const [pressPhase, setPressPhase] = useState<PressPhase>("idle");
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const startPress = () => {
     if (pressPhase === "open") return;
@@ -31,7 +39,7 @@ export default function PortionBadge({ value, onChange, pressDuration = 750 }) {
         onMouseDown={startPress}
         onMouseUp={cancelPress}
         onMouseLeave={cancelPress}
-        onContextMenu={(e) => e.preventDefault()}
+        onContextMenu={(e: MouseEvent<HTMLButtonElement>) => e.preventDefault()}
         aria-label="Maintenir pour ajuster les portions"
       >
         {value}
@@ -45,4 +53,3 @@ export default function PortionBadge({ value, onChange, pressDuration = 750 }) {
     </div>
   );
 }
-

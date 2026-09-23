@@ -1,14 +1,25 @@
 import { useEffect, useRef } from "react";
 import { triggerHaptic } from "../../utils/haptics";
 
-export default function PortionWheel({ value, onChange, min = 1, max = 24, step = 1, dark = true, suffix = "pers.", onSettle }) {
-  const listRef = useRef(null);
+interface PortionWheelProps {
+  value: number;
+  onChange: (value: number) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+  dark?: boolean;
+  suffix?: string;
+  onSettle?: () => void;
+}
+
+export default function PortionWheel({ value, onChange, min = 1, max = 24, step = 1, dark = true, suffix = "pers.", onSettle }: PortionWheelProps) {
+  const listRef = useRef<HTMLDivElement>(null);
   const itemHeight = 40;
   const wheelHeight = 120;
   const padHeight = (wheelHeight - itemHeight) / 2;
   const count = Math.max(1, Math.floor((max - min) / step) + 1);
   const numbers = Array.from({ length: count }, (_, i) => Math.round((min + i * step) * 100) / 100);
-  const closestIndex = (v) => {
+  const closestIndex = (v: number) => {
     let best = 0;
     let bestDist = Infinity;
     numbers.forEach((n, i) => {
@@ -19,7 +30,7 @@ export default function PortionWheel({ value, onChange, min = 1, max = 24, step 
   };
   const lastReportedIdx = useRef(closestIndex(value));
   const mountedAtRef = useRef(0);
-  const settleTimerRef = useRef(null);
+  const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     mountedAtRef.current = Date.now();
@@ -70,4 +81,3 @@ export default function PortionWheel({ value, onChange, min = 1, max = 24, step 
     </div>
   );
 }
-
