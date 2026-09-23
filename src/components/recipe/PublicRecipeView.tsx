@@ -15,7 +15,7 @@ import type { NutriscoreGrade } from "../../utils/nutriscoreClient";
 // — donnée non fiable par nature (encodée côté client par n'importe quel
 // auteur de recette, jamais revalidée côté serveur) : tous les champs
 // restent optionnels, chacun affiché défensivement ci-dessous.
-interface PublicRecipe {
+export interface PublicRecipe {
   title: string;
   category?: string | null;
   time?: number;
