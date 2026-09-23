@@ -1,10 +1,15 @@
+import type { ReactNode } from "react";
 import { isSucre } from "../../utils/helpers";
 
 /* ------------------------------------------------------------------ */
 /*  ILLUSTRATIONS SVG "AQUARELLE CULINAIRE" (aucune image externe)     */
 /* ------------------------------------------------------------------ */
 
-export function TarteSVG({ uid }) {
+interface IllustrationSvgProps {
+  uid: string;
+}
+
+export function TarteSVG({ uid }: IllustrationSvgProps) {
   return (
     <>
       <circle cx="100" cy="82" r="52" fill={`url(#main-${uid})`} filter={`url(#shadow-${uid})`} />
@@ -19,7 +24,7 @@ export function TarteSVG({ uid }) {
   );
 }
 
-export function ChocolatSVG({ uid }) {
+export function ChocolatSVG({ uid }: IllustrationSvgProps) {
   return (
     <>
       <rect x="55" y="42" width="90" height="68" rx="10" fill={`url(#main-${uid})`} filter={`url(#shadow-${uid})`} />
@@ -35,7 +40,7 @@ export function ChocolatSVG({ uid }) {
   );
 }
 
-export function CrepeSVG({ uid }) {
+export function CrepeSVG({ uid }: IllustrationSvgProps) {
   return (
     <>
       <ellipse cx="100" cy="100" rx="58" ry="14" fill="#8a6a2e" opacity="0.55" />
@@ -48,7 +53,7 @@ export function CrepeSVG({ uid }) {
   );
 }
 
-export function PouletSVG({ uid }) {
+export function PouletSVG({ uid }: IllustrationSvgProps) {
   return (
     <>
       <ellipse cx="100" cy="82" rx="50" ry="34" fill={`url(#main-${uid})`} filter={`url(#shadow-${uid})`} />
@@ -64,7 +69,7 @@ export function PouletSVG({ uid }) {
   );
 }
 
-export function RatatouilleSVG({ uid }) {
+export function RatatouilleSVG({ uid }: IllustrationSvgProps) {
   const colors = ["#6f8f4a", "#b1462f", "#7a5a86", "#c98a2c"];
   const dots = [-42, -28, -14, 0, 14, 28, 42];
   return (
@@ -78,7 +83,7 @@ export function RatatouilleSVG({ uid }) {
   );
 }
 
-export function QuicheSVG({ uid }) {
+export function QuicheSVG({ uid }: IllustrationSvgProps) {
   return (
     <>
       <path d="M30 118 L100 30 L170 118 Z" fill="#8a6a2e" opacity="0.9" />
@@ -93,7 +98,7 @@ export function QuicheSVG({ uid }) {
   );
 }
 
-export function DessertDefaultSVG({ uid }) {
+export function DessertDefaultSVG({ uid }: IllustrationSvgProps) {
   return (
     <>
       <ellipse cx="100" cy="105" rx="46" ry="12" fill="#5a3a4a" opacity="0.3" />
@@ -105,7 +110,7 @@ export function DessertDefaultSVG({ uid }) {
   );
 }
 
-export function PlatDefaultSVG({ uid }) {
+export function PlatDefaultSVG({ uid }: IllustrationSvgProps) {
   return (
     <>
       <ellipse cx="100" cy="100" rx="60" ry="22" fill={`url(#main-${uid})`} filter={`url(#shadow-${uid})`} />
@@ -118,7 +123,7 @@ export function PlatDefaultSVG({ uid }) {
   );
 }
 
-export function EmpanadaSVG({ uid }) {
+export function EmpanadaSVG({ uid }: IllustrationSvgProps) {
   const crimps = [46, 58, 70, 82, 94, 106, 118, 130, 142, 154];
   return (
     <>
@@ -141,7 +146,13 @@ export function EmpanadaSVG({ uid }) {
 /*  CATALOGUE DES ILLUSTRATIONS & DÉTECTION DU PLAT                    */
 /* ------------------------------------------------------------------ */
 
-export const ILLUSTRATIONS = {
+interface IllustrationDef {
+  label: string;
+  palette: [string, string, string];
+  render: (props: IllustrationSvgProps) => ReactNode;
+}
+
+export const ILLUSTRATIONS: Record<string, IllustrationDef> = {
   tarte: { label: "Tarte dorée", palette: ["#f2c869", "#c9862c", "#7c4a1e"], render: TarteSVG },
   chocolat: { label: "Fondant au chocolat", palette: ["#8a5a3a", "#5a2f1e", "#2e160c"], render: ChocolatSVG },
   crepe: { label: "Crêpes", palette: ["#f6e9c2", "#e3c26a", "#8a6a2e"], render: CrepeSVG },
@@ -153,7 +164,12 @@ export const ILLUSTRATIONS = {
   plat: { label: "Plat mijoté", palette: ["#c9d3a8", "#8a9a5e", "#4a5c34"], render: PlatDefaultSVG },
 };
 
-export const DISH_MATCH = [
+interface DishMatchEntry {
+  test: RegExp;
+  key: string;
+}
+
+export const DISH_MATCH: DishMatchEntry[] = [
   { test: /kouign|amann|tarte/i, key: "tarte" },
   { test: /chocolat|fondant|cacao/i, key: "chocolat" },
   { test: /cr[êe]pe|galette/i, key: "crepe" },
@@ -163,7 +179,17 @@ export const DISH_MATCH = [
   { test: /empanada/i, key: "empanada" },
 ];
 
-export function resolveIllustrationKey(recipe) {
+// Volontairement permissif : appelé aussi bien avec une Recipe complète
+// (DishArt.jsx) qu'avec un objet partiel construit à la volée (ex.
+// RecipeForm.jsx, qui n'a encore ni id ni ingrédients au moment de choisir
+// l'illustration d'une recette en cours de création).
+interface IllustrationKeyInput {
+  illustrationKey?: string | null;
+  title?: string | null;
+  category?: string | null;
+}
+
+export function resolveIllustrationKey(recipe: IllustrationKeyInput): string {
   if (recipe.illustrationKey && ILLUSTRATIONS[recipe.illustrationKey]) return recipe.illustrationKey;
   const match = DISH_MATCH.find((d) => d.test.test(recipe.title || ""));
   if (match) return match.key;

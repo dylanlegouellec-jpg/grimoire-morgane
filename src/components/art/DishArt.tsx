@@ -3,8 +3,19 @@ import { ILLUSTRATIONS, resolveIllustrationKey } from "./illustrations";
 
 let dishArtCounter = 0;
 
-export default function DishArt({ recipe }) {
-  const idRef = useRef(null);
+interface DishArtRecipe {
+  title?: string | null;
+  category?: string | null;
+  illustrationKey?: string | null;
+  imageUrl?: string | null;
+}
+
+interface DishArtProps {
+  recipe: DishArtRecipe;
+}
+
+export default function DishArt({ recipe }: DishArtProps) {
+  const idRef = useRef<string | null>(null);
   if (idRef.current === null) idRef.current = `dish-${dishArtCounter++}`;
   const artUid = idRef.current;
 
@@ -41,7 +52,7 @@ export default function DishArt({ recipe }) {
   // l'autre (jamais démontée/remontée, voir RecipeCard.jsx), un simple
   // callback ref ne se redéclencherait donc pas au fil des changements de
   // source (retry anti-cache, nouvelle photo choisie...).
-  const imgElRef = useRef(null);
+  const imgElRef = useRef<HTMLImageElement | null>(null);
   useEffect(() => {
     const node = imgElRef.current;
     if (node && node.complete && node.naturalWidth > 0) setPhotoLoaded(true);
@@ -57,7 +68,7 @@ export default function DishArt({ recipe }) {
     // Storage interrompu...).
     if (!retriedRef.current && navigator.onLine) {
       retriedRef.current = true;
-      const sep = rawUrl.includes("?") ? "&" : "?";
+      const sep = rawUrl!.includes("?") ? "&" : "?";
       setImgSrc(`${rawUrl}${sep}retry=${Date.now()}`);
     } else {
       setImgFailed(true);
@@ -97,7 +108,7 @@ export default function DishArt({ recipe }) {
       >
         <img
           ref={imgElRef}
-          src={imgSrc}
+          src={imgSrc ?? undefined}
           alt={recipe.title || "Illustration de la recette"}
           className="illus-photo"
           draggable="false"
