@@ -44,7 +44,7 @@ export default function CookMode({ recipe, onClose, pressDuration = 750 }: CookM
   const baseServings = Number(recipe.servings) || 1;
   const ratio = servings / baseServings;
   const scaledIngredients = recipe.ingredients.map((ing) =>
-    "isSection" in ing ? ing : { ...ing, qty: Math.round(ing.qty * ratio * 100) / 100 }
+    "isSection" in ing ? ing : { ...ing, qty: Math.round((ing.qty ?? 0) * ratio * 100) / 100 }
   );
 
   // Le mode cuisine est sombre et doit bloquer tout scroll de l'arrière-plan :
