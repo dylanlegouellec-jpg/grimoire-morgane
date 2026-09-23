@@ -181,13 +181,25 @@ export default function useRecipes({ householdId, initialRecipes = [], showToast
     const reader = new FileReader();
     reader.onload = async () => {
       try {
-        const data: any = JSON.parse(reader.result as string);
-        const list: any[] = Array.isArray(data) ? data : Array.isArray(data.recipes) ? data.recipes : [data];
-        const imported = list.filter((r) => r && r.title).map((r) => ({ ...r, id: nextId(), favorite: false, ingredients: normalizeIngredientList(r.ingredients) }));
+        // Contenu d'un fichier de grimoire exporté par un tiers — jamais
+        // revalidé côté serveur, forme non fiable par nature (voir
+        // decodeRecipeCode, utils/helpers.ts, pour le même principe côté
+        // lien de partage). `unknown` + narrowage minimal plutôt qu'un
+        // type Recipe complet, imposé par ce même flou.
+        const data: unknown = JSON.parse(reader.result as string);
+        const dataRecord = data as Record<string, unknown>;
+        const list: Record<string, unknown>[] = Array.isArray(data)
+          ? (data as Record<string, unknown>[])
+          : Array.isArray(dataRecord.recipes)
+            ? (dataRecord.recipes as Record<string, unknown>[])
+            : [dataRecord];
+        const imported = list
+          .filter((r) => r && r.title)
+          .map((r) => ({ ...r, id: nextId(), favorite: false, ingredients: normalizeIngredientList(r.ingredients) })) as unknown as Recipe[];
         setRecipes((prev) => [...imported, ...prev]);
         if (SUPABASE_READY) {
           for (const r of imported) {
-            try { await insertRow("recipes", mapRecipeToRow(r, householdId)); } catch { /* on continue les autres */ }
+            try { await insertRow("recipes", mapRecipeToRow(r as unknown as Record<string, unknown>, householdId)); } catch { /* on continue les autres */ }
           }
         }
         showToast(`${imported.length} recette(s) importée(s) !`);

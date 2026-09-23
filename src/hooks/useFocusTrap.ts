@@ -167,7 +167,6 @@ export default function useFocusTrap<T extends HTMLElement = HTMLElement>(onClos
         previouslyFocused.focus({ preventScroll: true });
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return containerRef;

@@ -98,7 +98,12 @@ export default function ShoppingView({
   // Supabase, comme la portée du plan de repas.
   const [aisleOrder, setAisleOrder] = useState<string[]>(() => getStoredAisleOrder() || DEFAULT_AISLE_ORDER);
 
-  const items = activeList ? activeList.items : [];
+  // Mémoïsé pour que la branche `[]` (aucune liste active) garde elle
+  // aussi une référence stable d'un rendu à l'autre — sinon le useMemo
+  // ci-dessous (bought/grouped/aisleCount) la verrait comme "changée" à
+  // chaque rendu tant qu'aucune liste n'est active, et perdrait son intérêt
+  // documenté juste en dessous.
+  const items = useMemo(() => (activeList ? activeList.items : []), [activeList]);
 
   // "/" permet de saisir plusieurs articles d'un coup (ex. "Lait / Pain /
   // Œufs") — même geste que pour les repas personnalisés du planning (voir
