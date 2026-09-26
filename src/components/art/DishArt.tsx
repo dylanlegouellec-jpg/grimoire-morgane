@@ -36,9 +36,17 @@ export default function DishArt({ recipe }: DishArtProps) {
   // "zone vide -> image nette" quand le réseau ou le cache sont lents.
   const [photoLoaded, setPhotoLoaded] = useState(false);
   const retriedRef = useRef(false);
+  // Délai avant le retry ci-dessous (handleImgError) — jamais démarré sur
+  // une <img> démontée/remontée entre-temps, ni laissé courir après un
+  // changement de recette (voir les deux points d'annulation ci-dessous).
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
+  }, []);
   const lastUrlRef = useRef(rawUrl);
   if (lastUrlRef.current !== rawUrl) {
     lastUrlRef.current = rawUrl;
+    if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
     setImgSrc(rawUrl);
     setImgFailed(false);
     setPhotoLoaded(false);
@@ -68,8 +76,19 @@ export default function DishArt({ recipe }: DishArtProps) {
     // Storage interrompu...).
     if (!retriedRef.current && navigator.onLine) {
       retriedRef.current = true;
-      const sep = rawUrl!.includes("?") ? "&" : "?";
-      setImgSrc(`${rawUrl}${sep}retry=${Date.now()}`);
+      // Attend un peu avant de retenter, au lieu d'un retry instantané :
+      // sur une connexion mobile capricieuse (5G avec peu de barres), une
+      // coupure ponctuelle dure typiquement plusieurs secondes — retenter
+      // dans la même milliseconde retombe presque à coup sûr dans la même
+      // fenêtre défaillante (observé en usage réel : plusieurs recettes
+      // différentes échouaient à chaque rechargement, jamais les mêmes,
+      // signe d'un problème de timing réseau plutôt que d'un fichier
+      // réellement cassé). Un court délai laisse la connexion se rétablir
+      // avant la seconde tentative.
+      retryTimeoutRef.current = setTimeout(() => {
+        const sep = rawUrl!.includes("?") ? "&" : "?";
+        setImgSrc(`${rawUrl}${sep}retry=${Date.now()}`);
+      }, 1500);
     } else {
       setImgFailed(true);
     }
