@@ -144,13 +144,27 @@ export default function DishArt({ recipe }: DishArtProps) {
       >
         <img
           ref={imgElRef}
+          // crossOrigin AVANT src, jamais après : React applique les
+          // attributs d'un <img> nouvellement monté dans l'ordre où ils
+          // sont écrits ici, et poser une valeur sur `src` déclenche
+          // IMMÉDIATEMENT le téléchargement avec le `crossOrigin` déjà en
+          // place sur le noeud à cet instant précis — un attribut posé
+          // après n'a plus aucun effet sur cette requête déjà partie.
+          // `src` avant `crossOrigin` faisait donc systématiquement partir
+          // le tout premier chargement de chaque carte en "no-cors" malgré
+          // sa présence plus bas dans ce JSX, empoisonnant le cache du
+          // service worker de la même façon que les fonds CSS de
+          // CookbookDocument.tsx/PublicRecipeView.tsx (voir leurs
+          // commentaires) — mais ici sans avoir besoin d'ouvrir la moindre
+          // fonctionnalité de partage/livre de cuisine, juste en affichant
+          // normalement une carte de recette pour la première fois.
+          crossOrigin="anonymous"
           src={imgSrc ?? undefined}
           alt={recipe.title || "Illustration de la recette"}
           className="illus-photo"
           draggable="false"
           loading="lazy"
           decoding="async"
-          crossOrigin="anonymous"
           onLoad={() => setPhotoLoaded(true)}
           onError={handleImgError}
         />
