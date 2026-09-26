@@ -3,6 +3,13 @@ import { ILLUSTRATIONS, resolveIllustrationKey } from "./illustrations";
 
 let dishArtCounter = 0;
 
+// Délais croissants entre chaque retry (voir handleImgError) — une seule
+// tentative de secours après 1.5s n'a pas suffi en usage réel sur une 5G
+// vraiment capricieuse (coupures de plusieurs secondes) : deux tentatives,
+// la seconde plus espacée, laissent plus de marge à la connexion pour se
+// rétablir avant d'abandonner définitivement sur le placeholder vectoriel.
+const RETRY_DELAYS_MS = [1500, 3500];
+
 interface DishArtRecipe {
   title?: string | null;
   category?: string | null;
@@ -35,7 +42,7 @@ export default function DishArt({ recipe }: DishArtProps) {
   // que la photo n'a pas fini de se décoder — évite le passage brutal
   // "zone vide -> image nette" quand le réseau ou le cache sont lents.
   const [photoLoaded, setPhotoLoaded] = useState(false);
-  const retriedRef = useRef(false);
+  const retryCountRef = useRef(0);
   // Délai avant le retry ci-dessous (handleImgError) — jamais démarré sur
   // une <img> démontée/remontée entre-temps, ni laissé courir après un
   // changement de recette (voir les deux points d'annulation ci-dessous).
@@ -50,7 +57,7 @@ export default function DishArt({ recipe }: DishArtProps) {
     setImgSrc(rawUrl);
     setImgFailed(false);
     setPhotoLoaded(false);
-    retriedRef.current = false;
+    retryCountRef.current = 0;
   }
   // Une image déjà en cache HTTP peut être "complete" dès son tout premier
   // rendu — avant même que le navigateur n'ait déclenché onLoad ci-dessous —
@@ -74,8 +81,7 @@ export default function DishArt({ recipe }: DishArtProps) {
     // En ligne, on garde le comportement d'origine : un aller-retour raté
     // n'est pas forcément définitif (Pollinations en retard, upload Supabase
     // Storage interrompu...).
-    if (!retriedRef.current && navigator.onLine) {
-      retriedRef.current = true;
+    if (retryCountRef.current < RETRY_DELAYS_MS.length && navigator.onLine) {
       // Attend un peu avant de retenter, au lieu d'un retry instantané :
       // sur une connexion mobile capricieuse (5G avec peu de barres), une
       // coupure ponctuelle dure typiquement plusieurs secondes — retenter
@@ -83,12 +89,14 @@ export default function DishArt({ recipe }: DishArtProps) {
       // fenêtre défaillante (observé en usage réel : plusieurs recettes
       // différentes échouaient à chaque rechargement, jamais les mêmes,
       // signe d'un problème de timing réseau plutôt que d'un fichier
-      // réellement cassé). Un court délai laisse la connexion se rétablir
-      // avant la seconde tentative.
+      // réellement cassé). Délai croissant sur les tentatives suivantes
+      // (RETRY_DELAYS_MS) pour laisser plus de marge à la connexion.
+      const delay = RETRY_DELAYS_MS[retryCountRef.current];
+      retryCountRef.current += 1;
       retryTimeoutRef.current = setTimeout(() => {
         const sep = rawUrl!.includes("?") ? "&" : "?";
         setImgSrc(`${rawUrl}${sep}retry=${Date.now()}`);
-      }, 1500);
+      }, delay);
     } else {
       setImgFailed(true);
     }
