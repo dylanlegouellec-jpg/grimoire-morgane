@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { CSS } from "../../constants/styles.css";
 import { PUBLIC_RECIPE_CSS } from "../../constants/styles/publicRecipe.css";
 import { LanguageProvider, useTranslation } from "../../contexts/LanguageContext";
@@ -7,6 +7,7 @@ import { translateRecipeText } from "../../utils/recipeTranslation";
 import { categoryLabel, groupIngredients, groupSteps, formatDurationMinutes } from "../../utils/helpers";
 import { formatIngredientLine } from "../cookbook/CookbookDocument";
 import { NUTRI_COLORS } from "../../utils/nutriscore";
+import { getResolvedPhotoDataUrl } from "../../utils/imageCache";
 import type { NormalizedIngredient } from "../../utils/ingredients";
 import type { StepEntry } from "../../utils/helpers";
 import type { NutriscoreGrade } from "../../utils/nutriscoreClient";
@@ -74,12 +75,30 @@ function RecipeContent({ recipe }: { recipe: PublicRecipe }) {
     }
   }, [recipe.title, language]);
 
+  // Résolue en URL data: plutôt qu'affichée directement (voir
+  // getResolvedPhotoDataUrl, utils/imageCache.ts) : un fond CSS ne peut
+  // jamais être chargé en mode "cors", sa requête "no-cors" empoisonnerait
+  // sinon le cache partagé du service worker avec une réponse opaque —
+  // cette page publique de lien de partage tournait sur le même domaine
+  // (donc le même service worker) que le reste de l'app, cassant ensuite
+  // cette même photo dans la grille de recettes principale à chaque
+  // ouverture d'un lien de partage.
+  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!hasPhoto || !recipe.imageUrl) { setPhotoDataUrl(null); return undefined; }
+    let cancelled = false;
+    getResolvedPhotoDataUrl(recipe.imageUrl).then((dataUrl) => {
+      if (!cancelled) setPhotoDataUrl(dataUrl);
+    });
+    return () => { cancelled = true; };
+  }, [hasPhoto, recipe.imageUrl]);
+
   return (
     <section className="cookbook-page cookbook-recipe-page">
-      {hasPhoto && (
+      {hasPhoto && photoDataUrl && (
         <div
           className="cookbook-recipe-photo-wrap cookbook-recipe-photo-wrap--grande"
-          style={{ backgroundImage: `url("${recipe.imageUrl}")` }}
+          style={{ backgroundImage: `url("${photoDataUrl}")` }}
         />
       )}
       <div className="cookbook-recipe-badges">
