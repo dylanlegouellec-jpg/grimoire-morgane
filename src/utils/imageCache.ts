@@ -2,7 +2,20 @@
 // service worker (voir vite.config.js) : ce sont ces deux caches CacheFirst
 // qui rendent une image de recette disponible hors-ligne.
 const IMAGE_CACHE_NAMES = ["supabase-storage-images-v2", "pollinations-images-v2"];
-const PREFETCH_CONCURRENCY = 4;
+// Réduits suite à un comportement observé en usage réel : sur un grimoire
+// de 25 recettes, les dernières de la liste échouaient nettement plus
+// souvent que les premières, de façon systématique (pas aléatoire) — signe
+// d'une limitation de débit côté CDN (Cloudflare, devant Supabase Storage)
+// déclenchée par une rafale de requêtes rapprochées, plutôt que d'un
+// problème réseau générique. PREFETCH_CONCURRENCY était à 4, sans aucune
+// pause entre les requêtes d'un même worker : STAGGER_DELAY_MS étale
+// désormais chaque nouvelle requête dans le temps.
+const PREFETCH_CONCURRENCY = 2;
+const STAGGER_DELAY_MS = 200;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 /* ------------------------------------------------------------------ */
 /*  PRÉCHARGEMENT DES IMAGES DE RECETTES — pour qu'une recette reste       */
@@ -105,6 +118,10 @@ export async function prefetchRecipeImages(recipes: ImageSourceRecipe[]): Promis
         // Une image manquante/injoignable ne doit jamais bloquer le
         // préchargement des autres recettes de la liste.
       }
+      // Étale les requêtes dans le temps plutôt que de toutes les tirer
+      // dès que le worker précédent se libère (voir STAGGER_DELAY_MS
+      // ci-dessus) — inutile après la toute dernière URL.
+      if (index < urls.length) await sleep(STAGGER_DELAY_MS);
     }
   }
   await Promise.all(Array.from({ length: PREFETCH_CONCURRENCY }, worker));
