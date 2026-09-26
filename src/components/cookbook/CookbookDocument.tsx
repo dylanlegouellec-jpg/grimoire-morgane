@@ -1,8 +1,10 @@
+import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { translateRecipeText } from "../../utils/recipeTranslation";
 import { categoryLabel, groupIngredients, groupSteps, formatDurationMinutes } from "../../utils/helpers";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
+import { getResolvedPhotoDataUrl } from "../../utils/imageCache";
 import { COVER_COLORS, marginMm, pageDimensionsMm } from "../../constants/cookbook";
 import type { CookbookBuilderConfig, PhotoSize, TocMode } from "../../constants/cookbook";
 import type { Recipe } from "../../hooks/useRecipes";
@@ -177,6 +179,26 @@ export function RecipePage({ recipe, config, t, language, pageNumber, isLast, ru
   const nutriColor = NUTRI_COLORS[nutriGrade] || "#b3872a";
   const hasPhoto = Boolean(recipe.imageUrl) && config.photoSize !== "aucune";
 
+  // Résolue en URL data: plutôt qu'affichée directement (voir
+  // getResolvedPhotoDataUrl, utils/imageCache.ts) : un fond CSS ne peut
+  // jamais être chargé en mode "cors", sa requête "no-cors" empoisonnerait
+  // sinon le cache partagé du service worker avec une réponse opaque,
+  // cassant ensuite cette même photo partout ailleurs dans l'app (grille de
+  // recettes...). Le composant affiche donc l'illustration vectorielle par
+  // défaut (aucun rendu ci-dessous) le temps que ce fetch aboutisse, plutôt
+  // qu'un blanc — pas de nouveau cas d'échec par rapport à avant, juste un
+  // très bref délai la toute première fois qu'une recette illustrée est
+  // prévisualisée/exportée.
+  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!hasPhoto || !recipe.imageUrl) { setPhotoDataUrl(null); return undefined; }
+    let cancelled = false;
+    getResolvedPhotoDataUrl(recipe.imageUrl).then((dataUrl) => {
+      if (!cancelled) setPhotoDataUrl(dataUrl);
+    });
+    return () => { cancelled = true; };
+  }, [hasPhoto, recipe.imageUrl]);
+
   return (
     <section className={`cookbook-page cookbook-recipe-page ${isLast ? "cookbook-page--last" : ""}`}>
       <p className="cookbook-running-header">{runningTitle}</p>
@@ -188,10 +210,10 @@ export function RecipePage({ recipe, config, t, language, pageNumber, isLast, ru
           background-size:cover recadre correctement dans les deux cas
           (aperçu à l'écran ET rasterisation html2canvas), sans rien changer
           au rendu visuel normal du navigateur. */}
-      {hasPhoto && (
+      {hasPhoto && photoDataUrl && (
         <div
           className={`cookbook-recipe-photo-wrap cookbook-recipe-photo-wrap--${config.photoSize}`}
-          style={{ backgroundImage: `url("${recipe.imageUrl}")` }}
+          style={{ backgroundImage: `url("${photoDataUrl}")` }}
         />
       )}
       <div className="cookbook-recipe-badges">

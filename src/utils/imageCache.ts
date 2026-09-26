@@ -94,6 +94,56 @@ export async function getImageCacheEntryCounts(): Promise<Record<string, number 
   return counts;
 }
 
+// Convertit une URL de photo cross-origin en URL "data:" locale, via un
+// fetch() explicitement en mode "cors" — jamais un <img>/fond CSS chargeant
+// l'URL distante directement. Un fond CSS (background-image) n'a AUCUN
+// équivalent de crossOrigin="anonymous" : impossible d'y forcer une requête
+// "cors", elle part toujours en "no-cors", et le service worker (même règle
+// CacheFirst que DishArt.tsx ci-dessus) met alors en cache une réponse
+// OPAQUE sous la MÊME clé que les lectures CORS habituelles. Cette entrée
+// opaque est ensuite systématiquement resservie à ces lectures CORS, qui
+// échouent alors avec "Response served by service worker is opaque" —
+// cassant l'affichage de cette photo PARTOUT dans l'app (grille de
+// recettes, préchargement...), jusqu'à expiration du cache (30 jours) ou
+// vidage manuel. Repéré via un vrai cas en production : la photo de
+// "Macarons" échouait de façon reproductible, alors que le fichier stocké
+// était confirmé 100% valide (curl, navigation Safari directe) — la seule
+// différence restante était le passage par CookbookDocument.tsx /
+// PublicRecipeView.tsx (livre de cuisine, fiche PDF, lien de partage
+// public), qui posaient tous deux ce même fond CSS sans jamais passer par
+// ce module. Une URL data: n'a besoin d'aucun réseau pour être affichée
+// (donc aucun risque d'empoisonner quoi que ce soit) : pas de cycle de vie
+// à gérer contrairement à une URL blob:, contrepartie acceptée ici (photos
+// déjà compressées à l'upload, voir imageUpload.ts).
+export async function fetchImageAsDataUrl(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, { mode: "cors", credentials: "omit" });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise<string | null>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : null);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+// Mémoïse fetchImageAsDataUrl par URL : CookbookDocument.tsx peut re-rendre
+// la même recette plusieurs fois (édition en direct du livre de cuisine) —
+// sans ça, chaque rendu relancerait un fetch complet pour la même photo.
+const resolvedPhotoDataUrls = new Map<string, Promise<string | null>>();
+export function getResolvedPhotoDataUrl(url: string): Promise<string | null> {
+  let cached = resolvedPhotoDataUrls.get(url);
+  if (!cached) {
+    cached = fetchImageAsDataUrl(url);
+    resolvedPhotoDataUrls.set(url, cached);
+  }
+  return cached;
+}
+
 export async function prefetchRecipeImages(recipes: ImageSourceRecipe[]): Promise<void> {
   if (typeof caches === "undefined" || typeof fetch === "undefined") return;
   if (!navigator.onLine) return; // aucune chance qu'un fetch aboutisse, inutile de le tenter hors-ligne

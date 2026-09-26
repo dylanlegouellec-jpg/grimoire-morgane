@@ -8,6 +8,7 @@ import { translateRecipeText } from "../../utils/recipeTranslation";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { COOKBOOK_CSS } from "../../constants/styles/cookbook.css";
 import { generateCookbookPdf, computeRecipeStartPages } from "../../utils/cookbookPdf";
+import { getResolvedPhotoDataUrl } from "../../utils/imageCache";
 import {
   DEFAULT_COOKBOOK_CONFIG,
   COVER_COLORS,
@@ -289,6 +290,17 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }: Co
     setGeneratingPdf(true);
     try {
       await refreshPageStarts();
+      // Attend que la photo de chaque recette sélectionnée soit résolue en
+      // URL data: (voir CookbookDocument.tsx/getResolvedPhotoDataUrl) avant
+      // de rasteriser : sans cette attente, une recette dont l'effet de
+      // résolution n'a pas encore eu le temps de tourner (ouverture rapide
+      // du panneau puis clic immédiat sur Télécharger) se retrouverait
+      // rasterisée sans sa photo, avant même que React n'ait eu la chance
+      // de la peindre.
+      await Promise.all(
+        selectedRecipes.map((r) => (r.imageUrl ? getResolvedPhotoDataUrl(r.imageUrl) : Promise.resolve(null)))
+      );
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       if (sheetRef.current) sheetRef.current.classList.add("cookbook-print-sheet--rendering");
       const blob = await generateCookbookPdf(docRef.current as HTMLElement, config);
       const url = URL.createObjectURL(blob);

@@ -16,6 +16,7 @@ import {
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
 import { generateRecipeCardPng } from "../../utils/recipeCardCanvas";
 import { generateCookbookPdf } from "../../utils/cookbookPdf";
+import { getResolvedPhotoDataUrl } from "../../utils/imageCache";
 import { RecipePage } from "../cookbook/CookbookDocument";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { translateRecipeText } from "../../utils/recipeTranslation";
@@ -196,6 +197,15 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
         photoSize: includePhoto && hasPhoto ? "grande" : "aucune",
       };
       if (!pdfSheetRef.current) return;
+      // Attend que la photo soit résolue en URL data: (voir
+      // CookbookDocument.tsx/getResolvedPhotoDataUrl) avant de rasteriser —
+      // sans cette attente, ouvrir la modale puis exporter très vite
+      // pourrait rasteriser la page avant que React n'ait eu la chance de
+      // peindre la photo une fois son fetch résolu.
+      if (includePhoto && hasPhoto && recipe.imageUrl) {
+        await getResolvedPhotoDataUrl(recipe.imageUrl);
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }
       const blob = await generateCookbookPdf(pdfSheetRef.current, pdfConfig);
       const result = await shareOrDownloadBlob(blob, `${slugify(recipe.title)}.pdf`, translateRecipeText(recipe.title, language), "application/pdf");
       if (result === "downloaded") showToast(t("share.sheetDownloadedToast"));
