@@ -99,6 +99,15 @@ export default function DishArt({ recipe }: DishArtProps) {
       }, delay);
     } else {
       setImgFailed(true);
+      // Un échec de <img> ne remonte jamais la vraie raison (statut HTTP,
+      // erreur CORS...) — masqué par le navigateur par sécurité, quel que
+      // soit le nombre de tentatives. On refait ici le même fetch "à la
+      // main", jamais affiché (juste pour son effet de bord), uniquement
+      // pour que window.fetch (patché par utils/devLog.ts) capture la
+      // vraie cause dans la Console de logs du Panneau de Diagnostics —
+      // seul moyen de diagnostiquer un échec d'image sur un téléphone,
+      // sans ordinateur ni DevTools branchés dessus.
+      if (rawUrl) fetch(rawUrl, { mode: "cors", credentials: "omit" }).catch(() => undefined);
     }
   };
 
