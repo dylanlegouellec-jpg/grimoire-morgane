@@ -94,7 +94,7 @@ export default function AppearanceSettingsModal({
             className="settings-slider"
             min="0"
             max="1"
-            step="0.05"
+            step="0.01"
             value={navOpacity}
             onChange={(e) => onSetNavOpacity(Number(e.target.value))}
             aria-label={t("settings.navOpacityTitle")}
