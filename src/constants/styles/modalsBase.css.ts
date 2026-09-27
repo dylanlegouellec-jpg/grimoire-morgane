@@ -39,7 +39,15 @@ export const MODALS_BASE_CSS: string = `
   background: rgba(var(--nav-bg-rgb), var(--nav-opacity, 0));
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(var(--nav-bg-rgb), 0.5);
+  /* Le contour restait à une opacité fixe de 0.5 quel que soit le curseur
+     "Opacité du fond" — à 0%, le fond du dock était bien transparent mais
+     ce contour, lui, dessinait toujours un anneau bien visible autour du
+     dock, empêchant le réglage le plus bas de paraître réellement
+     transparent. Suit désormais le même curseur (0.06 à 0%, jusqu'à 0.5 à
+     100%, comme avant) : un léger filet reste perceptible pour détacher le
+     dock du contenu même au minimum, sans jamais retomber sur un anneau
+     aussi marqué que le fond plein. */
+  border: 1px solid rgba(var(--nav-bg-rgb), calc(0.06 + var(--nav-opacity, 0) * 0.44));
   box-shadow: 0 10px 30px rgba(20,14,4,0.22), 0 2px 8px rgba(20,14,4,0.12);
   z-index: 40;
 }
