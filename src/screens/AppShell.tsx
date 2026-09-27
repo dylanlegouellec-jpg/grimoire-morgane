@@ -349,29 +349,24 @@ export default function AppShell({
     setShowSecretSettings(false);
     setShowOnboarding(true);
   };
-  // Même raisonnement : ferme d'abord les Réglages pour éviter toute
-  // cohabitation avec sa modale encore montée (voir replayOnboarding
-  // ci-dessus). Contrairement à replayOnboarding, celles-ci sont ouvertes
-  // DEPUIS les Réglages pour y effectuer une action ponctuelle (créer un
-  // cookbook, consulter les diagnostics) — leur fermeture doit donc
-  // rouvrir les Réglages plutôt que de renvoyer sur l'écran principal.
-  const openCookbookBuilder = () => {
-    setShowSecretSettings(false);
-    setShowCookbookBuilder(true);
-  };
-  const closeCookbookBuilder = () => {
-    setShowCookbookBuilder(false);
-    setShowSecretSettings(true);
-  };
-  // Même raisonnement que openCookbookBuilder/closeCookbookBuilder ci-dessus.
-  const openDiagnostics = () => {
-    setShowSecretSettings(false);
-    setShowDiagnosticsPanel(true);
-  };
-  const closeDiagnostics = () => {
-    setShowDiagnosticsPanel(false);
-    setShowSecretSettings(true);
-  };
+  // Contrairement à replayOnboarding ci-dessus, ces deux-là s'ouvrent
+  // PAR-DESSUS les Réglages (comme les sous-vues de SettingsSubPanel,
+  // voir son commentaire de fichier dans SecretSettingsModal.tsx) plutôt
+  // qu'à leur place : `showSecretSettings` ne doit JAMAIS passer à false
+  // ici. Un aller-retour false->true (avant/après) démontait puis
+  // remontait toute la modale Réglages à chaque ouverture/fermeture — le
+  // fond de l'app redevenait visible pendant le tirage de fermeture du
+  // Livre de cuisine/Panneau de diagnostics, au lieu de laisser
+  // apparaître les Réglages toujours montés en dessous (signalé : "on
+  // voit le fond de l'application pendant le mouvement"). Les deux
+  // modales partagent déjà le même verrou de scroll (compteur partagé,
+  // voir useBodyScrollLock.ts) et le même piège à focus empilable (pile
+  // de modales, voir useFocusTrap.ts) : rien d'autre à coordonner pour
+  // les empiler sans se gêner, comme RecipeDetail + RecipeForm.
+  const openCookbookBuilder = () => setShowCookbookBuilder(true);
+  const closeCookbookBuilder = () => setShowCookbookBuilder(false);
+  const openDiagnostics = () => setShowDiagnosticsPanel(true);
+  const closeDiagnostics = () => setShowDiagnosticsPanel(false);
   // Ne touche QUE l'état React local (voir hasCompletedOnboarding
   // ci-dessus) : le flag localStorage lui-même est déjà mis à jour par
   // DiagnosticsPanelModal (storeOnboardingCompleted(false)) avant cet
