@@ -296,7 +296,7 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
             </motion.div>
             {!isLegendTreatment(heroTreatment) && (
               <>
-                <div className="card-top-row" style={{ marginTop: 4 }}>
+                <div className="card-top-row" style={{ marginTop: 16 }}>
                   <span className={`chip ${categoryClass(recipe)}`}>{(dict.labels as Record<string, string>)[categoryLabel(recipe)] || categoryLabel(recipe)}</span>
                   {showNutriscore && (
                     <span className="nutri-badge" style={{ background: NUTRI_COLORS[nutri] }}>{nutri}</span>
