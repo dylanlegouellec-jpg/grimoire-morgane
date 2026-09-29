@@ -200,4 +200,26 @@ html, body {
 
 * { box-sizing: border-box; }
 
+/* --- Transition fluide entre thème clair et sombre ----------------------
+   Changer "data-theme" sur <html> (applyTheme, utils/theme.js) recalcule
+   INSTANTANÉMENT toutes les variables de couleur ci-dessus (:root /
+   [data-theme="dark"]) — une variable CSS n'est pas elle-même animable,
+   mais chaque PROPRIÉTÉ qui la consomme (background-color, color...) l'est
+   dès qu'elle porte sa propre transition : le navigateur interpole alors
+   en douceur entre l'ancienne et la nouvelle couleur calculée, sans rien
+   changer au thème lui-même (toujours appliqué d'un coup, pas de valeur
+   intermédiaire). Posé sur "*" plutôt que sur une liste de sélecteurs :
+   couvre d'un coup tout le fond parchemin, les cartes, le texte et les
+   bordures, quel que soit le composant. Un sélecteur plus spécifique
+   ailleurs (ex. .bought-chevron, transition: transform) garde sa propre
+   valeur de "transition" (remplacée entièrement par la cascade, jamais
+   fusionnée) — cette règle n'a donc aucun effet sur ces micro-animations
+   existantes, seulement sur les éléments qui n'en déclarent pas déjà une. */
+*, *::before, *::after {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease, fill 0.25s ease, stroke 0.25s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none; }
+}
+
 `;
