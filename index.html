@@ -87,6 +87,12 @@
       }
     </style>
     <link rel="apple-touch-icon" href="/Icon.jpeg">
+    <!-- Sans ceci, l'onglet du navigateur (Chrome, Edge...) retombe sur une
+         icône générique (globe) au lieu du logo de l'app — "apple-touch-icon"
+         ci-dessus ne couvre que l'ajout à l'écran d'accueil iOS, jamais
+         l'onglet lui-même. Même fichier que le manifest PWA (vite.config.js),
+         pas de doublon d'asset à maintenir. -->
+    <link rel="icon" href="/Icon.jpeg" type="image/jpeg">
     <!-- "default", surtout PAS "black-translucent" : une fois l'app ajoutée à
          l'écran d'accueil, black-translucent place la webview en plein écran
          à partir de y=0 (sous la Dynamic Island) mais lui laisse une hauteur
