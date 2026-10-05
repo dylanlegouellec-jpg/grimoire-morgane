@@ -501,6 +501,21 @@ export default function AppShell({
     <div className="grimoire-app">
       <style>{CSS}</style>
 
+      {/* Regroupe en-tête/recherche/filtres/nav — en paysage (voir
+          responsive.css.js, .app-sidebar), cette colonne devient une
+          colonne flex indépendante (sa propre hauteur, min-height: 100vh),
+          plutôt que de PARTAGER les mêmes lignes de grille CSS que
+          .app-content juste en dessous. Avant ce correctif, .app-content
+          (qui s'étend sur ces 4 lignes dans la grille d'origine) influençait
+          la hauteur calculée de la ligne "nav" selon la quantité de contenu
+          affiché (beaucoup de recettes vs. peu après un filtre, ou un onglet
+          Plan/Courses sans recherche ni filtres du tout) — la nav latérale
+          se décalait alors de haut en bas à chaque changement de filtre ou
+          d'onglet (signalé avec vidéo à l'appui). En portrait, ce wrapper
+          est neutre ("display: contents", voir responsive.css.js) : aucun
+          changement de rendu, les enfants restent directement dans le flux
+          de .grimoire-app comme avant. */}
+      <div className="app-sidebar">
       <header className="app-header">
         <button
           type="button"
@@ -606,6 +621,26 @@ export default function AppShell({
         </div>
       )}
 
+      {/* Dernier enfant de .app-sidebar (voir son commentaire plus haut) :
+          en paysage, "margin-top: auto" (responsive.css.js) la pousse tout
+          en bas de cette colonne flex indépendante, quel que soit le
+          contenu affiché à côté dans .app-content. */}
+      <nav className="bottom-nav">
+        {TABS.map(({ key, icon: Icon }) => (
+          <NavButton
+            key={key}
+            tabKey={key}
+            label={t(`nav.${key}`)}
+            Icon={Icon}
+            active={tab === key}
+            onSelect={() => changeTab(key)}
+            onLongPress={key === "courses" && shoppingLists.length > 0 ? () => setShowListsManager(true) : undefined}
+            pressDuration={pressDuration}
+          />
+        ))}
+      </nav>
+      </div>
+
       <main className="app-content" ref={appContentRef}>
         {/* key={tab} : une erreur dans un onglet ne doit emporter que son
             propre contenu (en-tête/filtres/nav basse restent utilisables) —
@@ -698,21 +733,6 @@ export default function AppShell({
         </div>
         </ErrorBoundary>
       </main>
-
-      <nav className="bottom-nav">
-        {TABS.map(({ key, icon: Icon }) => (
-          <NavButton
-            key={key}
-            tabKey={key}
-            label={t(`nav.${key}`)}
-            Icon={Icon}
-            active={tab === key}
-            onSelect={() => changeTab(key)}
-            onLongPress={key === "courses" && shoppingLists.length > 0 ? () => setShowListsManager(true) : undefined}
-            pressDuration={pressDuration}
-          />
-        ))}
-      </nav>
 
       <AnimatePresence>
         {showOnboarding && (

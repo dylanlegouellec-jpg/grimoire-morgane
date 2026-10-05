@@ -17,27 +17,57 @@ export const RESPONSIVE_CSS: string = `
 @media (orientation: landscape) and (min-width: 768px) {
   .grimoire-app, .loading-screen { max-width: 1400px; }
 
+  /* Une seule ligne de grille ("sidebar | content") plutôt que 4 lignes
+     partagées avec .app-content (ancien grid-template-rows: auto auto auto
+     1fr + grid-template-areas à 4 lignes, retiré) — voir .app-sidebar
+     ci-dessous pour la raison : .app-content s'étendait sur ces 4 lignes,
+     et sa propre hauteur (qui varie énormément selon le nombre de recettes
+     affichées, ou l'absence de recherche/filtres sur Plan/Courses)
+     influençait la taille calculée de la ligne "nav", faisant visiblement
+     glisser la nav latérale de haut en bas à chaque changement de filtre ou
+     d'onglet (signalé avec vidéo à l'appui). */
   .grimoire-app {
     display: grid;
     grid-template-columns: 300px 1fr;
-    grid-template-rows: auto auto auto 1fr;
-    grid-template-areas:
-      "header  content"
-      "search  content"
-      "filters content"
-      "nav     content";
+    grid-template-areas: "sidebar content";
     align-content: start;
+    min-height: 100vh;
+    /* Le padding-bottom: 130px hérité du mode portrait (theme.css.js,
+       dégagement pour le dock flottant) n'a plus lieu d'être ici : la nav
+       redevient un panneau intégré à la sidebar (voir .bottom-nav plus bas),
+       jamais un dock superposé en bas d'écran. Sans ce reset, 130px de vide
+       s'ajoutaient en bas de TOUTE la page, après la colonne de contenu. */
+    padding-bottom: 0;
+  }
+
+  /* En-tête/recherche/filtres/nav : colonne flex INDÉPENDANTE de la hauteur
+     de .app-content (voir JSX, AppShell.jsx), avec sa propre min-height:
+     100vh — "margin-top: auto" sur .bottom-nav (plus bas) la pousse tout en
+     bas de CETTE colonne, qui ne partage plus aucune ligne de grille avec le
+     contenu scrollable à côté. En portrait, "display: contents" la rend
+     neutre : ses enfants restent directement dans le flux normal de
+     .grimoire-app, comme avant l'introduction de ce wrapper. */
+  .app-sidebar {
+    grid-area: sidebar;
+    display: flex;
+    flex-direction: column;
     min-height: 100vh;
   }
 
-  .app-header { grid-area: header; text-align: left; padding: 24px 20px 12px; }
+  /* "border-bottom: none" : le filet du mode portrait (shell.css.js, séparateur
+     sous le titre avant la barre de recherche) se retrouvait collé contre la
+     barre de recherche juste en dessous — le padding du bas de l'en-tête
+     (12px) et la marge du haut de .search-bar (0 en paysage) laissent bien
+     moins d'air qu'en portrait. Inutile ici de toute façon : .app-content a
+     déjà son propre "border-left" (plus bas) pour séparer visuellement la
+     sidebar du contenu. */
+  .app-header { text-align: left; padding: 24px 20px 12px; border-bottom: none; }
   .app-header h1 { font-size: 1.3rem; }
   .offline-queue-badge { margin-left: 0; }
 
-  .search-bar { grid-area: search; margin: 0 20px 12px; }
+  .search-bar { margin: 0 20px 12px; }
 
   .filter-bar {
-    grid-area: filters;
     flex-direction: column; align-items: stretch;
     padding: 0 20px 16px; overflow-x: visible;
   }
@@ -51,13 +81,12 @@ export const RESPONSIVE_CSS: string = `
      sidebar paysage est un panneau fixe de la mise en page elle-même, pas
      un élément superposé. */
   .bottom-nav {
-    grid-area: nav;
     position: static; left: auto; transform: none; max-width: none; width: auto;
     flex-direction: column; align-items: stretch; gap: 4px;
     background: transparent; border: none; box-shadow: none;
     backdrop-filter: none; -webkit-backdrop-filter: none;
     border-radius: 0;
-    margin: auto 20px 20px; padding: 0;
+    margin: 0 20px 20px; margin-top: auto; padding: 0;
   }
   .nav-btn {
     flex-direction: row; justify-content: flex-start; gap: 10px;
