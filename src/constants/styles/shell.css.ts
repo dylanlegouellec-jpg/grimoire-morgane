@@ -7,6 +7,16 @@
 /* ------------------------------------------------------------------ */
 
 export const SHELL_CSS: string = `
+/* Wrapper neutre par défaut (portrait) : ses enfants (en-tête, recherche,
+   filtres, nav basse) restent directement dans le flux normal de
+   .grimoire-app, exactement comme avant son introduction — "display:
+   contents" retire le wrapper lui-même de l'arbre de mise en page sans
+   toucher au rendu de ses enfants. Redéfini en colonne flex indépendante
+   UNIQUEMENT en paysage (voir responsive.css.js, .app-sidebar) : c'est ce
+   mode-là qui a besoin d'une colonne dont la hauteur ne dépend jamais de
+   .app-content. */
+.app-sidebar { display: contents; }
+
 .app-header {
   position: relative;
   text-align: center;
