@@ -208,7 +208,7 @@ function RecipeCard({
             // de taille du hero pendant l'ouverture) que Framer ne réalise
             // ALORS PLUS AUCUN morphing du tout — la fiche apparaît déjà à sa
             // taille quasi finale dès la première frame, sans jamais grandir
-            // depuis la petite photo de la carte (l'effet "aspiré" disparú,
+            // depuis la petite photo de la carte (l'effet "aspiré" disparu,
             // signalé par l'utilisateur) — quel que soit le délai ajouté
             // avant d'ouvrir (testé jusqu'à 50ms) : Framer ne semble tout
             // simplement pas traiter un layoutId qui vient tout juste d'être
