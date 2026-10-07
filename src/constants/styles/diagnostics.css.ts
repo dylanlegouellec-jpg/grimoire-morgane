@@ -46,6 +46,10 @@ export const DIAGNOSTICS_CSS: string = `
 /* --- Code de l'app (CodeExplorer.tsx) : menus déroulants dossier > fichier --- */
 .code-explorer { display: flex; flex-direction: column; gap: 8px; }
 .code-intro { margin: 0 6px; }
+/* Boutons d'action sous « Appareil & performance » : AppDiagnostics enveloppe
+   chaque carte dans un <div>, donc la règle « .ios-group + .ios-group » (espace
+   entre deux cartes collées) ne s'applique pas ici — l'espace est posé à la main. */
+.diagnostics-actions { margin-top: 22px; }
 .code-total { margin: 0 6px 4px; font-size: 0.85rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 .code-disclosure { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); }
 .code-disclosure--file { border-radius: 10px; background: var(--surface-strong); }
