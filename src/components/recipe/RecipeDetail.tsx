@@ -6,7 +6,7 @@ import { DEFAULT_HERO_TREATMENT } from "../../constants";
 import { categoryLabel, categoryClass, groupSteps, triggerHaptic } from "../../utils/helpers";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { translateRecipeText } from "../../utils/recipeTranslation";
-import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
+import { EASE_OUT, MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION, SPRING_SHEET } from "../../constants/motion";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
@@ -34,7 +34,7 @@ const HERO_PARALLAX_RANGE_PX = 24;
 
 const FADE_ITEM_HIDDEN = { opacity: 0, y: 10 };
 const FADE_ITEM_VISIBLE = { opacity: 1, y: 0 };
-const FADE_ITEM_TRANSITION = { duration: 0.35, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] };
+const FADE_ITEM_TRANSITION = { duration: 0.35, ease: EASE_OUT };
 
 interface FadeInItemProps {
   root: RefObject<HTMLElement | null>;
@@ -273,7 +273,7 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
               ref={heroRef}
               className={`detail-hero ${heroTreatmentClassName(heroTreatment)}`}
               layoutId={prefersReducedMotion ? undefined : `recipe-photo-${recipe.id}`}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              transition={SPRING_SHEET}
             >
               <motion.div
                 className="detail-hero-parallax"

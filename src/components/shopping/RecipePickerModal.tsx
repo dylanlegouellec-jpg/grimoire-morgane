@@ -4,7 +4,7 @@ import { CheckSquare, ShoppingBasket, Square, X } from "lucide-react";
 import { FILTERS } from "../../constants";
 import { normalize, categoryClass, categoryLabel } from "../../utils/helpers";
 import { triggerHaptic } from "../../utils/haptics";
-import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
+import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION, SPRING_PILL } from "../../constants/motion";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
@@ -96,7 +96,7 @@ export default function RecipePickerModal({ recipes, onGenerate, onClose }: Reci
                     <motion.span
                       layoutId="recipe-picker-filter-pill"
                       className="filter-indicator"
-                      transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                      transition={SPRING_PILL}
                     />
                   )}
                   {f.label}

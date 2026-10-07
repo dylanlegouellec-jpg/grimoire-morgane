@@ -11,6 +11,8 @@ import { decodeRecipeCode } from './utils/helpers'
 import { registerSW } from 'virtual:pwa-register'
 import { initAudioOnFirstTouch } from './utils/audioUtils'
 import { installDevLog } from './utils/devLog'
+import { dismissSplash } from './utils/splash'
+import { MotionConfig } from 'motion/react'
 
 // Patché avant tout le reste : le Panneau de Diagnostics (Réglages du
 // Grimoire) doit pouvoir montrer les logs/erreurs survenus dès le tout
@@ -171,10 +173,26 @@ try {
 // TOUTE l'app sur un écran blanc, sans aucun message ni moyen de
 // récupérer sans fermer/rouvrir l'app. Voir ErrorBoundary.jsx pour le
 // filet plus ciblé, par onglet, posé à l'intérieur d'AppShell.jsx.
+//
+// MotionConfig reducedMotion="user" : avec "Réduire les animations" activé
+// dans le système, TOUTES les animations Framer Motion de l'app (modales,
+// pastilles, morphing de photo...) abandonnent les mouvements (déplacements,
+// mise à l'échelle) pour ne garder que les fondus — au lieu de n'être
+// respecté que par les quelques composants qui testent useReducedMotion()
+// eux-mêmes.
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ErrorBoundary>
-      {isShareLink ? <PublicRecipeView recipe={sharedRecipe} /> : <GrimoireDeMorgane />}
-    </ErrorBoundary>
+    <MotionConfig reducedMotion="user">
+      <ErrorBoundary>
+        {isShareLink ? <PublicRecipeView recipe={sharedRecipe} /> : <GrimoireDeMorgane />}
+      </ErrorBoundary>
+    </MotionConfig>
   </React.StrictMode>,
 )
+
+// Écran de démarrage (#splash, index.html) : GrimoireDeMorgane le retire
+// lui-même à son premier montage ; ces deux appels couvrent les cas où il ne
+// monte pas — la page de partage d'une recette (aucune app derrière), et un
+// plantage avant ce montage (sans ce filet, le splash masquerait à jamais
+// l'écran d'erreur de l'ErrorBoundary).
+window.setTimeout(dismissSplash, isShareLink ? 50 : 8000)

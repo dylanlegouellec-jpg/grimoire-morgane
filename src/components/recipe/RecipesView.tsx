@@ -5,17 +5,7 @@ import { normalize, triggerHaptic } from "../../utils/helpers";
 import { useTranslation } from "../../contexts/LanguageContext";
 import RecipeCard from "./RecipeCard";
 import type { Recipe } from "../../hooks/useRecipes";
-
-// Durées du changement de filtre en deux temps (voir plus bas) : les cartes
-// actuellement affichées se fondent d'abord vers le transparent (FILTER_EXIT_MS,
-// aligné sur CARD_EXIT_DURATION_S de RecipeCard.tsx), PUIS la grille bascule sur
-// le nouveau filtre et ses cartes entrent en cascade. Au-delà de
-// ENTER_STAGGER_MAX_INDEX cartes, le décalage cesse de croître : au-delà de
-// l'écran visible, un délai de plus d'une demi-seconde ne ferait que retarder
-// l'apparition de cartes que personne ne regarde encore.
-const FILTER_EXIT_MS = 170;
-const ENTER_STAGGER_MS = 55;
-const ENTER_STAGGER_MAX_INDEX = 6;
+import { ENTER_STAGGER_MAX_INDEX, ENTER_STAGGER_MS, FILTER_EXIT_MS } from "../../constants/motion";
 
 interface RecipesViewProps {
   recipes: Recipe[];

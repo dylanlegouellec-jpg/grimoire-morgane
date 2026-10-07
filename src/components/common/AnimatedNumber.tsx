@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useMotionValue, animate, useReducedMotion } from "motion/react";
+import { EASE_OUT } from "../../constants/motion";
 
 interface AnimatedNumberProps {
   value: number;
@@ -30,7 +31,7 @@ export default function AnimatedNumber({ value, className }: AnimatedNumberProps
       motionVal.jump(value);
       return undefined;
     }
-    const controls = animate(motionVal, value, { duration: 0.35, ease: [0.22, 1, 0.36, 1] });
+    const controls = animate(motionVal, value, { duration: 0.35, ease: EASE_OUT });
     return () => controls.stop();
   }, [value, prefersReducedMotion, motionVal]);
 

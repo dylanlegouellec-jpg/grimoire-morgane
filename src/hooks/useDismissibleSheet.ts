@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useMotionValue, useTransform, animate } from "motion/react";
 import type { RefObject, TouchEvent } from "react";
+import { SPRING_CLOSE } from "../constants/motion";
 
 /* ------------------------------------------------------------------ */
 /*  "TIRER POUR FERMER" — version Framer Motion de useSwipeToDismiss.js */
@@ -42,7 +43,6 @@ const DISMISS_DISTANCE_PX = 100;
 // L'ancien hook mesurait une vitesse en px/ms (0.6) ; Framer exprime la
 // sienne en px/s (info.velocity) — même seuil, juste convertie.
 const DISMISS_VELOCITY_PX_PER_S = 600;
-const CLOSE_SPRING: { type: "spring"; stiffness: number; damping: number } = { type: "spring", stiffness: 500, damping: 34 };
 
 interface UseDismissibleSheetOptions {
   scrollRef?: RefObject<HTMLElement | null>;
@@ -180,7 +180,7 @@ export default function useDismissibleSheet(onDismiss: () => void, { scrollRef, 
       // le tirage), pas de zéro, puisque c'est le même MotionValue.
       onDismiss();
     } else {
-      animate(y, 0, CLOSE_SPRING);
+      animate(y, 0, SPRING_CLOSE);
     }
   };
 

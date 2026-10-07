@@ -25,6 +25,7 @@ import {
   storeIconStyle,
 } from "./utils/localSettings";
 import { getProfile, saveProfile, pressDurationFromDb } from "./utils/profile";
+import { dismissSplash } from "./utils/splash";
 import { getOnboardingCompletedFromProfile, saveOnboardingCompletedToProfile } from "./utils/onboarding";
 import type { ThemeSetting } from "./utils/theme";
 import type { TextSize, Language, IconStyle } from "./utils/localSettings";
@@ -107,6 +108,12 @@ export default function GrimoireDeMorgane() {
 
   const [theme, setThemeState] = useState(() => getStoredTheme()); // "light" | "dark" | "system"
   const { toast, showToast } = useToast();
+  // L'écran de démarrage de index.html (#splash) s'efface dès ce premier
+  // montage : quel que soit l'écran choisi plus bas (chargement, connexion,
+  // app), il est déjà dessiné en dessous. Voir utils/splash.ts.
+  useEffect(() => {
+    dismissSplash();
+  }, []);
   const guestToastShownRef = useRef(false);
   useEffect(() => {
     if (isGuestMode && !guestToastShownRef.current) {

@@ -17,6 +17,7 @@ import ShoppingItemRow from "./ShoppingItemRow";
 import ShoppingAisleBlock from "./ShoppingAisleBlock";
 import type { Recipe } from "../../hooks/useRecipes";
 import type { ShoppingItem, ShoppingList } from "../../hooks/useShoppingLists";
+import { EASE_OUT, SCOPE_SWITCH_DURATION_S, SCOPE_SWITCH_SLIDE_PX } from "../../constants/motion";
 
 // "shopping.recap" reste une SEULE phrase traduite interpolée (voir
 // translations.js, "{bought}/{total} article{plural}...") — t() ne rend
@@ -44,14 +45,6 @@ function withAnimatedNumbers(text: string): ReactNode[] {
 /*  partir des articles NON cochés (`unchecked`) — ceux-ci rejoignent la    */
 /*  section "Articles achetés" repliable tout en bas.                       */
 /* ------------------------------------------------------------------ */
-// Même transition que la bascule Foyer/Personnel du Planning (voir
-// PlanningView.jsx, SCOPE_SWITCH_*) — copiée ici plutôt que partagée : les
-// deux vues n'ont d'autre lien qu'une coïncidence de nom de prop, un import
-// croisé entre elles pour trois constantes serait plus de bruit que
-// d'économie.
-const SCOPE_SWITCH_DURATION_S = 0.24;
-const SCOPE_SWITCH_EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
-const SCOPE_SWITCH_SLIDE_PX = 14;
 
 interface ShoppingViewProps {
   recipes: Recipe[];
@@ -257,7 +250,7 @@ export default function ShoppingView({
           initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: scope === "personal" ? SCOPE_SWITCH_SLIDE_PX : -SCOPE_SWITCH_SLIDE_PX }}
           animate={{ opacity: 1, x: 0 }}
           exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: scope === "personal" ? -SCOPE_SWITCH_SLIDE_PX : SCOPE_SWITCH_SLIDE_PX }}
-          transition={{ duration: SCOPE_SWITCH_DURATION_S, ease: SCOPE_SWITCH_EASE }}
+          transition={{ duration: SCOPE_SWITCH_DURATION_S, ease: EASE_OUT }}
         >
         {items.length > 0 ? (
           <div className="shopping-result">

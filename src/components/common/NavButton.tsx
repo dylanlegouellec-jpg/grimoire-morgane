@@ -2,6 +2,7 @@ import { useRef, useState, type MouseEvent } from "react";
 import type { LucideIcon } from "lucide-react";
 import { motion } from "motion/react";
 import { triggerHaptic, triggerHapticFeedback } from "../../utils/haptics";
+import { SPRING_PILL } from "../../constants/motion";
 // Le clic sonore est désormais joué par l'écouteur global délégué (voir
 // utils/audioUtils.js, initAudioOnFirstTouch) — plus besoin de l'appeler
 // ici, ça doublerait le son.
@@ -76,7 +77,7 @@ export default function NavButton({ tabKey, label, Icon, active, onSelect, onLon
         <motion.span
           layoutId="nav-pill"
           className="nav-pill"
-          transition={{ type: "spring", stiffness: 400, damping: 32 }}
+          transition={SPRING_PILL}
         />
       )}
       <Icon size={20} />
