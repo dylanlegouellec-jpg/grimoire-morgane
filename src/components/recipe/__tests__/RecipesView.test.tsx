@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import RecipesView from "../RecipesView";
 import { LanguageProvider } from "../../../contexts/LanguageContext";
@@ -67,6 +67,18 @@ const RECIPES = [
 
 const noop = () => {};
 
+// Le changement de filtre se fait en deux temps (RecipesView.tsx) : sortie des
+// cartes affichées (FILTER_EXIT_MS), PUIS bascule de la grille. Les assertions
+// sur l'état APRÈS le changement attendent donc cette bascule (waitFor, vrais
+// délais — 170 ms, négligeable). Deux sortes d'appels animate() visent le même
+// noeud : l'entrée (keyframes `opacity: [0, 1]`) et la sortie (`opacity: 0`) —
+// les distinguer évite qu'un test d'entrée passe en réalité grâce à la sortie.
+type AnimateCall = [unknown, { opacity?: number | number[] }, unknown];
+const isEntryCall = (node: unknown) => ([n, kf]: AnimateCall) => n === node && Array.isArray(kf.opacity);
+const isExitCall = (node: unknown) => ([n, kf]: AnimateCall) => n === node && kf.opacity === 0;
+const isRestoreCall = (node: unknown) => ([n, kf]: AnimateCall) => n === node && kf.opacity === 1;
+const calls = () => animateSpy.mock.calls as unknown as AnimateCall[];
+
 // Harnais minimal : reproduit juste ce qu'AppShell.jsx fait réellement
 // (filter/search/favoritesOnly pilotés par de l'état React local, changés
 // par de vrais clics) pour déclencher de vrais changements de filtre
@@ -130,9 +142,11 @@ describe("RecipesView — filtrage sans démontage", () => {
     const cardBefore = screen.getByText("Fondant au chocolat").closest(".recipe-card");
 
     await user.click(screen.getByText("go-sale")); // Fondant (Sucré) passe masqué
+    await waitFor(() => expect((cardBefore as HTMLElement).style.display).toBe("none"));
     const cardWhileHidden = screen.getByText("Fondant au chocolat").closest(".recipe-card");
 
     await user.click(screen.getByText("go-sucre")); // redevient visible
+    await waitFor(() => expect((cardBefore as HTMLElement).style.display).not.toBe("none"));
     const cardVisibleAgain = screen.getByText("Fondant au chocolat").closest(".recipe-card");
 
     // Même noeud DOM du début à la fin : jamais démontée, donc jamais
@@ -156,20 +170,22 @@ describe("RecipesView — filtrage sans démontage", () => {
 
     await user.click(screen.getByText("go-sucre"));
 
-    expect(animateSpy.mock.calls.some(([node]) => node === fadeNode)).toBe(true);
+    await waitFor(() => expect(calls().some(isEntryCall(fadeNode))).toBe(true));
   });
 
   it("rejoue l'animation d'entrée pour une carte qui redevient visible après avoir été masquée", async () => {
     const user = userEvent.setup();
     render(<Harness initialFilter="tout" />);
-    const fadeNode = screen.getByText("Fondant au chocolat").closest(".recipe-card")!.querySelector(".card-fade-wrap");
+    const sucreCard = screen.getByText("Fondant au chocolat").closest(".recipe-card") as HTMLElement;
+    const fadeNode = sucreCard.querySelector(".card-fade-wrap");
 
     await user.click(screen.getByText("go-sale")); // Fondant (Sucré) passe masqué
+    await waitFor(() => expect(sucreCard.style.display).toBe("none")); // attend la bascule de la grille
     animateSpy.mockClear();
 
     await user.click(screen.getByText("go-tout")); // redevient visible
 
-    expect(animateSpy.mock.calls.some(([node]) => node === fadeNode)).toBe(true);
+    await waitFor(() => expect(calls().some(isEntryCall(fadeNode))).toBe(true));
   });
 
   it("remet le défilement en haut sur un changement de filtre, mais pas sur une recherche", async () => {
@@ -179,12 +195,67 @@ describe("RecipesView — filtrage sans démontage", () => {
     expect(scrollSpy).not.toHaveBeenCalled();
 
     await user.click(screen.getByText("go-sale"));
-    expect(scrollSpy).toHaveBeenCalledWith(0, 0);
+    await waitFor(() => expect(scrollSpy).toHaveBeenCalledWith(0, 0));
 
     scrollSpy.mockClear();
     await user.click(screen.getByText("search-crepes"));
     expect(scrollSpy).not.toHaveBeenCalled();
 
     scrollSpy.mockRestore();
+  });
+
+  it("fait d'abord sortir les cartes affichées, puis bascule la grille", async () => {
+    const user = userEvent.setup();
+    render(<Harness initialFilter="tout" />);
+    const sucreCard = screen.getByText("Fondant au chocolat").closest(".recipe-card") as HTMLElement;
+    const saleCard = screen.getByText("Poulet rôti").closest(".recipe-card") as HTMLElement;
+    const sucreFade = sucreCard.querySelector(".card-fade-wrap");
+    const saleFade = saleCard.querySelector(".card-fade-wrap");
+    animateSpy.mockClear();
+
+    await user.click(screen.getByText("go-sale"));
+
+    // Pendant la sortie : toutes les cartes affichées se fondent (y compris
+    // celles qui resteront visibles), et la grille n'a PAS encore basculé —
+    // la carte sucrée est toujours affichée, donc visible pendant son fondu.
+    expect(calls().some(isExitCall(sucreFade))).toBe(true);
+    expect(calls().some(isExitCall(saleFade))).toBe(true);
+    expect(sucreCard.style.display).not.toBe("none");
+
+    // Puis la grille bascule : la carte sucrée est masquée, la salée rejoue
+    // son entrée.
+    await waitFor(() => expect(sucreCard.style.display).toBe("none"));
+    expect(calls().some(isEntryCall(saleFade))).toBe(true);
+  });
+
+  it("annule la sortie et ré-affiche les cartes si on revient sur le filtre déjà appliqué", async () => {
+    const user = userEvent.setup();
+    render(<Harness initialFilter="tout" />);
+    const sucreCard = screen.getByText("Fondant au chocolat").closest(".recipe-card") as HTMLElement;
+    const sucreFade = sucreCard.querySelector(".card-fade-wrap");
+    animateSpy.mockClear();
+
+    await user.click(screen.getByText("go-sale"));
+    await user.click(screen.getByText("go-tout")); // avant la fin de la sortie
+    // Laisse passer largement le délai de sortie : la grille n'a jamais dû
+    // basculer.
+    await new Promise((r) => setTimeout(r, 300));
+
+    expect(sucreCard.style.display).not.toBe("none");
+    expect(calls().some(isRestoreCall(sucreFade))).toBe(true);
+    expect(calls().some(isEntryCall(sucreFade))).toBe(false);
+  });
+
+  it("applique le dernier filtre demandé après des clics rapides", async () => {
+    const user = userEvent.setup();
+    render(<Harness initialFilter="tout" />);
+    const sucreCard = screen.getByText("Fondant au chocolat").closest(".recipe-card") as HTMLElement;
+    const saleCard = screen.getByText("Poulet rôti").closest(".recipe-card") as HTMLElement;
+
+    await user.click(screen.getByText("go-sale"));
+    await user.click(screen.getByText("go-sucre"));
+
+    await waitFor(() => expect(saleCard.style.display).toBe("none"));
+    expect(sucreCard.style.display).not.toBe("none");
   });
 });

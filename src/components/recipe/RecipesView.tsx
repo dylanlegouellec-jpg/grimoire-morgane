@@ -1,10 +1,21 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { Plus } from "lucide-react";
 import { normalize, triggerHaptic } from "../../utils/helpers";
 import { useTranslation } from "../../contexts/LanguageContext";
 import RecipeCard from "./RecipeCard";
 import type { Recipe } from "../../hooks/useRecipes";
+
+// Durées du changement de filtre en deux temps (voir plus bas) : les cartes
+// actuellement affichées se fondent d'abord vers le transparent (FILTER_EXIT_MS,
+// aligné sur CARD_EXIT_DURATION_S de RecipeCard.tsx), PUIS la grille bascule sur
+// le nouveau filtre et ses cartes entrent en cascade. Au-delà de
+// ENTER_STAGGER_MAX_INDEX cartes, le décalage cesse de croître : au-delà de
+// l'écran visible, un délai de plus d'une demi-seconde ne ferait que retarder
+// l'apparition de cartes que personne ne regarde encore.
+const FILTER_EXIT_MS = 170;
+const ENTER_STAGGER_MS = 55;
+const ENTER_STAGGER_MAX_INDEX = 6;
 
 interface RecipesViewProps {
   recipes: Recipe[];
@@ -52,33 +63,31 @@ export default function RecipesView({
     [recipes]
   );
 
+  // Filtre/favoris réellement APPLIQUÉS à la grille — en retard de
+  // FILTER_EXIT_MS sur les props `filter`/`favoritesOnly` (voir l'effet
+  // "changement de filtre en deux temps" plus bas) pour laisser aux cartes
+  // affichées le temps de se fondre avant que la grille ne bascule. La
+  // pastille dorée de la barre de filtres (AppShell.tsx) suit, elle, les props
+  // immédiatement : elle glisse pendant que les cartes sortent.
+  const [applied, setApplied] = useState({ filter, favoritesOnly });
+
   // Quelles recettes correspondent au filtre/à la recherche actifs — un Set
-  // d'ids, pas un nouveau tableau filtré : voir plus bas, chaque carte de
-  // .recipes-grid reste désormais TOUJOURS montée, quel que soit le filtre
-  // (seule sa visibilité CSS change via la prop `hidden`, voir
-  // RecipeCard.jsx). Avant, repasser de "Salé" à "Tout" démontait puis
-  // remontait chaque carte sucrée — donc sa balise <img> aussi, forçant le
-  // navigateur à la redécoder/repeindre depuis zéro à chaque passage, même
-  // avec l'image déjà en cache HTTP (le blocage constaté par l'utilisateur
-  // à chaque changement d'onglet Tout/Salé/Sucré/Favoris). Garder chaque
-  // carte montée en permanence élimine ce rechargement visuel : basculer
-  // entre les filtres ne fait plus qu'afficher/masquer des cartes déjà
-  // prêtes, jamais recréer leurs images.
+  // d'ids, pas un nouveau tableau filtré : chaque carte de .recipes-grid reste
+  // TOUJOURS montée, quel que soit le filtre (seule sa visibilité CSS change
+  // via la prop `hidden`, voir RecipeCard.tsx). Démonter/remonter une carte
+  // recréait sa balise <img>, que le navigateur devait redécoder/repeindre à
+  // chaque passage Tout/Salé/Sucré/Favoris, même avec l'image en cache HTTP.
   // `visibleIds` (correspondance filtre/recherche) ET `visibleIndexById`
-  // (position de chaque recette DANS la liste effectivement visible, pas
-  // dans la liste complète) calculés dans le même passage — ce second index
-  // sert au délai d'entrée échelonné ci-dessous : `Math.min(i, 10) * 45`
-  // sur la position dans le tableau COMPLET donnait un délai souvent
-  // identique (plafonné) pour toutes les cartes d'un petit filtre, cassant
-  // visuellement la cascade. Basé sur la position dans le sous-ensemble
-  // visible, chaque filtre retrouve son propre échelonnement 0,50,100...ms
-  // quel que soit son effectif.
+  // (position DANS la liste effectivement visible, pas dans la liste
+  // complète) sont calculés dans le même passage : le second sert au délai
+  // d'entrée échelonné, pour que chaque filtre retrouve son propre
+  // échelonnement quel que soit son effectif.
   const { visibleIds, visibleIndexById } = useMemo(() => {
     const ids = new Set<string>();
     const indexById = new Map<string, number>();
     sorted.forEach((r) => {
-      if (filter !== "tout" && normalize(r.category) !== filter) return;
-      if (favoritesOnly && !r.favorite) return;
+      if (applied.filter !== "tout" && normalize(r.category) !== applied.filter) return;
+      if (applied.favoritesOnly && !r.favorite) return;
       if (q) {
         const inTitle = r.title.toLowerCase().includes(q);
         const inIngredients = r.ingredients.some((ing) => !("isSection" in ing) && ing.name.toLowerCase().includes(q));
@@ -88,98 +97,89 @@ export default function RecipesView({
       ids.add(r.id);
     });
     return { visibleIds: ids, visibleIndexById: indexById };
-  }, [sorted, filter, favoritesOnly, q]);
+  }, [sorted, applied, q]);
 
   const hasVisible = visibleIds.size > 0;
 
-  // Compteur incrémenté à chaque VRAI changement de filtre/favoris (jamais à
-  // la recherche texte, ni au premier rendu) — passé à chaque carte pour
-  // qu'elle rejoue son fondu/zoom d'entrée dès que ce compteur bouge, tant
-  // qu'elle est visible après le changement (voir RecipeCard.jsx). Sans lui,
-  // une carte déjà visible avant ET après un changement de filtre (ex. Tout
-  // -> Salé : les cartes salées étaient déjà affichées sous "Tout") ne
-  // rejoue rien du tout — juste un saut instantané à sa nouvelle position,
-  // perçu comme une absence totale d'animation (signalé par l'utilisateur).
-  // Un aller-retour avait déjà eu lieu sur ce compteur : retiré une première
-  // fois en pensant qu'un burst de fondus simultanés causait le rendu
-  // saccadé initialement signalé — mesuré depuis (voir RecipeCard.jsx) que
-  // ce burst ne coûte au contraire RIEN en performance (0 frame perdue,
-  // même 20 cartes à la fois) : le vrai coupable du rendu saccadé ET du
-  // chevauchement visuel qui a suivi était le `layout`/`layoutId` Framer
-  // ajouté puis retiré séparément (voir #50/#51), pas ce fondu d'entrée.
-  const filterGenerationRef = useRef(0);
-  const prevFilterKeyRef = useRef(`${filter}|${favoritesOnly}`);
-  const filterKey = `${filter}|${favoritesOnly}`;
-  if (filterKey !== prevFilterKeyRef.current) {
-    prevFilterKeyRef.current = filterKey;
-    filterGenerationRef.current += 1;
-  }
-  const filterGeneration = filterGenerationRef.current;
+  const prefersReducedMotion = useReducedMotion();
+  const hasVisibleRef = useRef(hasVisible);
+  hasVisibleRef.current = hasVisible;
 
-  // Vrai pendant une courte fenêtre juste après un changement de filtre
-  // réel — passé à chaque carte pour qu'elle retire TEMPORAIREMENT le
-  // layoutId de morphing de sa photo (voir RecipeCard.jsx, `.illus-wrap`)
-  // pendant ce court instant précis. Ce layoutId doit rester présent EN
-  // CONTINU le reste du temps pour que le morphing carte -> fiche
-  // fonctionne (testé : l'armer seulement au moment du clic empêche Framer
-  // de jouer le morphing du tout, voir RecipeCard.jsx) — mais une présence
-  // continue sur une carte qui se déplace dans la grille (ex. Tout -> Salé)
-  // faisait traîner sa photo loin derrière elle pendant le déplacement
-  // (signalé avec vidéo à l'appui, voir historique). Couper le layoutId
-  // PILE pendant que les cartes sautent à leur nouvelle place, puis le
-  // remettre aussitôt après : Framer ne voit alors plus aucun "avant" à
-  // interpoler pour ce court instant (donc plus de traîne), et la présence
-  // continue reprend ensuite normalement pour le prochain clic éventuel.
-  //
-  // Le "on" DOIT s'appliquer au MÊME rendu que celui où `hidden` change pour
-  // chaque carte (celui qui fait sauter les cartes à leur nouvelle place) —
-  // un simple useEffect/useLayoutEffect arrive TOUJOURS un commit trop tard
-  // (React ne les exécute qu'APRÈS avoir déjà validé/peint ce rendu-là,
-  // laissant passer exactement l'instant que ce mécanisme cherche à éviter
-  // — vérifié, la traîne revenait malgré un useLayoutEffect). Setter l'état
-  // PENDANT le rendu, protégé par la comparaison à une ref pour ne le faire
-  // qu'une fois par changement réel : le pattern "ajuster un état en
-  // réaction à une prop" documenté par React, qui relance immédiatement le
-  // rendu AVANT tout commit/peinture — le tout premier rendu commité pour ce
-  // changement de filtre porte donc déjà `suppressMorph = true`.
-  const [suppressMorph, setSuppressMorph] = useState(false);
-  const prevGenerationForSuppressRef = useRef(filterGeneration);
-  if (filterGeneration !== prevGenerationForSuppressRef.current) {
-    prevGenerationForSuppressRef.current = filterGeneration;
-    if (!suppressMorph) setSuppressMorph(true);
-  }
-  // Remet le layoutId en place peu après — la grille a déjà fini de se
-  // réorganiser (instantané, CSS Grid) dès le rendu ci-dessus ; ce délai
-  // n'existe que pour laisser passer d'éventuels rendus en cascade
-  // (React effects, mesures Framer...) avant de redonner la main au
-  // morphing normal.
+  // Changement de filtre/favoris en DEUX TEMPS (les props `filter`/
+  // `favoritesOnly` changent tout de suite, la grille ne suit qu'ensuite) :
+  //  1. `exiting` passe à vrai — chaque carte affichée se fond vers le
+  //     transparent (voir RecipeCard.tsx, prop `exiting`) pendant
+  //     FILTER_EXIT_MS ;
+  //  2. `applied` prend alors les nouvelles valeurs : la grille bascule
+  //     (instantanément, CSS Grid, cartes déjà fondues donc invisibles) et
+  //     `filterGeneration` s'incrémente, ce qui fait rejouer à chaque carte
+  //     visible son fondu/zoom d'entrée en cascade.
+  // Avant ce changement, les anciennes cartes disparaissaient d'un coup
+  // (display: none) puis les nouvelles apparaissaient en fondu — la coupure
+  // brute masquait toute transition. `filterGeneration` est incrémenté à
+  // chaque VRAI changement de filtre/favoris (jamais à la recherche texte, ni
+  // au premier rendu) : une carte déjà visible avant ET après (ex. Tout ->
+  // Salé pour les cartes salées) rejoue ainsi elle aussi son entrée plutôt que
+  // de sauter à sa nouvelle place sans rien.
+  // Sans carte à faire sortir (grille vide) ou avec "Réduire les animations"
+  // système, la grille bascule immédiatement. Un clic rapide sur un autre
+  // filtre pendant la sortie relance simplement le délai vers la dernière
+  // valeur demandée ; revenir sur le filtre déjà appliqué l'annule (`exiting`
+  // retombe à faux, les cartes sont alors ré-affichées par RecipeCard.tsx).
+  const [exiting, setExiting] = useState(false);
+  const [filterGeneration, setFilterGeneration] = useState(0);
+  const [justApplied, setJustApplied] = useState(false);
   useEffect(() => {
-    if (!suppressMorph) return undefined;
-    const timer = setTimeout(() => setSuppressMorph(false), 60);
-    return () => clearTimeout(timer);
-  }, [suppressMorph]);
-
-  // Remonte en haut de page à chaque changement de filtre catégorie/favoris
-  // (pas à la recherche texte, ni au tout premier montage). Toutes les
-  // recettes restent montées en permanence désormais (voir visibleIds
-  // ci-dessus) : passer d'un filtre qui en affiche beaucoup (ex. "Sucré",
-  // 20 recettes chez certains utilisateurs) à un filtre qui n'en affiche
-  // que quelques-unes (ex. "Salé", 4 recettes) réduit brutalement la
-  // hauteur de la page. Sans remise à zéro, le défilement restait à sa
-  // position précédente — potentiellement bien plus bas que la nouvelle
-  // hauteur totale de la page, donc au-delà des quelques cartes restantes :
-  // rien de visible à l'écran (et le navigateur doit recaler la position de
-  // défilement à la volée), ce qui pouvait ressembler à un bug d'animation
-  // ou à un petit temps de latence alors que les cartes étaient en réalité
-  // déjà là, juste hors de vue.
-  const mountedRef = useRef(false);
-  useLayoutEffect(() => {
-    if (!mountedRef.current) {
-      mountedRef.current = true;
-      return;
+    if (filter === applied.filter && favoritesOnly === applied.favoritesOnly) {
+      setExiting(false);
+      return undefined;
     }
+    const commit = () => {
+      setApplied({ filter, favoritesOnly });
+      setExiting(false);
+      setFilterGeneration((g) => g + 1);
+      setJustApplied(true);
+    };
+    if (prefersReducedMotion || !hasVisibleRef.current) {
+      commit();
+      return undefined;
+    }
+    setExiting(true);
+    const timer = setTimeout(commit, FILTER_EXIT_MS);
+    return () => clearTimeout(timer);
+  }, [filter, favoritesOnly, applied, prefersReducedMotion]);
+
+  // Vrai pendant la sortie des cartes ET un court instant après la bascule de
+  // la grille — passé à chaque carte pour qu'elle retire TEMPORAIREMENT le
+  // layoutId de morphing de sa photo (voir RecipeCard.tsx, `.illus-wrap`).
+  // Ce layoutId doit rester présent EN CONTINU le reste du temps pour que le
+  // morphing carte -> fiche fonctionne (l'armer seulement au clic empêche
+  // Framer de le jouer), mais présent pendant que les cartes sautent à leur
+  // nouvelle place dans la grille, il faisait traîner leur photo loin derrière
+  // elles. `justApplied` est posé au MÊME rendu que le changement de `applied`
+  // (même lot de setState dans `commit`), donc le tout premier rendu commité
+  // pour la bascule porte déjà `suppressMorph = true` ; le court délai
+  // ci-dessous laisse passer d'éventuels rendus en cascade (effets React,
+  // mesures Framer) avant de redonner la main au morphing normal.
+  useEffect(() => {
+    if (!justApplied) return undefined;
+    const timer = setTimeout(() => setJustApplied(false), 60);
+    return () => clearTimeout(timer);
+  }, [justApplied]);
+  const suppressMorph = exiting || justApplied;
+
+  // Remonte en haut de page à la bascule de la grille (pas à la recherche
+  // texte, ni au tout premier montage) — au moment où les cartes sont déjà
+  // fondues, donc le saut de défilement n'est jamais visible. Toutes les
+  // recettes restent montées en permanence : passer d'un filtre qui en affiche
+  // beaucoup (ex. "Sucré", 20 recettes) à un filtre qui n'en affiche que
+  // quelques-unes (ex. "Salé", 4) réduit brutalement la hauteur de la page ;
+  // sans remise à zéro, le défilement resterait au-delà des cartes restantes,
+  // rien de visible à l'écran.
+  useLayoutEffect(() => {
+    if (filterGeneration === 0) return;
     window.scrollTo(0, 0);
-  }, [filter, favoritesOnly]);
+  }, [filterGeneration]);
 
   return (
     <div className="view">
@@ -194,12 +194,13 @@ export default function RecipesView({
             hidden={!visibleIds.has(r.id)}
             filterGeneration={filterGeneration}
             suppressMorph={suppressMorph}
+            exiting={exiting}
             onOpen={onOpen}
             isOpenRecipe={openRecipeId === r.id}
             onToggleFavorite={onToggleFavorite}
             onRequestDelete={onRequestDelete}
             onUpdateRecipe={onUpdateRecipe}
-            enterDelay={(visibleIndexById.get(r.id) || 0) * 50}
+            enterDelay={Math.min(visibleIndexById.get(r.id) || 0, ENTER_STAGGER_MAX_INDEX) * ENTER_STAGGER_MS}
             pressDuration={pressDuration}
             showNutriscore={showNutriscore}
             householdId={householdId}
