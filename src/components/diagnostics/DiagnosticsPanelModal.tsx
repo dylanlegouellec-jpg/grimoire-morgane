@@ -27,7 +27,7 @@ import {
 import { getOfflineQueueSize } from "../../utils/offlineQueue";
 import { clearImageCaches, getImageCacheEntryCounts } from "../../utils/imageCache";
 import { storeOnboardingCompleted } from "../../utils/localSettings";
-import { getDevLogEntries, clearDevLog, subscribeDevLog, type DevLogLevel } from "../../utils/devLog";
+import { getDevLogEntries, clearDevLog, subscribeDevLog, getPreviousSessionErrors, clearPreviousSessionErrors, type DevLogLevel } from "../../utils/devLog";
 
 /* ------------------------------------------------------------------ */
 /*  PANNEAU DE DIAGNOSTICS & MODE DÉVELOPPEUR                          */
@@ -152,7 +152,7 @@ type PerformanceWithMemory = Performance & {
 };
 
 export default function DiagnosticsPanelModal({ onClose, showToast, onResetOnboarding, accountEmail = null, householdName = null }: DiagnosticsPanelModalProps) {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const focusTrapRef = useFocusTrap<HTMLDivElement>(onClose);
   const sheet = useDismissibleSheet(onClose, { scrollRef: focusTrapRef });
   const setPanelRef = (node: HTMLDivElement | null) => { focusTrapRef.current = node; };
@@ -227,7 +227,15 @@ export default function DiagnosticsPanelModal({ onClose, showToast, onResetOnboa
   };
 
   const [logEntries, setLogEntries] = useState(() => getDevLogEntries());
-  useEffect(() => subscribeDevLog(setLogEntries), []);
+  const [previousErrors, setPreviousErrors] = useState(() => getPreviousSessionErrors());
+  useEffect(
+    () =>
+      subscribeDevLog((entries) => {
+        setLogEntries(entries);
+        setPreviousErrors(getPreviousSessionErrors());
+      }),
+    []
+  );
   const [logFilter, setLogFilter] = useState<"all" | DevLogLevel>("all");
   // Le filtre s'applique AVANT de ne garder que les 50 derniers : sinon un filtre
   // sur "error" ne montrerait que les erreurs perdues dans les 50 derniers événements.
@@ -279,6 +287,7 @@ export default function DiagnosticsPanelModal({ onClose, showToast, onResetOnboa
       generatedAt: new Date(),
       sections: [...appSections, liveRows, supabaseRows],
       logs: logEntries.slice(-50),
+      previousErrors,
     });
     showToast((await copyText(report)) ? t("diagnostics.reportCopied") : t("diagnostics.reportCopyFailed"));
   };
@@ -467,6 +476,25 @@ export default function DiagnosticsPanelModal({ onClose, showToast, onResetOnboa
                 <span className="ios-row-title">{t("diagnostics.reloadApp")}</span>
               </button>
             </div>
+
+            {previousErrors.length > 0 && (
+              <>
+                <div className="diagnostics-log-header">
+                  <p className="ios-group-title" style={{ margin: 0 }}>{t("diagnostics.previousErrors", { count: previousErrors.length })}</p>
+                  <button type="button" className="diagnostics-log-clear" onClick={() => clearPreviousSessionErrors()}>
+                    {t("diagnostics.clearLogs")}
+                  </button>
+                </div>
+                <div className="diagnostics-log">
+                  {previousErrors.slice(-10).reverse().map((entry) => (
+                    <div key={`${entry.ts}-${entry.message.slice(0, 20)}`} className="diagnostics-log-entry diagnostics-log-entry--error">
+                      <span className="diagnostics-log-level">{new Date(entry.ts).toLocaleString(language === "en" ? "en-GB" : "fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
+                      <span className="diagnostics-log-message">{entry.message}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
 
             <div className="diagnostics-log-header">
               <p className="ios-group-title" style={{ margin: 0 }}>{t("diagnostics.logConsole")}</p>

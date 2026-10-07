@@ -237,6 +237,8 @@ export const CODE_DOCS: Record<string, string> = {
     "Fige le fond de la page pendant qu'une modale est ouverte, avec la technique qui fonctionne sur iOS. Un compteur partagé gère plusieurs modales empilées, et un second hook dit si une modale est ouverte.",
   "src/hooks/useConnectionStatus.ts":
     "Dit si l'app est vraiment en ligne, hors ligne ou en cours de vérification, grâce à un vrai ping Supabase (le simple « navigator.onLine » est faux sur certains téléphones).",
+  "src/hooks/useWakeLock.ts":
+    "Empêche l'écran de s'éteindre pendant le mode cuisine, et redemande le verrou quand on revient sur l'app. Sans effet si le navigateur ne sait pas le faire.",
   "src/hooks/useLastSync.ts":
     "Donne l'instant de la dernière synchro réussie avec Supabase et se met à jour tout seul à chaque nouvel échange réussi.",
   "src/hooks/useAppDiagnostics.ts":

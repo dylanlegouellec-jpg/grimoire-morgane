@@ -219,10 +219,12 @@ export function buildDiagnosticsReport({
   generatedAt,
   sections,
   logs,
+  previousErrors = [],
 }: {
   generatedAt: Date;
   sections: ReportSection[];
   logs: DevLogEntry[];
+  previousErrors?: Pick<DevLogEntry, "ts" | "message">[];
 }): string {
   const lines: string[] = [
     "Rapport de diagnostic — Le Grimoire de Morgane",
@@ -236,6 +238,12 @@ export function buildDiagnosticsReport({
   if (logs.length === 0) lines.push("(vide)");
   for (const entry of logs) {
     lines.push(`${new Date(entry.ts).toLocaleTimeString("fr-FR")} [${entry.level}] ${entry.message}`);
+  }
+  if (previousErrors.length > 0) {
+    lines.push("", `[Erreurs des sessions précédentes — ${previousErrors.length}]`);
+    for (const entry of previousErrors) {
+      lines.push(`${new Date(entry.ts).toLocaleString("fr-FR")} ${entry.message}`);
+    }
   }
   return lines.join("\n");
 }

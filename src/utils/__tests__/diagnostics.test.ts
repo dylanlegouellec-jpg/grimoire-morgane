@@ -171,6 +171,18 @@ describe("buildDiagnosticsReport", () => {
     expect(report).toMatch(/\[error\] Boum/);
   });
 
+  it("ajoute les erreurs des sessions précédentes quand il y en a", () => {
+    const report = buildDiagnosticsReport({
+      generatedAt,
+      sections: [],
+      logs: [],
+      previousErrors: [{ ts: generatedAt.getTime(), message: "plantage hier" }],
+    });
+    expect(report).toContain("[Erreurs des sessions précédentes — 1]");
+    expect(report).toContain("plantage hier");
+    expect(buildDiagnosticsReport({ generatedAt, sections: [], logs: [] })).not.toContain("sessions précédentes");
+  });
+
   it("accorde le pluriel et indique un journal vide", () => {
     const empty = buildDiagnosticsReport({ generatedAt, sections: [], logs: [] });
     expect(empty).toContain("[Journal — 0 dernier événement]");
