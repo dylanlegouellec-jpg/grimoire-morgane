@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { RotateCcw } from "lucide-react";
 import { CSS } from "../../constants/styles.css";
+import { isChunkLoadError, reloadOnceForChunkError } from "../../utils/chunkReload";
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -9,6 +10,9 @@ interface ErrorBoundaryProps {
 
 interface ErrorBoundaryState {
   hasError: boolean;
+  // Message de l'erreur, affiché en petit sur l'écran d'erreur global : sans
+  // lui, une personne qui tombe dessus ne peut rien transmettre d'utile.
+  detail: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -30,11 +34,12 @@ interface ErrorBoundaryState {
 export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, detail: "" };
   }
 
-  static getDerivedStateFromError() {
-    return { hasError: true };
+  static getDerivedStateFromError(error: unknown) {
+    const message = error instanceof Error ? error.message : String(error ?? "");
+    return { hasError: true, detail: message.slice(0, 200) };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
@@ -42,10 +47,13 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
     // diagnostic disponible une fois l'app en production, sans outil de
     // suivi d'erreurs connecté à ce projet.
     console.error("Erreur capturée par ErrorBoundary :", error, info && info.componentStack);
+    // Morceau d'app devenu introuvable après une mise à jour : un rechargement
+    // règle le problème, inutile d'attendre que la personne le fasse.
+    if (isChunkLoadError(error)) reloadOnceForChunkError();
   }
 
   handleRetry = () => {
-    this.setState({ hasError: false });
+    this.setState({ hasError: false, detail: "" });
   };
 
   render() {
@@ -78,6 +86,11 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
           Une erreur inattendue est survenue. Tes recettes restent en sécurité —
           seul cet affichage a rencontré un problème.
         </p>
+        {this.state.detail && (
+          <p className="hint" style={{ fontStyle: "normal", textAlign: "center", fontSize: "0.7rem", opacity: 0.7, wordBreak: "break-word" }}>
+            {this.state.detail}
+          </p>
+        )}
         <button type="button" className="seal" onClick={() => window.location.reload()}>
           <RotateCcw size={15} /> Recharger l'application
         </button>
