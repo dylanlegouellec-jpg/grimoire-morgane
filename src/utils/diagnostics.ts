@@ -190,6 +190,21 @@ export function getPageLoadInfo(): PageLoadInfo {
   };
 }
 
+/* --- Temps écoulé -------------------------------------------------- */
+
+export type TimeAgo = { unit: "now" | "minutes" | "hours" | "days"; count: number };
+
+// « à l'instant », « il y a 5 minutes », « il y a 3 heures », « il y a 2 jours » —
+// renvoyé sous forme de valeurs, c'est l'appelant qui traduit (le panneau a deux langues).
+export function timeAgo(timestamp: number, now: number = Date.now()): TimeAgo {
+  const minutes = Math.floor(Math.max(0, now - timestamp) / 60000);
+  if (minutes < 1) return { unit: "now", count: 0 };
+  if (minutes < 60) return { unit: "minutes", count: minutes };
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return { unit: "hours", count: hours };
+  return { unit: "days", count: Math.floor(hours / 24) };
+}
+
 /* --- Rapport à copier --------------------------------------------------- */
 
 export interface ReportSection {

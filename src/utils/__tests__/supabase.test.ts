@@ -12,7 +12,8 @@ vi.mock("../supabaseClient", () => ({
   getSupabaseClient: () => null,
 }));
 
-import { saveAppState, flushOfflineQueue } from "../supabase";
+import { saveAppState, flushOfflineQueue, fetchTable } from "../supabase";
+import { getLastSyncAt, resetSyncStatusForTests } from "../syncStatus";
 import { enqueueOfflineAction, getOfflineQueue, clearOfflineQueue } from "../offlineQueue";
 
 /* ------------------------------------------------------------------ */
@@ -215,3 +216,27 @@ describe("flushOfflineQueue — conflits app_state", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("dernière synchro (utils/syncStatus.ts)", () => {
+  beforeEach(() => resetSyncStatusForTests());
+
+  it("note l'instant d'un échange de données réussi", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ body: [{ id: "r1" }] })));
+    expect(getLastSyncAt()).toBeNull();
+    await fetchTable("recipes");
+    expect(getLastSyncAt()).not.toBeNull();
+  });
+
+  it("ne note rien quand le serveur répond par une erreur", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ ok: false, status: 500, body: "boum" })));
+    await expect(fetchTable("recipes")).rejects.toThrow();
+    expect(getLastSyncAt()).toBeNull();
+  });
+
+  it("ne note rien quand le réseau est coupé", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+    await expect(fetchTable("recipes")).rejects.toThrow();
+    expect(getLastSyncAt()).toBeNull();
+  });
+});
+

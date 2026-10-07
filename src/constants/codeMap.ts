@@ -199,7 +199,7 @@ export const CODE_DOCS: Record<string, string> = {
   "package.json":
     "La carte d'identité du projet. Elle liste les dépendances (React, Supabase, Framer Motion, jsPDF…) et les commandes npm : dev, build, test, lint, typecheck.",
   "vite.config.ts":
-    "La configuration de Vite, l'outil qui construit l'app. Elle branche React et la PWA (service worker, génération du manifeste, cache hors ligne des images et des fichiers) et injecte au build les chiffres du Panneau de Diagnostics : lignes de code, carte du code, version et date de construction.",
+    "La configuration de Vite, l'outil qui construit l'app. Elle branche React et la PWA (service worker qui attend le feu vert pour se mettre à jour, génération du manifeste et de ses icônes, cache hors ligne des images et des fichiers) et injecte au build les chiffres du Panneau de Diagnostics : lignes de code, carte du code, version et date de construction.",
   "vitest.config.ts":
     "La configuration des tests (Vitest, dans un faux navigateur jsdom). Elle reprend les mêmes constantes injectées que vite.config.ts (lignes de code, carte du code, version), qui doivent rester synchronisées.",
   "tsconfig.json":
@@ -212,7 +212,7 @@ export const CODE_DOCS: Record<string, string> = {
 
   /* --- Point d'entrée ------------------------------------------------- */
   "src/main.tsx":
-    "Le point d'entrée : c'est le premier code que le navigateur exécute. Il installe le journal de debug, enregistre le service worker (mises à jour automatiques de la PWA), pose des repères sur la page (app installée, Android, clavier) puis monte l'app dans ses filets de sécurité. Il gère aussi le lien de partage d'une seule recette, sans jamais monter le reste de l'app.",
+    "Le point d'entrée : c'est le premier code que le navigateur exécute. Il installe le journal de debug, enregistre le service worker (la nouvelle version attend qu'on la recharge), pose des repères sur la page (app installée, Android, clavier) puis monte l'app dans ses filets de sécurité. Il gère aussi le lien de partage d'une seule recette, sans jamais monter le reste de l'app.",
   "src/GrimoireDeMorgane.tsx":
     "Le chef d'orchestre de l'app. Il branche la connexion, les préférences (thème, taille du texte, langue…), les hooks de données (recettes, frigo, plan, courses) et la synchronisation, puis choisit l'écran à afficher : chargement, connexion ou app. Il ne contient plus de logique métier : elle vit dans src/hooks.",
   "src/vite-env.d.ts":
@@ -237,6 +237,8 @@ export const CODE_DOCS: Record<string, string> = {
     "Fige le fond de la page pendant qu'une modale est ouverte, avec la technique qui fonctionne sur iOS. Un compteur partagé gère plusieurs modales empilées, et un second hook dit si une modale est ouverte.",
   "src/hooks/useConnectionStatus.ts":
     "Dit si l'app est vraiment en ligne, hors ligne ou en cours de vérification, grâce à un vrai ping Supabase (le simple « navigator.onLine » est faux sur certains téléphones).",
+  "src/hooks/useLastSync.ts":
+    "Donne l'instant de la dernière synchro réussie avec Supabase et se met à jour tout seul à chaque nouvel échange réussi.",
   "src/hooks/useAppDiagnostics.ts":
     "Réunit ce que le panneau de diagnostics sait de l'app : version, mode, service worker, appareil et chargement de la page. L'appareil se remet à jour tout seul (rotation, redimensionnement, réseau perdu ou retrouvé).",
   "src/hooks/useDismissibleSheet.ts":
@@ -269,6 +271,8 @@ export const CODE_DOCS: Record<string, string> = {
   /* --- Utilitaires ---------------------------------------------------- */
   "src/utils/aiIllustration.ts":
     "Appelle la fonction serveur qui génère une illustration de recette par IA. La clé d'API reste côté serveur, jamais dans le navigateur.",
+  "src/utils/appUpdate.ts":
+    "Gère « une nouvelle version est prête » : un petit état partagé entre le service worker et l'interface, pour que l'app ne se recharge que quand l'utilisateur le décide (bandeau « Recharger »). Revérifie aussi les mises à jour au retour au premier plan et chaque heure.",
   "src/utils/audioUtils.ts":
     "Les petits sons de l'app (clic, succès), fabriqués à la volée avec l'API Web Audio, sans aucun fichier audio. Respecte le réglage des effets sonores.",
   "src/utils/auth.ts":
@@ -323,6 +327,8 @@ export const CODE_DOCS: Record<string, string> = {
     "L'accès à Supabase en REST pur, sans SDK : lire et écrire les tables, avec délai maximum et repli sur la file hors ligne. Fournit aussi le ping de connexion, le comptage de lignes et le mode « simuler hors ligne » du panneau de diagnostics.",
   "src/utils/supabaseClient.ts":
     "Le client officiel Supabase, créé une seule fois. Il n'est utilisé que pour les mises à jour en direct (Realtime), qui exigent le SDK.",
+  "src/utils/syncStatus.ts":
+    "Garde l'instant de la dernière synchro réussie avec Supabase (lecture ou écriture de données, rejeu de la file hors ligne, changement reçu en direct), dans le stockage local pour qu'il survive à un rechargement. Affiché dans le panneau de diagnostics.",
   "src/utils/templateParser.ts":
     "Lit une fiche de recette en texte libre (« Recette de : … », « Ingrédients : … ») et la transforme en recette structurée. Fournit aussi les plages de la molette de quantité selon l'unité.",
   "src/utils/theme.ts":
@@ -511,6 +517,8 @@ export const CODE_DOCS: Record<string, string> = {
     "Affiche un texte à copier à la main quand la copie automatique est impossible.",
   "src/components/common/TextTemplateImportModal.tsx":
     "L'import d'une recette depuis une fiche texte collée (« Recette de : … »).",
+  "src/components/common/UpdateBanner.tsx":
+    "Le bandeau « Nouvelle version disponible » de l'en-tête, avec « Recharger » et « Plus tard ». Rien ne recharge l'app tant que l'utilisateur n'a pas tapé.",
   "src/components/common/UnsavedChangesModal.tsx":
     "Demande quoi faire d'un changement non enregistré : enregistrer, abandonner ou continuer à modifier.",
   "src/components/common/WheelPickerModal.tsx":

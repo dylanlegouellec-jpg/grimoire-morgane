@@ -9,6 +9,7 @@ import {
   getDisplayMode,
   getPageLoadInfo,
   getServiceWorkerInfo,
+  timeAgo,
 } from "../diagnostics";
 
 /* ------------------------------------------------------------------ */
@@ -185,3 +186,23 @@ describe("buildDiagnosticsReport", () => {
     expect(two).toContain("[Journal — 2 derniers événements]");
   });
 });
+
+describe("timeAgo", () => {
+  const now = 1_700_000_000_000;
+  const MINUTE = 60_000;
+
+  it("distingue « à l'instant », minutes, heures et jours", () => {
+    expect(timeAgo(now - 20_000, now)).toEqual({ unit: "now", count: 0 });
+    expect(timeAgo(now - 5 * MINUTE, now)).toEqual({ unit: "minutes", count: 5 });
+    expect(timeAgo(now - 59 * MINUTE, now)).toEqual({ unit: "minutes", count: 59 });
+    expect(timeAgo(now - 60 * MINUTE, now)).toEqual({ unit: "hours", count: 1 });
+    expect(timeAgo(now - 3 * 60 * MINUTE, now)).toEqual({ unit: "hours", count: 3 });
+    expect(timeAgo(now - 24 * 60 * MINUTE, now)).toEqual({ unit: "days", count: 1 });
+    expect(timeAgo(now - 49 * 60 * MINUTE, now)).toEqual({ unit: "days", count: 2 });
+  });
+
+  it("ne renvoie jamais un temps négatif (horloge en avance)", () => {
+    expect(timeAgo(now + 10 * MINUTE, now)).toEqual({ unit: "now", count: 0 });
+  });
+});
+

@@ -12,6 +12,7 @@ import {
   SHOPPING_LIST_COLUMNS,
 } from "../utils/supabase";
 import { getSupabaseClient } from "../utils/supabaseClient";
+import { markSyncSuccess } from "../utils/syncStatus";
 import { getOfflineQueueSize } from "../utils/offlineQueue";
 import { saveLocalCache } from "../utils/localCache";
 import { prefetchRecipeImages } from "../utils/imageCache";
@@ -501,6 +502,8 @@ export default function useOfflineSync({
     const channel = client
       .channel("grimoire_changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "recipes", filter: householdFilter }, (payload) => {
+        // Un changement d'un autre membre reçu en direct compte comme une synchro réussie.
+        markSyncSuccess();
         if (payload.eventType === "DELETE") {
           setRecipes((prev) => prev.filter((r) => r.id !== payload.old.id));
           return;
@@ -512,6 +515,8 @@ export default function useOfflineSync({
         });
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "shopping_lists", filter: householdFilter }, (payload) => {
+        // Un changement d'un autre membre reçu en direct compte comme une synchro réussie.
+        markSyncSuccess();
         if (payload.eventType === "DELETE") {
           setShoppingLists((prev) => prev.filter((l) => l.id !== payload.old.id));
           return;
@@ -523,6 +528,8 @@ export default function useOfflineSync({
         });
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "app_state", filter: householdFilter }, (payload) => {
+        // Un changement d'un autre membre reçu en direct compte comme une synchro réussie.
+        markSyncSuccess();
         if (payload.eventType === "DELETE") return;
         const row = payload.new;
         // La ref est mise à jour AVANT setX : quand l'effet de sauvegarde

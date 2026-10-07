@@ -2,6 +2,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_READY } from "../constants";
 import { enqueueOfflineAction, getOfflineQueue, removeFromOfflineQueue, incrementOfflineActionFailCount } from "./offlineQueue";
 import { normalizeIngredientList } from "./ingredients";
 import { getSupabaseClient } from "./supabaseClient";
+import { markSyncSuccess } from "./syncStatus";
 import type { NewOfflineAction } from "./offlineQueue";
 
 // Marqueurs posés sur de vraies instances Error (jamais un type d'erreur à
@@ -231,6 +232,9 @@ async function supabaseRequest(path: string, options: RequestInit = {}): Promise
     httpErr.status = res.status;
     throw httpErr;
   }
+  // Échange de données réussi : c'est ce qui alimente « Dernière synchro »
+  // (utils/syncStatus.ts) dans le Panneau de Diagnostics.
+  markSyncSuccess();
   if (res.status === 204) return null;
   const text = await res.text();
   return text ? JSON.parse(text) : null;
