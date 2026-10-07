@@ -242,27 +242,35 @@ export const SHELL_CSS: string = `
   /* Sert à revenir en douceur si une sortie (.tab-exit ci-dessous) est
      annulée en cours de route : sans lui, retirer la classe ferait sauter le
      contenu d'un coup à pleine opacité. */
-  transition: opacity 0.18s ease-out, left 0.18s ease-out;
+  transition: opacity 0.18s ease-out;
 }
 /* SORTIE de l'ancien onglet, posée par AppShell.tsx pendant TAB_EXIT_MS
    (constants/motion.ts : 0.16 s ici = TAB_EXIT_DURATION_S, à garder égal) —
-   fondu + léger décalage dans le sens inverse de l'entrée, puis le nouvel
-   onglet monte et joue l'animation d'entrée ci-dessus. Même "left"/opacité que
-   l'entrée, jamais "transform" (voir le commentaire plus haut : .fab et
-   .planning-reorder-banner, en position: fixed). "animation-duration: 0s"
+   FONDU SEUL, sur place : aucun mouvement latéral. Une version précédente
+   décalait aussi l'ancien contenu de 10 px sur le côté dès le toucher, juste
+   avant que le nouveau n'arrive de 18 px de l'autre côté : deux glissements
+   opposés d'affilée, perçus comme un à-coup de la page entière au moment
+   d'appuyer (reproduit à la mesure : x de 16 à 6 px en 130 ms). Le nouvel
+   onglet monte ensuite et joue l'animation d'entrée ci-dessus. "animation-duration: 0s"
    (et PAS "animation: none") : une entrée encore en cours ne doit pas écraser
    la valeur de la transition, mais le NOM de l'animation doit rester le même —
    sinon, si la sortie est annulée (retour sur l'onglet déjà affiché), retirer
    cette classe relancerait l'entrée depuis l'opacité 0 au lieu de revenir en
    douceur. pointer-events: none — on ne tape pas dans un contenu qui s'efface. */
 .tab-transition.tab-exit {
-  animation-duration: 0s; opacity: 0; left: calc(var(--tab-slide, 18px) * -0.55); pointer-events: none;
-  transition: opacity 0.16s cubic-bezier(0.4, 0, 1, 1), left 0.16s cubic-bezier(0.4, 0, 1, 1);
+  animation-duration: 0s; opacity: 0; pointer-events: none;
+  transition: opacity 0.16s cubic-bezier(0.4, 0, 1, 1);
 }
+/* Recherche et filtres (.tab-bars, AppShell.tsx) : même fondu que le contenu,
+   mais AUCUN glissement à l'entrée. Ils sont HORS de .app-content (seul à
+   couper ce qui dépasse sur les côtés) : un décalage de 18 px les ferait
+   déborder de l'écran sur la droite le temps de l'animation. */
+.tab-bars.tab-transition { animation-name: tabFade; }
 @media (prefers-reduced-motion: reduce) {
   .tab-transition, .tab-transition.tab-exit { animation: none; transition: none; left: 0; }
 }
 @keyframes tabSlide { from { opacity: 0; left: var(--tab-slide, 18px); } to { opacity: 1; left: 0; } }
+@keyframes tabFade { from { opacity: 0; } to { opacity: 1; } }
 
 /* --- Arrivée de l'app au lancement -------------------------------------
    Posées seulement tant que .grimoire-app porte .app-intro (AppShell.tsx :
