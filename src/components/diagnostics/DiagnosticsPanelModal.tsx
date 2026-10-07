@@ -336,7 +336,7 @@ export default function DiagnosticsPanelModal({ onClose, showToast, onResetOnboa
 
             {/* --- Application (version, mode, service worker) puis Appareil & performance --- */}
             <AppDiagnostics sections={appSections} />
-            <div className="ios-group">
+            <div className="ios-group diagnostics-actions">
               <button type="button" className="ios-row" onClick={runUpdateCheck} disabled={checkingUpdates}>
                 <span className="ios-row-icon"><RefreshCw size={16} /></span>
                 <span className="ios-row-title">{t("diagnostics.checkUpdates")}</span>
