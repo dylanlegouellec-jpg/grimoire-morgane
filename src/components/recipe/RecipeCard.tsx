@@ -17,12 +17,19 @@ import type { NutriscoreGrade } from "../../utils/nutriscoreClient";
 // juste avant l'effet ci-dessous pour le pourquoi de cette bascule.
 const CARD_ENTER_EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 const CARD_ENTER_DURATION_S = 0.42;
+// Sortie d'une carte quand le filtre change (voir RecipesView.tsx, prop
+// `exiting`) : plus courte que l'entrée et en "ease-in" (part doucement, finit
+// vite) — la grille bascule dès qu'elle est finie, la durée doit rester alignée
+// sur FILTER_EXIT_MS (RecipesView.tsx).
+const CARD_EXIT_EASE: [number, number, number, number] = [0.4, 0, 1, 1];
+const CARD_EXIT_DURATION_S = 0.16;
 
 interface RecipeCardProps {
   recipe: Recipe;
   hidden?: boolean;
   filterGeneration?: number;
   suppressMorph?: boolean;
+  exiting?: boolean;
   onOpen: (recipe: Recipe) => void;
   isOpenRecipe?: boolean;
   onToggleFavorite: (id: string) => void;
@@ -40,6 +47,7 @@ function RecipeCard({
   hidden = false,
   filterGeneration = 0,
   suppressMorph = false,
+  exiting = false,
   onOpen,
   isOpenRecipe = false,
   onToggleFavorite,
@@ -118,6 +126,28 @@ function RecipeCard({
   const prevHiddenRef = useRef(true); // "true" au tout premier rendu : force l'entrée si la carte démarre visible
   const prevGenerationRef = useRef(filterGeneration);
   const [scope, animate] = useAnimate();
+
+  // Fondu de SORTIE, déclenché par RecipesView quand le filtre change : la
+  // carte (déjà visible) se fond vers le transparent AVANT que la grille ne
+  // bascule — l'entrée ci-dessous repart ensuite de opacity 0, sans à-coup.
+  // Si la sortie est annulée (l'utilisateur revient sur le filtre déjà
+  // appliqué avant la fin du délai : `exiting` retombe à faux SANS que
+  // `filterGeneration` ait changé), la carte est ré-affichée ici ; quand la
+  // grille bascule vraiment, c'est l'effet d'entrée qui prend le relais.
+  const wasExitingRef = useRef(false);
+  const exitGenerationRef = useRef(filterGeneration);
+  useLayoutEffect(() => {
+    const wasExiting = wasExitingRef.current;
+    const generationChanged = filterGeneration !== exitGenerationRef.current;
+    wasExitingRef.current = exiting;
+    exitGenerationRef.current = filterGeneration;
+    if (hidden) return;
+    if (exiting && !wasExiting) {
+      animate(scope.current, { opacity: 0, y: -6, scale: 0.98 }, { duration: CARD_EXIT_DURATION_S, ease: CARD_EXIT_EASE });
+    } else if (!exiting && wasExiting && !generationChanged) {
+      animate(scope.current, { opacity: 1, y: 0, scale: 1 }, { duration: CARD_ENTER_DURATION_S / 2, ease: CARD_ENTER_EASE });
+    }
+  }, [exiting, hidden, filterGeneration, animate, scope]);
   useLayoutEffect(() => {
     const becameVisible = prevHiddenRef.current && !hidden;
     const generationChanged = filterGeneration !== prevGenerationRef.current;
@@ -178,7 +208,7 @@ function RecipeCard({
             // de taille du hero pendant l'ouverture) que Framer ne réalise
             // ALORS PLUS AUCUN morphing du tout — la fiche apparaît déjà à sa
             // taille quasi finale dès la première frame, sans jamais grandir
-            // depuis la petite photo de la carte (l'effet "aspiré" disparu,
+            // depuis la petite photo de la carte (l'effet "aspiré" disparú,
             // signalé par l'utilisateur) — quel que soit le délai ajouté
             // avant d'ouvrir (testé jusqu'à 50ms) : Framer ne semble tout
             // simplement pas traiter un layoutId qui vient tout juste d'être
