@@ -225,10 +225,39 @@ export const SHELL_CSS: string = `
    qu'aucun décalage n'est appliqué) ne crée jamais ce piège : seuls
    transform/filter/perspective le font. Sens ("forward"/"backward") posé
    par AppShell.jsx selon qu'on avance ou recule dans l'ordre des onglets. */
-.tab-transition { position: relative; animation: tabSlideForward 0.32s cubic-bezier(0.22, 1, 0.36, 1); }
-.tab-transition-backward { animation-name: tabSlideBackward; }
-@keyframes tabSlideForward { from { opacity: 0; left: 18px; } to { opacity: 1; left: 0; } }
-@keyframes tabSlideBackward { from { opacity: 0; left: -18px; } to { opacity: 1; left: 0; } }
+.tab-transition {
+  /* --tab-slide : décalage de départ de l'entrée (+18px vers l'avant, -18px
+     vers l'arrière), posé en style en ligne par AppShell.tsx. Une VARIABLE
+     plutôt que deux classes "avant"/"arrière" qui changeaient le NOM de
+     l'animation : changer le nom d'une animation la RELANCE, et le contenu
+     encore affiché repartait de l'opacité 0 au moment précis où il devait
+     se fondre (retour vers un onglet plus à gauche : disparition d'un coup au
+     lieu d'un fondu). Changer la valeur d'une variable ne relance rien. */
+  position: relative; animation: tabSlide 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  /* Sert à revenir en douceur si une sortie (.tab-exit ci-dessous) est
+     annulée en cours de route : sans lui, retirer la classe ferait sauter le
+     contenu d'un coup à pleine opacité. */
+  transition: opacity 0.18s ease-out, left 0.18s ease-out;
+}
+/* SORTIE de l'ancien onglet, posée par AppShell.tsx pendant TAB_EXIT_MS
+   (constants/motion.ts : 0.16 s ici = TAB_EXIT_DURATION_S, à garder égal) —
+   fondu + léger décalage dans le sens inverse de l'entrée, puis le nouvel
+   onglet monte et joue l'animation d'entrée ci-dessus. Même "left"/opacité que
+   l'entrée, jamais "transform" (voir le commentaire plus haut : .fab et
+   .planning-reorder-banner, en position: fixed). "animation-duration: 0s"
+   (et PAS "animation: none") : une entrée encore en cours ne doit pas écraser
+   la valeur de la transition, mais le NOM de l'animation doit rester le même —
+   sinon, si la sortie est annulée (retour sur l'onglet déjà affiché), retirer
+   cette classe relancerait l'entrée depuis l'opacité 0 au lieu de revenir en
+   douceur. pointer-events: none — on ne tape pas dans un contenu qui s'efface. */
+.tab-transition.tab-exit {
+  animation-duration: 0s; opacity: 0; left: calc(var(--tab-slide, 18px) * -0.55); pointer-events: none;
+  transition: opacity 0.16s cubic-bezier(0.4, 0, 1, 1), left 0.16s cubic-bezier(0.4, 0, 1, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tab-transition, .tab-transition.tab-exit { animation: none; transition: none; left: 0; }
+}
+@keyframes tabSlide { from { opacity: 0; left: var(--tab-slide, 18px); } to { opacity: 1; left: 0; } }
 
 /* --- Arrivée de l'app au lancement -------------------------------------
    Posées seulement tant que .grimoire-app porte .app-intro (AppShell.tsx :

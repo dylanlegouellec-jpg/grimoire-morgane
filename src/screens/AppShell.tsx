@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useRef, useState, lazy, Suspense } from "react";
-import type { ChangeEvent, Dispatch, SetStateAction } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import type { ChangeEvent, CSSProperties, Dispatch, SetStateAction } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Heart, Search, Settings, Wand2 } from "lucide-react";
 
 import { FILTERS, TABS } from "../constants";
-import { SPRING_PILL } from "../constants/motion";
+import { SPRING_PILL, TAB_EXIT_MS } from "../constants/motion";
 import { CSS } from "../constants/styles.css";
 import { triggerHaptic, nextId, copyText } from "../utils/helpers";
 import { getCachedProfile, getProfile } from "../utils/profile";
 import { useTranslation } from "../contexts/LanguageContext";
+import useExitThenSwitch from "../hooks/useExitThenSwitch";
 
 import { NavButton } from "../components/common";
 import ErrorBoundary from "../components/common/ErrorBoundary";
@@ -284,8 +285,32 @@ export default function AppShell({
     setPendingHouseholdJoin,
   } = syncApi;
 
+  // `tab` : l'onglet DEMANDÉ (la pastille de la barre du bas glisse tout de
+  // suite). `shownTab` : l'onglet réellement affiché, en retard de TAB_EXIT_MS
+  // pour laisser le contenu actuel se fondre avant que le nouveau n'entre
+  // (voir hooks/useExitThenSwitch.ts, et .tab-exit dans shell.css.ts) — même
+  // bascule en deux temps que les filtres de recettes. Tout ce qui s'affiche
+  // DANS la page (barre de recherche, filtres, contenu de l'onglet) suit
+  // `shownTab` ; seuls la barre de navigation, le tutoriel et le geste de
+  // balayage restent sur `tab`.
   const [tab, setTab] = useState("recettes");
-  // Sens du glissement entre onglets (voir .tab-transition, shell.css.js) —
+  const prefersReducedMotion = useReducedMotion();
+  const { shown: shownTab, exiting: tabExiting } = useExitThenSwitch(tab, TAB_EXIT_MS, Boolean(prefersReducedMotion));
+  // Précharge les trois onglets chargés à la demande (Plan, Frigo, Courses)
+  // peu après le lancement, hors du chemin critique : sans ça, le premier
+  // changement d'onglet montrait la baguette de chargement entre la sortie du
+  // contenu actuel et l'entrée du nouveau, le temps de récupérer son chunk. Un
+  // chunk déjà importé ici est servi tout de suite à React.lazy. Aucun octet
+  // de plus à télécharger au final : la PWA précache déjà tous les chunks.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void import("../components/planning/PlanningView");
+      void import("../components/fridge/FridgeView");
+      void import("../components/shopping/ShoppingView");
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
+  // Sens du glissement entre onglets (voir .tab-transition et --tab-slide, shell.css.ts) —
   // "avant" quand on va vers un onglet plus à droite dans la nav (Recettes
   // -> Plan -> Mon Frigo -> Courses), "arrière" sinon. Recalculé à CHAQUE
   // changement d'onglet (bouton de nav ou redirection programmatique comme
@@ -575,7 +600,7 @@ export default function AppShell({
         )}
       </header>
 
-      {tab === "recettes" && (
+      {shownTab === "recettes" && (
         <>
           <div className="search-bar">
             <Search size={15} />
@@ -622,7 +647,7 @@ export default function AppShell({
           </div>
         </>
       )}
-      {tab === "frigo" && (
+      {shownTab === "frigo" && (
         <div className="search-bar">
           <Search size={15} />
           <input
@@ -655,12 +680,12 @@ export default function AppShell({
       </div>
 
       <main className="app-content" ref={appContentRef}>
-        {/* key={tab} : une erreur dans un onglet ne doit emporter que son
+        {/* key={shownTab} : une erreur dans un onglet ne doit emporter que son
             propre contenu (en-tête/filtres/nav basse restent utilisables) —
             et changer d'onglet remonte le filet (nouvelle `key`), donc
             réinitialise l'erreur automatiquement plutôt que de rester
             bloqué sur le message d'erreur en revenant sur cet onglet. */}
-        <ErrorBoundary compact key={tab}>
+        <ErrorBoundary compact key={shownTab}>
         {/* Glissement horizontal léger entre onglets (voir .tab-transition,
             shell.css.js) — "left"/opacity, jamais "transform" : plusieurs
             onglets contiennent un élément position:fixed propre (.fab en
@@ -669,8 +694,11 @@ export default function AppShell({
             plutôt qu'au vrai viewport (même piège déjà documenté sur .view,
             juste au-dessus dans le JSX d'origine — voir shell.css.js). Un
             simple décalage "left" ne crée jamais ce problème. */}
-        <div className={`tab-transition tab-transition-${tabDirection}`}>
-        {tab === "recettes" && (
+        <div
+          className={`tab-transition${tabExiting ? " tab-exit" : ""}`}
+          style={{ "--tab-slide": tabDirection === "forward" ? "18px" : "-18px" } as CSSProperties}
+        >
+        {shownTab === "recettes" && (
           <RecipesView
             recipes={recipes}
             filter={filter}
@@ -688,7 +716,7 @@ export default function AppShell({
             showToast={showToast}
           />
         )}
-        {tab === "plan" && (
+        {shownTab === "plan" && (
           <Suspense fallback={<ViewLoadingFallback />}>
             <PlanningView
               recipes={recipes}
@@ -708,7 +736,7 @@ export default function AppShell({
             />
           </Suspense>
         )}
-        {tab === "frigo" && (
+        {shownTab === "frigo" && (
           <Suspense fallback={<ViewLoadingFallback />}>
             <FridgeView
               recipes={recipes}
@@ -723,7 +751,7 @@ export default function AppShell({
             />
           </Suspense>
         )}
-        {tab === "courses" && (
+        {shownTab === "courses" && (
           <Suspense fallback={<ViewLoadingFallback />}>
             <ShoppingView
               recipes={recipes}

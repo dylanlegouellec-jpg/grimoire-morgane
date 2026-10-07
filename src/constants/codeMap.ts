@@ -222,7 +222,7 @@ export const CODE_DOCS: Record<string, string> = {
 
   /* --- Écrans --------------------------------------------------------- */
   "src/screens/AppShell.tsx":
-    "La coque de l'app connectée : l'en-tête, la recherche, les filtres, la barre de navigation, les quatre onglets (Recettes, Plan, Frigo, Courses), le balayage pour changer de filtre et toutes les modales. Les onglets secondaires et les fenêtres rares sont chargés à la demande.",
+    "La coque de l'app connectée : l'en-tête, la recherche, les filtres, la barre de navigation, les quatre onglets (Recettes, Plan, Frigo, Courses) avec un fondu de sortie puis d'entrée entre eux, le balayage pour changer de filtre et toutes les modales. Les onglets secondaires et les fenêtres rares sont chargés à la demande.",
   "src/screens/LoadingScreen.tsx":
     "L'écran de chargement : une baguette qui tourne et un message (ouverture du grimoire, vérification de la session…).",
   "src/screens/LoginScreen.tsx":
@@ -241,6 +241,8 @@ export const CODE_DOCS: Record<string, string> = {
     "Dit si l'app est vraiment en ligne, hors ligne ou en cours de vérification, grâce à un vrai ping Supabase (le simple « navigator.onLine » est faux sur certains téléphones).",
   "src/hooks/useDismissibleSheet.ts":
     "Gère le geste « tirer vers le bas pour fermer » des modales : la feuille suit le doigt, puis se ferme selon la distance ou la vitesse, sans gêner le défilement du contenu.",
+  "src/hooks/useExitThenSwitch.ts":
+    "Retarde l'affichage d'une nouvelle valeur le temps qu'un fondu de sortie joue sur l'ancienne : c'est la bascule en deux temps (sortie, puis entrée) utilisée pour changer d'onglet. Gère les changements rapides, l'annulation et « Réduire les animations ».",
   "src/hooks/useFocusTrap.ts":
     "Garde le focus clavier à l'intérieur d'une modale, la ferme avec Échap ou le bouton retour du navigateur, et rend le focus à la fermeture. Gère aussi l'empilement de plusieurs modales.",
   "src/hooks/useHorizontalSwipe.ts":
@@ -368,7 +370,7 @@ export const CODE_DOCS: Record<string, string> = {
   "src/constants/styles/settingsIos.css.ts":
     "Les styles des Réglages façon iOS : listes groupées et contrôle segmenté.",
   "src/constants/styles/shell.css.ts":
-    "Les styles de la coque : en-tête, recherche, filtres, zone de contenu, glissement entre onglets et arrivée de l'app au lancement.",
+    "Les styles de la coque : en-tête, recherche, filtres, zone de contenu, fondu et glissement entre onglets, et arrivée de l'app au lancement.",
   "src/constants/styles/shopping.css.ts":
     "Les styles de l'onglet Courses : listes, rayons, lignes d'articles, sélecteur de recettes.",
   "src/constants/styles/theme.css.ts":

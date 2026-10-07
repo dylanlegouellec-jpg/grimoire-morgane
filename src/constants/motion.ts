@@ -44,6 +44,15 @@ export const FILTER_EXIT_MS = Math.round(CARD_EXIT_DURATION_S * 1000) + 10;
 export const ENTER_STAGGER_MS = 55;
 export const ENTER_STAGGER_MAX_INDEX = 6;
 
+// --- Changement d'onglet -----------------------------------------------
+// L'ancien contenu se fond (TAB_EXIT_DURATION_S), PUIS le nouveau entre
+// (animation d'entrée .tab-transition, shell.css.ts). Même mécanique et mêmes
+// durées que le changement de filtre des recettes. Le CSS ne peut pas importer
+// ces constantes : la durée de .tab-exit (shell.css.ts) est écrite à la main et
+// doit rester égale à TAB_EXIT_DURATION_S.
+export const TAB_EXIT_DURATION_S = 0.16;
+export const TAB_EXIT_MS = Math.round(TAB_EXIT_DURATION_S * 1000) + 10;
+
 // --- Glissements entre vues -------------------------------------------
 // Bascule Foyer/Personnel (Planning, Courses) : même durée/courbe que le
 // glissement entre onglets principaux (.tab-transition, shell.css.ts).
