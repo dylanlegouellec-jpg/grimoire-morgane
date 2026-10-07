@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:transitions": "vite build && node scripts/checkTransitions.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
@@ -38,6 +39,7 @@
     "globals": "^15.14.0",
     "jiti": "^2.7.0",
     "jsdom": "^25.0.1",
+    "playwright": "^1.56.1",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "typescript-eslint": "^8.70.1",
     "vite": "^5.0.0",

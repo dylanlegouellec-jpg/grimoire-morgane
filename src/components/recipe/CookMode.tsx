@@ -4,6 +4,7 @@ import { groupSteps, parseDurationMinutes, triggerHaptic } from "../../utils/hel
 import { useTranslation } from "../../contexts/LanguageContext";
 import { translateRecipeText } from "../../utils/recipeTranslation";
 import { overrideStatusBarColor } from "../../utils/theme";
+import useWakeLock from "../../hooks/useWakeLock";
 import Seal from "../common/Seal";
 import StepTimer from "./StepTimer";
 import PortionBadge from "./PortionBadge";
@@ -23,6 +24,7 @@ interface CookModeProps {
 // elle-même (l'écran le plus consulté d'une recette en cuisinant).
 export default function CookMode({ recipe, onClose, pressDuration = 750 }: CookModeProps) {
   const { t, language } = useTranslation();
+  useWakeLock();
   const groups = groupSteps(recipe.steps);
   const [groupIndex, setGroupIndex] = useState(0);
   const [done, setDone] = useState(() => groups.map((g) => g.steps.map(() => false)));

@@ -22,6 +22,55 @@ export interface DevLogEntry {
   ts: number;
 }
 
+/* Les erreurs sont aussi gardées dans localStorage : le journal en mémoire
+   disparaît quand l'app plante ou que le système la ferme, et c'est justement
+   alors qu'on en a besoin. Chaque erreur porte l'identifiant de la session qui
+   l'a produite, pour distinguer « cette session » des « sessions précédentes ». */
+const ERROR_STORE_KEY = "grimoire_error_log";
+const MAX_STORED_ERRORS = 20;
+const MAX_STORED_LENGTH = 500;
+const SESSION_ID = Math.random().toString(36).slice(2, 10);
+
+export interface StoredError {
+  sid: string;
+  ts: number;
+  message: string;
+}
+
+function readStoredErrors(): StoredError[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(ERROR_STORE_KEY) || "[]");
+    return Array.isArray(raw) ? raw.filter((e) => e && typeof e.message === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function storeError(message: string): void {
+  try {
+    const next = [...readStoredErrors(), { sid: SESSION_ID, ts: Date.now(), message: message.slice(0, MAX_STORED_LENGTH) }];
+    localStorage.setItem(ERROR_STORE_KEY, JSON.stringify(next.slice(-MAX_STORED_ERRORS)));
+  } catch {
+    // stockage plein ou bloqué : le journal en mémoire reste disponible
+  }
+}
+
+/** Erreurs produites par des sessions antérieures à celle-ci (les plus récentes en dernier). */
+export function getPreviousSessionErrors(): StoredError[] {
+  return readStoredErrors().filter((e) => e.sid !== SESSION_ID);
+}
+
+export function clearPreviousSessionErrors(): void {
+  try {
+    const kept = readStoredErrors().filter((e) => e.sid === SESSION_ID);
+    if (kept.length) localStorage.setItem(ERROR_STORE_KEY, JSON.stringify(kept));
+    else localStorage.removeItem(ERROR_STORE_KEY);
+  } catch {
+    // ignoré
+  }
+  notify();
+}
+
 type DevLogListener = (entries: DevLogEntry[]) => void;
 
 const MAX_ENTRIES = 200;
@@ -46,6 +95,7 @@ function push(level: DevLogLevel, message: string): void {
   try {
     entries.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, level, message, ts: Date.now() });
     if (entries.length > MAX_ENTRIES) entries.shift();
+    if (level === "error") storeError(message);
     notify();
   } finally {
     isPushing = false;

@@ -51,3 +51,29 @@ describe("devLog", () => {
     expect(getDevLogEntries().length).toBeLessThanOrEqual(200);
   });
 });
+
+describe("devLog — erreurs conservées entre les sessions", () => {
+  it("garde les erreurs d'une session précédente et exclut celles de la session courante", async () => {
+    const { getPreviousSessionErrors, clearPreviousSessionErrors } = await import("../devLog");
+    localStorage.setItem(
+      "grimoire_error_log",
+      JSON.stringify([{ sid: "ancienne", ts: 1000, message: "plantage hier" }])
+    );
+    console.error("erreur de cette session");
+
+    expect(getPreviousSessionErrors().map((e) => e.message)).toEqual(["plantage hier"]);
+    expect(JSON.parse(localStorage.getItem("grimoire_error_log") || "[]")).toHaveLength(2);
+
+    clearPreviousSessionErrors();
+    expect(getPreviousSessionErrors()).toEqual([]);
+    expect(JSON.parse(localStorage.getItem("grimoire_error_log") || "[]")).toHaveLength(1);
+  });
+
+  it("ne garde que les 20 dernières erreurs", () => {
+    localStorage.removeItem("grimoire_error_log");
+    for (let i = 0; i < 25; i++) console.error(`e${i}`);
+    const stored = JSON.parse(localStorage.getItem("grimoire_error_log") || "[]");
+    expect(stored).toHaveLength(20);
+    expect(stored[19].message).toContain("e24");
+  });
+});

@@ -483,6 +483,7 @@ export const translations: Record<"fr" | "en", TranslationTree> = {
       reloadApp: "Recharger l'application",
       logConsole: "Console de logs",
       clearLogs: "Vider",
+      previousErrors: "Erreurs des sessions précédentes ({count})",
       noLogs: "Aucun événement pour l'instant.",
     },
     publicRecipe: {
@@ -1003,6 +1004,7 @@ export const translations: Record<"fr" | "en", TranslationTree> = {
       reloadApp: "Reload the app",
       logConsole: "Log console",
       clearLogs: "Clear",
+      previousErrors: "Errors from previous sessions ({count})",
       noLogs: "No events yet.",
     },
     publicRecipe: {
