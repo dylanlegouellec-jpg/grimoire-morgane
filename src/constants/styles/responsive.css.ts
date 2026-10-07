@@ -15,7 +15,13 @@ export const RESPONSIVE_CSS: string = `
 /*  les longs défilements verticaux.                                    */
 /* ==================================================================== */
 @media (orientation: landscape) and (min-width: 768px) {
-  .grimoire-app, .loading-screen { max-width: 1400px; }
+  /* Plus de max-width ici (1400px retiré) : sur un grand écran, l'app
+     restait centrée avec deux grandes bandes vides de chaque côté au lieu
+     d'utiliser tout l'espace disponible — la sidebar (toujours 300px,
+     inchangée) et la grille de recettes (déjà en "auto-fill", voir plus
+     bas) profitent directement de la largeur réelle de l'écran, avec
+     simplement plus de colonnes de cartes sur un moniteur large. */
+  .grimoire-app, .loading-screen { max-width: none; }
 
   /* Une seule ligne de grille ("sidebar | content") plutôt que 4 lignes
      partagées avec .app-content (ancien grid-template-rows: auto auto auto
