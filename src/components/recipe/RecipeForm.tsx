@@ -521,11 +521,11 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
         )}
 
         <Flourish />
-        <label className="field">
+        <label className="field" data-tour="recipe-title">
           <span>Nom de la recette</span>
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex. Galette des rois" required />
         </label>
-        <div className="field-row">
+        <div className="field-row" data-tour="recipe-meta">
           <label className="field">
             <span>Catégorie</span>
             <select value={category} onChange={(e) => setCategory(e.target.value)}>
@@ -557,6 +557,7 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
         <button
           type="button"
           className="nutrition-toggle"
+          data-tour="recipe-nutrition"
           onClick={() => { triggerHaptic(10); setShowNutrition((v) => !v); }}
         >
           <span>Valeurs nutritionnelles (par portion)</span>
@@ -599,7 +600,7 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
         <label className="field">
           <span>Ingrédients</span>
         </label>
-        <Reorder.Group as="div" className="ingredient-rows" axis="y" values={ingredientRows} onReorder={setIngredientRows}>
+        <Reorder.Group as="div" className="ingredient-rows" data-tour="recipe-ingredients" axis="y" values={ingredientRows} onReorder={setIngredientRows}>
           {ingredientRows.map((row) => (
             <IngredientRow
               key={row.id}
@@ -610,14 +611,14 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
             />
           ))}
         </Reorder.Group>
-        <button type="button" className="link-btn add-ingredient-btn" {...ingredientAddPress}>
+        <button type="button" className="link-btn add-ingredient-btn" data-tour="recipe-add-ingredient" {...ingredientAddPress}>
           + Ajouter un ingrédient <span className="long-press-hint">(maintenir {formatPressDuration(pressDuration)} : titre de section)</span>
         </button>
 
         <label className="field">
           <span>Étapes de préparation</span>
         </label>
-        <Reorder.Group as="div" className="step-rows" axis="y" values={stepRows} onReorder={setStepRows}>
+        <Reorder.Group as="div" className="step-rows" data-tour="recipe-steps" axis="y" values={stepRows} onReorder={setStepRows}>
           {stepRows.map((row, idx) => (
             <StepRow
               key={row.id}
@@ -629,11 +630,11 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
             />
           ))}
         </Reorder.Group>
-        <button type="button" className="link-btn add-step-btn" {...stepAddPress}>
+        <button type="button" className="link-btn add-step-btn" data-tour="recipe-add-step" {...stepAddPress}>
           + Ajouter une étape <span className="long-press-hint">(maintenir {formatPressDuration(pressDuration)} : titre de section)</span>
         </button>
 
-        <label className="field">
+        <label className="field" data-tour="recipe-notes">
           <span>Remarques / Astuces — facultatif</span>
           <textarea
             rows={3}
@@ -643,7 +644,7 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
           />
         </label>
 
-        <div className="form-footer">
+        <div className="form-footer" data-tour="recipe-save">
           {formError && <p className="import-error">{formError}</p>}
           <Seal type="submit" tone="gold" disabled={!canSubmit} haptic={[100, 50, 40, 50, 150]}>
             <Wand2 size={16} /> {isEdit ? "Enregistrer les modifications" : "Sceller la recette"}

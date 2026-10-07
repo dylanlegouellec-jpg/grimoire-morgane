@@ -72,6 +72,7 @@ interface SecretSettingsModalProps {
   showToast?: (msg: string) => void;
   onSignOut: () => void;
   onReplayOnboarding: () => void;
+  onReplayRecipeTour: () => void;
   onOpenCookbookBuilder: () => void;
   onOpenDiagnostics: () => void;
 }
@@ -135,6 +136,7 @@ export default function SecretSettingsModal({
   showToast,
   onSignOut,
   onReplayOnboarding,
+  onReplayRecipeTour,
   onOpenCookbookBuilder,
   onOpenDiagnostics,
 }: SecretSettingsModalProps) {
@@ -341,6 +343,12 @@ export default function SecretSettingsModal({
             <button type="button" className="ios-row" onClick={() => { triggerHaptic(15); onReplayOnboarding(); }}>
               <span className="ios-row-icon" style={{ background: "var(--gold-light)" }}><Compass size={16} /></span>
               <span className="ios-row-title">{t("settings.replayTutorial")}</span>
+            </button>
+            {/* Même principe : ferme les Réglages puis ouvre un formulaire de
+                recette vide, avec le tuto « Modifier une recette » par-dessus. */}
+            <button type="button" className="ios-row" onClick={() => { triggerHaptic(15); onReplayRecipeTour(); }}>
+              <span className="ios-row-icon" style={{ background: "var(--gold-light)" }}><Pencil size={16} /></span>
+              <span className="ios-row-title">{t("settings.replayRecipeTour")}</span>
             </button>
           </div>
 

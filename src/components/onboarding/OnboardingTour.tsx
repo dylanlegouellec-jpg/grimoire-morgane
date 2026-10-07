@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { BookOpen, CalendarDays, Refrigerator, ShoppingBasket, Sparkles } from "lucide-react";
+import { BookOpen, CalendarDays, Hand, Refrigerator, ShoppingBasket, Sparkles } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { EASE_OUT, MODAL_BACKDROP_MOTION } from "../../constants/motion";
@@ -42,6 +42,8 @@ interface OnboardingTourProps {
   currentTab: string;
   changeTab: (tab: string) => void;
   onFinish: () => void;
+  // Propose, sur la dernière étape, d'enchaîner sur le tuto « Modifier une recette ».
+  onStartRecipeTour?: () => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -76,7 +78,7 @@ interface OnboardingTourProps {
 /*  modalsBase.css.js) : la même logique fonctionne sans aucune condition                                              */
 /*  supplémentaire sur ces trois variantes.                                                                               */
 /* ------------------------------------------------------------------ */
-export default function OnboardingTour({ currentTab, changeTab, onFinish }: OnboardingTourProps) {
+export default function OnboardingTour({ currentTab, changeTab, onFinish, onStartRecipeTour }: OnboardingTourProps) {
   const { t } = useTranslation();
   const prefersReducedMotion = useReducedMotion();
   const [stepIndex, setStepIndex] = useState(0);
@@ -96,6 +98,9 @@ export default function OnboardingTour({ currentTab, changeTab, onFinish }: Onbo
       titleKey: `onboarding.${tabKey}Title`,
       bodyKey: `onboarding.${tabKey}Body`,
     })),
+    // Dernière étape : les gestes qu'aucun bouton ne laisse deviner (appui
+    // long, tirer pour fermer). Sans cible : même fond plein que la bienvenue.
+    { tabKey: null, Icon: Hand, titleKey: "onboarding.gesturesTitle", bodyKey: "onboarding.gesturesBody" },
   ];
   const step = steps[stepIndex];
   const isFirst = stepIndex === 0;
@@ -148,6 +153,11 @@ export default function OnboardingTour({ currentTab, changeTab, onFinish }: Onbo
   const focusTrapRef = useFocusTrap<HTMLDivElement>(close);
   useBodyScrollLock(true);
 
+  const startRecipeTour = () => {
+    triggerHaptic(15);
+    close();
+    onStartRecipeTour?.();
+  };
   const goNext = () => {
     triggerHaptic(15);
     if (isLast) { close(); return; }
@@ -198,6 +208,11 @@ export default function OnboardingTour({ currentTab, changeTab, onFinish }: Onbo
             <h3 className="dropcap-title">{t(step.titleKey)}</h3>
             <Flourish />
             <p>{t(step.bodyKey)}</p>
+            {isLast && onStartRecipeTour && (
+              <button type="button" className="onboarding-secondary" onClick={startRecipeTour}>
+                {t("onboarding.recipeTourLink")}
+              </button>
+            )}
           </motion.div>
         </AnimatePresence>
 
