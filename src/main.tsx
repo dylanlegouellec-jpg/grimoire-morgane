@@ -12,6 +12,7 @@ import { registerSW } from 'virtual:pwa-register'
 import { initAudioOnFirstTouch } from './utils/audioUtils'
 import { installDevLog } from './utils/devLog'
 import { dismissSplash } from './utils/splash'
+import { reloadOnceForChunkError } from './utils/chunkReload'
 import { notifyUpdateAvailable, registerUpdateHandler, startUpdateChecks } from './utils/appUpdate'
 import { MotionConfig } from 'motion/react'
 
@@ -161,6 +162,13 @@ try {
 // mise à l'échelle) pour ne garder que les fondus — au lieu de n'être
 // respecté que par les quelques composants qui testent useReducedMotion()
 // eux-mêmes.
+// Échec du préchargement d'un morceau d'app (nom périmé après une mise à jour) :
+// Vite le signale ici avant de lever l'erreur. On recharge une fois plutôt que
+// d'afficher l'écran d'erreur — voir utils/chunkReload.ts.
+window.addEventListener("vite:preloadError", (event) => {
+  if (reloadOnceForChunkError()) event.preventDefault();
+});
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <MotionConfig reducedMotion="user">
