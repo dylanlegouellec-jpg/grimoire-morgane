@@ -4,7 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Heart, Search, Settings, Wand2 } from "lucide-react";
 
 import { FILTERS, TABS } from "../constants";
-import { SPRING_PILL, TAB_BARS_MOTION, TAB_EXIT_MS } from "../constants/motion";
+import { SPRING_PILL, TAB_EXIT_MS } from "../constants/motion";
 import { CSS } from "../constants/styles.css";
 import { triggerHaptic, nextId, copyText } from "../utils/helpers";
 import { getCachedProfile, getProfile } from "../utils/profile";
@@ -296,7 +296,6 @@ export default function AppShell({
   const [tab, setTab] = useState("recettes");
   const prefersReducedMotion = useReducedMotion();
   const { shown: shownTab, exiting: tabExiting } = useExitThenSwitch(tab, TAB_EXIT_MS, Boolean(prefersReducedMotion));
-  const tabBarsMotion = prefersReducedMotion ? { ...TAB_BARS_MOTION, transition: { duration: 0 } } : TAB_BARS_MOTION;
   // Remet la page en haut À LA BASCULE (le contenu est alors déjà fondu, donc
   // le saut ne se voit pas) : sinon, depuis un onglet défilé vers un onglet
   // plus court, le navigateur recale lui-même le défilement d'un coup, en
@@ -334,6 +333,9 @@ export default function AppShell({
   // touche `tab`, pour que ce calcul ne puisse pas être oublié à un
   // endroit et pas un autre.
   const [tabDirection, setTabDirection] = useState<"forward" | "backward">("forward");
+  // Décalage de départ de l'entrée (voir --tab-slide, shell.css.ts), commun au
+  // contenu de l'onglet ET à ses barres de recherche/filtres.
+  const tabSlideStyle = { "--tab-slide": tabDirection === "forward" ? "18px" : "-18px" } as CSSProperties;
   const changeTab = useCallback((nextKey: string) => {
     setTab((prevKey) => {
       if (nextKey === prevKey) return prevKey;
@@ -615,77 +617,84 @@ export default function AppShell({
         )}
       </header>
 
-      {/* Recherche + filtres (Recettes) et recherche (Frigo) : se replient /
-          se déplient en hauteur au lieu d'apparaître/disparaître d'un coup.
-          Avant, le contenu sous eux sautait de 56 à 105 px au moment précis de
-          la bascule d'onglet (décalage de mise en page mesuré : 0,04 à 0,14).
-          Pilotées par `tab` (l'onglet DEMANDÉ), pas `shownTab` : elles
-          commencent à bouger dès le clic, pendant que l'ancien contenu se fond,
-          et sont presque posées quand le nouveau entre. Sans animation avec
-          « Réduire les animations ». `initial={false}` : rien à l'arrivée de
-          l'app (voir .app-intro pour ça). */}
-      <AnimatePresence initial={false}>
-      {tab === "recettes" && (
-        <motion.div key="recettes-bars" className="tab-bars" {...tabBarsMotion}>
-          <div className="search-bar">
-            <Search size={15} />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t("app.searchRecipePlaceholder")}
-              aria-label={t("app.searchRecipePlaceholder")}
-            />
-          </div>
-          <div className="filter-bar">
-            {FILTERS.map((f) => {
-              const active = filter === f.key;
-              return (
+      {/* Recherche + filtres (Recettes) et recherche (Frigo) : font PARTIE du
+          contenu de l'onglet — mêmes classes, même fondu de sortie, même
+          entrée, même `key` que le contenu juste en dessous. Ils se fondent
+          avec l'ancien contenu, puis le nouveau (barres + contenu) entre
+          ensemble : la mise en page ne change que quand tout est invisible.
+          Deux essais précédents, abandonnés : (1) des barres qui changeaient
+          d'un coup à la bascule — elles restaient opaques pendant que le
+          contenu se fondait, puis disparaissaient en une image, et tout sautait
+          de 56 à 105 px ; (2) des barres animées en hauteur dès le clic — la
+          barre du NOUVEL onglet glissait au-dessus de l'ancien contenu encore
+          affiché et le repoussait vers le bas (enregistrement iPhone à l'appui). */}
+      {(shownTab === "recettes" || shownTab === "frigo") && (
+        <div
+          key={shownTab}
+          className={`tab-bars tab-transition${tabExiting ? " tab-exit" : ""}`}
+          style={tabSlideStyle}
+        >
+          {shownTab === "recettes" && (
+            <>
+              <div className="search-bar">
+                <Search size={15} />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder={t("app.searchRecipePlaceholder")}
+                  aria-label={t("app.searchRecipePlaceholder")}
+                />
+              </div>
+              <div className="filter-bar">
+                {FILTERS.map((f) => {
+                  const active = filter === f.key;
+                  return (
+                    <button
+                      key={f.key}
+                      className={`filter-pill ${active ? "active" : ""}`}
+                      onClick={() => { triggerHaptic(10); setFilter(f.key); }}
+                    >
+                      {/* Pastille dorée glissante — Framer Motion (layoutId
+                          "recettes-filter-pill", propre à cette barre : un autre
+                          layoutId que celui de RecipePickerModal.jsx, chacun
+                          avec son propre état "filter" local, jamais les deux
+                          montés à la fois de toute façon mais autant éviter tout
+                          risque de collision). */}
+                      {active && (
+                        <motion.span
+                          layoutId="recettes-filter-pill"
+                          className="filter-indicator"
+                          transition={SPRING_PILL}
+                        />
+                      )}
+                      {t(`filters.${f.key}`)}
+                    </button>
+                  );
+                })}
                 <button
-                  key={f.key}
-                  className={`filter-pill ${active ? "active" : ""}`}
-                  onClick={() => { triggerHaptic(10); setFilter(f.key); }}
+                  className={`filter-pill heart-pill ${favoritesOnly ? "active" : ""}`}
+                  onClick={() => { triggerHaptic(10); setFavoritesOnly((v) => !v); }}
+                  title={t("app.favoritesTitle")}
                 >
-                  {/* Pastille dorée glissante — Framer Motion (layoutId
-                      "recettes-filter-pill", propre à cette barre : un autre
-                      layoutId que celui de RecipePickerModal.jsx, chacun
-                      avec son propre état "filter" local, jamais les deux
-                      montés à la fois de toute façon mais autant éviter tout
-                      risque de collision). */}
-                  {active && (
-                    <motion.span
-                      layoutId="recettes-filter-pill"
-                      className="filter-indicator"
-                      transition={SPRING_PILL}
-                    />
-                  )}
-                  {t(`filters.${f.key}`)}
+                  <Heart size={13} fill={favoritesOnly ? "currentColor" : "none"} /> {t("app.favorites")}
                 </button>
-              );
-            })}
-            <button
-              className={`filter-pill heart-pill ${favoritesOnly ? "active" : ""}`}
-              onClick={() => { triggerHaptic(10); setFavoritesOnly((v) => !v); }}
-              title={t("app.favoritesTitle")}
-            >
-              <Heart size={13} fill={favoritesOnly ? "currentColor" : "none"} /> {t("app.favorites")}
-            </button>
-          </div>
-        </motion.div>
+              </div>
+
+            </>
+          )}
+          {shownTab === "frigo" && (
+            <div className="search-bar">
+              <Search size={15} />
+              <input
+                value={fridgeSearch}
+                onChange={(e) => setFridgeSearch(e.target.value)}
+                placeholder={t("app.searchFridgePlaceholder")}
+                aria-label={t("app.searchFridgePlaceholder")}
+              />
+            </div>
+          )}
+        </div>
       )}
-      {tab === "frigo" && (
-        <motion.div key="frigo-bars" className="tab-bars" {...tabBarsMotion}>
-          <div className="search-bar">
-            <Search size={15} />
-            <input
-              value={fridgeSearch}
-              onChange={(e) => setFridgeSearch(e.target.value)}
-              placeholder={t("app.searchFridgePlaceholder")}
-              aria-label={t("app.searchFridgePlaceholder")}
-            />
-          </div>
-        </motion.div>
-      )}
-      </AnimatePresence>
 
       {/* Dernier enfant de .app-sidebar (voir son commentaire plus haut) :
           en paysage, "margin-top: auto" (responsive.css.js) la pousse tout
@@ -724,7 +733,7 @@ export default function AppShell({
             simple décalage "left" ne crée jamais ce problème. */}
         <div
           className={`tab-transition${tabExiting ? " tab-exit" : ""}`}
-          style={{ "--tab-slide": tabDirection === "forward" ? "18px" : "-18px" } as CSSProperties}
+          style={tabSlideStyle}
         >
         {shownTab === "recettes" && (
           <RecipesView
