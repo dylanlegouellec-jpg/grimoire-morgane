@@ -53,6 +53,17 @@ export const ENTER_STAGGER_MAX_INDEX = 6;
 export const TAB_EXIT_DURATION_S = 0.16;
 export const TAB_EXIT_MS = Math.round(TAB_EXIT_DURATION_S * 1000) + 10;
 
+// Recherche et filtres de l'en-tête (AppShell.tsx) : replis/dépliages en
+// hauteur quand l'onglet change, pour que le contenu glisse au lieu de sauter.
+// Un peu plus long que la sortie du contenu (TAB_EXIT_DURATION_S) : à la
+// bascule, ils sont presque posés et le décalage restant passe inaperçu.
+export const TAB_BARS_MOTION = {
+  initial: { height: 0, opacity: 0 },
+  animate: { height: "auto", opacity: 1 },
+  exit: { height: 0, opacity: 0 },
+  transition: { duration: 0.26, ease: EASE_OUT },
+} as const;
+
 // --- Glissements entre vues -------------------------------------------
 // Bascule Foyer/Personnel (Planning, Courses) : même durée/courbe que le
 // glissement entre onglets principaux (.tab-transition, shell.css.ts).
