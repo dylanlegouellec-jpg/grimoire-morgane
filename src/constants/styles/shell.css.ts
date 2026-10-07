@@ -116,6 +116,30 @@ export const SHELL_CSS: string = `
    EXACTEMENT comme le contenu de l'onglet. "flex-shrink: 0" : en paysage,
    .app-sidebar est une colonne flex. */
 .tab-bars { flex-shrink: 0; }
+/* Bandeau « Nouvelle version disponible » (UpdateBanner.tsx), dans l'en-tête, même
+   gabarit que .offline-banner mais doré : une information, pas une alerte. */
+.update-banner {
+  margin: 8px auto 0; max-width: 340px; padding: 5px 6px 5px 12px;
+  font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.5px; text-transform: uppercase;
+  color: var(--gold); background: rgba(179,135,42,0.14);
+  border: 1px solid rgba(179,135,42,0.45); border-radius: 999px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  animation: introDown 0.4s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.update-banner-text { flex: 1; text-align: left; }
+.update-banner-reload {
+  flex-shrink: 0; border: none; border-radius: 999px; cursor: pointer;
+  background: var(--gold); color: var(--parchment);
+  font-family: 'Cinzel', serif; font-size: 0.58rem; letter-spacing: 0.5px; text-transform: uppercase;
+  padding: 4px 11px;
+}
+.update-banner-later {
+  flex-shrink: 0; border: none; background: none; cursor: pointer; color: var(--ink-soft);
+  font-family: 'EB Garamond', serif; font-size: 0.8rem; text-transform: none; letter-spacing: 0; font-style: italic;
+  padding: 4px 8px;
+}
+@media (prefers-reduced-motion: reduce) { .update-banner { animation: none; } }
+
 .search-bar {
   display: flex; align-items: center; gap: 8px;
   margin: 14px 16px 0; padding: 9px 12px;

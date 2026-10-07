@@ -9,6 +9,7 @@ vi.mock("../../../utils/supabaseClient", () => ({
 import DiagnosticsPanelModal from "../DiagnosticsPanelModal";
 import { LanguageProvider } from "../../../contexts/LanguageContext";
 import { installDevLog, clearDevLog } from "../../../utils/devLog";
+import { markSyncSuccess, resetSyncStatusForTests } from "../../../utils/syncStatus";
 
 /* ------------------------------------------------------------------ */
 /*  Les sections ajoutées au Panneau de Diagnostics : Application,         */
@@ -45,6 +46,7 @@ afterEach(() => {
   // @ts-expect-error — idem pour le presse-papiers
   delete navigator.clipboard;
   act(() => clearDevLog());
+  resetSyncStatusForTests();
 });
 
 describe("Application et appareil", () => {
@@ -58,12 +60,15 @@ describe("Application et appareil", () => {
     await waitFor(() => expect(screen.getByText("non pris en charge")).toBeInTheDocument());
   });
 
-  it("affiche l'appareil : écran, fenêtre, langue, réseau, navigateur, chargement", () => {
+  it("affiche l'appareil : écran, fenêtre, langue, réseau, navigateur, chargement", async () => {
     renderModal();
     expect(screen.getByText("Appareil & performance")).toBeInTheDocument();
     for (const label of ["Écran", "Fenêtre", "Langue / fuseau", "Réseau", "Chargement de la page", "Ressources chargées"]) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
+    // Attend la lecture asynchrone du service worker : sans ça, le test se
+    // termine avant, et la mise à jour d'affichage arrive hors de act().
+    await waitFor(() => expect(screen.getByText("non pris en charge")).toBeInTheDocument());
   });
 });
 
@@ -129,6 +134,27 @@ describe("Rapport", () => {
     renderModal({ showToast });
     await user.click(screen.getByText("Copier le rapport"));
     await waitFor(() => expect(showToast).toHaveBeenCalledWith("Copie impossible."));
+  });
+});
+
+describe("Dernière synchro", () => {
+  it("dit qu'aucune synchro n'a eu lieu sur cet appareil", async () => {
+    const user = userEvent.setup();
+    const writeText = stubClipboard();
+    renderModal();
+    await user.click(screen.getByText("Copier le rapport"));
+    await waitFor(() => expect(writeText).toHaveBeenCalled());
+    expect(writeText.mock.calls[0][0]).toContain("Dernière synchro : aucune sur cet appareil");
+  });
+
+  it("donne l'heure de la dernière synchro réussie et le temps écoulé", async () => {
+    const user = userEvent.setup();
+    const writeText = stubClipboard();
+    markSyncSuccess(Date.now());
+    renderModal();
+    await user.click(screen.getByText("Copier le rapport"));
+    await waitFor(() => expect(writeText).toHaveBeenCalled());
+    expect(writeText.mock.calls[0][0]).toMatch(/Dernière synchro : .+ · à l'instant/);
   });
 });
 

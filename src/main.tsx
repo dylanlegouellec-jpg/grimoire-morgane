@@ -12,6 +12,7 @@ import { registerSW } from 'virtual:pwa-register'
 import { initAudioOnFirstTouch } from './utils/audioUtils'
 import { installDevLog } from './utils/devLog'
 import { dismissSplash } from './utils/splash'
+import { notifyUpdateAvailable, registerUpdateHandler, startUpdateChecks } from './utils/appUpdate'
 import { MotionConfig } from 'motion/react'
 
 // Patché avant tout le reste : le Panneau de Diagnostics (Réglages du
@@ -20,44 +21,24 @@ import { MotionConfig } from 'motion/react'
 // l'ouverture du panneau.
 installDevLog()
 
-// `registerType: "autoUpdate"` (vite.config.js) ne fait qu'une partie du
-// travail : un nouveau service worker prend bien le contrôle en silence
-// dès qu'il est prêt (skipWaiting + clientsClaim, activés par ce mode),
-// mais ça ne recharge jamais l'onglet déjà ouvert — le JS déjà chargé en
-// mémoire continue de tourner tel quel jusqu'à la prochaine navigation/
-// fermeture manuelle. Concrètement observé cette session : après un
-// déploiement, un onglet resté ouvert continuait de réclamer les anciens
-// fichiers (hash de build précédent, supprimés du serveur) au moindre
-// rechargement lazy, avec des 404 à la clé — précisément le scénario visé
-// par une PWA gardée ouverte en fond de poche sur un téléphone.
+// Mises à jour (vite.config.ts, `registerType: "prompt"`) : une nouvelle version
+// s'installe en arrière-plan puis ATTEND — l'ancienne continue de servir ses
+// propres fichiers, donc aucun 404 sur un morceau de code supprimé du serveur,
+// même pour une appli gardée ouverte en fond de poche. `onNeedRefresh` prévient
+// l'interface (bandeau « Nouvelle version disponible », utils/appUpdate.ts) ;
+// c'est l'utilisateur qui décide quand recharger.
 //
-// `controllerchange` se déclenche quand le service worker qui contrôle
-// CET onglet change. Ne recharger que si un contrôleur existait DÉJÀ au
-// démarrage (donc que ce changement correspond à une vraie mise à jour en
-// cours de session) : sur la toute première visite, aucun service worker
-// ne contrôle encore la page au moment où elle se charge — le premier
-// controllerchange à ce moment-là est juste la prise de contrôle
-// initiale (clientsClaim), pas une mise à jour, et n'a donc rien à
-// recharger.
-//
-// Désactivé sur Android, à la demande — même détection UA que
-// data-platform plus bas (Android est la seule des deux plateformes à
-// s'annoncer sans ambiguïté dans navigator.userAgent). Un onglet Android
-// resté ouvert après un déploiement continuera donc de tourner sur le JS
-// déjà chargé jusqu'à la prochaine fermeture/réouverture manuelle — avec
-// le risque de 404 décrit ci-dessus si un chargement lazy réclame entre-
-// temps un fichier d'un ancien build déjà supprimé du serveur.
-if ("serviceWorker" in navigator && !/Android/i.test(navigator.userAgent)) {
-  const hadController = Boolean(navigator.serviceWorker.controller);
-  let reloaded = false;
-  navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (!hadController || reloaded) return;
-    reloaded = true;
-    window.location.reload();
-  });
-}
-
-registerSW({ immediate: true })
+// Avant : `registerType: "autoUpdate"` — le service worker s'activait seul et
+// ce fichier rechargeait l'onglet dès `controllerchange` (sauf sur Android, à la
+// demande). Une recette en cours de saisie pouvait ainsi disparaître d'un coup.
+const updateSW = registerSW({
+  immediate: true,
+  onNeedRefresh: notifyUpdateAvailable,
+})
+registerUpdateHandler(updateSW)
+// Revérifie au retour au premier plan et chaque heure : une appli installée
+// reste souvent suspendue des jours entiers sans jamais se mettre à jour d'elle-même.
+startUpdateChecks()
 
 // Détecte l'app installée sur l'écran d'accueil pour le CSS (voir
 // .bottom-nav/.fab/.grimoire-app) : le média CSS "display-mode: standalone"

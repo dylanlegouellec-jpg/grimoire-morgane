@@ -92,7 +92,17 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: "autoUpdate",
+      // "prompt" : une nouvelle version s'installe puis ATTEND que l'utilisateur tape
+      // sur « Recharger » (bandeau, utils/appUpdate.ts). Avant : "autoUpdate", qui
+      // activait la nouvelle version tout seul et rechargeait l'onglet — une recette
+      // en cours de saisie pouvait disparaître. Avec "prompt", l'ancienne version
+      // garde ses propres fichiers en cache jusque-là : pas de 404 sur du code supprimé.
+      registerType: "prompt",
+      // Le plugin ajoute de lui-même les icônes du manifeste au précache (en plus de
+      // `globPatterns`, que `globIgnores` ci-dessous ne peut donc pas retirer). Le
+      // navigateur les récupère à l'installation de l'app, jamais l'app elle-même :
+      // les précacher ajouterait ~0,5 Mo à télécharger à chaque nouvelle version.
+      includeManifestIcons: false,
       includeAssets: ["Icon.jpeg"],
       manifest: {
         name: "Le Grimoire de Morgane",
@@ -116,21 +126,31 @@ export default defineConfig({
         background_color: "#f1e6c8",
         theme_color: "#f1e6c8",
         orientation: "portrait",
+        // PNG aux tailles réellement déclarées (192 et 512), plus une icône
+        // "maskable" À PART : Android la découpe (cercle, carré arrondi…) et ne
+        // garantit visible que le cercle central de 80 % — le cookie y est donc
+        // centré à 70 % sur fond noir uni. Avant : un seul JPEG déclaré 512x512
+        // (il en faisait 649) avec purpose "any maskable", qu'Android découpait au
+        // hasard. L'icône de l'écran d'accueil iPhone reste Icon.jpeg
+        // (apple-touch-icon, index.html) : iOS veut un carré plein.
         icons: [
-          {
-            src: "/Icon.jpeg",
-            sizes: "512x512",
-            // Corrigé : le fichier est un .jpeg, pas un .png (le
-            // manifest.json d'origine annonçait le mauvais type MIME).
-            type: "image/jpeg",
-            purpose: "any maskable",
-          },
+          { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+          { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+          { src: "/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
       },
       workbox: {
         // Précache tout ce qui compose l'app elle-même : sans réseau,
         // c'est ce qui permet à l'app de s'ouvrir malgré tout.
         globPatterns: ["**/*.{js,css,html,ico,jpeg,png,svg,webp}"],
+        // Les icônes du manifeste sont récupérées par le navigateur à l'installation,
+        // jamais par l'app : inutile de les précacher (~0,5 Mo de plus à chaque version).
+        globIgnores: ["icon-192.png", "icon-512.png", "icon-maskable-512.png"],
+        // Prend le contrôle des pages ouvertes dès l'activation (le tout premier
+        // chargement devient utilisable hors ligne sans rechargement). Avec
+        // "prompt", une mise à jour n'active rien tant que l'utilisateur n'a pas
+        // tapé sur « Recharger » : ce réglage ne change donc rien à ce moment-là.
+        clientsClaim: true,
         runtimeCaching: [
           {
             // Ping de connectivité (pingSupabase() / useConnectionStatus.js,

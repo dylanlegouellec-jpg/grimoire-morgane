@@ -13,6 +13,7 @@ import useExitThenSwitch from "../hooks/useExitThenSwitch";
 
 import { NavButton } from "../components/common";
 import ErrorBoundary from "../components/common/ErrorBoundary";
+import UpdateBanner from "../components/common/UpdateBanner";
 import { RecipesView, RecipeForm, RecipeDetail, CookMode } from "../components/recipe";
 import type { Recipe } from "../hooks/useRecipes";
 import type { MealPlanEntry } from "../hooks/useMealPlan";
@@ -610,6 +611,7 @@ export default function AppShell({
             )}
           </p>
         )}
+        <UpdateBanner />
         {offlineQueueSize > 0 && (
           <p className="offline-queue-badge">
             {t("app.syncPending", { count: offlineQueueSize, plural: offlineQueueSize > 1 ? "s" : "" })}

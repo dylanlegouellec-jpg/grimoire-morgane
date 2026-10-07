@@ -15,7 +15,8 @@ import CodeExplorer from "./CodeExplorer";
 import AppDiagnostics from "./AppDiagnostics";
 import { buildAppSections } from "./appSections";
 import useAppDiagnostics from "../../hooks/useAppDiagnostics";
-import { buildDiagnosticsReport, checkForUpdates, forceUpdate, formatBytes, type ReportSection } from "../../utils/diagnostics";
+import { buildDiagnosticsReport, checkForUpdates, forceUpdate, formatBytes, timeAgo, type ReportSection } from "../../utils/diagnostics";
+import useLastSync from "../../hooks/useLastSync";
 import {
   pingSupabase,
   flushOfflineQueue,
@@ -157,6 +158,21 @@ export default function DiagnosticsPanelModal({ onClose, showToast, onResetOnboa
   const setPanelRef = (node: HTMLDivElement | null) => { focusTrapRef.current = node; };
 
   const app = useAppDiagnostics();
+
+  // Dernière synchro réussie avec Supabase (utils/syncStatus.ts). Le « il y a … »
+  // se rafraîchit toutes les 30 s tant que le panneau est ouvert.
+  const lastSyncAt = useLastSync();
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNowTick(Date.now()), 30000);
+    return () => clearInterval(timer);
+  }, []);
+  const lastSyncLabel = (() => {
+    if (lastSyncAt == null) return t("diagnostics.lastSyncNever");
+    const ago = timeAgo(lastSyncAt, nowTick);
+    const when = ago.unit === "now" ? t("diagnostics.agoNow") : t(`diagnostics.ago.${ago.unit}`, { count: ago.count });
+    return `${new Date(lastSyncAt).toLocaleString("fr-FR")} · ${when}`;
+  })();
   const appSections = useMemo(() => buildAppSections(app, t), [app, t]);
 
   const fps = useFpsCounter(true);
@@ -253,6 +269,7 @@ export default function DiagnosticsPanelModal({ onClose, showToast, onResetOnboa
         [t("diagnostics.household"), householdName ?? "—"],
         [t("diagnostics.connectionStatusLabel"), t(`diagnostics.connectionStatus.${connection.status}`)],
         [t("diagnostics.latency"), latencyMs == null ? "—" : `${latencyMs} ms`],
+        [t("diagnostics.lastSync"), lastSyncLabel],
         [t("diagnostics.pendingSync"), String(queueSize)],
         [t("diagnostics.recipeRows"), tableCounts.recipes === undefined ? "…" : String(tableCounts.recipes ?? t("diagnostics.unavailable"))],
         [t("diagnostics.simulateOffline"), forceOffline ? "oui" : "non"],
@@ -401,6 +418,10 @@ export default function DiagnosticsPanelModal({ onClose, showToast, onResetOnboa
                     <span className={`diagnostics-status-dot diagnostics-status-dot--${connection.status}`}>
                       {t(`diagnostics.connectionStatus.${connection.status}`)}
                     </span>
+                  </div>
+                  <div className="diagnostics-metric">
+                    <span className="diagnostics-metric-label">{t("diagnostics.lastSync")}</span>
+                    <span className="diagnostics-metric-value diagnostics-metric-value--text">{lastSyncLabel}</span>
                   </div>
                   <div className="diagnostics-metric">
                     <span className="diagnostics-metric-label">{t("diagnostics.latency")}</span>
