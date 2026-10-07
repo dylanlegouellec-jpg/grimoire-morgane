@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef, useState, lazy, Suspense } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, lazy, Suspense } from "react";
 import type { ChangeEvent, CSSProperties, Dispatch, SetStateAction } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Heart, Search, Settings, Wand2 } from "lucide-react";
 
 import { FILTERS, TABS } from "../constants";
-import { SPRING_PILL, TAB_EXIT_MS } from "../constants/motion";
+import { SPRING_PILL, TAB_BARS_MOTION, TAB_EXIT_MS } from "../constants/motion";
 import { CSS } from "../constants/styles.css";
 import { triggerHaptic, nextId, copyText } from "../utils/helpers";
 import { getCachedProfile, getProfile } from "../utils/profile";
@@ -296,6 +296,21 @@ export default function AppShell({
   const [tab, setTab] = useState("recettes");
   const prefersReducedMotion = useReducedMotion();
   const { shown: shownTab, exiting: tabExiting } = useExitThenSwitch(tab, TAB_EXIT_MS, Boolean(prefersReducedMotion));
+  const tabBarsMotion = prefersReducedMotion ? { ...TAB_BARS_MOTION, transition: { duration: 0 } } : TAB_BARS_MOTION;
+  // Remet la page en haut À LA BASCULE (le contenu est alors déjà fondu, donc
+  // le saut ne se voit pas) : sinon, depuis un onglet défilé vers un onglet
+  // plus court, le navigateur recale lui-même le défilement d'un coup, en
+  // plein milieu de la transition (mesuré : 600 -> 203 px). En paysage, c'est
+  // .app-content qui défile, pas la page. Pas au premier montage.
+  const tabScrollMountedRef = useRef(false);
+  useLayoutEffect(() => {
+    if (!tabScrollMountedRef.current) {
+      tabScrollMountedRef.current = true;
+      return;
+    }
+    window.scrollTo(0, 0);
+    if (appContentRef.current) appContentRef.current.scrollTop = 0;
+  }, [shownTab]);
   // Précharge les trois onglets chargés à la demande (Plan, Frigo, Courses)
   // peu après le lancement, hors du chemin critique : sans ça, le premier
   // changement d'onglet montrait la baguette de chargement entre la sortie du
@@ -600,8 +615,18 @@ export default function AppShell({
         )}
       </header>
 
-      {shownTab === "recettes" && (
-        <>
+      {/* Recherche + filtres (Recettes) et recherche (Frigo) : se replient /
+          se déplient en hauteur au lieu d'apparaître/disparaître d'un coup.
+          Avant, le contenu sous eux sautait de 56 à 105 px au moment précis de
+          la bascule d'onglet (décalage de mise en page mesuré : 0,04 à 0,14).
+          Pilotées par `tab` (l'onglet DEMANDÉ), pas `shownTab` : elles
+          commencent à bouger dès le clic, pendant que l'ancien contenu se fond,
+          et sont presque posées quand le nouveau entre. Sans animation avec
+          « Réduire les animations ». `initial={false}` : rien à l'arrivée de
+          l'app (voir .app-intro pour ça). */}
+      <AnimatePresence initial={false}>
+      {tab === "recettes" && (
+        <motion.div key="recettes-bars" className="tab-bars" {...tabBarsMotion}>
           <div className="search-bar">
             <Search size={15} />
             <input
@@ -645,19 +670,22 @@ export default function AppShell({
               <Heart size={13} fill={favoritesOnly ? "currentColor" : "none"} /> {t("app.favorites")}
             </button>
           </div>
-        </>
+        </motion.div>
       )}
-      {shownTab === "frigo" && (
-        <div className="search-bar">
-          <Search size={15} />
-          <input
-            value={fridgeSearch}
-            onChange={(e) => setFridgeSearch(e.target.value)}
-            placeholder={t("app.searchFridgePlaceholder")}
-            aria-label={t("app.searchFridgePlaceholder")}
-          />
-        </div>
+      {tab === "frigo" && (
+        <motion.div key="frigo-bars" className="tab-bars" {...tabBarsMotion}>
+          <div className="search-bar">
+            <Search size={15} />
+            <input
+              value={fridgeSearch}
+              onChange={(e) => setFridgeSearch(e.target.value)}
+              placeholder={t("app.searchFridgePlaceholder")}
+              aria-label={t("app.searchFridgePlaceholder")}
+            />
+          </div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* Dernier enfant de .app-sidebar (voir son commentaire plus haut) :
           en paysage, "margin-top: auto" (responsive.css.js) la pousse tout
