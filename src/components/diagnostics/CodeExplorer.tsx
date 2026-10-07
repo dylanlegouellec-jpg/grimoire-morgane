@@ -71,6 +71,14 @@ function Disclosure({ className = "", header, children, defaultOpen = false }: D
   );
 }
 
+// Le type d'un fichier d'après son nom : ".css.ts" à part (ce sont les feuilles
+// de style, écrites en TypeScript), sinon l'extension.
+function fileType(path: string): string {
+  if (path.endsWith(".css.ts")) return ".css.ts";
+  const dot = path.lastIndexOf(".");
+  return dot === -1 ? path : path.slice(dot);
+}
+
 function baseName(path: string): string {
   return path.slice(path.lastIndexOf("/") + 1);
 }
@@ -123,6 +131,18 @@ export default function CodeExplorer() {
     [files]
   );
   const totalLines = useMemo(() => files.reduce((sum, f) => sum + f.lines, 0), [files]);
+  // Lignes et fichiers par type (.tsx, .ts, .css.ts, .json…), du plus gros au plus petit.
+  const byType = useMemo(() => {
+    const totals = new Map<string, { files: number; lines: number }>();
+    for (const f of files) {
+      const type = fileType(f.path);
+      const entry = totals.get(type) ?? { files: 0, lines: 0 };
+      entry.files += 1;
+      entry.lines += f.lines;
+      totals.set(type, entry);
+    }
+    return [...totals.entries()].sort((a, b) => b[1].lines - a[1].lines);
+  }, [files]);
 
   const plural = (count: number) => (count > 1 ? "s" : "");
   const filesLabel = (count: number) => t("diagnostics.codeFiles", { count, plural: plural(count) });
@@ -136,6 +156,19 @@ export default function CodeExplorer() {
         {filesLabel(files.length)} · {linesLabel(totalLines)}
         {testFileCount > 0 && <> · {t("diagnostics.codeTestsHidden", { count: testFileCount })}</>}
       </p>
+
+      <Disclosure
+        header={() => <span className="code-disclosure-title"><span className="code-group-title">{t("diagnostics.codeByType")}</span></span>}
+      >
+        <div className="code-panel-inner diagnostics-metrics">
+          {byType.map(([type, total]) => (
+            <div key={type} className="diagnostics-metric">
+              <span className="diagnostics-metric-label code-type-name">{type}</span>
+              <span className="diagnostics-metric-value">{linesLabel(total.lines)} · {filesLabel(total.files)}</span>
+            </div>
+          ))}
+        </div>
+      </Disclosure>
 
       <Disclosure
         className="code-disclosure--overview"

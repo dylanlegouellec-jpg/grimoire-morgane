@@ -38,7 +38,6 @@ export const CODE_GROUPS: CodeGroup[] = [
       "tsconfig.json",
       "eslint.config.ts",
       "vercel.json",
-      "public/manifest.json",
     ],
   },
   {
@@ -200,17 +199,16 @@ export const CODE_DOCS: Record<string, string> = {
   "package.json":
     "La carte d'identité du projet. Elle liste les dépendances (React, Supabase, Framer Motion, jsPDF…) et les commandes npm : dev, build, test, lint, typecheck.",
   "vite.config.ts":
-    "La configuration de Vite, l'outil qui construit l'app. Elle branche React et la PWA (service worker, manifeste, cache hors ligne des images et des fichiers) et injecte au build les chiffres du Panneau de Diagnostics : lignes de code et carte du code.",
+    "La configuration de Vite, l'outil qui construit l'app. Elle branche React et la PWA (service worker, génération du manifeste, cache hors ligne des images et des fichiers) et injecte au build les chiffres du Panneau de Diagnostics : lignes de code, carte du code, version et date de construction.",
   "vitest.config.ts":
-    "La configuration des tests (Vitest, dans un faux navigateur jsdom). Elle reprend les mêmes constantes injectées que vite.config.ts, qui doivent rester synchronisées.",
+    "La configuration des tests (Vitest, dans un faux navigateur jsdom). Elle reprend les mêmes constantes injectées que vite.config.ts (lignes de code, carte du code, version), qui doivent rester synchronisées.",
   "tsconfig.json":
     "Les réglages du compilateur TypeScript, en mode strict. TypeScript ne produit aucun fichier ici : il ne fait que vérifier les types (npm run typecheck) sur src, api, scripts et les fichiers de configuration.",
   "eslint.config.ts":
     "Les règles de qualité du code (ESLint) : une série pour le code du navigateur (React, hooks), une autre pour les fonctions serveur et les fichiers de configuration qui tournent sous Node.",
   "vercel.json":
     "Les règles de l'hébergement Vercel : cache d'un an pour les fichiers /assets (leur nom change à chaque version), jamais de cache pour le service worker et le manifeste, et des en-têtes de sécurité (pas d'affichage dans une iframe, pas d'accès caméra, micro ni position).",
-  "public/manifest.json":
-    "Un ancien manifeste de l'app web (nom, couleurs, icône). Plus rien ne le référence : le manifeste réellement utilisé est généré par vite-plugin-pwa (voir vite.config.ts), ce fichier est un reliquat.",
+
 
   /* --- Point d'entrée ------------------------------------------------- */
   "src/main.tsx":
@@ -218,7 +216,7 @@ export const CODE_DOCS: Record<string, string> = {
   "src/GrimoireDeMorgane.tsx":
     "Le chef d'orchestre de l'app. Il branche la connexion, les préférences (thème, taille du texte, langue…), les hooks de données (recettes, frigo, plan, courses) et la synchronisation, puis choisit l'écran à afficher : chargement, connexion ou app. Il ne contient plus de logique métier : elle vit dans src/hooks.",
   "src/vite-env.d.ts":
-    "Des déclarations de types pour Vite et pour les constantes injectées au build (nombre de lignes de code, carte du code). Aucun code exécuté.",
+    "Des déclarations de types pour Vite et pour les constantes injectées au build (nombre de lignes de code, carte du code, version). Aucun code exécuté.",
 
   /* --- Écrans --------------------------------------------------------- */
   "src/screens/AppShell.tsx":
@@ -239,6 +237,8 @@ export const CODE_DOCS: Record<string, string> = {
     "Fige le fond de la page pendant qu'une modale est ouverte, avec la technique qui fonctionne sur iOS. Un compteur partagé gère plusieurs modales empilées, et un second hook dit si une modale est ouverte.",
   "src/hooks/useConnectionStatus.ts":
     "Dit si l'app est vraiment en ligne, hors ligne ou en cours de vérification, grâce à un vrai ping Supabase (le simple « navigator.onLine » est faux sur certains téléphones).",
+  "src/hooks/useAppDiagnostics.ts":
+    "Réunit ce que le panneau de diagnostics sait de l'app : version, mode, service worker, appareil et chargement de la page. L'appareil se remet à jour tout seul (rotation, redimensionnement, réseau perdu ou retrouvé).",
   "src/hooks/useDismissibleSheet.ts":
     "Gère le geste « tirer vers le bas pour fermer » des modales : la feuille suit le doigt, puis se ferme selon la distance ou la vitesse, sans gêner le défilement du contenu.",
   "src/hooks/useExitThenSwitch.ts":
@@ -277,6 +277,8 @@ export const CODE_DOCS: Record<string, string> = {
     "Génère le vrai fichier PDF du livre de cuisine : calcul des sauts de page et du début de chaque recette.",
   "src/utils/devLog.ts":
     "Un journal de debug gardé en mémoire (console, erreurs, requêtes réseau) pour la console du Panneau de Diagnostics. Utile sur un téléphone, où on ne peut pas ouvrir les outils de développement.",
+  "src/utils/diagnostics.ts":
+    "Les outils de diagnostic de l'app elle-même : version, mode d'affichage (installée ou navigateur), état du service worker, vérification et mise à jour forcée, informations sur l'appareil, chargement de la page, et construction du rapport à copier. Chaque API navigateur est protégée, car beaucoup n'existent pas partout.",
   "src/utils/haptics.ts":
     "Le retour haptique (vibration). Seuls les navigateurs qui exposent l'API de vibration l'utilisent : iOS ne le fait pas, le comportement y est donc différent.",
   "src/utils/helpers.ts":
@@ -530,9 +532,13 @@ export const CODE_DOCS: Record<string, string> = {
   "src/components/onboarding/OnboardingTour.tsx":
     "Le tutoriel guidé en cinq étapes : un voile avec un projecteur sur chaque zone, qui change d'onglet au besoin et le restaure à la fin.",
   "src/components/diagnostics/DiagnosticsPanelModal.tsx":
-    "Le Panneau de Diagnostics : images par seconde, mémoire, stockage, connexion Supabase, outils de debug, console de logs, et la section « Code de l'app ».",
+    "Le Panneau de Diagnostics : images par seconde et mémoire, version et état de l'app (mises à jour, rapport à copier), appareil, code de l'app, stockage, connexion Supabase, outils de debug, et console de logs filtrable.",
+  "src/components/diagnostics/AppDiagnostics.tsx":
+    "Affiche les sections « Application » et « Appareil & performance » du panneau : un titre puis des lignes libellé et valeur. Les boutons d'action restent dans le panneau.",
+  "src/components/diagnostics/appSections.ts":
+    "Construit une seule fois les lignes des sections « Application » et « Appareil & performance », pour que ce qui s'affiche à l'écran et ce qui part dans le rapport copié ne puissent jamais se contredire.",
   "src/components/diagnostics/CodeExplorer.tsx":
-    "La section « Code de l'app » du panneau : des menus déroulants par dossier puis par fichier, avec le rôle, le nombre de lignes et les liens d'import.",
+    "La section « Code de l'app » du panneau : la répartition des lignes par type de fichier, puis des menus déroulants par dossier puis par fichier, avec le rôle, le nombre de lignes et les liens d'import.",
   "src/components/art/DishArt.tsx":
     "Affiche l'image d'une recette : sa photo (avec de nouvelles tentatives si le réseau flanche) ou, à défaut, une illustration dessinée adaptée au plat.",
   "src/components/art/illustrations.tsx":
@@ -557,6 +563,8 @@ export const CODE_DOCS: Record<string, string> = {
     "Crée les cinq fonctions SQL qui manquaient pour gérer les demandes d'adhésion à un foyer : voir les demandes, approuver, refuser, changer le rôle d'un membre, retirer un membre.",
   "scripts/countLoc.ts":
     "Compte les lignes de code de src/ au moment du build, pour le chiffre « lignes de code » du Panneau de Diagnostics.",
+  "scripts/buildInfo.ts":
+    "Calcule au moment du build le numéro de commit et la date de construction, affichés dans la section « Application » du Panneau de Diagnostics et dans le rapport copié.",
   "scripts/codeMap.ts":
     "Construit au moment du build la carte du code (liste des fichiers, lignes, liens d'import) affichée dans la section « Code de l'app » de ce panneau.",
 };

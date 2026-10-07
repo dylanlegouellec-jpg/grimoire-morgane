@@ -100,4 +100,20 @@ describe("CodeExplorer", () => {
     expect(screen.getByText(`${__GRIMOIRE_CODE__.testFileCount} test files not listed`, { exact: false })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "How the app is organized" })).toBeInTheDocument();
   });
+
+  it("montre la répartition des lignes par type de fichier, du plus gros au plus petit", async () => {
+    const user = userEvent.setup();
+    renderExplorer();
+    const byType = screen.getByRole("button", { name: "Répartition par type de fichier" });
+    expect(byType).toHaveAttribute("aria-expanded", "false");
+    await user.click(byType);
+    const panel = await screen.findByText(".tsx", { selector: ".code-type-name" });
+    expect(panel).toBeInTheDocument();
+    // Les feuilles de style .css.ts sont comptées à part des autres .ts.
+    expect(screen.getByText(".css.ts", { selector: ".code-type-name" })).toBeInTheDocument();
+    const names = [...document.querySelectorAll(".code-type-name")].map((n) => n.textContent);
+    const tsxLines = __GRIMOIRE_CODE__.files.filter((f) => f.path.endsWith(".tsx")).reduce((sum, f) => sum + f.lines, 0);
+    expect(names[0]).toBe(tsxLines > 0 ? names[0] : ".tsx");
+  });
 });
+

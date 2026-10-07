@@ -4,6 +4,7 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 import { countGrimoireLoc } from "./scripts/countLoc";
 import { buildCodeManifest } from "./scripts/codeMap";
+import { getBuildInfo } from "./scripts/buildInfo";
 import type { WorkboxPlugin } from "workbox-core";
 
 // DishArt.tsx (handleImgError) retente une image en échec avec un
@@ -55,6 +56,10 @@ const GRIMOIRE_LOC = countGrimoireLoc(fileURLToPath(new URL("./src", import.meta
 // définir la même constante, sans quoi `__GRIMOIRE_CODE__` serait indéfinie
 // pendant les tests.
 const GRIMOIRE_CODE = buildCodeManifest(fileURLToPath(new URL(".", import.meta.url)));
+// Version de l'app (commit + date de construction) du Panneau de Diagnostics, voir
+// scripts/buildInfo.ts — même remarque : `vitest.config.ts` doit définir la même
+// constante.
+const GRIMOIRE_BUILD = getBuildInfo();
 
 /* ------------------------------------------------------------------ */
 /*  PWA — mode hors-ligne réel                                          */
@@ -82,6 +87,7 @@ export default defineConfig({
   define: {
     __GRIMOIRE_LOC__: JSON.stringify(GRIMOIRE_LOC),
     __GRIMOIRE_CODE__: JSON.stringify(GRIMOIRE_CODE),
+    __GRIMOIRE_BUILD__: JSON.stringify(GRIMOIRE_BUILD),
   },
   plugins: [
     react(),
@@ -91,6 +97,11 @@ export default defineConfig({
       manifest: {
         name: "Le Grimoire de Morgane",
         short_name: "Grimoire",
+        // Sans "lang", le plugin PWA écrit "en" par défaut dans le manifeste généré :
+        // l'app est en français (la langue de l'interface se règle ensuite dans
+        // les Réglages, indépendamment de celle-ci).
+        lang: "fr",
+        description: "Ton grimoire de recettes : plan de repas, frigo et liste de courses, même sans réseau.",
         start_url: "/",
         display: "standalone",
         // Alignées sur --parchment (theme.css.js), pas un blanc cassé

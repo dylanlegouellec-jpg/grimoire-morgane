@@ -8,6 +8,11 @@ export const DIAGNOSTICS_CSS: string = `
 .diagnostics-metric { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .diagnostics-metric-label { color: var(--ink-soft); font-size: 0.92rem; }
 .diagnostics-metric-value { font-weight: 600; font-variant-numeric: tabular-nums; }
+/* Valeurs textuelles longues (agent utilisateur, adresse, e-mail) : passent à la
+   ligne et restent alignées à droite au lieu de pousser le libellé hors de la ligne. */
+.diagnostics-metric-label { flex-shrink: 0; }
+.diagnostics-metric-value--text { min-width: 0; text-align: right; font-weight: 500; overflow-wrap: anywhere; }
+.diagnostics-log-header + .segmented { margin-bottom: 8px; }
 
 .diagnostics-tone-good { color: var(--forest); }
 .diagnostics-tone-warn { color: var(--gold); }
@@ -77,6 +82,7 @@ export const DIAGNOSTICS_CSS: string = `
   padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-soft);
 }
 .code-chip--more { font-family: 'EB Garamond', serif; font-style: italic; font-size: 0.78rem; }
+.code-type-name { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.85rem; color: var(--ink); }
 .code-overview-step { margin-bottom: 4px; }
 .code-overview-title { margin: 0 0 3px; font-family: 'Cinzel', serif; font-size: 0.74rem; letter-spacing: 0.4px; color: var(--gold); }
 `;
