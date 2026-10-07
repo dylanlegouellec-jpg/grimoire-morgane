@@ -111,12 +111,11 @@ export const SHELL_CSS: string = `
 }
 .offline-banner-retry:active { background: rgba(255,59,48,0.3); }
 
-/* Enveloppe animée en hauteur de .search-bar / .filter-bar (AppShell.tsx,
-   TAB_BARS_MOTION) : "overflow: hidden" pour que la hauteur puisse tomber à 0 ;
-   elle contient aussi les marges de ses enfants (nouveau contexte de mise en
-   forme), donc la hauteur animée inclut bien l'espace autour des barres.
-   "flex-shrink: 0" : en paysage, .app-sidebar est une colonne flex. */
-.tab-bars { overflow: hidden; flex-shrink: 0; }
+/* Enveloppe de .search-bar / .filter-bar (AppShell.tsx) : elle porte aussi
+   .tab-transition, donc la recherche et les filtres se fondent et entrent
+   EXACTEMENT comme le contenu de l'onglet. "flex-shrink: 0" : en paysage,
+   .app-sidebar est une colonne flex. */
+.tab-bars { flex-shrink: 0; }
 .search-bar {
   display: flex; align-items: center; gap: 8px;
   margin: 14px 16px 0; padding: 9px 12px;
