@@ -90,9 +90,16 @@
     <!-- Sans ceci, l'onglet du navigateur (Chrome, Edge...) retombe sur une
          icône générique (globe) au lieu du logo de l'app — "apple-touch-icon"
          ci-dessus ne couvre que l'ajout à l'écran d'accueil iOS, jamais
-         l'onglet lui-même. Même fichier que le manifest PWA (vite.config.js),
-         pas de doublon d'asset à maintenir. -->
-    <link rel="icon" href="/Icon.jpeg" type="image/jpeg">
+         l'onglet lui-même. Le cookie découpé SANS le fond noir (PNG transparent,
+         tiré de Icon.jpeg) : un JPEG ne peut pas être transparent, donc l'onglet
+         affichait un carré noir autour du cookie. Deux tailles : 32 px pour
+         l'onglet, 192 px pour les écrans haute densité et les raccourcis. Le
+         JPEG d'origine reste utilisé pour l'icône de l'écran d'accueil
+         (apple-touch-icon ci-dessus et manifest PWA, vite.config.ts) : ces
+         icônes-là doivent rester un carré plein, iOS remplirait sinon la
+         transparence en noir. -->
+    <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+    <link rel="icon" href="/favicon-192.png" type="image/png" sizes="192x192">
     <!-- "default", surtout PAS "black-translucent" : une fois l'app ajoutée à
          l'écran d'accueil, black-translucent place la webview en plein écran
          à partir de y=0 (sous la Dynamic Island) mais lui laisse une hauteur
