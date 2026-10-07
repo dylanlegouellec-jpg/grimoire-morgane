@@ -10,6 +10,7 @@ import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import useConnectionStatus from "../../hooks/useConnectionStatus";
 import Flourish from "../common/Flourish";
 import Switch from "../common/Switch";
+import CodeExplorer from "./CodeExplorer";
 import {
   pingSupabase,
   flushOfflineQueue,
@@ -256,6 +257,10 @@ export default function DiagnosticsPanelModal({ onClose, showToast, onResetOnboa
                 <span className="diagnostics-metric-value">{__GRIMOIRE_LOC__.toLocaleString()}</span>
               </div>
             </div>
+
+            {/* --- Code de l'app : menus déroulants par dossier puis par fichier --- */}
+            <p className="ios-group-title">{t("diagnostics.codeTitle")}</p>
+            <CodeExplorer />
 
             {/* --- Stockage appareil --- */}
             <p className="ios-group-title">{t("diagnostics.storageTitle")}</p>
