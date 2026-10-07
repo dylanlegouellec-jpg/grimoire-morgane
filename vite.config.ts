@@ -3,6 +3,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 import { countGrimoireLoc } from "./scripts/countLoc";
+import { buildCodeManifest } from "./scripts/codeMap";
 import type { WorkboxPlugin } from "workbox-core";
 
 // DishArt.tsx (handleImgError) retente une image en échec avec un
@@ -49,6 +50,11 @@ function ignoreRetryCacheBust(): WorkboxPlugin {
 // le navigateur, voir scripts/countLoc.ts. `vitest.config.ts` définit la
 // même constante de la même façon : les deux doivent rester synchronisés.
 const GRIMOIRE_LOC = countGrimoireLoc(fileURLToPath(new URL("./src", import.meta.url)));
+// Carte du code du Panneau de Diagnostics (voir scripts/codeMap.ts) — calculée
+// une seule fois ici, comme GRIMOIRE_LOC ci-dessus. `vitest.config.ts` doit
+// définir la même constante, sans quoi `__GRIMOIRE_CODE__` serait indéfinie
+// pendant les tests.
+const GRIMOIRE_CODE = buildCodeManifest(fileURLToPath(new URL(".", import.meta.url)));
 
 /* ------------------------------------------------------------------ */
 /*  PWA — mode hors-ligne réel                                          */
@@ -75,6 +81,7 @@ const GRIMOIRE_LOC = countGrimoireLoc(fileURLToPath(new URL("./src", import.meta
 export default defineConfig({
   define: {
     __GRIMOIRE_LOC__: JSON.stringify(GRIMOIRE_LOC),
+    __GRIMOIRE_CODE__: JSON.stringify(GRIMOIRE_CODE),
   },
   plugins: [
     react(),

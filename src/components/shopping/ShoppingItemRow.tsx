@@ -7,6 +7,7 @@ import { useTranslation } from "../../contexts/LanguageContext";
 import { translateRecipeText } from "../../utils/recipeTranslation";
 import useLongPress from "../../hooks/useLongPress";
 import type { ShoppingItem } from "../../hooks/useShoppingLists";
+import { EASE_OUT, SPRING_RELEASE } from "../../constants/motion";
 
 /* ------------------------------------------------------------------ */
 /*  LIGNE D'ARTICLE — tap pour cocher, appui long pour la molette de     */
@@ -38,7 +39,6 @@ import type { ShoppingItem } from "../../hooks/useShoppingLists";
 /*  commence, exactement comme avant.                                                                                */
 /* ------------------------------------------------------------------ */
 const SWIPE_COMMIT_PX = 72;
-const RELEASE_SPRING = { type: "spring", stiffness: 500, damping: 30 } as const;
 // Sortie de liste (suppression ou coche) : fondu + léger rétrécissement,
 // pas de translation — la remontée des articles suivants pour combler le
 // vide vient déjà de "layout" ci-dessous (voir <AnimatePresence
@@ -46,7 +46,7 @@ const RELEASE_SPRING = { type: "spring", stiffness: 500, damping: 30 } as const;
 // le début de sa sortie pour que ses voisins glissent tout de suite, sans
 // attendre la fin de son fondu).
 const EXIT_VARIANT = { opacity: 0, scale: 0.92 };
-const EXIT_TRANSITION: { duration: number; ease: [number, number, number, number] } = { duration: 0.2, ease: [0.22, 1, 0.36, 1] };
+const EXIT_TRANSITION: { duration: number; ease: [number, number, number, number] } = { duration: 0.2, ease: EASE_OUT };
 
 type DivDragProps = HTMLMotionProps<"div">;
 type DragEventParam = Parameters<NonNullable<DivDragProps["onDrag"]>>[0];
@@ -91,7 +91,7 @@ function ShoppingItemRow({ item, checked, onToggle, onAdjust, onDelete, onOpenWh
   };
 
   const handleDragEnd = (_event: DragEventParam, info: DragInfoParam) => {
-    animate(x, 0, RELEASE_SPRING);
+    animate(x, 0, SPRING_RELEASE);
     const dx = info.offset.x;
     if (Math.abs(dx) <= SWIPE_COMMIT_PX) return;
     if (dx > 0) { triggerHaptic(15); onToggle(item.id); }

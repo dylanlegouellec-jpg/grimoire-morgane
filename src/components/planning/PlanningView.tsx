@@ -15,6 +15,7 @@ import type { Recipe } from "../../hooks/useRecipes";
 import type { MealPlanEntry } from "../../hooks/useMealPlan";
 import type { ViewScope } from "../../utils/localSettings";
 import type { MealEntryLike } from "./PlanningMealItem";
+import { EASE_OUT, SCOPE_SWITCH_DURATION_S, SCOPE_SWITCH_SLIDE_PX } from "../../constants/motion";
 
 /* ------------------------------------------------------------------ */
 /*  PLANIFICATION — vue chronologique par semaine, un jour par bloc,      */
@@ -32,13 +33,6 @@ import type { MealEntryLike } from "./PlanningMealItem";
 /*  quel jour de l'année est possible, pas seulement ceux de la semaine        */
 /*  actuellement affichée.                                                     */
 /* ------------------------------------------------------------------ */
-// Même transition (durée/easing) que le glissement entre onglets principaux
-// (.tab-transition, shell.css.js) — juste jouée via Framer Motion plutôt
-// qu'un @keyframes CSS, pour pouvoir la piloter par React state (`scope`) au
-// lieu d'un changement de `key` sur tout un onglet.
-const SCOPE_SWITCH_DURATION_S = 0.24;
-const SCOPE_SWITCH_EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
-const SCOPE_SWITCH_SLIDE_PX = 14;
 
 interface PlanningViewProps {
   recipes: Recipe[];
@@ -327,7 +321,7 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
             initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: scope === "personal" ? SCOPE_SWITCH_SLIDE_PX : -SCOPE_SWITCH_SLIDE_PX }}
             animate={{ opacity: 1, x: 0 }}
             exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: scope === "personal" ? -SCOPE_SWITCH_SLIDE_PX : SCOPE_SWITCH_SLIDE_PX }}
-            transition={{ duration: SCOPE_SWITCH_DURATION_S, ease: SCOPE_SWITCH_EASE }}
+            transition={{ duration: SCOPE_SWITCH_DURATION_S, ease: EASE_OUT }}
           >
             {days.map((d) => {
               const iso = toISODate(d);

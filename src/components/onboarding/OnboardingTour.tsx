@@ -3,7 +3,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { BookOpen, CalendarDays, Refrigerator, ShoppingBasket, Sparkles } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useTranslation } from "../../contexts/LanguageContext";
-import { MODAL_BACKDROP_MOTION } from "../../constants/motion";
+import { EASE_OUT, MODAL_BACKDROP_MOTION } from "../../constants/motion";
 import { triggerHaptic } from "../../utils/haptics";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
@@ -190,7 +190,7 @@ export default function OnboardingTour({ currentTab, changeTab, onFinish }: Onbo
             initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: 16 }}
             animate={{ opacity: 1, x: 0 }}
             exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: -16 }}
-            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.22, ease: EASE_OUT }}
           >
             <div className="onboarding-card-icon">
               <step.Icon size={22} />

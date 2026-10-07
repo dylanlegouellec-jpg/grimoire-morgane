@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, useMotionValue, animate } from "motion/react";
 import type { HTMLMotionProps } from "motion/react";
+import { SPRING_RELEASE } from "../../constants/motion";
 
 /* ------------------------------------------------------------------ */
 /*  FLORILÈGE SWIPEABLE (geste tactile générique) — Framer Motion         */
@@ -22,7 +23,6 @@ import type { HTMLMotionProps } from "motion/react";
 /*  l'issue du geste (tap, glissement confirmé ou abandonné).                                    */
 /* ------------------------------------------------------------------ */
 const SWIPE_THRESHOLD_PX = 40;
-const RELEASE_SPRING = { type: "spring", stiffness: 500, damping: 30 } as const;
 
 type DivDragProps = HTMLMotionProps<"div">;
 type DragEventParam = Parameters<NonNullable<DivDragProps["onDrag"]>>[0];
@@ -50,7 +50,7 @@ export default function SwipeFlourish({ onSwipeRight, onSwipeLeft, onTap }: Swip
 
   const handleDragEnd = (_event: DragEventParam, info: DragInfoParam) => {
     setHint(null);
-    animate(x, 0, RELEASE_SPRING);
+    animate(x, 0, SPRING_RELEASE);
     const dx = info.offset.x;
     if (Math.abs(dx) < SWIPE_THRESHOLD_PX) {
       if (onTap) onTap();

@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { Heart, Search, Settings, Wand2 } from "lucide-react";
 
 import { FILTERS, TABS } from "../constants";
+import { SPRING_PILL } from "../constants/motion";
 import { CSS } from "../constants/styles.css";
 import { triggerHaptic, nextId, copyText } from "../utils/helpers";
 import { getCachedProfile, getProfile } from "../utils/profile";
@@ -497,8 +498,20 @@ export default function AppShell({
     };
   }, [setFilter]);
 
+  // Arrivée de l'app au lancement (voir .app-intro, shell.css.ts) : classe
+  // posée au premier rendu puis retirée une fois les animations terminées
+  // (~0,85 s), pour qu'elles ne rejouent JAMAIS ensuite — en particulier
+  // quand .search-bar/.filter-bar sont remontées en revenant sur l'onglet
+  // Recettes. Durée de la minuterie : un peu plus que la plus longue des
+  // animations (délai + durée).
+  const [intro, setIntro] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setIntro(false), 1100);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
-    <div className="grimoire-app">
+    <div className={`grimoire-app${intro ? " app-intro" : ""}`}>
       <style>{CSS}</style>
 
       {/* Regroupe en-tête/recherche/filtres/nav — en paysage (voir
@@ -592,7 +605,7 @@ export default function AppShell({
                     <motion.span
                       layoutId="recettes-filter-pill"
                       className="filter-indicator"
-                      transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                      transition={SPRING_PILL}
                     />
                   )}
                   {t(`filters.${f.key}`)}

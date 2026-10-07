@@ -2,6 +2,7 @@ import { useId } from "react";
 import type { LucideIcon } from "lucide-react";
 import { motion } from "motion/react";
 import { triggerHaptic } from "../../utils/helpers";
+import { SPRING_PILL } from "../../constants/motion";
 
 interface SegmentedOption {
   value: string;
@@ -61,7 +62,7 @@ export default function SegmentedControl({ options, value, onChange, ariaLabel, 
               <motion.span
                 layoutId={`${layoutId}-pill`}
                 className="segmented-pill"
-                transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                transition={SPRING_PILL}
               />
             )}
             {Icon && <Icon size={14} />}

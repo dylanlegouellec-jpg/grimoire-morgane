@@ -230,6 +230,31 @@ export const SHELL_CSS: string = `
 @keyframes tabSlideForward { from { opacity: 0; left: 18px; } to { opacity: 1; left: 0; } }
 @keyframes tabSlideBackward { from { opacity: 0; left: -18px; } to { opacity: 1; left: 0; } }
 
+/* --- Arrivée de l'app au lancement -------------------------------------
+   Posées seulement tant que .grimoire-app porte .app-intro (AppShell.tsx :
+   retirée après ~1,1 s, donc rien ne rejoue en revenant sur un onglet). Les
+   cartes de recettes ont déjà leur propre entrée en cascade (RecipeCard.tsx) ;
+   ici l'en-tête, la recherche/les filtres puis la nav basse arrivent
+   en décalé, du haut vers le bas, avec la même courbe que le reste de
+   l'app (EASE_OUT, constants/motion.ts). Propriété "translate" (pas
+   "transform") : elle se combine avec le transform déjà posé sur
+   .bottom-nav (translateX(-50%)) au lieu de l'écraser — et jamais posée
+   sur .grimoire-app lui-même, dont le .bottom-nav (position: fixed) ne doit
+   pas devenir un enfant d'un ancêtre transformé ni voir son verre dépoli
+   isolé par une opacité d'ancêtre. */
+@keyframes introDown { from { opacity: 0; translate: 0 -10px; } to { opacity: 1; translate: 0 0; } }
+@keyframes introUp { from { opacity: 0; translate: 0 22px; } to { opacity: 1; translate: 0 0; } }
+.app-intro .app-header { animation: introDown 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.05s backwards; }
+.app-intro .search-bar,
+.app-intro .filter-bar { animation: introDown 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.14s backwards; }
+.app-intro .bottom-nav { animation: introUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.22s backwards; }
+@media (prefers-reduced-motion: reduce) {
+  .app-intro .app-header,
+  .app-intro .search-bar,
+  .app-intro .filter-bar,
+  .app-intro .bottom-nav { animation: none; }
+}
+
 .hint { color: var(--ink-soft); font-style: italic; font-size: 0.92rem; margin: 4px 0 14px; }
 
 `;

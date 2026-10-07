@@ -11,18 +11,7 @@ import DishArt from "../art/DishArt";
 import RecipeOptionsModal from "../common/RecipeOptionsModal";
 import type { Recipe } from "../../hooks/useRecipes";
 import type { NutriscoreGrade } from "../../utils/nutriscoreClient";
-
-// Même cubic-bezier que l'ancienne @keyframes cardEnter/cardEnterAlt (CSS),
-// remplacées par cet animate() Framer Motion impératif — voir le commentaire
-// juste avant l'effet ci-dessous pour le pourquoi de cette bascule.
-const CARD_ENTER_EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
-const CARD_ENTER_DURATION_S = 0.42;
-// Sortie d'une carte quand le filtre change (voir RecipesView.tsx, prop
-// `exiting`) : plus courte que l'entrée et en "ease-in" (part doucement, finit
-// vite) — la grille bascule dès qu'elle est finie, la durée doit rester alignée
-// sur FILTER_EXIT_MS (RecipesView.tsx).
-const CARD_EXIT_EASE: [number, number, number, number] = [0.4, 0, 1, 1];
-const CARD_EXIT_DURATION_S = 0.16;
+import { CARD_ENTER_DURATION_S, CARD_EXIT_DURATION_S, EASE_IN, EASE_OUT, SPRING_SHEET } from "../../constants/motion";
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -143,9 +132,9 @@ function RecipeCard({
     exitGenerationRef.current = filterGeneration;
     if (hidden) return;
     if (exiting && !wasExiting) {
-      animate(scope.current, { opacity: 0, y: -6, scale: 0.98 }, { duration: CARD_EXIT_DURATION_S, ease: CARD_EXIT_EASE });
+      animate(scope.current, { opacity: 0, y: -6, scale: 0.98 }, { duration: CARD_EXIT_DURATION_S, ease: EASE_IN });
     } else if (!exiting && wasExiting && !generationChanged) {
-      animate(scope.current, { opacity: 1, y: 0, scale: 1 }, { duration: CARD_ENTER_DURATION_S / 2, ease: CARD_ENTER_EASE });
+      animate(scope.current, { opacity: 1, y: 0, scale: 1 }, { duration: CARD_ENTER_DURATION_S / 2, ease: EASE_OUT });
     }
   }, [exiting, hidden, filterGeneration, animate, scope]);
   useLayoutEffect(() => {
@@ -157,7 +146,7 @@ function RecipeCard({
     animate(
       scope.current,
       { opacity: [0, 1], y: [14, 0], scale: [0.97, 1] },
-      { duration: CARD_ENTER_DURATION_S, ease: CARD_ENTER_EASE, delay: enterDelay / 1000 }
+      { duration: CARD_ENTER_DURATION_S, ease: EASE_OUT, delay: enterDelay / 1000 }
     );
   }, [hidden, filterGeneration, enterDelay, animate, scope]);
 
@@ -222,7 +211,7 @@ function RecipeCard({
             // sans qu'aucune fiche ne s'ouvre — et avec "Réduire les
             // animations" système (prefers-reduced-motion).
             layoutId={!isOpenRecipe && !suppressMorph && !prefersReducedMotion ? `recipe-photo-${recipe.id}` : undefined}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            transition={SPRING_SHEET}
           >
             <DishArt recipe={recipe} />
             <button

@@ -90,9 +90,16 @@
     <!-- Sans ceci, l'onglet du navigateur (Chrome, Edge...) retombe sur une
          icône générique (globe) au lieu du logo de l'app — "apple-touch-icon"
          ci-dessus ne couvre que l'ajout à l'écran d'accueil iOS, jamais
-         l'onglet lui-même. Même fichier que le manifest PWA (vite.config.js),
-         pas de doublon d'asset à maintenir. -->
-    <link rel="icon" href="/Icon.jpeg" type="image/jpeg">
+         l'onglet lui-même. Le cookie découpé SANS le fond noir (PNG transparent,
+         tiré de Icon.jpeg) : un JPEG ne peut pas être transparent, donc l'onglet
+         affichait un carré noir autour du cookie. Deux tailles : 32 px pour
+         l'onglet, 192 px pour les écrans haute densité et les raccourcis. Le
+         JPEG d'origine reste utilisé pour l'icône de l'écran d'accueil
+         (apple-touch-icon ci-dessus et manifest PWA, vite.config.ts) : ces
+         icônes-là doivent rester un carré plein, iOS remplirait sinon la
+         transparence en noir. -->
+    <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+    <link rel="icon" href="/favicon-192.png" type="image/png" sizes="192x192">
     <!-- "default", surtout PAS "black-translucent" : une fois l'app ajoutée à
          l'écran d'accueil, black-translucent place la webview en plein écran
          à partir de y=0 (sous la Dynamic Island) mais lui laisse une hauteur
@@ -119,8 +126,65 @@
          couleur du thème réellement appliqué (clair/sombre/système, ET le
          choix explicite de l'utilisateur s'il diffère du système). -->
     <meta name="theme-color" content="#f1e6c8">
+    <!-- Thème clair/sombre résolu AVANT la toute première peinture : l'écran
+         de démarrage ci-dessous (#splash) n'existe que dans cette page, avant
+         que React ne charge et que applyTheme() (utils/theme.ts) ne pose le
+         vrai thème sur <html> — sans ce petit script, un utilisateur en
+         thème sombre verrait d'abord un éclair crème. Même règle que
+         resolveTheme() : choix explicite stocké ("light"/"dark"), sinon le
+         thème du système. Rien d'autre que data-theme et la couleur de barre
+         d'état ici ; tout le reste revient à applyTheme() dès que l'app
+         démarre. -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("grimoire_theme");
+          var dark = stored === "dark" || (stored !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          if (dark) {
+            document.documentElement.setAttribute("data-theme", "dark");
+            document.querySelector('meta[name="theme-color"]').setAttribute("content", "#1c1917");
+          }
+        } catch (e) { /* stockage indisponible : thème clair par défaut */ }
+      })();
+    </script>
+    <!-- Écran de démarrage : peint par le navigateur dès le HTML reçu, donc
+         avant tout JavaScript (sinon : page blanche le temps de charger le
+         bundle). Mêmes couleurs que --parchment/--gold (theme.css.ts), en
+         clair et en sombre. Retiré en fondu par dismissSplash()
+         (utils/splash.ts) dès que l'app a monté son premier écran. -->
+    <style>
+      html { background: #f1e6c8; }
+      html[data-theme="dark"] { background: #1c1917; }
+      #splash {
+        position: fixed; inset: 0; z-index: 9999;
+        display: flex; align-items: center; justify-content: center;
+        background: radial-gradient(ellipse at top left, rgba(255,255,255,0.35), transparent 60%), #f1e6c8;
+        color: #b3872a;
+        transition: opacity 0.35s ease;
+      }
+      html[data-theme="dark"] #splash {
+        background: radial-gradient(ellipse at top left, rgba(255,255,255,0.04), transparent 60%), #1c1917;
+        color: #d97706;
+      }
+      #splash.splash-leaving { opacity: 0; pointer-events: none; }
+      #splash svg { animation: splashBreathe 1.6s ease-in-out infinite; }
+      @keyframes splashBreathe {
+        0%, 100% { opacity: 0.55; transform: scale(0.94); }
+        50% { opacity: 1; transform: scale(1); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #splash { transition: none; }
+        #splash svg { animation: none; }
+      }
+    </style>
   </head>
   <body>
+    <div id="splash" aria-hidden="true">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/>
+        <path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/>
+      </svg>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
