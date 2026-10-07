@@ -44,6 +44,7 @@ const CookbookBuilderModal = lazy(() => import("../components/cookbook/CookbookB
 const DiagnosticsPanelModal = lazy(() => import("../components/diagnostics/DiagnosticsPanelModal"));
 const ListsManagerModal = lazy(() => import("../components/common/ListsManagerModal"));
 const OnboardingTour = lazy(() => import("../components/onboarding/OnboardingTour"));
+const RecipeEditTour = lazy(() => import("../components/onboarding/RecipeEditTour"));
 
 // Fallback minimal pour les onglets secondaires (Planning/Frigo/Courses) :
 // juste la baguette qui tourne déjà utilisée sur l'écran de chargement
@@ -362,6 +363,7 @@ export default function AppShell({
   const [showDiagnosticsPanel, setShowDiagnosticsPanel] = useState(false);
   const [showListsManager, setShowListsManager] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showRecipeTour, setShowRecipeTour] = useState(false);
   // Lance le tuto UNE SEULE FOIS, dès qu'on sait avec certitude que ce
   // compte (ou cet appareil, en mode invité) ne l'a jamais terminé —
   // jamais avant `onboardingResolved` (voir son commentaire,
@@ -392,6 +394,21 @@ export default function AppShell({
   const replayOnboarding = () => {
     setShowSecretSettings(false);
     setShowOnboarding(true);
+  };
+  // Tuto « Modifier une recette » : ouvre un formulaire de création VIDE
+  // derrière le tuto (rien n'est enregistré, aucune recette existante n'est
+  // touchée) et le referme à la fin, quelle que soit la façon de quitter.
+  const startRecipeTour = () => {
+    setFormTarget("new");
+    setShowRecipeTour(true);
+  };
+  const closeRecipeTour = () => {
+    setShowRecipeTour(false);
+    setFormTarget(null);
+  };
+  const replayRecipeTour = () => {
+    setShowSecretSettings(false);
+    startRecipeTour();
   };
   // Contrairement à replayOnboarding ci-dessus, ces deux-là s'ouvrent
   // PAR-DESSUS les Réglages (comme les sous-vues de SettingsSubPanel,
@@ -817,7 +834,15 @@ export default function AppShell({
       <AnimatePresence>
         {showOnboarding && (
           <Suspense fallback={null}>
-            <OnboardingTour currentTab={tab} changeTab={changeTab} onFinish={closeOnboarding} />
+            <OnboardingTour currentTab={tab} changeTab={changeTab} onFinish={closeOnboarding} onStartRecipeTour={startRecipeTour} />
+          </Suspense>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showRecipeTour && (
+          <Suspense fallback={null}>
+            <RecipeEditTour onFinish={closeRecipeTour} />
           </Suspense>
         )}
       </AnimatePresence>
@@ -965,6 +990,7 @@ export default function AppShell({
             showToast={showToast}
             onSignOut={signOut}
             onReplayOnboarding={replayOnboarding}
+            onReplayRecipeTour={replayRecipeTour}
             onOpenCookbookBuilder={openCookbookBuilder}
             onOpenDiagnostics={openDiagnostics}
           />

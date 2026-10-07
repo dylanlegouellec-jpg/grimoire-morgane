@@ -67,4 +67,18 @@ export const ONBOARDING_CSS: string = `
   font-family: 'EB Garamond', serif; font-style: italic; font-size: 0.82rem;
   color: var(--ink-soft); text-decoration: underline; cursor: pointer;
 }
+/* Tuto « Modifier une recette » : la cible est un champ du formulaire (un
+   rectangle), pas un bouton rond de la barre du bas. */
+.onboarding-hole.onboarding-hole--box { border-radius: 14px; }
+/* Cible dans la moitié basse du formulaire : la carte passe en haut de
+   l'écran pour ne pas la recouvrir. */
+.onboarding-card.onboarding-card--top {
+  bottom: auto;
+  top: max(16px, calc(env(safe-area-inset-top) + 12px));
+}
+.onboarding-secondary {
+  display: block; margin: 12px auto 0; background: none; border: none; padding: 6px 4px;
+  font-family: 'EB Garamond', serif; font-style: italic; font-size: 0.9rem;
+  color: var(--ink); text-decoration: underline; cursor: pointer;
+}
 `;

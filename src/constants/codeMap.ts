@@ -539,6 +539,10 @@ export const CODE_DOCS: Record<string, string> = {
     "L'assistant du livre de cuisine : choix des recettes, couverture, format, aperçu, impression ou téléchargement du PDF.",
   "src/components/cookbook/CookbookDocument.tsx":
     "Le document du livre de cuisine lui-même, partagé entre l'aperçu à l'écran et l'impression.",
+  "src/components/onboarding/RecipeEditTour.tsx":
+    "Le tuto « Modifier une recette » : met en lumière, étape par étape, les champs du formulaire (nom, temps, ingrédients, étapes, notes, enregistrer). Il s'ouvre sur un formulaire vide, donc rien n'est enregistré.",
+  "src/components/onboarding/recipeTourSteps.ts":
+    "La liste des étapes du tuto « Modifier une recette » : pour chacune, l'élément du formulaire à éclairer et la clé de ses textes.",
   "src/components/onboarding/OnboardingTour.tsx":
     "Le tutoriel guidé en cinq étapes : un voile avec un projecteur sur chaque zone, qui change d'onglet au besoin et le restaure à la fin.",
   "src/components/diagnostics/DiagnosticsPanelModal.tsx":
