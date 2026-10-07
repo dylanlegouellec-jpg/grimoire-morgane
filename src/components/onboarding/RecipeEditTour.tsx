@@ -45,7 +45,6 @@ export default function RecipeEditTour({ onFinish }: RecipeEditTourProps) {
   const prefersReducedMotion = useReducedMotion();
   const [stepIndex, setStepIndex] = useState(0);
   const [hole, setHole] = useState<Hole | null>(null);
-  const [cardOnTop, setCardOnTop] = useState(false);
   const cardRef = useRef<HTMLDivElement | null>(null);
 
   const step = RECIPE_TOUR_STEPS[stepIndex];
@@ -55,15 +54,23 @@ export default function RecipeEditTour({ onFinish }: RecipeEditTourProps) {
   const focusTrapRef = useFocusTrap<HTMLDivElement>(onFinish);
   useBodyScrollLock(true);
 
+  // Le formulaire ne défile pas quand il tient en entier : sans place pour
+  // remonter la cible, elle resterait sous la carte d'explication (qui est
+  // toujours en bas). La classe ci-dessous ajoute de la marge sous le
+  // formulaire pendant le tuto (voir .recipe-tour-active, onboarding.css.ts)
+  // pour que n'importe quel champ puisse être amené en haut de la fenêtre.
+  useLayoutEffect(() => {
+    document.body.classList.add("recipe-tour-active");
+    return () => document.body.classList.remove("recipe-tour-active");
+  }, []);
+
   // Amène la cible en haut de la fenêtre du formulaire (le formulaire EST le
-  // conteneur défilant), la mesure, puis borne le trou au-dessus de la carte
-  // d'explication. Le formulaire s'anime encore à son ouverture pendant les
-  // premières étapes : on re-mesure donc plusieurs fois.
+  // conteneur défilant), la mesure, puis borne le trou au-dessus de la carte.
+  // Le formulaire s'anime encore à son ouverture pendant les premières
+  // étapes : on re-mesure donc plusieurs fois.
   useLayoutEffect(() => {
     const measure = () => {
       if (!step.selector) {
-        cardRef.current?.classList.remove("onboarding-card--top");
-        setCardOnTop(false);
         setHole({ top: window.innerHeight / 2, left: window.innerWidth / 2, width: 0, height: 0 });
         return;
       }
@@ -75,23 +82,9 @@ export default function RecipeEditTour({ onFinish }: RecipeEditTourProps) {
         if (Math.abs(delta) > 1) container.scrollTop += delta;
       }
       const r = el.getBoundingClientRect();
-      // Le formulaire ne défile pas toujours (il tient parfois en entier) :
-      // une cible située sous la carte (ou à peine visible au-dessus) reste en
-      // bas. La carte se place alors en haut de l'écran plutôt que par-dessus. Classe posée
-      // tout de suite sur le DOM pour mesurer la carte à sa vraie place.
-      cardRef.current?.classList.remove("onboarding-card--top");
-      const bottomCardTop = cardRef.current ? cardRef.current.getBoundingClientRect().top : window.innerHeight;
-      const visibleAbove = Math.min(r.bottom + HOLE_PADDING, bottomCardTop - 12) - Math.max(r.top - HOLE_PADDING, 0);
-      const onTop = visibleAbove < Math.min(r.height + HOLE_PADDING * 2, 56);
-      cardRef.current?.classList.toggle("onboarding-card--top", onTop);
-      setCardOnTop(onTop);
-      const cardRect = cardRef.current?.getBoundingClientRect();
-      let top = Math.max(r.top - HOLE_PADDING, 0);
-      let bottom = r.bottom + HOLE_PADDING;
-      if (cardRect) {
-        if (onTop) top = Math.max(top, cardRect.bottom + 12);
-        else bottom = Math.min(bottom, cardRect.top - 12);
-      }
+      const cardTop = cardRef.current ? cardRef.current.getBoundingClientRect().top : window.innerHeight - 340;
+      const top = Math.max(r.top - HOLE_PADDING, 0);
+      const bottom = Math.min(r.bottom + HOLE_PADDING, cardTop - 12);
       setHole({ top, left: Math.max(r.left - HOLE_PADDING, 0), width: r.width + HOLE_PADDING * 2, height: Math.max(bottom - top, 24) });
     };
     measure();
@@ -132,7 +125,7 @@ export default function RecipeEditTour({ onFinish }: RecipeEditTourProps) {
         transition={prefersReducedMotion ? { duration: 0.01 } : { type: "spring", stiffness: 260, damping: 28 }}
       />
 
-      <div className={`onboarding-card${cardOnTop ? " onboarding-card--top" : ""}`} ref={cardRef}>
+      <div className="onboarding-card" ref={cardRef}>
         <AnimatePresence mode="wait">
           <motion.div
             key={stepIndex}
