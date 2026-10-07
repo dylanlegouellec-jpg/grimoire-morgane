@@ -14,3 +14,8 @@ declare const __GRIMOIRE_CODE__: {
   files: ReadonlyArray<{ path: string; lines: number; imports: string[]; importedBy: string[] }>;
   testFileCount: number;
 };
+
+// Version de l'app (commit + date de construction), injectée au build comme
+// __GRIMOIRE_CODE__ ci-dessus (voir scripts/buildInfo.ts). Utilisée par
+// utils/diagnostics.ts.
+declare const __GRIMOIRE_BUILD__: { commit: string; builtAt: string };

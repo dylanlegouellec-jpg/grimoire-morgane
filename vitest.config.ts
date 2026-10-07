@@ -3,6 +3,7 @@ import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import { countGrimoireLoc } from "./scripts/countLoc";
 import { buildCodeManifest } from "./scripts/codeMap";
+import { getBuildInfo } from "./scripts/buildInfo";
 
 /* ------------------------------------------------------------------ */
 /*  CONFIGURATION VITEST — séparée de vite.config.ts (qui porte le       */
@@ -18,10 +19,14 @@ const GRIMOIRE_LOC = countGrimoireLoc(fileURLToPath(new URL("./src", import.meta
 // Même `define` que vite.config.ts pour la carte du code (scripts/codeMap.ts).
 const GRIMOIRE_CODE = buildCodeManifest(fileURLToPath(new URL(".", import.meta.url)));
 
+// Même `define` que vite.config.ts pour la version de l'app (scripts/buildInfo.ts).
+const GRIMOIRE_BUILD = getBuildInfo();
+
 export default defineConfig({
   define: {
     __GRIMOIRE_LOC__: JSON.stringify(GRIMOIRE_LOC),
     __GRIMOIRE_CODE__: JSON.stringify(GRIMOIRE_CODE),
+    __GRIMOIRE_BUILD__: JSON.stringify(GRIMOIRE_BUILD),
   },
   plugins: [react()],
   test: {

@@ -987,6 +987,8 @@ export default function AppShell({
             onClose={closeDiagnostics}
             showToast={showToast}
             onResetOnboarding={resetOnboarding}
+            accountEmail={user?.email ?? null}
+            householdName={households.find((h) => h.id === householdId)?.name ?? null}
           />
         </Suspense>
         )}

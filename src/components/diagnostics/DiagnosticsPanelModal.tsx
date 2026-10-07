@@ -3,14 +3,19 @@ import { motion } from "motion/react";
 import { X, RefreshCw } from "lucide-react";
 import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
 import { SUPABASE_READY } from "../../constants";
-import { triggerHaptic } from "../../utils/helpers";
+import { copyText, triggerHaptic } from "../../utils/helpers";
 import { useTranslation } from "../../contexts/LanguageContext";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import useConnectionStatus from "../../hooks/useConnectionStatus";
 import Flourish from "../common/Flourish";
 import Switch from "../common/Switch";
+import SegmentedControl from "../common/SegmentedControl";
 import CodeExplorer from "./CodeExplorer";
+import AppDiagnostics from "./AppDiagnostics";
+import { buildAppSections } from "./appSections";
+import useAppDiagnostics from "../../hooks/useAppDiagnostics";
+import { buildDiagnosticsReport, checkForUpdates, forceUpdate, formatBytes, type ReportSection } from "../../utils/diagnostics";
 import {
   pingSupabase,
   flushOfflineQueue,
@@ -21,7 +26,7 @@ import {
 import { getOfflineQueueSize } from "../../utils/offlineQueue";
 import { clearImageCaches, getImageCacheEntryCounts } from "../../utils/imageCache";
 import { storeOnboardingCompleted } from "../../utils/localSettings";
-import { getDevLogEntries, clearDevLog, subscribeDevLog } from "../../utils/devLog";
+import { getDevLogEntries, clearDevLog, subscribeDevLog, type DevLogLevel } from "../../utils/devLog";
 
 /* ------------------------------------------------------------------ */
 /*  PANNEAU DE DIAGNOSTICS & MODE DÉVELOPPEUR                          */
@@ -40,19 +45,6 @@ import { getDevLogEntries, clearDevLog, subscribeDevLog } from "../../utils/devL
 /*  la clé anonyme REST — seule l'API de gestion Supabase (jeton admin)                   */
 /*  le permettrait, hors de portée d'une clé publiée côté client.                            */
 /* ------------------------------------------------------------------ */
-
-function formatBytes(bytes: number | null | undefined): string {
-  if (bytes == null || Number.isNaN(bytes)) return "—";
-  if (bytes < 1024) return `${bytes} o`;
-  const units = ["Ko", "Mo", "Go"];
-  let value = bytes;
-  let unitIndex = -1;
-  do {
-    value /= 1024;
-    unitIndex += 1;
-  } while (value >= 1024 && unitIndex < units.length - 1);
-  return `${value.toFixed(1)} ${units[unitIndex]}`;
-}
 
 function localStorageByteSize(): number | null {
   try {
@@ -144,6 +136,9 @@ interface DiagnosticsPanelModalProps {
   onClose: () => void;
   showToast: (msg: string) => void;
   onResetOnboarding?: () => void;
+  /** Compte connecté et foyer actif, pour la section Supabase et le rapport. */
+  accountEmail?: string | null;
+  householdName?: string | null;
 }
 
 interface TableCounts {
@@ -155,11 +150,14 @@ type PerformanceWithMemory = Performance & {
   memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number };
 };
 
-export default function DiagnosticsPanelModal({ onClose, showToast, onResetOnboarding }: DiagnosticsPanelModalProps) {
+export default function DiagnosticsPanelModal({ onClose, showToast, onResetOnboarding, accountEmail = null, householdName = null }: DiagnosticsPanelModalProps) {
   const { t } = useTranslation();
   const focusTrapRef = useFocusTrap<HTMLDivElement>(onClose);
   const sheet = useDismissibleSheet(onClose, { scrollRef: focusTrapRef });
   const setPanelRef = (node: HTMLDivElement | null) => { focusTrapRef.current = node; };
+
+  const app = useAppDiagnostics();
+  const appSections = useMemo(() => buildAppSections(app, t), [app, t]);
 
   const fps = useFpsCounter(true);
   const memory = typeof performance !== "undefined" ? (performance as PerformanceWithMemory).memory : undefined;
@@ -214,7 +212,59 @@ export default function DiagnosticsPanelModal({ onClose, showToast, onResetOnboa
 
   const [logEntries, setLogEntries] = useState(() => getDevLogEntries());
   useEffect(() => subscribeDevLog(setLogEntries), []);
-  const recentLogEntries = useMemo(() => logEntries.slice(-50).reverse(), [logEntries]);
+  const [logFilter, setLogFilter] = useState<"all" | DevLogLevel>("all");
+  // Le filtre s'applique AVANT de ne garder que les 50 derniers : sinon un filtre
+  // sur "error" ne montrerait que les erreurs perdues dans les 50 derniers événements.
+  const recentLogEntries = useMemo(
+    () => logEntries.filter((entry) => logFilter === "all" || entry.level === logFilter).slice(-50).reverse(),
+    [logEntries, logFilter]
+  );
+
+  const [checkingUpdates, setCheckingUpdates] = useState(false);
+  const runUpdateCheck = async () => {
+    setCheckingUpdates(true);
+    const result = await checkForUpdates();
+    await app.refreshServiceWorker();
+    setCheckingUpdates(false);
+    showToast(
+      result === "up-to-date" ? t("diagnostics.updateUpToDate") : result === "update-found" ? t("diagnostics.updateFound") : t("diagnostics.updateUnsupported")
+    );
+  };
+
+  // Le rapport reprend les lignes affichées à l'écran (mêmes sections que
+  // AppDiagnostics) puis les mesures en direct, la connexion, et les derniers
+  // événements du journal — sans filtre, quel que soit celui choisi à l'écran.
+  const copyReport = async () => {
+    const liveRows: ReportSection = {
+      title: t("diagnostics.performanceTitle"),
+      rows: [
+        [t("diagnostics.fps"), fps == null ? "…" : `${fps} fps`],
+        [t("diagnostics.memory"), memory ? `${formatBytes(memory.usedJSHeapSize)} / ${formatBytes(memory.jsHeapSizeLimit)}` : t("diagnostics.unavailable")],
+        [t("diagnostics.locCount"), __GRIMOIRE_LOC__.toLocaleString()],
+        [t("diagnostics.storageUsed"), storageEstimate ? `${formatBytes(storageEstimate.usage)} / ${formatBytes(storageEstimate.quota)}` : t("diagnostics.unavailable")],
+        [t("diagnostics.localStorageSize"), formatBytes(localBytes)],
+        [t("diagnostics.imageCacheEntries"), imageCacheCounts ? String(Object.values(imageCacheCounts).reduce((sum: number, n) => sum + (n || 0), 0)) : "…"],
+      ],
+    };
+    const supabaseRows: ReportSection = {
+      title: t("diagnostics.supabaseTitle"),
+      rows: [
+        [t("diagnostics.account"), accountEmail ?? "—"],
+        [t("diagnostics.household"), householdName ?? "—"],
+        [t("diagnostics.connectionStatusLabel"), t(`diagnostics.connectionStatus.${connection.status}`)],
+        [t("diagnostics.latency"), latencyMs == null ? "—" : `${latencyMs} ms`],
+        [t("diagnostics.pendingSync"), String(queueSize)],
+        [t("diagnostics.recipeRows"), tableCounts.recipes === undefined ? "…" : String(tableCounts.recipes ?? t("diagnostics.unavailable"))],
+        [t("diagnostics.simulateOffline"), forceOffline ? "oui" : "non"],
+      ],
+    };
+    const report = buildDiagnosticsReport({
+      generatedAt: new Date(),
+      sections: [...appSections, liveRows, supabaseRows],
+      logs: logEntries.slice(-50),
+    });
+    showToast((await copyText(report)) ? t("diagnostics.reportCopied") : t("diagnostics.reportCopyFailed"));
+  };
 
   return (
     <>
@@ -257,6 +307,24 @@ export default function DiagnosticsPanelModal({ onClose, showToast, onResetOnboa
                 <span className="diagnostics-metric-value">{__GRIMOIRE_LOC__.toLocaleString()}</span>
               </div>
             </div>
+
+            {/* --- Application (version, mode, service worker) puis Appareil & performance --- */}
+            <AppDiagnostics sections={appSections} />
+            <div className="ios-group">
+              <button type="button" className="ios-row" onClick={runUpdateCheck} disabled={checkingUpdates}>
+                <span className="ios-row-icon"><RefreshCw size={16} /></span>
+                <span className="ios-row-title">{t("diagnostics.checkUpdates")}</span>
+              </button>
+              <ConfirmButton
+                label={t("diagnostics.forceUpdate")}
+                armedLabel={t("diagnostics.confirmAction")}
+                onConfirm={() => { void forceUpdate(); }}
+              />
+              <button type="button" className="ios-row" onClick={copyReport}>
+                <span className="ios-row-title">{t("diagnostics.copyReport")}</span>
+              </button>
+            </div>
+            <p className="hint code-intro">{t("diagnostics.forceUpdateHint")}</p>
 
             {/* --- Code de l'app : menus déroulants par dossier puis par fichier --- */}
             <p className="ios-group-title">{t("diagnostics.codeTitle")}</p>
@@ -321,6 +389,14 @@ export default function DiagnosticsPanelModal({ onClose, showToast, onResetOnboa
               <>
                 <div className="ios-group ios-group-padded diagnostics-metrics">
                   <div className="diagnostics-metric">
+                    <span className="diagnostics-metric-label">{t("diagnostics.account")}</span>
+                    <span className="diagnostics-metric-value diagnostics-metric-value--text">{accountEmail ?? "—"}</span>
+                  </div>
+                  <div className="diagnostics-metric">
+                    <span className="diagnostics-metric-label">{t("diagnostics.household")}</span>
+                    <span className="diagnostics-metric-value diagnostics-metric-value--text">{householdName ?? "—"}</span>
+                  </div>
+                  <div className="diagnostics-metric">
                     <span className="diagnostics-metric-label">{t("diagnostics.connectionStatusLabel")}</span>
                     <span className={`diagnostics-status-dot diagnostics-status-dot--${connection.status}`}>
                       {t(`diagnostics.connectionStatus.${connection.status}`)}
@@ -377,6 +453,19 @@ export default function DiagnosticsPanelModal({ onClose, showToast, onResetOnboa
                 {t("diagnostics.clearLogs")}
               </button>
             </div>
+            <SegmentedControl
+              ariaLabel={t("diagnostics.logConsole")}
+              compact
+              value={logFilter}
+              onChange={(value) => setLogFilter(value as "all" | DevLogLevel)}
+              options={[
+                { value: "all", label: t("diagnostics.logFilterAll") },
+                { value: "error", label: "error" },
+                { value: "warn", label: "warn" },
+                { value: "network", label: "network" },
+                { value: "log", label: "log" },
+              ]}
+            />
             <div className="diagnostics-log">
               {recentLogEntries.length === 0 && <p className="hint diagnostics-log-empty">{t("diagnostics.noLogs")}</p>}
               {recentLogEntries.map((entry) => (

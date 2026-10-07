@@ -33,7 +33,7 @@ export interface CodeManifest {
 }
 
 // Dossiers parcourus à partir de la racine, plus quelques fichiers de
-// configuration posés directement à la racine (ou dans public/).
+// configuration posés directement à la racine.
 const SCAN_DIRS = ["src", "api", "scripts", "supabase"];
 const ROOT_FILES = [
   "index.html",
@@ -43,7 +43,6 @@ const ROOT_FILES = [
   "tsconfig.json",
   "eslint.config.ts",
   "vercel.json",
-  "public/manifest.json",
 ];
 const CODE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx"];
 const LISTED_EXTENSIONS = new Set([...CODE_EXTENSIONS, ".html", ".json", ".md", ".sql"]);
