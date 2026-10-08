@@ -127,6 +127,11 @@ html, body {
      .grimoire-app en min-height: 100% un peu plus bas) se cale sur cette
      même mesure fiable plutôt que sur le viewport instable. */
   height: 100%;
+  /* Pas d'effet « élastique » en tirant la page au-delà de son haut ou de son
+     bas : sur iPhone (iOS 16+, aussi en PWA installée), la page se décollait
+     et laissait voir un grand vide sombre au-dessus de l'en-tête. Les fenêtres
+     (réglages, recette...) ont leur propre défilement et ne sont pas touchées. */
+  overscroll-behavior-y: none;
   /* --parchment, pas --page-bg (blanc cassé) : sécurité si un enfant
      n'atteint malgré tout pas tout à fait le bas réel de l'écran — même
      couleur que .grimoire-app juste en dessous, donc invisible. */
