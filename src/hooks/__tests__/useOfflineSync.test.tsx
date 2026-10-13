@@ -92,6 +92,8 @@ function Harness() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>([]);
   const [activeListId, setActiveListId] = useState<string | null>(null);
+  // Harnais de test : expose le setter au test, hors de React (volontaire).
+  // eslint-disable-next-line react-hooks/globals
   externalSetPantry = setPantry;
 
   const { ready } = useOfflineSync({
