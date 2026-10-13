@@ -1,6 +1,6 @@
 import { useState, useRef, lazy, Suspense, type RefObject, type WheelEvent, type TouchEvent } from "react";
 import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform, useInView } from "motion/react";
-import { ChefHat, Clock, Minus, Pencil, Plus, Share2, Users, Wheat, X } from "lucide-react";
+import { ChefHat, Clock, Minus, Plus, Share2, Users, Wheat, X } from "lucide-react";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
 import { DEFAULT_HERO_TREATMENT } from "../../constants";
 import { categoryLabel, categoryClass, groupSteps, triggerHaptic } from "../../utils/helpers";
@@ -161,7 +161,7 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
   // Même principe que RecipeCard : valeur stockée, calculée une seule
   // fois côté serveur à la création/édition — aucun appel réseau ici.
   const nutri = (recipe?.nutriscoreGrade || estimateNutriscoreLocal(rawIngredients as never, recipe?.category)) as NutriscoreGrade;
-  const { language, dict, t } = useTranslation();
+  const { language, dict } = useTranslation();
   const prefersReducedMotion = useReducedMotion();
 
   // Fige le <body> (technique position:fixed, fiable sur iOS Safari —
@@ -334,14 +334,6 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
               <Seal tone="gold" onClick={() => setShowShare(true)}>
                 <Share2 size={16} /> Partager la recette
               </Seal>
-              {/* Bouton visible en plus du geste « tirer vers le haut en bas de
-                  la fiche » : sans lui, modifier une recette était impossible
-                  à deviner, et inaccessible au clavier ou au lecteur d'écran. */}
-              {onEdit && (
-                <Seal tone="gold" onClick={() => onEdit(recipe)}>
-                  <Pencil size={16} /> {t("recipes.edit")}
-                </Seal>
-              )}
             </div>
             <Flourish />
           </div>

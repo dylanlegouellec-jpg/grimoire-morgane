@@ -1,7 +1,7 @@
 import { useRef, useState, type ChangeEvent } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "motion/react";
-import { Camera, ImageOff, Sparkles, Trash2, X } from "lucide-react";
+import { Camera, ImageOff, Pencil, Sparkles, Trash2, X } from "lucide-react";
 import { triggerHaptic } from "../../utils/helpers";
 import { generateAIIllustration } from "../../utils/aiIllustration";
 import { uploadRecipeImage } from "../../utils/imageUpload";
@@ -17,6 +17,8 @@ interface RecipeOptionsModalProps {
   onClose: () => void;
   onUpdateRecipe: (recipe: Recipe) => void;
   onRequestDelete: (recipe: Recipe) => void;
+  // Ouvre le formulaire de modification (AppShell) — absent : pas de ligne « Modifier ».
+  onEdit?: (recipe: Recipe) => void;
   householdId: string | null;
   showToast?: (msg: string) => void;
 }
@@ -28,7 +30,7 @@ interface RecipeOptionsModalProps {
 /*  (voir MODAL_SHEET_MOTION.exit) ait le temps de jouer avant le vrai   */
 /*  démontage.                                                          */
 /* ------------------------------------------------------------------ */
-export default function RecipeOptionsModal({ recipe, onClose, onUpdateRecipe, onRequestDelete, householdId, showToast }: RecipeOptionsModalProps) {
+export default function RecipeOptionsModal({ recipe, onClose, onUpdateRecipe, onRequestDelete, onEdit, householdId, showToast }: RecipeOptionsModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [generating, setGenerating] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -125,6 +127,13 @@ export default function RecipeOptionsModal({ recipe, onClose, onUpdateRecipe, on
         <Flourish />
 
         <div className="recipe-options-list">
+          {onEdit && (
+            <button type="button" className="recipe-option-row" onClick={() => { triggerHaptic(15); onClose(); onEdit(recipe); }}>
+              <Pencil size={18} />
+              <span>Modifier la recette</span>
+            </button>
+          )}
+
           <button type="button" className="recipe-option-row" onClick={handlePhotoClick} disabled={uploading}>
             <Camera size={18} className={uploading ? "spin-wand" : ""} />
             <span>{uploading ? "Envoi de la photo…" : "Ajouter ma propre photo"}</span>

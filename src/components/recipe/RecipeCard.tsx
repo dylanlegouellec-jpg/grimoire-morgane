@@ -24,6 +24,7 @@ interface RecipeCardProps {
   onToggleFavorite: (id: string) => void;
   onRequestDelete: (recipe: Recipe) => void;
   onUpdateRecipe: (recipe: Recipe) => void;
+  onEdit?: (recipe: Recipe) => void;
   enterDelay?: number;
   pressDuration?: number;
   showNutriscore?: boolean;
@@ -42,6 +43,7 @@ function RecipeCard({
   onToggleFavorite,
   onRequestDelete,
   onUpdateRecipe,
+  onEdit,
   enterDelay = 0,
   pressDuration = 750,
   showNutriscore = true,
@@ -250,6 +252,7 @@ function RecipeCard({
             recipe={recipe}
             onClose={() => { setShowOptions(false); cardLongPress.resetPressState(); }}
             onUpdateRecipe={onUpdateRecipe}
+            onEdit={onEdit}
             onRequestDelete={onRequestDelete}
             householdId={householdId}
             showToast={showToast}
