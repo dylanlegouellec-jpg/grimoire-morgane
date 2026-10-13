@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { RECIPE_TOUR_STEPS } from "../recipeTourSteps";
 import { translations, type TranslationTree } from "../../../constants/translations";
@@ -11,7 +11,11 @@ import { translations, type TranslationTree } from "../../../constants/translati
 /*  formulaire ferait silencieusement perdre son étape au tuto.          */
 /* ------------------------------------------------------------------ */
 
-const formSource = readFileSync(resolve(__dirname, "../../recipe/RecipeForm.tsx"), "utf8");
+// Le formulaire est découpé : RecipeForm.tsx + ses morceaux dans recipe/form/.
+const formDir = resolve(__dirname, "../../recipe/form");
+const formSource = [resolve(__dirname, "../../recipe/RecipeForm.tsx"), ...readdirSync(formDir).filter((f) => f.endsWith(".tsx")).map((f) => resolve(formDir, f))]
+  .map((f) => readFileSync(f, "utf8"))
+  .join("\n");
 
 function lookup(tree: TranslationTree, path: string): unknown {
   return path.split(".").reduce<unknown>((node, key) => (node && typeof node === "object" ? (node as TranslationTree)[key] : undefined), tree);
@@ -27,7 +31,7 @@ describe("RecipeEditTour", () => {
     for (const step of RECIPE_TOUR_STEPS) {
       const name = step.selector?.match(/data-tour="([^"]+)"/)?.[1];
       if (!name) continue;
-      expect(formSource, `data-tour="${name}" introuvable dans RecipeForm.tsx`).toContain(`data-tour="${name}"`);
+      expect(formSource, `data-tour="${name}" introuvable dans RecipeForm.tsx ni recipe/form/`).toContain(`data-tour="${name}"`);
     }
   });
 

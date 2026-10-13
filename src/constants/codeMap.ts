@@ -424,7 +424,17 @@ export const CODE_DOCS: Record<string, string> = {
   "src/components/recipe/RecipeDetail.tsx":
     "La fiche détail d'une recette : photo avec effet de parallaxe, ingrédients, étapes, et les actions (cuisiner, modifier, partager).",
   "src/components/recipe/RecipeForm.tsx":
-    "Le formulaire de création et de modification d'une recette : champs, ingrédients et étapes réordonnables, photo, estimations nutritionnelles, et confirmation si des modifications ne sont pas enregistrées.",
+    "Le formulaire de création et de modification d'une recette : garde l'état de la recette, l'enregistre, et demande confirmation si des modifications ne sont pas enregistrées. Ses morceaux sont dans recipe/form/.",
+  "src/components/recipe/form/recipeFormRows.ts":
+    "Données du formulaire de recette : unités proposées, forme des rangées d'ingrédients et d'étapes, et passage recette <-> rangées (ouverture, enregistrement, détection des modifications).",
+  "src/components/recipe/form/FormRows.tsx":
+    "Une rangée d'ingrédient ou d'étape du formulaire, réordonnable à la poignée (⠿), ou un titre de section.",
+  "src/components/recipe/form/RowEditors.tsx":
+    "Les listes d'ingrédients et d'étapes du formulaire, avec le bouton « + Ajouter… » (appui maintenu = titre de section).",
+  "src/components/recipe/form/NutritionSection.tsx":
+    "La section repliable des valeurs nutritionnelles du formulaire, avec l'estimation en ligne à partir des ingrédients.",
+  "src/components/recipe/form/useLongPressAdd.ts":
+    "Appui court ou maintenu sur un bouton « + Ajouter… » : une rangée, ou un titre de section après le temps d'appui réglé.",
   "src/components/recipe/RecipesView.tsx":
     "L'onglet Recettes : la grille de cartes. Le filtrage (Tout, Salé, Sucré, Favoris, recherche) ne démonte jamais une carte, et un changement de filtre se fait en deux temps : sortie des cartes en fondu, puis entrée en cascade.",
   "src/components/recipe/StepTimer.tsx":
@@ -529,6 +539,8 @@ export const CODE_DOCS: Record<string, string> = {
     "Le menu d'actions d'une recette (appui long sur une carte) : photo, illustration générée par IA et autres actions.",
   "src/components/common/Toast.tsx":
     "Message éphémère en bas d'écran (texte de useToast), avec un bouton d'action facultatif comme « Annuler » après une suppression.",
+  "src/components/common/DocumentTitle.tsx":
+    "Le titre de l'onglet du navigateur : affiche le nom de la recette ouverte (balise <title> de React 19), et le titre normal revient à la fermeture.",
   "src/components/common/Seal.tsx":
     "Le bouton en forme de sceau, utilisé pour l'action principale d'un écran.",
   "src/components/common/SecretSettingsModal.tsx":
