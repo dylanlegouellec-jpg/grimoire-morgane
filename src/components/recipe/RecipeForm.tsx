@@ -57,7 +57,7 @@ interface RecipeFormProps {
 /* ------------------------------------------------------------------ */
 
 export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, pressDuration = 750 }: RecipeFormProps) {
-  useBodyScrollLock(true);
+  const isPresent = useBodyScrollLock(true);
   const { t } = useTranslation();
   const isEdit = !!initialRecipe;
   const [title, setTitle] = useState<string>(initialRecipe ? initialRecipe.title : "");
@@ -180,7 +180,7 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
 
   return (
     <>
-    <motion.div className="modal-backdrop" onClick={attemptClose} {...MODAL_BACKDROP_MOTION}>
+    <motion.div className="modal-backdrop" onClick={attemptClose} {...MODAL_BACKDROP_MOTION} style={isPresent ? undefined : { pointerEvents: "none" }}>
       <motion.form
         ref={setFormRef}
         className="modal grimoire-page form-clean modal-swipeable"

@@ -339,6 +339,8 @@ export const CODE_DOCS: Record<string, string> = {
     "Magasin partagé des minuteurs du mode cuisine : plusieurs minuteurs en même temps, basés sur une heure de fin (justes même onglet en veille), conservés d'un groupe d'étapes à l'autre et vidés à la fermeture. Envoie la notification de fin une seule fois par minuteur et se lit via useCookTimers().",
   "src/utils/thumbnails.ts":
     "Miniatures des photos de recettes : dérive le chemin et l'URL publique de la miniature (~480 px) d'une photo du bucket recipe-images, et retient pour la session les miniatures manquantes et les rattrapages déjà tentés.",
+  "src/utils/nutritionBatch.ts":
+    "Estimation nutritionnelle en lot : trouve les recettes sans aucune valeur nutritionnelle et les estime une par une (avec pause, progression et arrêt possible), sans jamais toucher une recette déjà renseignée.",
   "src/utils/recipeSearch.ts":
     "Recherche et tri de la grille de recettes : recherche sans accents, mot par mot, dans le titre et les ingrédients, qui tolère une petite faute de frappe ; tri par nom, plus récentes ou plus rapides.",
   "src/utils/shoppingShare.ts":
@@ -379,6 +381,8 @@ export const CODE_DOCS: Record<string, string> = {
     "Règles d'accessibilité chargées en dernier : contour visible au clavier, zones tactiles agrandies pour les petits boutons, et pas de zoom au double appui sur les boutons (le zoom à deux doigts, lui, est autorisé).",
   "src/styles/cookbook.css":
     "Les styles du livre de cuisine : aperçu à l'écran et mise en page d'impression (pages, couverture).",
+  "src/styles/nutritionBatch.css":
+    "Styles de l'écran d'estimation nutritionnelle en lot (liste des recettes, barre de progression, états).",
   "src/styles/cookmode.css":
     "Les styles du mode cuisine : étapes en plein écran, molette de portions, feuille de quantité.",
   "src/styles/diagnostics.css":
@@ -551,6 +555,10 @@ export const CODE_DOCS: Record<string, string> = {
     "Message éphémère en bas d'écran (texte de useToast), avec un bouton d'action facultatif comme « Annuler » après une suppression.",
   "src/components/common/DocumentTitle.tsx":
     "Le titre de l'onglet du navigateur : affiche le nom de la recette ouverte (balise <title> de React 19), et le titre normal revient à la fermeture.",
+  "src/components/common/NutritionBatchModal.tsx":
+    "Écran des Réglages « Estimer la nutrition des recettes » : liste les recettes sans valeurs nutritionnelles, lance leur estimation avec une barre de progression et l'état de chaque recette, puis affiche un résumé.",
+  "src/components/common/NavPill.tsx":
+    "La pastille sombre sous l'onglet actif de la barre de navigation : elle glisse d'un onglet à l'autre, sa position étant mesurée dans la barre elle-même (le défilement de la page ne la fait plus sauter).",
   "src/components/common/Seal.tsx":
     "Le bouton en forme de sceau, utilisé pour l'action principale d'un écran.",
   "src/components/common/SecretSettingsModal.tsx":

@@ -9,6 +9,9 @@ import useTabNavigation from "../hooks/useTabNavigation";
 import useFilterSwipe from "../hooks/useFilterSwipe";
 
 import NavButton from "../components/common/NavButton";
+import NavPill from "../components/common/NavPill";
+import { getStoredRecipeSort, storeRecipeSort } from "../utils/localSettings";
+import type { RecipeSort } from "../utils/recipeSearch";
 import ErrorBoundary from "../components/common/ErrorBoundary";
 import AppHeader from "./AppHeader";
 import TabBars from "./TabBars";
@@ -162,6 +165,14 @@ export default function AppShell({
   // Navigation entre onglets (onglet demandé / affiché, sens du glissement,
   // retour en haut à la bascule) : voir hooks/useTabNavigation.ts.
   const appContentRef = useRef<HTMLElement | null>(null);
+  // État (et non useRef) : la pastille doit se mesurer dès que la barre existe.
+  const [navEl, setNavEl] = useState<HTMLElement | null>(null);
+  // Ordre de la grille de recettes (Réglages > Apparence), mémorisé sur l'appareil.
+  const [recipeSort, setRecipeSort] = useState<RecipeSort>(getStoredRecipeSort);
+  const changeRecipeSort = (next: string) => {
+    setRecipeSort(next as RecipeSort);
+    storeRecipeSort(next as RecipeSort);
+  };
   const { tab, shownTab, tabExiting, tabSlideStyle, changeTab } = useTabNavigation(appContentRef);
   // Onglets déjà affichés au moins une fois : gardés en mémoire (<Activity>).
   const [visitedTabs, setVisitedTabs] = useState(() => new Set([shownTab]));
@@ -369,7 +380,8 @@ export default function AppShell({
           en paysage, "margin-top: auto" (responsive.css) la pousse tout
           en bas de cette colonne flex indépendante, quel que soit le
           contenu affiché à côté dans .app-content. */}
-      <nav className="bottom-nav">
+      <nav className="bottom-nav" ref={setNavEl}>
+        <NavPill nav={navEl} activeKey={tab} />
         {TABS.map(({ key, icon: Icon }) => (
           <NavButton
             key={key}
@@ -416,6 +428,7 @@ export default function AppShell({
             onToggleFavorite={toggleFavorite}
             onAddRequest={() => setFormTarget("new")}
             onImportRequest={() => setShowLinkImport(true)}
+            sort={recipeSort}
             onOpen={setOpenRecipe}
             openRecipeId={openRecipe ? openRecipe.id : null}
             onRequestDelete={setDeleteTarget}
@@ -628,6 +641,8 @@ export default function AppShell({
             onImportLink={() => setShowLinkImport(true)}
             pressDuration={pressDuration}
             onSetPressDuration={setPressDuration}
+            recipeSort={recipeSort}
+            onSetRecipeSort={changeRecipeSort}
             theme={theme}
             onSetTheme={setTheme}
             showNutriscore={showNutriscore}
@@ -660,6 +675,8 @@ export default function AppShell({
             onReplayRecipeTour={replayRecipeTour}
             onOpenCookbookBuilder={openCookbookBuilder}
             onOpenDiagnostics={openDiagnostics}
+            recipes={recipes}
+            onSaveRecipe={saveRecipe}
           />
         </Suspense>
         )}

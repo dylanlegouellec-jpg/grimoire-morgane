@@ -1,8 +1,6 @@
 import { useRef, useState, type MouseEvent } from "react";
 import type { LucideIcon } from "lucide-react";
-import { motion } from "motion/react";
 import { triggerHaptic, triggerHapticFeedback } from "../../utils/haptics";
-import { SPRING_PILL } from "../../constants/motion";
 // Le clic sonore est désormais joué par l'écouteur global délégué (voir
 // utils/audioUtils.js, initAudioOnFirstTouch) — plus besoin de l'appeler
 // ici, ça doublerait le son.
@@ -60,26 +58,6 @@ export default function NavButton({ tabKey, label, Icon, active, onSelect, onLon
       onMouseLeave={cancel}
       onContextMenu={(e: MouseEvent<HTMLButtonElement>) => { if (onLongPress) e.preventDefault(); }}
     >
-      {/* Pastille active — Framer Motion (layoutId partagé "nav-pill") :
-          un seul <motion.span> existe à la fois dans le DOM (rendu
-          seulement par le NavButton actif), mais Framer repère qu'un autre
-          élément portait déjà ce layoutId juste avant et anime le
-          changement de position/taille entre les deux au lieu de faire
-          apparaître la pastille d'un coup sec à sa nouvelle place — c'est
-          ce qui donne l'effet de glissement d'un onglet à l'autre, sans
-          calcul de position manuel. "inset:0" + "borderRadius: inherit"
-          (voir modalsBase.css, .nav-pill) : la pastille épouse
-          exactement la forme du bouton, qu'il soit rond (dock flottant en
-          portrait) ou en rectangle arrondi (colonne latérale en paysage,
-          voir responsive.css) — sans avoir à dupliquer cette règle pour
-          les deux mises en page. */}
-      {active && (
-        <motion.span
-          layoutId="nav-pill"
-          className="nav-pill"
-          transition={SPRING_PILL}
-        />
-      )}
       <Icon size={20} />
       <span>{label}</span>
     </button>

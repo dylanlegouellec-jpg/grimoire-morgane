@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useIsPresent } from "motion/react";
 
 /* ------------------------------------------------------------------ */
 /*  VERROU DE SCROLL DU FOND (fiable sur iOS Safari)                   */
@@ -91,12 +92,22 @@ function unlockBody(): void {
   }
 }
 
-export default function useBodyScrollLock(active: boolean = true): void {
+// Le verrou est rendu DÈS QUE la modale commence à se fermer (useIsPresent
+// passe à faux au début de son animation de sortie, dans <AnimatePresence>),
+// pas à la fin de cette animation : avant, après avoir fermé une fiche
+// recette, la liste restait impossible à faire défiler ~0,75 s (plus sur
+// iPhone), le temps que le ressort de sortie se termine. Renvoie ce même
+// booléen : l'appelant peut laisser passer les touchers pendant la sortie
+// (pointer-events: none sur son fond, voir RecipeDetail/RecipeForm).
+export default function useBodyScrollLock(active: boolean = true): boolean {
+  const isPresent = useIsPresent();
+  const locked = active && isPresent;
   useEffect(() => {
-    if (!active) return undefined;
+    if (!locked) return undefined;
     lockBody();
     return () => { unlockBody(); };
-  }, [active]);
+  }, [locked]);
+  return isPresent;
 }
 
 // À utiliser quand un geste doit se couper tant qu'une modale/feuille

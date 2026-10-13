@@ -1,0 +1,63 @@
+/* ------------------------------------------------------------------ */
+/*  RÉGLAGES — « Estimer la nutrition des recettes »                     */
+/*  (components/common/NutritionBatchModal.tsx) : liste des recettes      */
+/*  sans valeurs nutritionnelles, barre de progression "3 / 12" et état   */
+/*  de chaque recette pendant l'estimation en lot. Repose sur les cartes   */
+/*  .ios-group de settingsIos.css ; couleurs = variables du thème (clair/  */
+/*  sombre), texte doré via --gold-text uniquement.                        */
+/* ------------------------------------------------------------------ */
+.nutri-batch-list { list-style: none; margin: 0; padding: 0; }
+.nutri-batch-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px;
+  font-family: 'EB Garamond', serif; font-size: 1rem; color: var(--ink);
+}
+.nutri-batch-row + .nutri-batch-row { border-top: 1px solid var(--line); }
+.nutri-batch-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nutri-batch-status {
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px;
+  font-size: 0.85rem; color: var(--ink-soft);
+}
+.nutri-batch-pending .nutri-batch-status { opacity: 0.7; }
+.nutri-batch-running { background: var(--surface); }
+.nutri-batch-running .nutri-batch-status { color: var(--gold-text); font-style: italic; }
+.nutri-batch-done .nutri-batch-status { color: var(--forest); font-weight: 600; }
+.nutri-batch-failed .nutri-batch-status { color: var(--wine); }
+
+.nutri-batch-spin { animation: nutri-batch-spin 0.9s linear infinite; }
+@keyframes nutri-batch-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .nutri-batch-spin { animation: none; } }
+
+.nutri-batch-progress { margin: 14px 2px 14px; }
+.nutri-batch-progress-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  font-family: 'EB Garamond', serif; font-style: italic; color: var(--ink-soft);
+}
+.nutri-batch-progress-count {
+  font-family: 'Cinzel', serif; font-style: normal; font-size: 0.85rem; letter-spacing: 0.5px; color: var(--gold-text);
+}
+.nutri-batch-bar {
+  margin-top: 8px; height: 8px; border-radius: 999px; overflow: hidden;
+  background: var(--surface-strong);
+}
+.nutri-batch-bar-fill {
+  height: 100%; border-radius: inherit; background: var(--gold);
+  transition: width 0.3s ease;
+}
+
+.nutri-batch-summary { margin: 14px 2px; }
+.nutri-batch-summary-main {
+  margin: 0 0 4px; font-family: 'EB Garamond', serif; font-size: 1.05rem; font-weight: 600; color: var(--ink);
+}
+
+.nutri-batch-offline {
+  display: flex; align-items: flex-start; gap: 8px;
+  margin: 12px 0 0; padding: 10px 12px; border-radius: 12px;
+  background: var(--surface); color: var(--wine);
+  font-family: 'EB Garamond', serif; font-size: 0.95rem;
+}
+.nutri-batch-offline svg { flex-shrink: 0; margin-top: 4px; }
+.nutri-batch-empty {
+  margin: 18px 4px; font-family: 'EB Garamond', serif; font-style: italic; color: var(--ink-soft);
+}
+.nutri-batch-actions { display: flex; justify-content: center; margin: 18px 0 6px; }

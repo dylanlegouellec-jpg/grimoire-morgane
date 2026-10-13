@@ -85,7 +85,8 @@
      sidebar paysage est un panneau fixe de la mise en page elle-même, pas
      un élément superposé. */
   .bottom-nav {
-    position: static; left: auto; transform: none; max-width: none; width: auto;
+    /* "relative" (et non "static") : repère de la pastille de l'onglet actif (NavPill.tsx). */
+    position: relative; left: auto; transform: none; max-width: none; width: auto;
     flex-direction: column; align-items: stretch; gap: 4px;
     background: transparent; border: none; box-shadow: none;
     backdrop-filter: none; -webkit-backdrop-filter: none;

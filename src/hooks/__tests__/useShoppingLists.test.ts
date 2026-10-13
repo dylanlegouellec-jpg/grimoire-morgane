@@ -107,3 +107,19 @@ describe("useShoppingLists — « Annuler » après une suppression", () => {
     expect(insertRowMock).toHaveBeenCalledWith("shopping_lists", expect.objectContaining({ id: "l1" }), );
   });
 });
+
+describe("useShoppingLists — « Annuler » après réinitialisation", () => {
+  it("remet tous les articles, dans l'ordre et avec leurs coches", () => {
+    callRpcMock.mockReturnValue(new Promise(() => {}));
+    const showToast = vi.fn();
+    const items = [item("a"), item("b", true), item("c")];
+    const { result } = renderHook(() =>
+      useShoppingLists({ householdId: "h1", userId: "u1", initialLists: [list(items)], initialActiveListId: "l1", showToast })
+    );
+    act(() => result.current.resetActiveList());
+    expect(result.current.shoppingLists[0].items).toEqual([]);
+    const action = showToast.mock.calls.at(-1)?.[1];
+    act(() => action.onAction());
+    expect(result.current.shoppingLists[0].items).toEqual(items);
+  });
+});
