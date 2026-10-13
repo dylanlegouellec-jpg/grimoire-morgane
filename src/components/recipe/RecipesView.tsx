@@ -2,6 +2,8 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { Plus } from "lucide-react";
 import { normalize, triggerHaptic } from "../../utils/helpers";
+import { buildSearchEntry, matchesSearch, parseQuery, sortRecipes, RECIPE_SORTS, type RecipeSort } from "../../utils/recipeSearch";
+import { getStoredRecipeSort, storeRecipeSort } from "../../utils/localSettings";
 import { useTranslation } from "../../contexts/LanguageContext";
 import RecipeCard from "./RecipeCard";
 import type { Recipe } from "../../hooks/useRecipes";
@@ -46,17 +48,26 @@ export default function RecipesView({
   showToast,
 }: RecipesViewProps) {
   const { t } = useTranslation();
-  const q = search.trim().toLowerCase();
+  // Recherche tolérante (accents, fautes de frappe, plusieurs mots) : voir
+  // utils/recipeSearch.ts. Le texte recherchable de chaque recette n'est
+  // préparé qu'une fois par liste de recettes, pas à chaque frappe.
+  const terms = useMemo(() => parseQuery(search), [search]);
+  const searchIndex = useMemo(() => new Map(recipes.map((r) => [r.id, buildSearchEntry(r)])), [recipes]);
+
+  // Ordre de la grille (Nom / Plus récentes / Plus rapides), mémorisé sur l'appareil.
+  const [sort, setSort] = useState<RecipeSort>(getStoredRecipeSort);
+  const changeSort = (next: RecipeSort) => {
+    triggerHaptic(10);
+    setSort(next);
+    storeRecipeSort(next);
+  };
 
   // Triée UNE SEULE FOIS sur TOUTES les recettes, pas seulement celles du
   // filtre actif (voir visibleIds ci-dessous, qui décide seule quelles
   // cartes sont affichées) — trier puis exclure donne le même ordre relatif
   // qu'exclure puis trier, donc aucun changement visuel pour l'ensemble
   // effectivement visible dans un filtre donné.
-  const sorted = useMemo(
-    () => [...recipes].sort((a, b) => a.title.localeCompare(b.title, "fr")),
-    [recipes]
-  );
+  const sorted = useMemo(() => sortRecipes(recipes, sort), [recipes, sort]);
 
   // Filtre/favoris réellement APPLIQUÉS à la grille — en retard de
   // FILTER_EXIT_MS sur les props `filter`/`favoritesOnly` (voir l'effet
@@ -83,16 +94,15 @@ export default function RecipesView({
     sorted.forEach((r) => {
       if (applied.filter !== "tout" && normalize(r.category) !== applied.filter) return;
       if (applied.favoritesOnly && !r.favorite) return;
-      if (q) {
-        const inTitle = r.title.toLowerCase().includes(q);
-        const inIngredients = r.ingredients.some((ing) => !("isSection" in ing) && ing.name.toLowerCase().includes(q));
-        if (!inTitle && !inIngredients) return;
+      if (terms.length) {
+        const entry = searchIndex.get(r.id);
+        if (!entry || !matchesSearch(entry, terms)) return;
       }
       indexById.set(r.id, ids.size);
       ids.add(r.id);
     });
     return { visibleIds: ids, visibleIndexById: indexById };
-  }, [sorted, applied, q]);
+  }, [sorted, applied, terms, searchIndex]);
 
   const hasVisible = visibleIds.size > 0;
 
@@ -201,7 +211,19 @@ export default function RecipesView({
             )}
           </div>
         </div>
-      ) : !hasVisible && (
+      ) : (
+        <div className="recipes-toolbar">
+          <label className="recipes-sort">
+            <span>{t("recipes.sort.label")}</span>
+            <select value={sort} onChange={(e) => changeSort(e.target.value as RecipeSort)}>
+              {RECIPE_SORTS.map((key) => (
+                <option key={key} value={key}>{t(`recipes.sort.${key}`)}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
+      {recipes.length > 0 && !hasVisible && (
         <p className="hint" style={{ textAlign: "center", marginTop: 30 }}>{t("recipes.noMatch")}</p>
       )}
       <div className="recipes-grid" style={hasVisible ? undefined : { display: "none" }}>

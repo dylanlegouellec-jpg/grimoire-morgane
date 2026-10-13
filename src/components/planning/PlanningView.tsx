@@ -11,6 +11,8 @@ import Seal from "../common/Seal";
 import SegmentedControl from "../common/SegmentedControl";
 import AddMealModal from "./AddMealModal";
 import PlanningMealGroup from "./PlanningMealGroup";
+import MoveMealModal from "./MoveMealModal";
+import { DROP_DATE_ATTR, PlanningMoveContext, buildMoveUpdates, parseISODateLocal, resolveMoveTarget, type MealSlot, type PlanningMoveApi } from "./planningMove";
 import type { Recipe } from "../../hooks/useRecipes";
 import type { MealPlanEntry } from "../../hooks/useMealPlan";
 import type { ViewScope } from "../../utils/localSettings";
@@ -73,6 +75,9 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
   // restent fixes, seuls la recette/le type de plat peuvent changer (voir
   // AddMealModal.jsx, prop `editEntry`).
   const [editingEntry, setEditingEntry] = useState<MealPlanEntry | null>(null);
+  // Entrée en cours de déplacement via « Déplacer… » (menu d'appui long,
+  // voir MoveMealModal.tsx/planningMove.ts) — null quand la feuille est fermée.
+  const [movingEntry, setMovingEntry] = useState<MealPlanEntry | null>(null);
   // Jours dépliés/repliés (voir isDayExpanded plus bas) — seuls les
   // BASCULEMENTS explicites de l'utilisateur sont mémorisés ici, par date
   // ISO (persiste donc d'une semaine à l'autre pour cette même date) ;
@@ -234,6 +239,43 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
   // .js pour l'ajustement du courseType selon le moment d'arrivée).
   const handleMoveSection = (entries: MealPlanEntry[], newMealTypeKey: string) => onMoveMealSection(entries.map((e) => e.id), newMealTypeKey);
 
+  // Déplacement d'UN plat vers un autre jour et/ou moment — commun au
+  // glisser-déposer (poignée ⋮⋮ lâchée sur un autre jour/moment, voir
+  // PlanningMealItem.tsx) et à « Déplacer… » (MoveMealModal.tsx). Une simple
+  // mise à jour de l'entrée (date + moment + type de plat ajusté, voir
+  // buildMoveUpdates) : son id, sa recette et sa portée ne changent pas. Le
+  // jour d'arrivée est déplié (sinon le plat semblerait avoir disparu) et la
+  // vue suit la semaine d'arrivée si elle diffère (cas du calendrier).
+  const moveEntryTo = (entry: MealPlanEntry, slot: MealSlot) => {
+    onUpdateMeal(entry.id, buildMoveUpdates(entry, slot));
+    setExpandedOverrides((prev) => new Map(prev).set(slot.date, true));
+    const targetWeek = getWeekStart(parseISODateLocal(slot.date));
+    if (toISODate(targetWeek) !== toISODate(weekStart)) setWeekStart(targetWeek);
+    showToast(t("planningMove.movedToast", {
+      label: labelForEntry(entry),
+      day: formatDayLabel(parseISODateLocal(slot.date), language),
+      meal: t(`mealTypes.${slot.mealType}`),
+    }));
+  };
+  const moveApi: PlanningMoveApi = {
+    canDrop: (entryLike, target) => {
+      const entry = mealPlan.find((e) => e.id === entryLike.id);
+      return Boolean(entry && resolveMoveTarget(entry, target));
+    },
+    dropEntry: (entryLike, target) => {
+      const entry = mealPlan.find((e) => e.id === entryLike.id);
+      if (!entry) return false;
+      const slot = resolveMoveTarget(entry, target);
+      if (!slot) return false;
+      moveEntryTo(entry, slot);
+      return true;
+    },
+    requestMove: (entryLike) => {
+      const entry = mealPlan.find((e) => e.id === entryLike.id);
+      if (entry) setMovingEntry(entry);
+    },
+  };
+
   const toggleReorderMode = () => {
     triggerHaptic(15);
     setReorderMode((v) => !v);
@@ -264,6 +306,7 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
   };
 
   return (
+    <PlanningMoveContext.Provider value={moveApi}>
     <div className="view">
       <div className="planning-header">
         <h2 className="dropcap-title" style={{ margin: 0, textAlign: "center" }}>{t("planning.title")}</h2>
@@ -330,7 +373,11 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
               const dayLabel = formatDayLabel(d, language);
               const expanded = isDayExpanded(iso, todayFlag);
               return (
-                <div className={`planning-day ${todayFlag ? "today" : ""}`} key={iso}>
+                // Carte du jour = zone de dépôt « ce jour, même moment » pour le
+                // glisser-déposer (voir planningMove.ts) — y compris repliée, ce
+                // qui permet de viser n'importe quel jour de la semaine sans
+                // avoir à les déplier tous.
+                <div className={`planning-day ${todayFlag ? "today" : ""}`} key={iso} {...{ [DROP_DATE_ATTR]: iso }}>
                   <div className="planning-day-header">
                     <button
                       type="button"
@@ -367,6 +414,7 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
                       {groupEntriesByMealType(dayEntries).map((group) => (
                         <PlanningMealGroup
                           key={group.mealType.key}
+                          dropDate={iso}
                           mealType={group.mealType}
                           entries={group.entries}
                           groupEntriesByCourse={groupEntriesByCourse}
@@ -414,7 +462,7 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
           simplement ce mode, rien à enregistrer en plus à ce moment précis. */}
       {reorderMode && (
         <div className="planning-reorder-banner">
-          <span className="planning-reorder-banner-label">{t("planning.reorderBannerLabel")}</span>
+          <span className="planning-reorder-banner-label">{t("planningMove.reorderBannerLabel")}</span>
           <Seal tone="gold" onClick={toggleReorderMode}>{t("planning.reorderBannerConfirm")}</Seal>
         </div>
       )}
@@ -442,6 +490,21 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
           />
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {movingEntry && (
+          <MoveMealModal
+            label={labelForEntry(movingEntry)}
+            current={{ date: movingEntry.date, mealType: movingEntry.mealType }}
+            onClose={() => setMovingEntry(null)}
+            onConfirm={(slot) => {
+              moveEntryTo(movingEntry, slot);
+              setMovingEntry(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
+    </PlanningMoveContext.Provider>
   );
 }

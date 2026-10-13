@@ -339,6 +339,10 @@ export const CODE_DOCS: Record<string, string> = {
     "Magasin partagé des minuteurs du mode cuisine : plusieurs minuteurs en même temps, basés sur une heure de fin (justes même onglet en veille), conservés d'un groupe d'étapes à l'autre et vidés à la fermeture. Envoie la notification de fin une seule fois par minuteur et se lit via useCookTimers().",
   "src/utils/thumbnails.ts":
     "Miniatures des photos de recettes : dérive le chemin et l'URL publique de la miniature (~480 px) d'une photo du bucket recipe-images, et retient pour la session les miniatures manquantes et les rattrapages déjà tentés.",
+  "src/utils/recipeSearch.ts":
+    "Recherche et tri de la grille de recettes : recherche sans accents, mot par mot, dans le titre et les ingrédients, qui tolère une petite faute de frappe ; tri par nom, plus récentes ou plus rapides.",
+  "src/utils/shoppingShare.ts":
+    "Texte d'une liste de courses à envoyer par message à quelqu'un qui n'a pas l'app : un bloc par rayon avec son emoji, une case par article, les articles déjà pris à la fin.",
   "src/utils/shoppingOps.ts":
     "Les modifications d'articles d'une liste de courses (ajouter, cocher, quantité, retirer, vider) : les applique sur l'appareil comme le fait le serveur, et garde de côté celles pas encore confirmées pour les réappliquer sur ce que le serveur renvoie.",
   "src/utils/i18n.ts":
@@ -421,6 +425,8 @@ export const CODE_DOCS: Record<string, string> = {
     "La page publique d'une seule recette (lien de partage). Elle n'affiche rien d'autre du grimoire et ne fait aucune requête vers le reste de l'app.",
   "src/components/recipe/RecipeCard.tsx":
     "Une carte de recette dans la grille : photo, favori, badges, appui long. Elle s'efface puis réapparaît en fondu quand le filtre change, sans jamais être démontée, pour que son image ne se recharge pas.",
+  "src/components/recipe/CookPhotoPrompt.tsx":
+    "Encadré de fin du mode cuisine qui propose de prendre le plat en photo (appareil photo ou galerie) et en fait la photo de la recette, en demandant avant de remplacer une photo déjà prise.",
   "src/components/recipe/RecipeDetail.tsx":
     "La fiche détail d'une recette : photo avec effet de parallaxe, ingrédients, étapes, et les actions (cuisiner, modifier, partager).",
   "src/components/recipe/RecipeForm.tsx":
@@ -465,6 +471,10 @@ export const CODE_DOCS: Record<string, string> = {
     "La ligne d'un plat dans le plan : appui long pour ouvrir son menu, poignée pour le réordonner.",
   "src/components/planning/PlanningMealItemsList.tsx":
     "Une liste de plats qu'on réordonne par glisser-déposer.",
+  "src/components/planning/MoveMealModal.tsx":
+    "La fenêtre « Déplacer… » d'un plat du plan : on choisit un autre jour dans le calendrier et un autre moment du repas.",
+  "src/components/planning/planningMove.ts":
+    "Les règles pour déplacer un plat vers un autre jour ou un autre moment, par glisser-déposer ou par le menu « Déplacer… ».",
   "src/components/planning/PlanningView.tsx":
     "L'onglet Plan : une semaine à la fois, un bloc par jour, chaque repas relié à une recette. Bascule entre le plan du foyer et le plan personnel, bouton « + » et envoi vers les courses.",
   "src/components/planning/index.ts":

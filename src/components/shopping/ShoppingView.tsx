@@ -1,12 +1,13 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { AnimatePresence, motion, Reorder, useReducedMotion } from "motion/react";
-import { ChevronDown, Plus, ShoppingBasket, User, Users } from "lucide-react";
+import { ChevronDown, Plus, Share2, ShoppingBasket, User, Users } from "lucide-react";
 import { DEFAULT_AISLE_ORDER, copyText } from "../../utils/helpers";
 import { triggerHaptic } from "../../utils/haptics";
 import { getStoredAisleOrder, storeAisleOrder } from "../../utils/localSettings";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { translateRecipeText } from "../../utils/recipeTranslation";
+import { buildShoppingShareText } from "../../utils/shoppingShare";
 import Seal from "../common/Seal";
 import SegmentedControl from "../common/SegmentedControl";
 import QuantitySheet from "../common/QuantitySheet";
@@ -167,19 +168,33 @@ export default function ShoppingView({
     storeAisleOrder(next);
   };
 
-  const buildListText = () => {
-    const lines = [`🛒 ${activeList ? activeList.name : t("shopping.defaultListName")} — Le Grimoire de Morgane`, ""];
-    orderedAisleKeys.forEach((aisle) => {
-      const list = grouped[aisle];
-      lines.push(`${(dict.labels as Record<string, string>)[aisle] || aisle} :`);
-      list.forEach((it) => lines.push(`- ${Math.round(it.qty * 100) / 100}${it.unit ? ` ${it.unit}` : ""} ${translateRecipeText(it.name, language)}`));
-      lines.push("");
+  const buildListText = () =>
+    buildShoppingShareText({
+      listName: activeList ? activeList.name : t("shopping.defaultListName"),
+      aisles: orderedAisleKeys.map((aisle) => ({ key: aisle, label: (dict.labels as Record<string, string>)[aisle] || aisle, items: grouped[aisle] || [] })),
+      bought,
+      language,
+      boughtLabel: t("shopping.alreadyBought"),
+      footer: t("shopping.shareFooter"),
+      itemName: (name) => translateRecipeText(name, language),
     });
-    if (bought.length) {
-      lines.push(t("shopping.alreadyBought"));
-      bought.forEach((it) => lines.push(`- ${translateRecipeText(it.name, language)}`));
+
+  // Partage par message (menu de partage du téléphone : WhatsApp, SMS…) ;
+  // sans menu de partage (ordinateur), le texte est copié.
+  const handleShare = async () => {
+    triggerHaptic(15);
+    const text = buildListText();
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: activeList ? activeList.name : t("shopping.defaultListName"), text });
+        return;
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
+        // autre erreur : copie ci-dessous
+      }
     }
-    return lines.join("\n").trim();
+    await copyText(text);
+    showToast(t("shopping.listCopied"));
   };
 
   const handleAppleCopy = async () => {
@@ -273,6 +288,11 @@ export default function ShoppingView({
                 className="shopping-progress-fill"
                 style={{ width: `${items.length ? (bought.length / items.length) * 100 : 0}%` }}
               />
+            </div>
+            <div className="shopping-share-row">
+              <button type="button" className="shopping-share-btn" onClick={handleShare}>
+                <Share2 size={15} aria-hidden="true" /> {t("shopping.shareList")}
+              </button>
             </div>
             <div className="apple-bar">
               <SwipeFlourish onSwipeRight={handleAppleCopy} onSwipeLeft={handleAppleReset} onTap={handleAppleReset} />
