@@ -9,7 +9,11 @@
 
 const QUEUE_KEY = "grimoire_offline_queue";
 
-export type OfflineActionType = "insert" | "update" | "delete" | "app_state";
+export type OfflineActionType = "insert" | "update" | "delete" | "app_state" | "rpc";
+
+// "rpc" : appel d'une fonction SQL (table = nom de la fonction, payload = ses
+// arguments) — utilisé pour les modifications d'articles des listes de
+// courses (shopping_list_apply, voir utils/shoppingOps.ts).
 
 // "app_state" : recordId = householdId, payload = le patch partiel à
 // appliquer, baseline = la valeur que ce client croyait être sur le

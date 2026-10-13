@@ -330,6 +330,16 @@ export async function updateRow(table: string, id: string, patch: Record<string,
     { id, ...patch }
   );
 }
+// Appel d'une fonction SQL (POST /rest/v1/rpc/<nom>). Hors ligne, l'appel est
+// mis en file et rejoué au retour du réseau, comme les autres écritures ;
+// il renvoie alors `undefined` faute de réponse du serveur.
+export async function callRpc<T = unknown>(fn: string, args: Record<string, unknown>): Promise<T | undefined> {
+  return withOfflineFallback<T | undefined>(
+    { table: fn, type: "rpc", payload: args },
+    async () => (await supabaseRequest(`rpc/${fn}`, { method: "POST", body: JSON.stringify(args) })) as T,
+    undefined
+  );
+}
 export async function deleteRow(table: string, id: string): Promise<void> {
   return withOfflineFallback(
     { table, type: "delete", recordId: id },
@@ -482,6 +492,8 @@ async function runFlushOfflineQueue(): Promise<FlushOfflineQueueResult> {
         await supabaseRequest(`${action.table}?id=eq.${encodeURIComponent(action.recordId as string)}`, { method: "DELETE" });
       } else if (action.type === "app_state") {
         await applyAppStatePatch(action.recordId as string, action.payload as Record<string, unknown>);
+      } else if (action.type === "rpc") {
+        await supabaseRequest(`rpc/${action.table}`, { method: "POST", body: JSON.stringify(action.payload ?? {}) });
       }
       removeFromOfflineQueue(action.id);
       flushed += 1;
