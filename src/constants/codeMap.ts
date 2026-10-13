@@ -353,6 +353,8 @@ export const CODE_DOCS: Record<string, string> = {
     "Les dictionnaires français et anglais de tous les textes de l'interface, plus des libellés à plat pour traduire des textes déjà enregistrés dans les données.",
 
   /* --- Styles ---------------------------------------------------------- */
+  "src/constants/styles/a11y.css.ts":
+    "Règles d'accessibilité chargées en dernier : contour visible au clavier, zones tactiles agrandies pour les petits boutons, et pas de zoom au double appui sur les boutons (le zoom à deux doigts, lui, est autorisé).",
   "src/constants/styles/cookbook.css.ts":
     "Les styles du livre de cuisine : aperçu à l'écran et mise en page d'impression (pages, couverture).",
   "src/constants/styles/cookmode.css.ts":

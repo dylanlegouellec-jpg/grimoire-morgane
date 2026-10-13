@@ -78,7 +78,7 @@ export const PLANNING_CSS: string = `
 }
 .planning-add-btn {
   width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
-  border: 1px dashed rgba(179,135,42,0.5); background: none; color: var(--gold);
+  border: 1px dashed rgba(179,135,42,0.5); background: none; color: var(--gold-text);
   display: flex; align-items: center; justify-content: center; cursor: pointer;
 }
 .planning-add-btn:active { background: rgba(179,135,42,0.12); }

@@ -113,7 +113,7 @@ export const COOKMODE_CSS: string = `
   color: var(--chrome-text); opacity: 0.6;
 }
 .portion-wheel-wrap.light .portion-wheel-item { color: rgba(42,32,19,0.32); }
-.portion-wheel-wrap.light .portion-wheel-item.active { color: var(--gold); }
+.portion-wheel-wrap.light .portion-wheel-item.active { color: var(--gold-text); }
 .portion-wheel-wrap.light .portion-wheel-highlight { border-color: rgba(179,135,42,0.5); }
 .portion-wheel-wrap.light .portion-wheel-suffix { color: var(--ink-soft); }
 
@@ -195,11 +195,11 @@ export const COOKMODE_CSS: string = `
 .ingredient-list li.ingredient-section-title {
   list-style: none; margin-left: -18px; margin-top: 8px;
   font-family: 'Cinzel', serif; font-size: 0.72rem; letter-spacing: 1px; text-transform: uppercase;
-  color: var(--gold);
+  color: var(--gold-text);
 }
 .cookmode-ingredients li.ingredient-section-title { color: var(--gold-light); }
 .steps-group-title {
-  font-family: 'Cinzel', serif; font-size: 0.82rem; letter-spacing: 0.5px; color: var(--gold);
+  font-family: 'Cinzel', serif; font-size: 0.82rem; letter-spacing: 0.5px; color: var(--gold-text);
   margin: 14px 0 6px;
 }
 .group-nav {

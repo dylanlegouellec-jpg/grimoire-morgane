@@ -1040,7 +1040,9 @@ export default function AppShell({
           </Suspense>
         )}
       </AnimatePresence>
-      {toast && <div className="toast">{toast}</div>}
+      {/* Zone annoncée par les lecteurs d'écran (toujours présente, le
+          message y apparaît) : sans elle, les confirmations restaient muettes. */}
+      <div role="status" aria-live="polite">{toast && <div className="toast">{toast}</div>}</div>
     </div>
   );
 }

@@ -20,7 +20,7 @@ export const COOKBOOK_CSS: string = `
 .cookbook-color-swatch.active { box-shadow: 0 0 0 3px var(--parchment), 0 0 0 5px var(--gold); }
 .cookbook-recipe-list { max-height: 280px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .cookbook-recipe-list .ios-row-title { flex: 1; text-align: left; }
-.cookbook-recipe-list .ios-row-check { color: var(--gold); flex-shrink: 0; }
+.cookbook-recipe-list .ios-row-check { color: var(--gold-text); flex-shrink: 0; }
 .cookbook-selection-count {
   font-family: 'Cinzel', serif; letter-spacing: 0.5px; font-size: 0.72rem;
   text-transform: uppercase; color: var(--ink-soft); margin: 8px 2px 0;

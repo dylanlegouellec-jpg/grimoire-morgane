@@ -84,7 +84,7 @@ export const SHELL_CSS: string = `
   font-family: 'Cinzel', serif;
   font-size: 0.62rem;
   letter-spacing: 3px;
-  color: var(--gold);
+  color: var(--gold-text);
   text-transform: uppercase;
 }
 .offline-queue-badge {
@@ -121,7 +121,7 @@ export const SHELL_CSS: string = `
 .update-banner {
   margin: 8px auto 0; max-width: 340px; padding: 5px 6px 5px 12px;
   font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.5px; text-transform: uppercase;
-  color: var(--gold); background: rgba(179,135,42,0.14);
+  color: var(--gold-text); background: rgba(179,135,42,0.14);
   border: 1px solid rgba(179,135,42,0.45); border-radius: 999px;
   display: flex; align-items: center; justify-content: center; gap: 8px;
   animation: introDown 0.4s cubic-bezier(0.22, 1, 0.36, 1) backwards;

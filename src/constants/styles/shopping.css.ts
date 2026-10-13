@@ -25,7 +25,7 @@ export const SHOPPING_CSS: string = `
 .active-list-name-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .active-list-name-empty { color: var(--ink-soft); }
 .active-list-name-empty .active-list-name-text { font-style: italic; }
-.active-list-switch { font-family: 'EB Garamond', serif; font-style: italic; font-size: 0.78rem; color: var(--gold); flex-shrink: 0; }
+.active-list-switch { font-family: 'EB Garamond', serif; font-style: italic; font-size: 0.78rem; color: var(--gold-text); flex-shrink: 0; }
 .manual-add-row {
   display: flex; gap: 8px; margin-bottom: 16px;
   background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 4px 4px 14px;
@@ -141,7 +141,7 @@ export const SHOPPING_CSS: string = `
 .aisle-block { margin-bottom: 16px; }
 .aisle-block h4 {
   display: flex; align-items: center; gap: 6px;
-  font-family: 'Cinzel', serif; font-size: 0.78rem; letter-spacing: 1px; color: var(--gold); text-transform: uppercase;
+  font-family: 'Cinzel', serif; font-size: 0.78rem; letter-spacing: 1px; color: var(--gold-text); text-transform: uppercase;
   margin-bottom: 8px; border-bottom: 1px dashed var(--line); padding-bottom: 4px;
 }
 .aisle-icon { font-size: 0.95rem; }
@@ -193,7 +193,7 @@ export const SHOPPING_CSS: string = `
 .checkbox-row { display: flex; align-items: center; gap: 10px; cursor: pointer; flex: 1; }
 .checkbox {
   width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid var(--gold);
-  display: flex; align-items: center; justify-content: center; color: var(--gold); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; color: var(--gold-text); flex-shrink: 0;
 }
 /* "gap: 6px" (relevé de 4px) et boutons à 24px (relevés de 20px) : cible
    tactile minimum WCAG 2.5.8 (24×24px CSS) — en dessous, +/- collés à 4px

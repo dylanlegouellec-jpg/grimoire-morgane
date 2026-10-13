@@ -55,6 +55,8 @@ export const translations: Record<"fr" | "en", TranslationTree> = {
     },
     recipes: {
       noMatch: "Aucune recette ne correspond à ta recherche.",
+      addRecipe: "Ajouter une recette",
+      edit: "Modifier",
     },
     cookMode: {
       stepsDone: "{done} / {total} étapes terminées",
@@ -603,6 +605,8 @@ export const translations: Record<"fr" | "en", TranslationTree> = {
     },
     recipes: {
       noMatch: "No recipe matches your search.",
+      addRecipe: "Add a recipe",
+      edit: "Edit",
     },
     cookMode: {
       stepsDone: "{done} / {total} steps done",

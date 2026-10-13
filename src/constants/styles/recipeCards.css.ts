@@ -148,7 +148,7 @@ export const RECIPE_CARDS_CSS: string = `
 .card-meta span { display: inline-flex; align-items: center; gap: 3px; }
 .carbs-badge {
   font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.4px;
-  background: rgba(179,135,42,0.15); color: var(--gold); border: 1px solid rgba(179,135,42,0.4);
+  background: rgba(179,135,42,0.15); color: var(--gold-text); border: 1px solid rgba(179,135,42,0.4);
   padding: 3px 8px; border-radius: 999px;
 }
 

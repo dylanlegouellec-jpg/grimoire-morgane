@@ -1,0 +1,53 @@
+export const A11Y_CSS: string = `
+/* ------------------------------------------------------------------ */
+/*  ACCESSIBILITÉ (audit du 13/10/2026) — chargé en DERNIER (voir        */
+/*  styles.css.ts) pour compléter les règles des composants sans les      */
+/*  réécrire.                                                             */
+/* ------------------------------------------------------------------ */
+
+/* Le zoom à deux doigts est de nouveau autorisé (index.html). Sans ceci,
+   un double appui rapide sur un bouton (+/- des portions...) zoomerait la
+   page sur Android. Posé sur les éléments touchables UNIQUEMENT, jamais sur
+   html/body : à la racine, touch-action ralentissait le défilement sous
+   Chrome (voir le commentaire de index.html). */
+button, a, input, select, textarea, label, summary, [role="button"] {
+  touch-action: manipulation;
+}
+
+/* Contour visible quand on navigue au clavier (jamais au toucher ni au
+   clic : :focus-visible). Avant, aucun repère n'indiquait l'élément actif. */
+:focus-visible {
+  outline: 2px solid var(--gold-light);
+  outline-offset: 2px;
+}
+
+/* Zones tactiles d'au moins ~44 px de haut pour les petits boutons fréquents,
+   sans changer leur dessin : un ::after invisible agrandit la surface
+   cliquable. Horizontalement, l'agrandissement reste plus petit que l'écart
+   avec le voisin, pour ne jamais « voler » le toucher destiné au champ ou
+   au bouton d'à côté. */
+.qty-stepper button,
+.portions-stepper button,
+.ing-remove,
+.step-remove,
+.row-drag-handle,
+.lists-manager-icon-btn { position: relative; }
+.qty-stepper button::after,
+.portions-stepper button::after,
+.ing-remove::after,
+.step-remove::after,
+.row-drag-handle::after,
+.lists-manager-icon-btn::after,
+.fav-btn::after,
+.modal-close::after {
+  content: ""; position: absolute;
+}
+.qty-stepper button::after { inset: -10px -3px; }
+.portions-stepper button::after { inset: -9px -8px; }
+.ing-remove::after,
+.step-remove::after,
+.lists-manager-icon-btn::after { inset: -8px -3px; }
+.row-drag-handle::after { inset: -7px -3px; }
+.fav-btn::after,
+.modal-close::after { inset: -7px; }
+`;

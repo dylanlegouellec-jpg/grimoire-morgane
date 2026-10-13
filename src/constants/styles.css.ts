@@ -34,6 +34,7 @@ import { PLANNING_CSS } from "./styles/planning.css";
 import { ONBOARDING_CSS } from "./styles/onboarding.css";
 import { COOKBOOK_CSS } from "./styles/cookbook.css";
 import { DIAGNOSTICS_CSS } from "./styles/diagnostics.css";
+import { A11Y_CSS } from "./styles/a11y.css";
 
 export const CSS: string = [
   THEME_CSS,
@@ -52,4 +53,5 @@ export const CSS: string = [
   ONBOARDING_CSS,
   COOKBOOK_CSS,
   DIAGNOSTICS_CSS,
+  A11Y_CSS,
 ].join("\n");

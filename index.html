@@ -16,7 +16,20 @@
          coïncident enfin ; les env(safe-area-inset-*) tombent à 0, ce que les
          quelques règles qui s'en servent absorbent sans dommage (elles sont
          toutes en max()/calc() avec une valeur de repli). -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <!-- Zoom à deux doigts autorisé (accessibilité : il était bloqué par
+         "user-scalable=no"). Sur iPhone/iPad seulement, "maximum-scale=1.0"
+         est ajouté juste en dessous : iOS l'ignore pour le zoom à deux doigts
+         (qui reste possible), mais il empêche le zoom automatique, gênant,
+         quand on touche un champ de saisie. Sur Android, il bloquerait le
+         zoom : il n'y est donc pas mis. Le double appui qui zoomait est
+         neutralisé par touch-action sur les boutons (a11y.css.ts). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function () {
+        var ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+        if (ios) document.querySelector('meta[name="viewport"]').setAttribute("content", "width=device-width, initial-scale=1.0, maximum-scale=1.0");
+      })();
+    </script>
     <!-- Le manifest et l'enregistrement du service worker sont injectés
          automatiquement par vite-plugin-pwa (voir vite.config.js) — plus
          besoin de <link rel="manifest"> manuel ni de manifest.json à la
@@ -57,9 +70,9 @@
          scroll repaint"), et responsable du défilement bloqué/saccadé
          constaté sur Chrome desktop et Android (jamais sur iOS Safari, qui
          implémente cette intersection différemment). Son seul rôle réel —
-         bloquer le double-tap pour zoomer — est de toute façon déjà assuré
-         par "user-scalable=no" dans la balise viewport ci-dessus, ce qui la
-         rendait entièrement redondante. Retirée : chaque élément gère
+         bloquer le double-tap pour zoomer — est désormais assuré sur les
+         seuls éléments touchables (boutons, liens, champs : a11y.css.ts),
+         jamais à la racine. Retirée : chaque élément gère
          désormais son propre touch-action (voir .recipe-card notamment)
          sans restriction globale imposée par la racine.
          overscroll-behavior-y: contain, posé ici un temps pour rester

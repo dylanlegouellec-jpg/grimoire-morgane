@@ -226,7 +226,7 @@ export const MODALS_BASE_CSS: string = `
   color: var(--ink-soft); cursor: pointer;
 }
 .dropcap-title { font-family: 'Cinzel', serif; font-size: 1.3rem; margin: 10px 0 4px; }
-.flourish { text-align: center; color: var(--gold); font-size: 1.1rem; margin: 12px 0; }
+.flourish { text-align: center; color: var(--gold-text); font-size: 1.1rem; margin: 12px 0; }
 .modal h4 { font-family: 'Cinzel', serif; font-size: 0.85rem; letter-spacing: 0.5px; margin: 16px 0 8px; color: var(--ink-soft); }
 
 /* --- Menu d'actions sur une recette (appui long) ----------------------
