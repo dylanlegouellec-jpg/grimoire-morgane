@@ -16,6 +16,7 @@ import ErrorBoundary from "../components/common/ErrorBoundary";
 import AppHeader from "./AppHeader";
 import TabBars from "./TabBars";
 import { RecipesView, RecipeForm, RecipeDetail, CookMode } from "../components/recipe";
+import type { InkOrigin } from "../components/recipe/form/createAnimations";
 import type { Recipe } from "../hooks/useRecipes";
 import type { ShowToast, ToastState } from "../hooks/useToast";
 import Toast from "../components/common/Toast";
@@ -182,6 +183,10 @@ export default function AppShell({
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [fridgeSearch, setFridgeSearch] = useState("");
   const [formTarget, setFormTarget] = useState<Recipe | "new" | null>(null); // null | 'new' | recipe object
+  // Centre du « + » qui a ouvert la création (tache d'encre, voir RecipeForm) ;
+  // oublié dès que le formulaire se ferme.
+  const [formInkOrigin, setFormInkOrigin] = useState<InkOrigin | null>(null);
+  if (!formTarget && formInkOrigin) setFormInkOrigin(null);
   const [openRecipe, setOpenRecipe] = useState<Recipe | null>(null);
   const [cookingRecipe, setCookingRecipe] = useState<Recipe | null>(null);
   const [textModal, setTextModal] = useState<{ title: string; text: string } | null>(null);
@@ -426,7 +431,7 @@ export default function AppShell({
             search={search}
             favoritesOnly={favoritesOnly}
             onToggleFavorite={toggleFavorite}
-            onAddRequest={() => setFormTarget("new")}
+            onAddRequest={(origin) => { setFormInkOrigin(origin ?? null); setFormTarget("new"); }}
             onImportRequest={() => setShowLinkImport(true)}
             sort={recipeSort}
             onOpen={setOpenRecipe}
@@ -549,6 +554,7 @@ export default function AppShell({
             // plus bas) : supprimer depuis le formulaire effaçait sans prévenir.
             onDelete={() => { if (formTarget !== "new") setDeleteTarget(formTarget); }}
             initialRecipe={formTarget === "new" ? null : formTarget}
+            inkOrigin={formTarget === "new" ? formInkOrigin : null}
             pressDuration={pressDuration}
           />
         )}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import BodyPortal from "../common/BodyPortal";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ChevronDown, ChevronLeft, ChevronRight, Plus, Send, User, Users } from "lucide-react";
 import { getWeekStart, addWeeks, getWeekDays, toISODate, isSameDay, formatWeekRange, formatDayLabel, MEAL_TYPES, COURSE_TYPES, courseTypeInfo, courseTypeOrder } from "../../utils/planning";
@@ -450,9 +451,11 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
           repas n'a pas de sens pendant qu'on réordonne, et son coin bas-droit
           chevaucherait de toute façon la bannière. */}
       {!reorderMode && (
-        <button type="button" className="fab" onClick={openAddFab} aria-label={t("planning.addMealFab")}>
-          <Plus size={22} />
-        </button>
+        <BodyPortal>
+          <button type="button" className="fab" onClick={openAddFab} aria-label={t("planning.addMealFab")}>
+            <Plus size={22} />
+          </button>
+        </BodyPortal>
       )}
 
       {/* Bannière fixe de validation du mode réorganisation (voir

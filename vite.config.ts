@@ -162,7 +162,11 @@ export default defineConfig({
         // statique, sans notion de thème clair/sombre.
         background_color: "#f1e6c8",
         theme_color: "#f1e6c8",
-        orientation: "portrait",
+        // "any" (et non plus "portrait") : l'app installée suit la rotation
+        // du téléphone. Le paysage a sa propre mise en page, resserrée pour
+        // une faible hauteur (styles/responsive.css, « TÉLÉPHONE EN
+        // PAYSAGE ») ; le mode cuisine a la sienne (styles/cookmode.css).
+        orientation: "any",
         // PNG aux tailles réellement déclarées (192 et 512), plus une icône
         // "maskable" À PART : Android la découpe (cercle, carré arrondi…) et ne
         // garantit visible que le cercle central de 80 % — le cookie y est donc

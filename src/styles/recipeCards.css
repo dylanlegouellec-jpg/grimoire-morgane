@@ -423,3 +423,7 @@
 .recipes-welcome-title { font-family: 'Cinzel', serif; font-size: 1.3rem; font-weight: 600; color: var(--ink); margin: 0 0 6px; }
 .recipes-welcome-actions { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 18px; }
 .recipes-welcome-actions .seal { display: inline-flex; align-items: center; gap: 6px; }
+/* Rendu à la racine de la page (BodyPortal) : il n'hérite plus du fondu
+   d'arrivée de l'onglet, d'où son propre fondu. */
+.fab { animation: fadeIn 0.35s ease; }
+@media (prefers-reduced-motion: reduce) { .fab { animation: none; } }

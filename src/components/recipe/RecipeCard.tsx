@@ -11,6 +11,7 @@ import DishArt from "../art/DishArt";
 import RecipeOptionsModal from "../common/RecipeOptionsModal";
 import type { Recipe } from "../../hooks/useRecipes";
 import type { NutriscoreGrade } from "../../utils/nutriscoreClient";
+import { useSealedPulse } from "./form/createAnimations";
 import { CARD_ENTER_DURATION_S, CARD_EXIT_DURATION_S, EASE_IN, EASE_OUT, SPRING_SHEET } from "../../constants/motion";
 
 interface RecipeCardProps {
@@ -69,6 +70,9 @@ function RecipeCard({
   // désormais identique, pas seulement similaire.
   const cardLongPress = useLongPress<HTMLDivElement>(() => setShowOptions(true), pressDuration);
   const prefersReducedMotion = useReducedMotion();
+  // Halo doré juste après l'enregistrement de cette recette (cachet de
+  // cire, voir form/createAnimations.ts).
+  const sealedPulse = useSealedPulse(recipe.id);
 
   const handleClick = () => {
     if (cardLongPress.wasLongPress()) return;
@@ -156,7 +160,8 @@ function RecipeCard({
     <>
       <div
         ref={cardLongPress.ref}
-        className={`card recipe-card press-anim press-${cardLongPress.pressState}`}
+        className={`card recipe-card press-anim press-${cardLongPress.pressState}${sealedPulse ? " card-sealed" : ""}`}
+        data-recipe-id={recipe.id}
         // display: none (pas un retrait du DOM) quand la carte ne correspond
         // plus au filtre actif — voir RecipesView.jsx : elle reste montée,
         // son <img> déjà chargée n'est jamais redémontée/redécodée. Cette
