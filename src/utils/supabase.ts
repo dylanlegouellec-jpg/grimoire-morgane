@@ -98,7 +98,7 @@ export async function pingSupabase(): Promise<boolean> {
     lastKnownReachable = false;
     return false;
   }
-  let reachable = false;
+  let reachable: boolean;
   try {
     const token = await getAuthToken();
     // `#_conncheck=1` (fragment, PAS un paramètre de requête `?...`) :
