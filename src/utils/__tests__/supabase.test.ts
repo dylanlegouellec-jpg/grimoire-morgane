@@ -269,3 +269,17 @@ describe("ordre des écritures quand des modifications attendent encore", () => 
     expect(getOfflineQueue()).toHaveLength(0);
   });
 });
+
+describe("appel de fonction SQL (rpc) dans la file hors ligne", () => {
+  it("rejoue un appel rpc mis en attente vers /rest/v1/rpc/<nom>", async () => {
+    enqueueOfflineAction({ table: "shopping_list_apply", type: "rpc", payload: { p_list_id: "l1", p_ops: [{ op: "clear" }] } });
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ body: [] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await flushOfflineQueue();
+
+    expect(result.flushed).toBe(1);
+    expect(fetchMock.mock.calls[0][0]).toMatch(/\/rest\/v1\/rpc\/shopping_list_apply$/);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ p_list_id: "l1", p_ops: [{ op: "clear" }] });
+  });
+});

@@ -325,6 +325,8 @@ export const CODE_DOCS: Record<string, string> = {
     "Une traduction approximative du français vers l'anglais pour les textes de recettes, à l'aide d'un dictionnaire. Ce n'est pas une vraie traduction automatique.",
   "src/utils/chunkReload.ts":
     "Quand un écran chargé à la demande n'existe plus sur le serveur (app restée ouverte pendant une mise à jour), recharge la page une seule fois au lieu d'afficher l'écran d'erreur.",
+  "src/utils/shoppingOps.ts":
+    "Les modifications d'articles d'une liste de courses (ajouter, cocher, quantité, retirer, vider) : les applique sur l'appareil comme le fait le serveur, et garde de côté celles pas encore confirmées pour les réappliquer sur ce que le serveur renvoie.",
   "src/utils/splash.ts":
     "Retire en fondu l'écran de démarrage de index.html, une fois que l'app a affiché son premier écran.",
   "src/utils/supabase.ts":
@@ -581,6 +583,8 @@ export const CODE_DOCS: Record<string, string> = {
     "Crée les cinq fonctions SQL qui manquaient pour gérer les demandes d'adhésion à un foyer : voir les demandes, approuver, refuser, changer le rôle d'un membre, retirer un membre.",
   "supabase/migrations/20261013150000_household_access_approved_only.sql":
     "Ferme une faille trouvée à l'audit : une simple demande pour rejoindre un foyer donnait déjà accès à ses recettes, listes et planning. Seuls les membres acceptés y ont droit, la liste des membres ne se modifie plus que par les fonctions prévues, et les photos sont limitées au dossier de son foyer (5 Mo, images seulement).",
+  "supabase/migrations/20261013170000_shopping_list_item_ops.sql":
+    "Crée la fonction shopping_list_apply : le serveur applique une modification d'article (ajouter, cocher, changer la quantité, retirer, vider) sur sa propre version de la liste, au lieu de recevoir toute la liste. Deux personnes qui font les courses en même temps ne s'écrasent plus.",
   "scripts/countLoc.ts":
     "Compte les lignes de code de src/ au moment du build, pour le chiffre « lignes de code » du Panneau de Diagnostics.",
   "scripts/buildInfo.ts":

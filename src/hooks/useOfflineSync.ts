@@ -1,3 +1,4 @@
+import { withPendingShoppingOps } from "../utils/shoppingOps";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DEFAULT_BASICS, SUPABASE_READY, demoRecipes } from "../constants";
 import { decodeRecipeCode, isShoppingListInScope } from "../utils/helpers";
@@ -227,7 +228,7 @@ export default function useOfflineSync({
           setMealPlan(loadedMealPlan);
           lastSyncedMealPlanRef.current = JSON.stringify(loadedMealPlan);
         }
-        const mappedLists = (listRows || []).map(mapRowToShoppingList) as ShoppingList[];
+        const mappedLists = ((listRows || []).map(mapRowToShoppingList) as ShoppingList[]).map(withPendingShoppingOps);
         setShoppingLists(mappedLists);
         // Filtrée par la portée AFFICHÉE (préférence locale à l'appareil,
         // voir useShoppingLists.js) avant de choisir la dernière créée —
@@ -441,7 +442,7 @@ export default function useOfflineSync({
         fetchTable("shopping_lists", `select=${SHOPPING_LIST_COLUMNS}&household_id=eq.${householdId}&order=created_at.asc`),
       ]);
       setRecipes((rows || []).map(mapRowToRecipe) as Recipe[]);
-      setShoppingLists((listRows || []).map(mapRowToShoppingList) as ShoppingList[]);
+      setShoppingLists(((listRows || []).map(mapRowToShoppingList) as ShoppingList[]).map(withPendingShoppingOps));
     } catch (err) {
       console.error("Rafraîchissement après reconnexion impossible :", err);
     }
@@ -545,7 +546,10 @@ export default function useOfflineSync({
           setShoppingLists((prev) => prev.filter((l) => l.id !== payload.old.id));
           return;
         }
-        const incoming = mapRowToShoppingList(payload.new) as ShoppingList;
+        // Nos propres modifications encore en route sont réappliquées par-dessus
+        // (voir utils/shoppingOps.ts) : un écho arrivé entre deux coches ne
+        // fait plus disparaître la seconde.
+        const incoming = withPendingShoppingOps(mapRowToShoppingList(payload.new) as ShoppingList);
         setShoppingLists((prev) => {
           const exists = prev.some((l) => l.id === incoming.id);
           return exists ? prev.map((l) => (l.id === incoming.id ? incoming : l)) : [...prev, incoming];

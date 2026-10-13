@@ -1,7 +1,8 @@
 import { useCallback, useRef, useState } from "react";
 import { SUPABASE_READY } from "../constants";
 import { nextId, guessAisle, ingredientKey, isShoppingListInScope, triggerHaptic } from "../utils/helpers";
-import { insertRow, updateRow, deleteRow, mapShoppingListToRow } from "../utils/supabase";
+import { insertRow, updateRow, deleteRow, callRpc, mapShoppingListToRow } from "../utils/supabase";
+import { applyShoppingOps, addPendingShoppingOps, settlePendingShoppingOps, withPendingShoppingOps, type ShoppingOp } from "../utils/shoppingOps";
 import { getStoredShoppingScope, storeShoppingScope, getStoredActiveShoppingListId, storeActiveShoppingListId } from "../utils/localSettings";
 import type { ViewScope } from "../utils/localSettings";
 import type { Recipe } from "./useRecipes";
@@ -103,13 +104,13 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
   // `scope`/`ownerId` optionnels : par défaut, une nouvelle liste prend la
   // portée actuellement affichée (voir shoppingScopeRef) — c'est le cas de
   // la création explicite (bouton "+" du gestionnaire) comme de la création
-  // implicite (withActiveList ci-dessous, quand on ajoute un article sans
+  // implicite (applyToActiveList ci-dessous, quand on ajoute un article sans
   // liste active : sinon elle serait TOUJOURS créée en "household", même
   // si l'onglet "personal" est actif).
   // SYNCHRONE à dessein (pas de `await` sur l'écriture Supabase, "tirée et
-  // oubliée" comme le `updateRow(...).catch(...)` de withActiveList
+  // oubliée" comme l'envoi des modifications dans applyToActiveList
   // ci-dessous) : ce hook attendait auparavant la fin de cette écriture
-  // réseau avant de renvoyer le nouvel id, ce que withActiveList attendait
+  // réseau avant de renvoyer le nouvel id, ce que applyToActiveList attendait
   // À SON TOUR avant d'ajouter le premier article — sur une connexion lente
   // ou coupée, ce premier ajout restait bloqué indéfiniment (silencieusement,
   // sans le moindre message d'erreur), alors que la création de liste ET
@@ -117,17 +118,21 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
   // optimiste (état local d'abord, réseau en tâche de fond ensuite). Renvoyer
   // l'id immédiatement aligne cette fonction sur ce même principe déjà
   // appliqué partout ailleurs dans ce hook.
-  const createShoppingList = useCallback((scopeArg?: string, ownerIdArg?: string | null): string => {
+  // `initialItems` : quand on ajoute un article sans liste active, la liste
+  // est créée AVEC cet article (un seul envoi), au lieu d'une création puis
+  // d'un ajout envoyés en parallèle — l'ajout pouvait arriver avant la liste
+  // et se perdre.
+  const createShoppingList = useCallback((scopeArg?: string, ownerIdArg?: string | null, initialItems: ShoppingItem[] = []): string => {
     const scope: ViewScope = (scopeArg || shoppingScopeRef.current) === "personal" ? "personal" : "household";
     const ownerId = scope === "personal" ? (ownerIdArg || userIdRef.current || null) : null;
     const id = nextId();
     const name = nextListName(scope);
-    const newList: ShoppingList = { id, name, items: [], scope, userId: ownerId };
+    const newList: ShoppingList = { id, name, items: initialItems, scope, userId: ownerId };
     setShoppingLists((prev) => [...prev, newList]);
     setActiveListId(id);
     storeActiveShoppingListId(scope, id);
     triggerHaptic(15);
-    if (SUPABASE_READY) {
+    if (SUPABASE_READY && householdId) {
       insertRow("shopping_lists", mapShoppingListToRow(newList as unknown as Record<string, unknown>, householdId)).catch((err) => {
         console.error(err);
         showToast("Échec de la création de la liste.");
@@ -162,60 +167,91 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
     }
   }, [showToast]);
 
-  // Applique une mutation à la liste active, en la créant d'abord si
-  // besoin — c'est le point de passage commun de toutes les actions
-  // ci-dessous, ce qui garantit qu'aucune ne peut désynchroniser l'état
-  // local de ce qui part vers Supabase.
-  const withActiveList = useCallback((mutateFn: (items: ShoppingItem[]) => ShoppingItem[]) => {
-    let listId = activeListIdRef.current;
-    if (!listId) listId = createShoppingList();
-    setShoppingLists((prev) => {
-      const next = prev.map((l) => (l.id === listId ? { ...l, items: mutateFn(l.items) } : l));
-      const target = next.find((l) => l.id === listId);
-      if (target && SUPABASE_READY) {
-        updateRow("shopping_lists", listId, { items: target.items }).catch((err) => console.error(err));
-      }
-      return next;
-    });
-  }, [createShoppingList]);
+  // Applique des modifications d'articles à la liste active (en la créant
+  // d'abord si besoin) — point de passage commun de toutes les actions
+  // ci-dessous. Seules les modifications partent au serveur (voir
+  // utils/shoppingOps.ts), jamais la liste entière : deux personnes qui
+  // cochent en même temps ne s'écrasent plus. `buildOps` reçoit les articles
+  // actuels, pour les actions qui en dépendent (cocher, quantités, générer).
+  const applyToActiveList = useCallback((buildOps: (items: ShoppingItem[]) => ShoppingOp[]) => {
+    const listId = activeListIdRef.current;
+    const current = listId ? listsRef.current.find((l) => l.id === listId) : undefined;
+    if (!listId || !current) {
+      const ops = buildOps([]);
+      createShoppingList(undefined, undefined, applyShoppingOps([], ops));
+      return;
+    }
+    const ops = buildOps(current.items);
+    if (!ops.length) return;
+    // Mise à jour immédiate de la référence aussi : deux appuis très rapides
+    // (avant le rendu suivant) partent ainsi de la bonne liste.
+    listsRef.current = listsRef.current.map((l) => (l.id === listId ? { ...l, items: applyShoppingOps(l.items, ops) } : l));
+    setShoppingLists((prev) => prev.map((l) => (l.id === listId ? { ...l, items: applyShoppingOps(l.items, ops) } : l)));
+    // Sans foyer (mode invité, pas encore connecté) : rien à envoyer, la
+    // liste ne vit que sur l'appareil.
+    if (!SUPABASE_READY || !householdId) return;
+    const token = addPendingShoppingOps(listId, ops);
+    callRpc<ShoppingItem[] | null>("shopping_list_apply", { p_list_id: listId, p_ops: ops })
+      .then((serverItems) => {
+        settlePendingShoppingOps(listId, token);
+        // Réponse du serveur = la liste à jour, modifications des autres
+        // membres comprises ; on y réapplique nos modifications encore en route.
+        if (Array.isArray(serverItems)) {
+          setShoppingLists((prev) => prev.map((l) => (l.id === listId ? withPendingShoppingOps({ ...l, items: serverItems }) : l)));
+        }
+      })
+      .catch((err) => {
+        settlePendingShoppingOps(listId, token);
+        console.error(err);
+        showToast("Impossible d'enregistrer la modification de la liste.");
+      });
+  }, [createShoppingList, householdId, showToast]);
 
   const addManualItem = useCallback((name: string) => {
-    return withActiveList((items) => [{ id: nextId(), name, qty: 1, unit: "", checked: false, aisle: guessAisle(name) }, ...items]);
-  }, [withActiveList]);
+    applyToActiveList(() => [{ op: "add", item: { id: nextId(), name, qty: 1, unit: "", checked: false, aisle: guessAisle(name) } }]);
+  }, [applyToActiveList]);
 
+  // Coche avec une VALEUR (cochée / pas cochée), jamais « inverser » : rejouer
+  // la même modification donne toujours le même résultat.
   const toggleShoppingItem = useCallback((id: string) => {
     triggerHaptic(12);
-    withActiveList((items) => items.map((it) => (it.id === id ? { ...it, checked: !it.checked } : it)));
-  }, [withActiveList]);
+    applyToActiveList((items) => {
+      const item = items.find((it) => it.id === id);
+      return item ? [{ op: "patch", id, fields: { checked: !item.checked } }] : [];
+    });
+  }, [applyToActiveList]);
 
   // Suppression d'un seul article — geste de swipe gauche sur une ligne
   // (voir ShoppingItemRow.jsx), à distinguer de resetActiveList (vide
   // toute la liste).
   const deleteShoppingItem = useCallback((id: string) => {
     triggerHaptic(20);
-    withActiveList((items) => items.filter((it) => it.id !== id));
-  }, [withActiveList]);
+    applyToActiveList(() => [{ op: "remove", id }]);
+  }, [applyToActiveList]);
 
   const adjustShoppingQty = useCallback((id: string, delta: number) => {
     triggerHaptic(10);
-    withActiveList((items) => items.map((it) => (it.id === id ? { ...it, qty: Math.max(0, Math.round((it.qty + delta) * 100) / 100) } : it)));
-  }, [withActiveList]);
+    applyToActiveList((items) => {
+      const item = items.find((it) => it.id === id);
+      return item ? [{ op: "patch", id, fields: { qty: Math.max(0, Math.round((item.qty + delta) * 100) / 100) } }] : [];
+    });
+  }, [applyToActiveList]);
 
   // `unit` optionnel : la molette de portions (une seule valeur) ne le
   // passe jamais, la nouvelle feuille de quantité des courses (voir
   // QuantitySheet.jsx) le passe toujours, puisqu'elle laisse aussi choisir
   // l'unité.
   const setShoppingItemQty = useCallback((id: string, value: number, unit?: string) => {
-    withActiveList((items) => items.map((it) => (
-      it.id === id ? { ...it, qty: Math.max(0, value), ...(unit !== undefined ? { unit } : {}) } : it
-    )));
-  }, [withActiveList]);
+    applyToActiveList(() => [{ op: "patch", id, fields: { qty: Math.max(0, value), ...(unit !== undefined ? { unit } : {}) } }]);
+  }, [applyToActiveList]);
 
   // Fusion "intelligente" : on regroupe par nom normalisé (accents/casse/
   // pluriel ignorés — voir ingredientKey) + unité, pas par simple texte
   // brut en minuscules. "Tomate" (déjà dans la liste) et "tomates" (dans
   // une nouvelle recette) sont ainsi reconnus comme le même article et
   // additionnés, plutôt que de créer une deuxième ligne en double.
+  // Un article déjà coché dont la quantité augmente est décoché : il en
+  // faut davantage, il n'est donc plus « acheté ».
   //
   // `recipeIds` peut contenir des doublons (ex. la Planification envoie
   // le même id plusieurs fois si une recette est planifiée deux fois dans
@@ -224,33 +260,45 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
   // fois quel que soit le nombre de répétitions dans recipeIds.
   const generateShoppingList = useCallback((recipes: Recipe[], recipeIds: string[]) => {
     const recipeById = new Map(recipes.map((r) => [r.id, r]));
-    withActiveList((items) => {
-      const map = new Map(items.map((it) => [`${ingredientKey(it.name)}__${it.unit}`, { ...it }]));
+    applyToActiveList((items) => {
+      const existing = new Map(items.map((it) => [`${ingredientKey(it.name)}__${it.unit}`, it]));
+      const added = new Map<string, ShoppingItem>();
+      const extra = new Map<string, number>();
       recipeIds.forEach((id) => {
         const r = recipeById.get(id);
         if (!r) return;
         r.ingredients.forEach((ing) => {
           if ("isSection" in ing) return;
           const key = `${ingredientKey(ing.name)}__${ing.unit}`;
-          if (map.has(key)) {
-            map.get(key)!.qty += Number(ing.qty) || 0;
+          const qty = Number(ing.qty) || 0;
+          if (existing.has(key)) {
+            extra.set(key, (extra.get(key) ?? 0) + qty);
+          } else if (added.has(key)) {
+            added.get(key)!.qty += qty;
           } else {
-            map.set(key, { id: nextId(), name: ing.name, unit: ing.unit, qty: Number(ing.qty) || 0, checked: false, aisle: guessAisle(ing.name) });
+            added.set(key, { id: nextId(), name: ing.name, unit: ing.unit, qty, checked: false, aisle: guessAisle(ing.name) });
           }
         });
       });
-      return Array.from(map.values());
+      const ops: ShoppingOp[] = [];
+      extra.forEach((delta, key) => {
+        const item = existing.get(key)!;
+        if (delta <= 0) return;
+        ops.push({ op: "patch", id: item.id, fields: { qty: Math.round((item.qty + delta) * 100) / 100, ...(item.checked ? { checked: false } : {}) } });
+      });
+      added.forEach((item) => ops.push({ op: "append", item }));
+      return ops;
     });
     showToast("Liste de courses générée !");
     triggerHaptic(15);
-  }, [withActiveList, showToast]);
+  }, [applyToActiveList, showToast]);
 
   const resetActiveList = useCallback(() => {
     if (!activeListIdRef.current) return;
-    withActiveList(() => []);
+    applyToActiveList(() => [{ op: "clear" }]);
     showToast("Liste réinitialisée !");
     triggerHaptic([60, 30, 60]);
-  }, [withActiveList, showToast]);
+  }, [applyToActiveList, showToast]);
 
   return {
     shoppingLists,

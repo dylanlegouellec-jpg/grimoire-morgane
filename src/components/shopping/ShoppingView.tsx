@@ -150,6 +150,11 @@ export default function ShoppingView({
   // (article coché/décoché faisant apparaître/disparaître un rayon...).
   const [visibleAisles, setVisibleAisles] = useState(orderedAisleKeys);
   useEffect(() => { setVisibleAisles(orderedAisleKeys); }, [orderedAisleKeys]);
+  // `visibleAisles` n'est resynchronisé qu'APRÈS le rendu (effet ci-dessus) :
+  // juste après avoir coché le dernier article d'un rayon, il contient encore
+  // ce rayon, désormais vide — son bloc plantait alors tout l'écran Courses.
+  // On n'affiche donc que les rayons qui ont encore des articles.
+  const shownAisles = visibleAisles.filter((aisle) => grouped[aisle]);
 
   // Un seul commit (mémorisation) au relâchement du glissement, jamais
   // pendant (voir ShoppingAisleBlock.jsx, commitDrag) — les rayons non
@@ -280,8 +285,8 @@ export default function ShoppingView({
                 réordonne les rayons entre eux, "apprend" l'agencement du
                 magasin de l'utilisateur, et mémorise cet ordre localement
                 (voir commitAisleOrder ci-dessus). */}
-            <Reorder.Group as="div" axis="y" values={visibleAisles} onReorder={setVisibleAisles}>
-              {visibleAisles.map((aisle) => (
+            <Reorder.Group as="div" axis="y" values={shownAisles} onReorder={setVisibleAisles}>
+              {shownAisles.map((aisle) => (
                 <ShoppingAisleBlock
                   key={aisle}
                   aisle={aisle}

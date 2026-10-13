@@ -78,3 +78,10 @@ update storage.buckets
 set file_size_limit = 5242880,
     allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp']
 where id in ('recipe-images', 'avatars');
+
+-- 6. Sans session (visiteur non connecté, session expirée) : les règles
+--    ci-dessus appellent get_my_household_ids(), qui doit donc rester
+--    exécutable par « anon » — elle ne lui renvoie rien (auth.uid() est vide),
+--    et les lectures répondent « aucune ligne » au lieu d'une erreur 401.
+--    (Migration household_ids_anon_execute.)
+grant execute on function public.get_my_household_ids() to anon;
