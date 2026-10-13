@@ -1,13 +1,9 @@
 import { useState, useRef } from "react";
-import type { ChangeEvent, Dispatch, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, SetStateAction } from "react";
-import { AnimatePresence, motion, Reorder, useDragControls } from "motion/react";
-import { ChevronDown, Sparkles, Wand2, X } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { Wand2, X } from "lucide-react";
 import { nextId, extractCodeFromInput, decodeRecipeCode, triggerHaptic, formatDurationMinutes } from "../../utils/helpers";
-import { normalizeIngredientList, parseQuantity } from "../../utils/ingredients";
 import { fetchNutriscoreGrade } from "../../utils/nutriscoreClient";
-import { estimateNutritionOnline } from "../../utils/nutritionClient";
 import { playSuccessSound } from "../../utils/audioUtils";
-import { formatPressDuration } from "../common/pressDuration";
 import { resolveIllustrationKey } from "../art/illustrations";
 import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
 import useSecretTrigger from "../../hooks/useSecretTrigger";
@@ -20,197 +16,33 @@ import WheelPickerModal from "../common/WheelPickerModal";
 import UnsavedChangesModal from "../common/UnsavedChangesModal";
 import type { Recipe } from "../../hooks/useRecipes";
 import { useTranslation } from "../../contexts/LanguageContext";
+import {
+  ingredientRowsFromRecipe,
+  ingredientsFromRows,
+  makeRowIdFactory,
+  nutritionFromRecipe,
+  rowsSnapshot,
+  stepRowsFromRecipe,
+  stepsFromRows,
+  type IngredientRowT,
+  type NutritionValues,
+  type StepRowT,
+} from "./form/recipeFormRows";
+import { IngredientsEditor, StepsEditor } from "./form/RowEditors";
+import NutritionSection from "./form/NutritionSection";
+
+export { UNIT_OPTIONS } from "./form/recipeFormRows";
 
 /* ------------------------------------------------------------------ */
-/*  UNITÉS DISPONIBLES POUR LES INGRÉDIENTS                            */
+/*  Les morceaux du formulaire vivent dans ./form/ :                    */
+/*  - recipeFormRows.ts : unités, rangées, passage recette <-> rangées  */
+/*  - FormRows.tsx : une rangée d'ingrédient / d'étape réordonnable     */
+/*  - RowEditors.tsx : listes d'ingrédients et d'étapes + « Ajouter »   */
+/*  - NutritionSection.tsx : valeurs nutritionnelles et estimation      */
+/*  - useLongPressAdd.ts : appui court / maintenu sur « + Ajouter… »    */
+/*  Ce fichier garde l'état de la recette, l'enregistrement, la         */
+/*  fermeture (modifications non enregistrées) et la mise en page.      */
 /* ------------------------------------------------------------------ */
-
-export const UNIT_OPTIONS = [
-  { value: "g", label: "g" },
-  { value: "kg", label: "kg" },
-  { value: "ml", label: "ml" },
-  { value: "cl", label: "cl" },
-  { value: "l", label: "l" },
-  { value: "pièce", label: "pièce(s)" },
-  { value: "pincée", label: "pincée(s)" },
-  { value: "c. à soupe", label: "c. à soupe" },
-  { value: "c. à café", label: "c. à café" },
-  { value: "", label: "Sans unité" },
-];
-
-// Libellé AFFICHÉ de chaque unité selon la langue active — la `value`
-// enregistrée avec la recette (ci-dessus) ne change jamais. Les unités
-// absentes de cette table (g, kg, ml...) s'affichent telles quelles.
-const UNIT_LABEL_KEYS: Record<string, string> = {
-  "pièce": "recipeUi.form.units.piece",
-  "pincée": "recipeUi.form.units.pinch",
-  "c. à soupe": "recipeUi.form.units.tbsp",
-  "c. à café": "recipeUi.form.units.tsp",
-  "": "recipeUi.form.units.none",
-};
-
-interface IngredientSectionRow {
-  id: string;
-  isSection: true;
-  title: string;
-}
-interface IngredientDataRow {
-  id: string;
-  isSection?: false;
-  qty: string | number;
-  unit: string;
-  name: string;
-}
-type IngredientRowT = IngredientSectionRow | IngredientDataRow;
-
-interface StepSectionRow {
-  id: string;
-  isSection: true;
-  title: string;
-}
-interface StepDataRow {
-  id: string;
-  isSection?: false;
-  text: string;
-}
-type StepRowT = StepSectionRow | StepDataRow;
-
-/* ------------------------------------------------------------------ */
-/*  RANGÉE D'INGRÉDIENT/D'ÉTAPE RÉORDONNABLE — extraite en composant       */
-/*  séparé (comme PlanningMealItem.jsx pour le Planning, même geste) :      */
-/*  useDragControls est un hook, il ne peut pas être appelé un nombre de     */
-/*  fois variable dans le .map() de RecipeForm.jsx.                           */
-/*                                                                              */
-/*  MIGRATION depuis hooks/useDragReorder.js (déjà fait pour le Planning,        */
-/*  voir PlanningMealItemsList.jsx/PlanningMealItem.jsx) : <Reorder.Group>/         */
-/*  <Reorder.Item> de Framer Motion remplacent la mesure de hauteurs de              */
-/*  rangée et le calcul de décalages à la main. Contrairement au Planning,             */
-/*  `onReorder` peut ici mettre à jour l'état (ingredientRows/stepRows) EN               */
-/*  DIRECT, à chaque changement de position pendant le glissement, sans état                */
-/*  local intermédiaire à committer au relâchement : ce sont déjà de simples                  */
-/*  useState locaux à ce formulaire, sans retour haptique ni écriture réseau à                  */
-/*  chaque appel (contrairement à hooks/useMealPlan.js, reorderMealPlanEntries)                   */
-/*  — les rappeler en boucle pendant tout le glissement ne coûte rien.                               */
-/*                                                                                                      */
-/*  "dragListener={false}" + `dragControls` : seule la poignée (⠿) démarre un                          */
-/*  glissement via `dragControls.start(e)` — jamais un simple clic dans un champ                         */
-/*  texte/liste déroulante de la rangée, qui doit rester utilisable normalement.                           */
-/* ------------------------------------------------------------------ */
-interface IngredientRowProps {
-  row: IngredientRowT;
-  onUpdateRow: (id: string, field: string, value: string) => void;
-  onRemoveRow: (id: string) => void;
-  canRemove: boolean;
-}
-
-function IngredientRow({ row, onUpdateRow, onRemoveRow, canRemove }: IngredientRowProps) {
-  const { t } = useTranslation();
-  const dragControls = useDragControls();
-  const startDrag = (e: ReactPointerEvent<HTMLButtonElement>) => { triggerHaptic(15); dragControls.start(e); };
-  const commitDrag = () => triggerHaptic(12);
-
-  if (row.isSection) {
-    return (
-      <Reorder.Item value={row} as="div" className="ingredient-section-row" dragListener={false} dragControls={dragControls} onDragEnd={commitDrag}>
-        <button type="button" className="row-drag-handle" onPointerDown={startDrag} aria-label={t("recipeUi.form.dragToReorder")}>⠿</button>
-        <input
-          type="text"
-          className="ing-section-title"
-          value={row.title}
-          onChange={(e) => onUpdateRow(row.id, "title", e.target.value)}
-          placeholder={t("recipeUi.form.ingredientSectionPlaceholder")}
-        />
-        {canRemove && (
-          <button type="button" className="ing-remove" onClick={() => onRemoveRow(row.id)} aria-label={t("recipeUi.form.removeSection")}>✕</button>
-        )}
-      </Reorder.Item>
-    );
-  }
-  return (
-    <Reorder.Item value={row} as="div" className="ingredient-row" dragListener={false} dragControls={dragControls} onDragEnd={commitDrag}>
-      <button type="button" className="row-drag-handle" onPointerDown={startDrag} aria-label={t("recipeUi.form.dragToReorder")}>⠿</button>
-      {/* Texte + clavier décimal (comme les valeurs nutritionnelles plus bas) :
-          avec type="number", « 0,5 » tapé sur iPhone arrivait vide et la
-          quantité était enregistrée à 0 sans prévenir. Voir parseQuantity. */}
-      <input
-        type="text"
-        inputMode="decimal"
-        className="ing-qty"
-        value={row.qty}
-        onChange={(e) => onUpdateRow(row.id, "qty", e.target.value)}
-        placeholder={t("recipeUi.form.qtyPlaceholder")}
-      />
-      <select
-        className="ing-unit"
-        value={row.unit}
-        onChange={(e) => onUpdateRow(row.id, "unit", e.target.value)}
-      >
-        {UNIT_OPTIONS.map((u) => (
-          <option key={u.label} value={u.value}>{u.value in UNIT_LABEL_KEYS ? t(UNIT_LABEL_KEYS[u.value]) : u.label}</option>
-        ))}
-      </select>
-      <input
-        type="text"
-        className="ing-name"
-        value={row.name}
-        onChange={(e) => onUpdateRow(row.id, "name", e.target.value)}
-        placeholder={t("recipeUi.form.ingredientNamePlaceholder")}
-      />
-      {canRemove && (
-        <button type="button" className="ing-remove" onClick={() => onRemoveRow(row.id)} aria-label={t("recipeUi.form.removeIngredient")}>✕</button>
-      )}
-    </Reorder.Item>
-  );
-}
-
-interface StepRowProps {
-  row: StepRowT;
-  idx: number;
-  onUpdateRow: (id: string, field: string, value: string) => void;
-  onRemoveRow: (id: string) => void;
-  canRemove: boolean;
-}
-
-function StepRow({ row, idx, onUpdateRow, onRemoveRow, canRemove }: StepRowProps) {
-  const { t } = useTranslation();
-  const dragControls = useDragControls();
-  const startDrag = (e: ReactPointerEvent<HTMLButtonElement>) => { triggerHaptic(15); dragControls.start(e); };
-  const commitDrag = () => triggerHaptic(12);
-
-  if (row.isSection) {
-    return (
-      <Reorder.Item value={row} as="div" className="step-section-row" dragListener={false} dragControls={dragControls} onDragEnd={commitDrag}>
-        <button type="button" className="row-drag-handle" onPointerDown={startDrag} aria-label={t("recipeUi.form.dragToReorder")}>⠿</button>
-        <input
-          type="text"
-          className="step-section-title"
-          value={row.title}
-          onChange={(e) => onUpdateRow(row.id, "title", e.target.value)}
-          placeholder={t("recipeUi.form.stepSectionPlaceholder")}
-        />
-        {canRemove && (
-          <button type="button" className="step-remove" onClick={() => onRemoveRow(row.id)} aria-label={t("recipeUi.form.removeSection")}>✕</button>
-        )}
-      </Reorder.Item>
-    );
-  }
-  return (
-    <Reorder.Item value={row} as="div" className="step-row" dragListener={false} dragControls={dragControls} onDragEnd={commitDrag}>
-      <button type="button" className="row-drag-handle" onPointerDown={startDrag} aria-label={t("recipeUi.form.dragToReorder")}>⠿</button>
-      <span className="step-row-num">{idx + 1}</span>
-      <input
-        type="text"
-        className="step-text"
-        value={row.text}
-        onChange={(e) => onUpdateRow(row.id, "text", e.target.value)}
-        placeholder={t("recipeUi.form.stepPlaceholder", { n: idx + 1 })}
-      />
-      {canRemove && (
-        <button type="button" className="step-remove" onClick={() => onRemoveRow(row.id)} aria-label={t("recipeUi.form.removeStep")}>✕</button>
-      )}
-    </Reorder.Item>
-  );
-}
 
 interface RecipeFormProps {
   onClose: () => void;
@@ -218,17 +50,6 @@ interface RecipeFormProps {
   onDelete: (id: string) => void;
   initialRecipe?: Recipe | null;
   pressDuration?: number;
-}
-
-interface LongPressAddHandlers {
-  onClick: () => void;
-  onTouchStart: () => void;
-  onTouchEnd: () => void;
-  onTouchMove: () => void;
-  onMouseDown: () => void;
-  onMouseUp: () => void;
-  onMouseLeave: () => void;
-  onContextMenu: (e: ReactMouseEvent<HTMLButtonElement>) => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -243,41 +64,12 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
   const [category, setCategory] = useState<string>(initialRecipe ? initialRecipe.category : "Salé");
   const [time, setTime] = useState<number>(initialRecipe ? initialRecipe.time : 30);
   const [servings, setServings] = useState<number>(initialRecipe ? initialRecipe.servings : 4);
-  const [calories, setCalories] = useState<string | number>(initialRecipe && initialRecipe.calories ? initialRecipe.calories : "");
-  const [protein, setProtein] = useState<string | number>(initialRecipe && initialRecipe.protein ? initialRecipe.protein : "");
-  const [carbs, setCarbs] = useState<string | number>(initialRecipe && initialRecipe.carbs ? initialRecipe.carbs : "");
-  const [fat, setFat] = useState<string | number>(initialRecipe && initialRecipe.fat ? initialRecipe.fat : "");
-  // Repliée par défaut, sauf si la recette a déjà au moins une valeur
-  // nutritionnelle renseignée (édition) — pas de raison de la cacher dans
-  // ce cas, l'utilisateur voudra probablement la voir/corriger d'emblée.
-  const [showNutrition, setShowNutrition] = useState<boolean>(
-    Boolean(initialRecipe && (initialRecipe.calories || initialRecipe.protein || initialRecipe.carbs || initialRecipe.fat))
-  );
-  const [estimatingNutrition, setEstimatingNutrition] = useState(false);
-  const [nutritionError, setNutritionError] = useState("");
+  const [nutrition, setNutrition] = useState<NutritionValues>(() => nutritionFromRecipe(initialRecipe));
   const [notes, setNotes] = useState<string>(initialRecipe && initialRecipe.notes ? initialRecipe.notes : "");
-  const rowIdRef = useRef(0);
-  const newRowId = () => `ing-${rowIdRef.current++}`;
-  const [ingredientRows, setIngredientRows] = useState<IngredientRowT[]>(() =>
-    initialRecipe && initialRecipe.ingredients.length
-      ? initialRecipe.ingredients.map((i): IngredientRowT =>
-          "isSection" in i
-            ? { id: newRowId(), isSection: true, title: i.title }
-            : { id: newRowId(), qty: i.qty ?? "", unit: i.unit, name: i.name }
-        )
-      : [{ id: newRowId(), qty: "", unit: "g", name: "" }]
-  );
-  const stepIdRef = useRef(0);
-  const newStepId = () => `step-${stepIdRef.current++}`;
-  const [stepRows, setStepRows] = useState<StepRowT[]>(() =>
-    initialRecipe && initialRecipe.steps.length
-      ? initialRecipe.steps.map((s): StepRowT =>
-          typeof s === "object" && s.isSection
-            ? { id: newStepId(), isSection: true, title: s.title }
-            : { id: newStepId(), text: s as string }
-        )
-      : [{ id: newStepId(), text: "" }]
-  );
+  const [newIngredientId] = useState(() => makeRowIdFactory("ing"));
+  const [ingredientRows, setIngredientRows] = useState<IngredientRowT[]>(() => ingredientRowsFromRecipe(initialRecipe, newIngredientId));
+  const [newStepId] = useState(() => makeRowIdFactory("step"));
+  const [stepRows, setStepRows] = useState<StepRowT[]>(() => stepRowsFromRecipe(initialRecipe, newStepId));
   const [importUnlocked, setImportUnlocked] = useState(false);
   const [importText, setImportText] = useState("");
   const [importError, setImportError] = useState("");
@@ -288,16 +80,9 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
   const [showUnsavedConfirm, setShowUnsavedConfirm] = useState(false);
 
   // État "modifié" (dirty) : compare un instantané JSON des champs
-  // pertinents à leur valeur au tout premier rendu — jamais les `id`
-  // internes des rangées d'ingrédients/étapes (juste des clés React, pas
-  // une donnée de la recette), sinon un simple réordonnancement identique
-  // au contenu original se signalerait à tort comme une modification.
+  // pertinents à leur valeur au tout premier rendu (voir rowsSnapshot).
   const buildSnapshot = () =>
-    JSON.stringify({
-      title, category, time, servings, calories, protein, carbs, fat, notes,
-      ingredients: ingredientRows.map((r) => (r.isSection ? { isSection: true, title: r.title } : { qty: r.qty, unit: r.unit, name: r.name })),
-      steps: stepRows.map((r) => (r.isSection ? { isSection: true, title: r.title } : { text: r.text })),
-    });
+    JSON.stringify({ title, category, time, servings, nutrition, notes, ...rowsSnapshot(ingredientRows, stepRows) });
   const initialSnapshotRef = useRef<string | null>(null);
   if (initialSnapshotRef.current === null) initialSnapshotRef.current = buildSnapshot();
   const isDirty = initialSnapshotRef.current !== buildSnapshot();
@@ -331,114 +116,10 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
 
   const secretImport = useSecretTrigger(() => setImportUnlocked(true));
 
-  const addIngredientRow = () => {
-    triggerHaptic(15);
-    setIngredientRows((prev) => [...prev, { id: newRowId(), qty: "", unit: "g", name: "" }]);
-  };
-  const addIngredientSectionRow = () => {
-    triggerHaptic([20, 30, 20]);
-    setIngredientRows((prev) => [...prev, { id: newRowId(), isSection: true, title: "" }]);
-  };
-  const removeIngredientRow = (id: string) => {
-    triggerHaptic(15);
-    setIngredientRows((prev) => (prev.length > 1 ? prev.filter((r) => r.id !== id) : prev));
-  };
-  const updateIngredientRow = (id: string, field: string, value: string) => {
-    setIngredientRows((prev) => prev.map((r) => (r.id === id ? ({ ...r, [field]: value } as IngredientRowT) : r)));
-  };
-
-  const addStepRow = () => {
-    triggerHaptic(15);
-    setStepRows((prev) => [...prev, { id: newStepId(), text: "" }]);
-  };
-  const addStepSectionRow = () => {
-    triggerHaptic([20, 30, 20]);
-    setStepRows((prev) => [...prev, { id: newStepId(), isSection: true, title: "" }]);
-  };
-  const removeStepRow = (id: string) => {
-    triggerHaptic(15);
-    setStepRows((prev) => (prev.length > 1 ? prev.filter((r) => r.id !== id) : prev));
-  };
-  const updateStepRow = (id: string, field: string, value: string) => {
-    setStepRows((prev) => prev.map((r) => (r.id === id ? ({ ...r, [field]: value } as StepRowT) : r)));
-  };
-
-  // Maintenir "+ Ajouter…" pendant le temps d'appui configuré ajoute un titre de section.
-  const useLongPressAdd = (onShortPress: () => void, onLongPress: () => void, duration: number): LongPressAddHandlers => {
-    const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const fired = useRef(false);
-    const start = () => {
-      fired.current = false;
-      timer.current = setTimeout(() => { fired.current = true; onLongPress(); }, duration);
-    };
-    const cancel = () => { if (timer.current) { clearTimeout(timer.current); timer.current = null; } };
-    const click = () => { if (fired.current) { fired.current = false; return; } onShortPress(); };
-    return {
-      onClick: click,
-      onTouchStart: start,
-      onTouchEnd: cancel,
-      onTouchMove: cancel,
-      onMouseDown: start,
-      onMouseUp: cancel,
-      onMouseLeave: cancel,
-      onContextMenu: (e) => e.preventDefault(),
-    };
-  };
-  const ingredientAddPress = useLongPressAdd(addIngredientRow, addIngredientSectionRow, pressDuration);
-  const stepAddPress = useLongPressAdd(addStepRow, addStepSectionRow, pressDuration);
-
   const hasTitle = title.trim().length > 0;
   const hasIngredients = ingredientRows.some((r) => !r.isSection && r.name.trim().length > 0);
   const hasSteps = stepRows.some((r) => !r.isSection && r.text.trim().length > 0);
   const canSubmit = hasTitle && hasIngredients && hasSteps;
-
-  // Partagé entre submit() et le bouton "Estimer la nutrition" : les deux
-  // ont besoin de la même liste d'ingrédients normalisée à partir des
-  // rangées du formulaire, l'un pour enregistrer la recette, l'autre pour
-  // l'envoyer à /api/nutrition-estimate.
-  const buildIngredientsFromRows = () =>
-    normalizeIngredientList(
-      ingredientRows
-        .filter((r) => (r.isSection ? r.title.trim() : r.name.trim()))
-        .map((r) =>
-          r.isSection
-            ? { isSection: true, title: r.title.trim() }
-            : { qty: parseQuantity(r.qty), unit: r.unit, name: r.name.trim() }
-        )
-    );
-
-  // Un clavier numérique iOS/Android tape naturellement une virgule pour
-  // les décimales (locale française). Avec <input type="number">, un "12,5"
-  // ne parse PAS comme nombre valide selon la spec HTML (point seul admis) —
-  // le navigateur vide alors silencieusement e.target.value ET marque le
-  // champ invalide (badInput), d'où l'erreur "Entrez une valeur valide" au
-  // moment de sceller la recette, sans que la virgule n'ait jamais atteint
-  // le JS pour être corrigée. D'où le passage en <input type="text"
-  // inputMode="decimal"> ci-dessous (clavier numérique conservé sur
-  // mobile, mais AUCUN filtrage natif du caractère) : la virgule arrive
-  // bien jusqu'ici, où on la convertit nous-mêmes.
-  const onDecimalChange = (setter: Dispatch<SetStateAction<string | number>>) => (e: ChangeEvent<HTMLInputElement>) =>
-    setter(e.target.value.replace(",", "."));
-
-  const handleEstimateNutrition = async () => {
-    if (estimatingNutrition) return;
-    triggerHaptic(15);
-    setEstimatingNutrition(true);
-    setNutritionError("");
-    try {
-      const result = await estimateNutritionOnline(buildIngredientsFromRows(), Number(servings) || 4);
-      if (!result) {
-        setNutritionError(t("recipeUi.form.nutritionEstimateError"));
-        return;
-      }
-      setCalories(result.calories);
-      setProtein(result.protein);
-      setCarbs(result.carbs);
-      setFat(result.fat);
-    } finally {
-      setEstimatingNutrition(false);
-    }
-  };
 
   const submit = async (e: { preventDefault: () => void }) => {
     e.preventDefault();
@@ -446,15 +127,9 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
       if (!canSubmit) setFormError(t("recipeUi.form.missingFields"));
       return;
     }
-    const ingredients = buildIngredientsFromRows();
-    const steps = stepRows
-      .filter((r) => (r.isSection ? r.title.trim() : r.text.trim()))
-      .map((r) => (r.isSection ? { isSection: true as const, title: r.title.trim() } : r.text.trim()));
+    const ingredients = ingredientsFromRows(ingredientRows);
+    const steps = stepsFromRows(stepRows);
     const toNumberOrNull = (v: string | number): number | null => (v !== "" && !Number.isNaN(Number(v)) ? Number(v) : null);
-    const carbsValue = toNumberOrNull(carbs);
-    const caloriesValue = toNumberOrNull(calories);
-    const proteinValue = toNumberOrNull(protein);
-    const fatValue = toNumberOrNull(fat);
     const titleChanged = isEdit && initialRecipe!.title !== title.trim();
     const illustrationKey =
       isEdit && initialRecipe!.illustrationKey && !titleChanged
@@ -474,10 +149,10 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
       category,
       time: Number(time) || 30,
       servings: Number(servings) || 4,
-      carbs: carbsValue,
-      calories: caloriesValue,
-      protein: proteinValue,
-      fat: fatValue,
+      carbs: toNumberOrNull(nutrition.carbs),
+      calories: toNumberOrNull(nutrition.calories),
+      protein: toNumberOrNull(nutrition.protein),
+      fat: toNumberOrNull(nutrition.fat),
       notes: notes.trim() || null,
       illustrationKey,
       favorite: isEdit ? !!initialRecipe!.favorite : false,
@@ -571,85 +246,15 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
             </button>
           </label>
         </div>
-        <button
-          type="button"
-          className="nutrition-toggle"
-          data-tour="recipe-nutrition"
-          onClick={() => { triggerHaptic(10); setShowNutrition((v) => !v); }}
-        >
-          <span>{t("recipeUi.form.nutritionToggle")}</span>
-          <ChevronDown size={16} className={`nutrition-chevron ${showNutrition ? "open" : ""}`} />
-        </button>
-        {showNutrition && (
-          <div className="nutrition-fields">
-            <button
-              type="button"
-              className="link-btn nutrition-estimate-btn"
-              onClick={handleEstimateNutrition}
-              disabled={estimatingNutrition}
-            >
-              <Sparkles size={15} /> {estimatingNutrition ? t("recipeUi.form.estimating") : t("recipeUi.form.estimateNutrition")}
-            </button>
-            {nutritionError && <p className="hint" style={{ fontStyle: "normal" }}>{nutritionError}</p>}
-            <div className="field-row">
-              <label className="field field-discreet">
-                <span>{t("recipeUi.form.caloriesLabel")}</span>
-                <input type="text" inputMode="decimal" value={calories} onChange={onDecimalChange(setCalories)} placeholder={t("recipeUi.form.examplePlaceholder", { value: 320 })} />
-              </label>
-              <label className="field field-discreet">
-                <span>{t("recipeUi.form.proteinLabel")}</span>
-                <input type="text" inputMode="decimal" value={protein} onChange={onDecimalChange(setProtein)} placeholder={t("recipeUi.form.examplePlaceholder", { value: 12 })} />
-              </label>
-            </div>
-            <div className="field-row">
-              <label className="field field-discreet">
-                <span>{t("recipeUi.form.carbsLabel")}</span>
-                <input type="text" inputMode="decimal" value={carbs} onChange={onDecimalChange(setCarbs)} placeholder={t("recipeUi.form.examplePlaceholder", { value: 30 })} />
-              </label>
-              <label className="field field-discreet">
-                <span>{t("recipeUi.form.fatLabel")}</span>
-                <input type="text" inputMode="decimal" value={fat} onChange={onDecimalChange(setFat)} placeholder={t("recipeUi.form.examplePlaceholder", { value: 9 })} />
-              </label>
-            </div>
-          </div>
-        )}
+        <NutritionSection
+          values={nutrition}
+          onChange={setNutrition}
+          getEstimateInput={() => ({ ingredients: ingredientsFromRows(ingredientRows), servings: Number(servings) || 4 })}
+        />
 
-        <label className="field">
-          <span>{t("recipeUi.form.ingredientsLabel")}</span>
-        </label>
-        <Reorder.Group as="div" className="ingredient-rows" data-tour="recipe-ingredients" axis="y" values={ingredientRows} onReorder={setIngredientRows}>
-          {ingredientRows.map((row) => (
-            <IngredientRow
-              key={row.id}
-              row={row}
-              onUpdateRow={updateIngredientRow}
-              onRemoveRow={removeIngredientRow}
-              canRemove={ingredientRows.length > 1}
-            />
-          ))}
-        </Reorder.Group>
-        <button type="button" className="link-btn add-ingredient-btn" data-tour="recipe-add-ingredient" {...ingredientAddPress}>
-          {t("recipeUi.form.addIngredient")} <span className="long-press-hint">{t("recipeUi.form.longPressHint", { duration: formatPressDuration(pressDuration) })}</span>
-        </button>
+        <IngredientsEditor rows={ingredientRows} setRows={setIngredientRows} newId={newIngredientId} pressDuration={pressDuration} />
 
-        <label className="field">
-          <span>{t("recipeUi.form.stepsLabel")}</span>
-        </label>
-        <Reorder.Group as="div" className="step-rows" data-tour="recipe-steps" axis="y" values={stepRows} onReorder={setStepRows}>
-          {stepRows.map((row, idx) => (
-            <StepRow
-              key={row.id}
-              row={row}
-              idx={idx}
-              onUpdateRow={updateStepRow}
-              onRemoveRow={removeStepRow}
-              canRemove={stepRows.length > 1}
-            />
-          ))}
-        </Reorder.Group>
-        <button type="button" className="link-btn add-step-btn" data-tour="recipe-add-step" {...stepAddPress}>
-          {t("recipeUi.form.addStep")} <span className="long-press-hint">{t("recipeUi.form.longPressHint", { duration: formatPressDuration(pressDuration) })}</span>
-        </button>
+        <StepsEditor rows={stepRows} setRows={setStepRows} newId={newStepId} pressDuration={pressDuration} />
 
         <label className="field" data-tour="recipe-notes">
           <span>{t("recipeUi.form.notesLabel")}</span>

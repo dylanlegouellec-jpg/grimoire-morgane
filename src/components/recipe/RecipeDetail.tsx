@@ -1,5 +1,6 @@
 import { useState, useRef, lazy, Suspense, type RefObject, type WheelEvent, type TouchEvent } from "react";
 import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform, useInView } from "motion/react";
+import DocumentTitle from "../common/DocumentTitle";
 import { ChefHat, Clock, Minus, Plus, Share2, Users, Wheat, X } from "lucide-react";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
 import { DEFAULT_HERO_TREATMENT } from "../../constants";
@@ -265,6 +266,7 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
         onTouchStart={composedTouchStart}
         onTouchMove={composedTouchMove}
       >
+        <DocumentTitle page={translateRecipeText(recipe.title, language)} />
         <div className="detail-drag-handle" aria-hidden="true" />
         <button className="modal-close" onClick={onClose} aria-label={t("common.close")}><X size={20} /></button>
 
