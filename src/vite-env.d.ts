@@ -15,7 +15,9 @@ declare const __GRIMOIRE_CODE__: {
   testFileCount: number;
 };
 
-// Version de l'app (commit + date de construction), injectée au build comme
-// __GRIMOIRE_CODE__ ci-dessus (voir scripts/buildInfo.ts). Utilisée par
+// Version de l'app (commit), injectée au build comme __GRIMOIRE_CODE__
+// ci-dessus (voir scripts/buildInfo.ts). La date de construction n'est PAS
+// dans le code (elle changerait le nom de tous les fichiers à chaque
+// déploiement) : elle est lue dans /version.json. Utilisée par
 // utils/diagnostics.ts.
-declare const __GRIMOIRE_BUILD__: { commit: string; builtAt: string };
+declare const __GRIMOIRE_BUILD__: { commit: string; builtAt?: string };

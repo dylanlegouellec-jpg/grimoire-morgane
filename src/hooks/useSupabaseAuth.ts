@@ -15,7 +15,7 @@ import {
 } from "../utils/auth";
 import { loadLocalCache } from "../utils/localCache";
 import { getCachedHouseholds, setCachedHouseholds, setCachedMembers } from "../utils/householdCache";
-import type { Session } from "@supabase/supabase-js";
+import type { Session, User } from "@supabase/supabase-js";
 import type { Household } from "../utils/auth";
 
 function getStoredActiveHouseholdId(): string | null {
@@ -186,9 +186,18 @@ export default function useSupabaseAuth() {
     await rejectHouseholdMemberApi(householdId, userId);
   }, []);
 
+  // Supabase fournit un NOUVEL objet `user` à chaque évènement de session
+  // (renouvellement du jeton toutes les heures, retour sur l'onglet...).
+  // Tous les effets qui dépendent de `user` (chargement complet des données,
+  // profil...) se relançaient alors pour rien, et ce rechargement pouvait
+  // écraser une modification faite au même instant. On garde donc le même
+  // objet tant que l'utilisateur (identifiant, e-mail) ne change pas.
+  const stableUserRef = useRef<User | null>(null);
+  stableUserRef.current = keepSameUser(stableUserRef.current, session ? session.user : null);
+
   return {
     session,
-    user: session ? session.user : null,
+    user: stableUserRef.current,
     householdId,
     households,
     householdLoading,
@@ -205,4 +214,11 @@ export default function useSupabaseAuth() {
     signInWithGoogle,
     signOut: signOutUser,
   };
+}
+
+/** Garde l'objet utilisateur précédent s'il désigne la même personne (même id, même e-mail). */
+export function keepSameUser(previous: User | null, next: User | null): User | null {
+  if (!next) return null;
+  if (previous && previous.id === next.id && previous.email === next.email) return previous;
+  return next;
 }

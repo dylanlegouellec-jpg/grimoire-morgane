@@ -577,6 +577,8 @@ export const CODE_DOCS: Record<string, string> = {
     "Active la sécurité par ligne (RLS) sur les tables des recettes et des listes de courses : chaque compte ne voit et ne modifie que les données des foyers dont il est membre. Avant, n'importe quel compte connecté pouvait tout lire.",
   "supabase/migrations/20260923120059_add_missing_household_request_functions.sql":
     "Crée les cinq fonctions SQL qui manquaient pour gérer les demandes d'adhésion à un foyer : voir les demandes, approuver, refuser, changer le rôle d'un membre, retirer un membre.",
+  "supabase/migrations/20261013150000_household_access_approved_only.sql":
+    "Ferme une faille trouvée à l'audit : une simple demande pour rejoindre un foyer donnait déjà accès à ses recettes, listes et planning. Seuls les membres acceptés y ont droit, la liste des membres ne se modifie plus que par les fonctions prévues, et les photos sont limitées au dossier de son foyer (5 Mo, images seulement).",
   "scripts/countLoc.ts":
     "Compte les lignes de code de src/ au moment du build, pour le chiffre « lignes de code » du Panneau de Diagnostics.",
   "scripts/buildInfo.ts":

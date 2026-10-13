@@ -3,7 +3,7 @@ import type { ChangeEvent, Dispatch, MouseEvent as ReactMouseEvent, PointerEvent
 import { AnimatePresence, motion, Reorder, useDragControls } from "motion/react";
 import { ChevronDown, Sparkles, Wand2, X } from "lucide-react";
 import { nextId, extractCodeFromInput, decodeRecipeCode, triggerHaptic, formatDurationMinutes } from "../../utils/helpers";
-import { normalizeIngredientList } from "../../utils/ingredients";
+import { normalizeIngredientList, parseQuantity } from "../../utils/ingredients";
 import { fetchNutriscoreGrade } from "../../utils/nutriscoreClient";
 import { estimateNutritionOnline } from "../../utils/nutritionClient";
 import { playSuccessSound } from "../../utils/audioUtils";
@@ -116,10 +116,12 @@ function IngredientRow({ row, onUpdateRow, onRemoveRow, canRemove }: IngredientR
   return (
     <Reorder.Item value={row} as="div" className="ingredient-row" dragListener={false} dragControls={dragControls} onDragEnd={commitDrag}>
       <button type="button" className="row-drag-handle" onPointerDown={startDrag} aria-label="Glisser pour réordonner">⠿</button>
+      {/* Texte + clavier décimal (comme les valeurs nutritionnelles plus bas) :
+          avec type="number", « 0,5 » tapé sur iPhone arrivait vide et la
+          quantité était enregistrée à 0 sans prévenir. Voir parseQuantity. */}
       <input
-        type="number"
-        min="0"
-        step="any"
+        type="text"
+        inputMode="decimal"
         className="ing-qty"
         value={row.qty}
         onChange={(e) => onUpdateRow(row.id, "qty", e.target.value)}
@@ -386,7 +388,7 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
         .map((r) =>
           r.isSection
             ? { isSection: true, title: r.title.trim() }
-            : { qty: parseFloat(String(r.qty).replace(",", ".")) || 0, unit: r.unit, name: r.name.trim() }
+            : { qty: parseQuantity(r.qty), unit: r.unit, name: r.name.trim() }
         )
     );
 
