@@ -1,5 +1,5 @@
 import { triggerHaptic } from "../utils/helpers";
-import { Seal } from "../components/common";
+import Seal from "../components/common/Seal";
 import { translateCurrent } from "../utils/i18n";
 
 /* ------------------------------------------------------------------ */
