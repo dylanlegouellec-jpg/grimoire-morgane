@@ -162,7 +162,17 @@ export default function useOfflineSync({
   // Chargement initial : cache local en priorité (offline-first), puis
   // rafraîchissement Supabase en tâche de fond dès que la session/le
   // foyer sont connus.
+  // Foyer dont les données sont actuellement affichées : en changer remet à
+  // zéro les drapeaux « modification en cours » (ils concernent l'ancien
+  // foyer, et ne doivent pas empêcher d'afficher les données du nouveau).
+  const loadedHouseholdRef = useRef<string | null>(null);
   useEffect(() => {
+    if (loadedHouseholdRef.current !== householdId) {
+      pantryDirtyRef.current = false;
+      basicsDirtyRef.current = false;
+      mealPlanDirtyRef.current = false;
+      loadedHouseholdRef.current = householdId;
+    }
     const hasCache = Array.isArray(localCache.recipes) && localCache.recipes.length > 0;
     if (hasCache) setReady(true);
 
@@ -199,15 +209,24 @@ export default function useOfflineSync({
         const loadedPantry = (state && state.pantry) || [];
         const loadedBasics = (state && state.basics) || DEFAULT_BASICS;
         const loadedMealPlan = (state && state.meal_plan) || [];
-        setPantry(loadedPantry);
-        setBasics(loadedBasics);
-        setMealPlan(loadedMealPlan);
-        // Ce qu'on vient de charger EST déjà l'état du serveur — inutile
-        // que l'effet de sauvegarde le renvoie une première fois pour
-        // rien dès que `ready` passe à true juste en dessous.
-        lastSyncedPantryRef.current = JSON.stringify(loadedPantry);
-        lastSyncedBasicsRef.current = JSON.stringify(loadedBasics);
-        lastSyncedMealPlanRef.current = JSON.stringify(loadedMealPlan);
+        // Une modification locale pas encore confirmée (sauvegarde en cours
+        // ou en attente) n'est jamais écrasée par ce chargement : elle
+        // partira normalement, puis l'écho Realtime remettra tout d'accord.
+        if (!pantryDirtyRef.current) {
+          setPantry(loadedPantry);
+          // Ce qu'on vient de charger EST déjà l'état du serveur — inutile
+          // que l'effet de sauvegarde le renvoie une première fois pour
+          // rien dès que `ready` passe à true juste en dessous.
+          lastSyncedPantryRef.current = JSON.stringify(loadedPantry);
+        }
+        if (!basicsDirtyRef.current) {
+          setBasics(loadedBasics);
+          lastSyncedBasicsRef.current = JSON.stringify(loadedBasics);
+        }
+        if (!mealPlanDirtyRef.current) {
+          setMealPlan(loadedMealPlan);
+          lastSyncedMealPlanRef.current = JSON.stringify(loadedMealPlan);
+        }
         const mappedLists = (listRows || []).map(mapRowToShoppingList) as ShoppingList[];
         setShoppingLists(mappedLists);
         // Filtrée par la portée AFFICHÉE (préférence locale à l'appareil,
@@ -377,13 +396,18 @@ export default function useOfflineSync({
     // une valeur qui ne correspond plus à ce qui est réellement en base.
     // Rafraîchir immédiatement depuis le serveur évite de laisser
     // l'utilisateur continuer à agir sur une donnée fantôme.
-    if (conflicts && conflicts.length && householdId) {
+    // Même rafraîchissement après une resynchronisation réussie : au
+    // lancement, l'app a souvent relu le serveur AVANT que la file
+    // hors-ligne soit rejouée, et affiche donc encore l'état d'avant ces
+    // modifications. Une donnée en cours de modification ici n'est jamais
+    // écrasée (voir *DirtyRef).
+    if (householdId && (flushed > 0 || (conflicts && conflicts.length))) {
       try {
         const state = await loadAppState(householdId);
         if (state) {
-          if (Array.isArray(state.pantry)) { setPantry(state.pantry); lastSyncedPantryRef.current = JSON.stringify(state.pantry); }
-          if (state.basics) { setBasics(state.basics); lastSyncedBasicsRef.current = JSON.stringify(state.basics); }
-          if (Array.isArray(state.meal_plan)) { setMealPlan(state.meal_plan); lastSyncedMealPlanRef.current = JSON.stringify(state.meal_plan); }
+          if (Array.isArray(state.pantry) && !pantryDirtyRef.current) { setPantry(state.pantry); lastSyncedPantryRef.current = JSON.stringify(state.pantry); }
+          if (state.basics && !basicsDirtyRef.current) { setBasics(state.basics); lastSyncedBasicsRef.current = JSON.stringify(state.basics); }
+          if (Array.isArray(state.meal_plan) && !mealPlanDirtyRef.current) { setMealPlan(state.meal_plan); lastSyncedMealPlanRef.current = JSON.stringify(state.meal_plan); }
         }
       } catch (err) {
         console.error("Rafraîchissement après conflit impossible :", err);

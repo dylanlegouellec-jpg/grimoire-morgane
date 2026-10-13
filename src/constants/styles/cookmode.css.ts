@@ -168,6 +168,11 @@ export const COOKMODE_CSS: string = `
   display: flex; align-items: center; justify-content: center; cursor: pointer;
 }
 .lists-manager-delete { color: var(--wine); }
+.lists-manager-delete.armed {
+  width: auto; padding: 0 10px; border-radius: 999px;
+  border-color: var(--wine); background: var(--wine); color: #fff;
+  font-family: 'Cinzel', serif; font-size: 0.66rem; letter-spacing: 0.4px;
+}
 
 /* --- Rappel ingrédients (mode cuisine) --- */
 .ingredients-toggle {

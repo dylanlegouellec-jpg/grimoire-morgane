@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  fetchBuildDate,
   getBuildInfo,
   getDeviceInfo,
   getDisplayMode,
@@ -35,6 +36,16 @@ export default function useAppDiagnostics(): AppDiagnostics {
   const [serviceWorker, setServiceWorker] = useState<ServiceWorkerInfo | null>(null);
   // Le chargement de la page ne change plus une fois terminé : lu une seule fois.
   const [load] = useState<PageLoadInfo>(() => getPageLoadInfo());
+  const [build, setBuild] = useState<BuildInfo>(() => getBuildInfo());
+
+  useEffect(() => {
+    if (build.builtAt) return undefined;
+    let cancelled = false;
+    void fetchBuildDate(build.commit).then((builtAt) => {
+      if (!cancelled && builtAt) setBuild((b) => ({ ...b, builtAt }));
+    });
+    return () => { cancelled = true; };
+  }, [build.commit, build.builtAt]);
 
   const refreshServiceWorker = useCallback(async () => {
     setServiceWorker(await getServiceWorkerInfo());
@@ -59,7 +70,7 @@ export default function useAppDiagnostics(): AppDiagnostics {
   }, []);
 
   return {
-    build: getBuildInfo(),
+    build,
     mode: getDisplayMode(),
     address: typeof window !== "undefined" ? window.location.origin : "—",
     device,

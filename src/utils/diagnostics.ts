@@ -31,10 +31,27 @@ export interface BuildInfo {
   builtAt: string;
 }
 
-// Injectée au build (scripts/buildInfo.ts) ; tolérante si la constante n'existe
-// pas (un outil qui importerait ce fichier sans passer par Vite).
+// Le commit est injecté au build (scripts/buildInfo.ts) ; tolérante si la
+// constante n'existe pas (un outil qui importerait ce fichier sans passer par Vite).
 export function getBuildInfo(): BuildInfo {
-  return typeof __GRIMOIRE_BUILD__ !== "undefined" ? __GRIMOIRE_BUILD__ : { commit: "dev", builtAt: "" };
+  if (typeof __GRIMOIRE_BUILD__ === "undefined") return { commit: "dev", builtAt: "" };
+  return { commit: __GRIMOIRE_BUILD__.commit, builtAt: __GRIMOIRE_BUILD__.builtAt ?? "" };
+}
+
+// Date de construction, lue dans /version.json (écrit au build par
+// vite.config.ts) plutôt que gravée dans le code : une date dans le code
+// changeait le nom de TOUS les fichiers de l'app à chaque déploiement, et
+// chaque téléphone devait tout retélécharger. Le fichier décrit la version
+// en ligne ; sa date n'est reprise que si c'est bien la version qui tourne.
+export async function fetchBuildDate(commit: string): Promise<string> {
+  try {
+    const res = await fetch("/version.json", { cache: "no-store" });
+    if (!res.ok) return "";
+    const data = (await res.json()) as { commit?: unknown; builtAt?: unknown };
+    return data.commit === commit && typeof data.builtAt === "string" ? data.builtAt : "";
+  } catch {
+    return "";
+  }
 }
 
 /* --- Mode d'affichage ----------------------------------------------- */

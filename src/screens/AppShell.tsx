@@ -875,7 +875,9 @@ export default function AppShell({
           <RecipeForm
             onClose={() => setFormTarget(null)}
             onSave={saveRecipe}
-            onDelete={(id) => { deleteRecipe(id); setOpenRecipe(null); }}
+            // Même confirmation que depuis le menu d'une carte (DeleteConfirmModal
+            // plus bas) : supprimer depuis le formulaire effaçait sans prévenir.
+            onDelete={() => { if (formTarget !== "new") setDeleteTarget(formTarget); }}
             initialRecipe={formTarget === "new" ? null : formTarget}
             pressDuration={pressDuration}
           />
@@ -922,6 +924,7 @@ export default function AppShell({
               onConfirm={() => {
                 deleteRecipe(deleteTarget.id);
                 showToast(t("app.recipeDeleted"));
+                if (openRecipe && openRecipe.id === deleteTarget.id) setOpenRecipe(null);
                 setDeleteTarget(null);
               }}
               onCancel={() => setDeleteTarget(null)}

@@ -12,7 +12,7 @@ vi.mock("../supabaseClient", () => ({
   getSupabaseClient: () => null,
 }));
 
-import { saveAppState, flushOfflineQueue, fetchTable } from "../supabase";
+import { saveAppState, flushOfflineQueue, fetchTable, updateRow } from "../supabase";
 import { getLastSyncAt, resetSyncStatusForTests } from "../syncStatus";
 import { enqueueOfflineAction, getOfflineQueue, clearOfflineQueue } from "../offlineQueue";
 
@@ -240,3 +240,32 @@ describe("dernière synchro (utils/syncStatus.ts)", () => {
   });
 });
 
+describe("ordre des écritures quand des modifications attendent encore", () => {
+  it("passe derrière la file au lieu d'écrire directement (sinon l'ancienne valeur écraserait la nouvelle au rejeu)", async () => {
+    enqueueOfflineAction({ table: "recipes", type: "update", recordId: "r1", payload: { title: "A" } });
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ body: [{ id: "r1" }] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await updateRow("recipes", "r1", { title: "B" });
+    await vi.waitFor(() => expect(getOfflineQueue()).toHaveLength(0));
+
+    const bodies = fetchMock.mock.calls.map((call) => JSON.parse(call[1].body));
+    expect(bodies).toEqual([{ title: "A" }, { title: "B" }]);
+  });
+
+  it("considère comme réussi le rejeu d'un ajout déjà enregistré (409), sans bloquer la suite", async () => {
+    enqueueOfflineAction({ table: "recipes", type: "insert", payload: { id: "r1", title: "A" } });
+    enqueueOfflineAction({ table: "recipes", type: "update", recordId: "r1", payload: { title: "B" } });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn()
+        .mockResolvedValueOnce(jsonResponse({ ok: false, status: 409, body: { code: "23505" } }))
+        .mockResolvedValueOnce(jsonResponse({ body: [{ id: "r1" }] }))
+    );
+
+    const result = await flushOfflineQueue();
+
+    expect(result).toMatchObject({ flushed: 2, dropped: 0 });
+    expect(getOfflineQueue()).toHaveLength(0);
+  });
+});

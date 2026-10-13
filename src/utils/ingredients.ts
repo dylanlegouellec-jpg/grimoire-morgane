@@ -60,3 +60,25 @@ export function normalizeIngredientList(list: unknown): NormalizedIngredient[] {
     .map(normalizeIngredient)
     .filter((ing): ing is NormalizedIngredient => Boolean(ing));
 }
+
+/**
+ * Quantité saisie à la main → nombre. Accepte la virgule (« 0,5 », clavier
+ * français), le point, une fraction (« 1/2 ») ou un nombre mixte (« 1 1/2 »).
+ * Renvoie 0 pour une saisie vide ou illisible.
+ */
+export function parseQuantity(input: unknown): number {
+  const text = String(input ?? "").trim().replace(",", ".");
+  if (!text) return 0;
+  const mixed = text.match(/^(\d+)\s+(\d+)\s*\/\s*(\d+)$/);
+  if (mixed) {
+    const den = Number(mixed[3]);
+    return den ? Number(mixed[1]) + Number(mixed[2]) / den : 0;
+  }
+  const fraction = text.match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);
+  if (fraction) {
+    const den = Number(fraction[2]);
+    return den ? Number(fraction[1]) / den : 0;
+  }
+  const value = Number(text);
+  return Number.isFinite(value) && value >= 0 ? value : 0;
+}

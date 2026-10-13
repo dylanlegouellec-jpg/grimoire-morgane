@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { motion } from "motion/react";
 import Flourish from "./Flourish";
@@ -32,6 +32,13 @@ interface ListsManagerModalProps {
 }
 
 export default function ListsManagerModal({ lists, activeListId, scope, onOpen, onCreate, onRename, onDelete, onClose }: ListsManagerModalProps) {
+  const [armedDeleteId, setArmedDeleteId] = useState<string | null>(null);
+  // Sans second appui dans les 3 s, le bouton se désarme tout seul.
+  useEffect(() => {
+    if (!armedDeleteId) return undefined;
+    const timer = setTimeout(() => setArmedDeleteId(null), 3000);
+    return () => clearTimeout(timer);
+  }, [armedDeleteId]);
   useBodyScrollLock(true);
   const modalRef = useFocusTrap<HTMLDivElement>(onClose);
   const sheet = useDismissibleSheet(onClose, { scrollRef: modalRef });
@@ -90,7 +97,20 @@ export default function ListsManagerModal({ lists, activeListId, scope, onOpen, 
                   </button>
                 )}
                 <button type="button" className="lists-manager-icon-btn" onClick={() => startRename(list)} aria-label="Renommer">✎</button>
-                <button type="button" className="lists-manager-icon-btn lists-manager-delete" onClick={() => onDelete(list.id)} aria-label="Supprimer">✕</button>
+                {/* Deux appuis pour supprimer : le premier arme le bouton
+                    (« Supprimer ? »), le second confirme. Un seul appui
+                    effaçait la liste entière sans prévenir. */}
+                <button
+                  type="button"
+                  className={`lists-manager-icon-btn lists-manager-delete ${armedDeleteId === list.id ? "armed" : ""}`}
+                  onClick={() => {
+                    if (armedDeleteId === list.id) { setArmedDeleteId(null); onDelete(list.id); }
+                    else setArmedDeleteId(list.id);
+                  }}
+                  aria-label={armedDeleteId === list.id ? "Confirmer la suppression" : "Supprimer"}
+                >
+                  {armedDeleteId === list.id ? "Supprimer ?" : "✕"}
+                </button>
               </div>
             ))}
           </div>

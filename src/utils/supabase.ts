@@ -289,6 +289,15 @@ function isRecoverableOffline(err: unknown): boolean {
 // requête elle-même), l'empile pour rejeu automatique au retour du réseau
 // plutôt que de faire échouer l'action de l'utilisateur.
 async function withOfflineFallback<T>(action: NewOfflineAction, run: () => Promise<T>, optimisticResult: T): Promise<T> {
+  // Des modifications plus anciennes attendent encore d'être envoyées : on
+  // passe derrière elles plutôt que d'écrire tout de suite. Sinon, au
+  // rejeu, une ancienne valeur mise en attente hors ligne écraserait celle,
+  // plus récente, qu'on vient d'envoyer directement.
+  if (getOfflineQueue().length > 0) {
+    enqueueOfflineAction(action);
+    void flushOfflineQueue();
+    return optimisticResult;
+  }
   try {
     return await run();
   } catch (err) {
@@ -456,7 +465,14 @@ async function runFlushOfflineQueue(): Promise<FlushOfflineQueueResult> {
         }
       }
       if (action.type === "insert") {
-        await supabaseRequest(action.table, { method: "POST", body: JSON.stringify([action.payload]) });
+        try {
+          await supabaseRequest(action.table, { method: "POST", body: JSON.stringify([action.payload]) });
+        } catch (err) {
+          // 409 = la ligne existe déjà : l'envoi d'origine, coupé par le
+          // délai d'attente, avait en fait abouti. C'est donc un succès, pas
+          // un échec qui bloquerait toute la file derrière lui.
+          if ((err as SupabaseRequestError).status !== 409) throw err;
+        }
       } else if (action.type === "update") {
         await supabaseRequest(`${action.table}?id=eq.${encodeURIComponent(action.recordId as string)}`, {
           method: "PATCH",

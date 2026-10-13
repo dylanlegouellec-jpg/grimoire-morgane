@@ -109,6 +109,14 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
   // Sécurisation du nombre de portions initiales
   const baseServings = Number(recipe?.servings) || 1;
   const [servings, setServings] = useState(() => baseServings);
+  // La fiche reste ouverte pendant une modification (le formulaire s'empile
+  // par-dessus) : si le nombre de portions de la recette change, on repart
+  // de la nouvelle valeur, sinon les quantités affichées seraient fausses.
+  const [servingsBase, setServingsBase] = useState(baseServings);
+  if (servingsBase !== baseServings) {
+    setServingsBase(baseServings);
+    setServings(baseServings);
+  }
   const [showShare, setShowShare] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   // Trois refs à poser sur le même conteneur (scrollRef pour le geste de

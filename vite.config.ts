@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 import { countGrimoireLoc } from "./scripts/countLoc";
@@ -83,14 +83,47 @@ const GRIMOIRE_BUILD = getBuildInfo();
 /*  garantit que l'app démarre, la couche applicative garantit qu'elle      */
 /*  reste utilisable une fois démarrée.                                    */
 /* ------------------------------------------------------------------ */
+// Date de construction : écrite dans /version.json (pas précaché, voir
+// globPatterns), JAMAIS dans le code. Une date dans le code changeait le nom
+// de tous les fichiers à chaque déploiement, même sans aucun changement, et
+// chaque téléphone retéléchargeait toute l'app (~2 Mo). Voir fetchBuildDate,
+// utils/diagnostics.ts.
+function versionFile(): Plugin {
+  return {
+    name: "grimoire-version-file",
+    apply: "build",
+    generateBundle() {
+      this.emitFile({ type: "asset", fileName: "version.json", source: JSON.stringify(GRIMOIRE_BUILD) });
+    },
+  };
+}
+
+// Bibliothèques dans leurs propres fichiers : leur nom ne change que si
+// elles sont mises à jour, donc un déploiement de l'app ne les fait pas
+// retélécharger (avant : tout était dans le fichier principal, qui change à
+// chaque version).
+function vendorChunk(id: string): string | undefined {
+  if (!id.includes("node_modules")) return undefined;
+  if (/node_modules\/(react|react-dom|scheduler)\//.test(id)) return "vendor-react";
+  if (/node_modules\/@supabase\//.test(id)) return "vendor-supabase";
+  if (/node_modules\/(motion|framer-motion|motion-dom|motion-utils)\//.test(id)) return "vendor-motion";
+  return undefined;
+}
+
 export default defineConfig({
   define: {
     __GRIMOIRE_LOC__: JSON.stringify(GRIMOIRE_LOC),
     __GRIMOIRE_CODE__: JSON.stringify(GRIMOIRE_CODE),
-    __GRIMOIRE_BUILD__: JSON.stringify(GRIMOIRE_BUILD),
+    __GRIMOIRE_BUILD__: JSON.stringify({ commit: GRIMOIRE_BUILD.commit }),
+  },
+  build: {
+    rollupOptions: {
+      output: { manualChunks: vendorChunk },
+    },
   },
   plugins: [
     react(),
+    versionFile(),
     VitePWA({
       // "prompt" : une nouvelle version s'installe puis ATTEND que l'utilisateur tape
       // sur « Recharger » (bandeau, utils/appUpdate.ts). Avant : "autoUpdate", qui
@@ -103,7 +136,6 @@ export default defineConfig({
       // navigateur les récupère à l'installation de l'app, jamais l'app elle-même :
       // les précacher ajouterait ~0,5 Mo à télécharger à chaque nouvelle version.
       includeManifestIcons: false,
-      includeAssets: ["Icon.jpeg"],
       manifest: {
         name: "Le Grimoire de Morgane",
         short_name: "Grimoire",
@@ -145,13 +177,35 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,ico,jpeg,png,svg,webp}"],
         // Les icônes du manifeste sont récupérées par le navigateur à l'installation,
         // jamais par l'app : inutile de les précacher (~0,5 Mo de plus à chaque version).
-        globIgnores: ["icon-192.png", "icon-512.png", "icon-maskable-512.png"],
+        globIgnores: [
+          "icon-192.png",
+          "icon-512.png",
+          "icon-maskable-512.png",
+          // Export PDF du livre de cuisine (cookbookPdf.ts) : ~770 Ko rarement
+          // utilisés. Plus précachés à chaque version : téléchargés à la
+          // première utilisation, puis gardés (voir « lazy-libs » plus bas).
+          "assets/jspdf*.js",
+          "assets/html2canvas*.js",
+          "assets/purify.es*.js",
+          "assets/index.es-*.js",
+        ],
         // Prend le contrôle des pages ouvertes dès l'activation (le tout premier
         // chargement devient utilisable hors ligne sans rechargement). Avec
         // "prompt", une mise à jour n'active rien tant que l'utilisateur n'a pas
         // tapé sur « Recharger » : ce réglage ne change donc rien à ce moment-là.
         clientsClaim: true,
         runtimeCaching: [
+          {
+            // Les bibliothèques d'export PDF retirées du précache (globIgnores) :
+            // gardées après leur premier téléchargement, pour que l'export
+            // fonctionne ensuite hors ligne.
+            urlPattern: ({ url }) => /\/assets\/(jspdf|html2canvas|purify\.es|index\.es-).*\.js$/.test(url.pathname),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "lazy-libs",
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 24 * 60 * 60 },
+            },
+          },
           {
             // Ping de connectivité (pingSupabase() / useConnectionStatus.js,
             // repéré par #_conncheck=1 — un FRAGMENT d'URL, pas un
