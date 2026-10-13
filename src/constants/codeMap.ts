@@ -219,6 +219,10 @@ export const CODE_DOCS: Record<string, string> = {
     "Des déclarations de types pour Vite et pour les constantes injectées au build (nombre de lignes de code, carte du code, version). Aucun code exécuté.",
 
   /* --- Écrans --------------------------------------------------------- */
+  "src/screens/AppHeader.tsx":
+    "L'en-tête de l'écran principal : bouton des Réglages avec la photo de profil et la pastille de connexion, titre, bandeaux hors ligne, mise à jour disponible et modifications en attente.",
+  "src/screens/TabBars.tsx":
+    "La barre de recherche et les filtres (Tout, Salé, Sucré, Favoris) de l'onglet Recettes, et la recherche de l'onglet Frigo, qui entrent et sortent avec le contenu de l'onglet.",
   "src/screens/appShellTypes.ts":
     "Les types de ce que l'app fournit à l'écran principal : recettes, frigo, plan, courses, réglages, foyer et synchronisation, regroupés par domaine.",
   "src/screens/AppShell.tsx":
