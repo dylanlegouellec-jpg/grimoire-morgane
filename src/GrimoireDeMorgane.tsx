@@ -56,7 +56,7 @@ import type {
   SyncApi,
   PendingImportRecipe,
   ShoppingApi,
-} from "./screens/AppShell";
+} from "./screens/appShellTypes";
 
 // Reproduit le déséquilibre réel signalé en mode invité (4 recettes Salé /
 // 20 Sucré) pour rejouer fidèlement le bug de bascule de filtre — la

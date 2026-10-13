@@ -219,6 +219,8 @@ export const CODE_DOCS: Record<string, string> = {
     "Des déclarations de types pour Vite et pour les constantes injectées au build (nombre de lignes de code, carte du code, version). Aucun code exécuté.",
 
   /* --- Écrans --------------------------------------------------------- */
+  "src/screens/appShellTypes.ts":
+    "Les types de ce que l'app fournit à l'écran principal : recettes, frigo, plan, courses, réglages, foyer et synchronisation, regroupés par domaine.",
   "src/screens/AppShell.tsx":
     "La coque de l'app connectée : l'en-tête, la recherche, les filtres, la barre de navigation, les quatre onglets (Recettes, Plan, Frigo, Courses) avec un fondu de sortie puis d'entrée entre eux, le balayage pour changer de filtre et toutes les modales. Les onglets secondaires et les fenêtres rares sont chargés à la demande.",
   "src/screens/LoadingScreen.tsx":
@@ -239,6 +241,10 @@ export const CODE_DOCS: Record<string, string> = {
     "Dit si l'app est vraiment en ligne, hors ligne ou en cours de vérification, grâce à un vrai ping Supabase (le simple « navigator.onLine » est faux sur certains téléphones).",
   "src/hooks/useWakeLock.ts":
     "Empêche l'écran de s'éteindre pendant le mode cuisine, et redemande le verrou quand on revient sur l'app. Sans effet si le navigateur ne sait pas le faire.",
+  "src/hooks/useTabNavigation.ts":
+    "La navigation entre les onglets de l'écran principal : onglet demandé et onglet affiché (le contenu sort en fondu avant que le nouveau n'entre), sens du glissement, retour en haut de page, préchargement des onglets.",
+  "src/hooks/useFilterSwipe.ts":
+    "Le balayage horizontal sur l'onglet Recettes, qui passe au filtre voisin (Tout, Salé, Sucré) sans se déclencher pendant un simple défilement.",
   "src/hooks/useLastSync.ts":
     "Donne l'instant de la dernière synchro réussie avec Supabase et se met à jour tout seul à chaque nouvel échange réussi.",
   "src/hooks/useAppDiagnostics.ts":
