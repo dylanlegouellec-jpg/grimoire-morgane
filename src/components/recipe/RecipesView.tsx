@@ -14,6 +14,8 @@ interface RecipesViewProps {
   favoritesOnly: boolean;
   onToggleFavorite: (id: string) => void;
   onAddRequest: () => void;
+  /** Ouvre l'import d'une recette (lien). Affiché sur l'écran d'accueil d'un grimoire vide. */
+  onImportRequest?: () => void;
   onOpen: (recipe: Recipe) => void;
   openRecipeId: string | null;
   onRequestDelete: (recipe: Recipe) => void;
@@ -32,6 +34,7 @@ export default function RecipesView({
   favoritesOnly,
   onToggleFavorite,
   onAddRequest,
+  onImportRequest,
   onOpen,
   openRecipeId,
   onRequestDelete,
@@ -168,14 +171,37 @@ export default function RecipesView({
   // quelques-unes (ex. "Salé", 4) réduit brutalement la hauteur de la page ;
   // sans remise à zéro, le défilement resterait au-delà des cartes restantes,
   // rien de visible à l'écran.
+  // Garde la dernière bascule déjà traitée : l'onglet reste en mémoire
+  // (<Activity>, voir AppShell) et React rejoue ses effets quand on y revient
+  // — sans cette garde, revenir sur Recettes remettait la page en haut au
+  // lieu de retrouver la position de défilement.
+  const scrolledGenerationRef = useRef(0);
   useLayoutEffect(() => {
-    if (filterGeneration === 0) return;
+    if (filterGeneration === 0 || filterGeneration === scrolledGenerationRef.current) return;
+    scrolledGenerationRef.current = filterGeneration;
     window.scrollTo(0, 0);
   }, [filterGeneration]);
 
   return (
     <div className="view">
-      {!hasVisible && (
+      {/* Grimoire encore vide (nouvel utilisateur) : un accueil qui dit quoi
+          faire, au lieu de « aucune recette ne correspond à ta recherche ». */}
+      {recipes.length === 0 ? (
+        <div className="recipes-welcome">
+          <h2 className="recipes-welcome-title">{t("recipes.welcome.title")}</h2>
+          <p className="hint">{t("recipes.welcome.body")}</p>
+          <div className="recipes-welcome-actions">
+            <button type="button" className="seal seal-gold" onClick={() => { triggerHaptic(15); onAddRequest(); }}>
+              <Plus size={16} aria-hidden="true" /> {t("recipes.welcome.add")}
+            </button>
+            {onImportRequest && (
+              <button type="button" className="seal" onClick={onImportRequest}>
+                {t("recipes.welcome.import")}
+              </button>
+            )}
+          </div>
+        </div>
+      ) : !hasVisible && (
         <p className="hint" style={{ textAlign: "center", marginTop: 30 }}>{t("recipes.noMatch")}</p>
       )}
       <div className="recipes-grid" style={hasVisible ? undefined : { display: "none" }}>

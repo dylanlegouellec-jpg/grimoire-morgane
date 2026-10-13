@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Check, ChevronRight, X } from "lucide-react";
+import { useState, useEffect, useRef, type MouseEvent } from "react";
+import { Check, ChevronRight, Pause, Play, Square, Volume2, X } from "lucide-react";
 import { groupSteps, parseDurationMinutes, triggerHaptic } from "../../utils/helpers";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { translateRecipeText } from "../../utils/recipeTranslation";
@@ -9,6 +9,20 @@ import Seal from "../common/Seal";
 import StepTimer from "./StepTimer";
 import PortionBadge from "./PortionBadge";
 import type { Recipe } from "../../hooks/useRecipes";
+import {
+  clearCookTimers,
+  formatRemaining,
+  getRemainingMs,
+  removeCookTimer,
+  toggleCookTimer,
+  useCookTimers,
+} from "../../utils/cookTimers";
+
+// Lecture à voix haute : API native du navigateur, absente de certains
+// navigateurs intégrés (et de jsdom) — le bouton n'est alors pas affiché.
+function speechAvailable(): boolean {
+  return typeof window !== "undefined" && "speechSynthesis" in window && typeof SpeechSynthesisUtterance !== "undefined";
+}
 
 interface CookModeProps {
   recipe: Recipe;
@@ -30,6 +44,10 @@ export default function CookMode({ recipe, onClose, pressDuration = 750 }: CookM
   const [done, setDone] = useState(() => groups.map((g) => g.steps.map(() => false)));
   const [showIngredients, setShowIngredients] = useState(false);
   const [servings, setServings] = useState(() => Number(recipe.servings) || 1);
+  const { timers, now } = useCookTimers();
+  const canSpeak = speechAvailable();
+  const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const currentGroup = groups[groupIndex] || { title: null, steps: [] };
   const currentDone = done[groupIndex] || [];
@@ -39,6 +57,43 @@ export default function CookMode({ recipe, onClose, pressDuration = 750 }: CookM
   };
   const totalSteps = groups.reduce((sum, g) => sum + g.steps.length, 0);
   const totalDone = done.reduce((sum, g) => sum + g.filter(Boolean).length, 0);
+
+  // Une seule lecture à la fois : relancer la même étape l'arrête, en lancer
+  // une autre coupe la précédente.
+  const stopSpeaking = () => {
+    utteranceRef.current = null;
+    setSpeakingIndex(null);
+    if (speechAvailable()) window.speechSynthesis.cancel();
+  };
+  const toggleSpeak = (e: MouseEvent<HTMLButtonElement>, i: number, text: string) => {
+    e.stopPropagation(); // la carte se coche au clic : la lecture ne doit pas la cocher
+    if (!speechAvailable()) return;
+    if (speakingIndex === i) { stopSpeaking(); return; }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = language === "fr" ? "fr-FR" : "en-US";
+    // cancel() déclenche aussi la fin de l'ancienne lecture : on ne remet à
+    // zéro que si c'est bien la lecture en cours qui s'achève.
+    const finish = () => {
+      if (utteranceRef.current === utterance) { utteranceRef.current = null; setSpeakingIndex(null); }
+    };
+    utterance.onend = finish;
+    utterance.onerror = finish;
+    utteranceRef.current = utterance;
+    setSpeakingIndex(i);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // Changer de groupe d'étapes (ou fermer le mode cuisine) coupe la lecture.
+  useEffect(() => () => {
+    utteranceRef.current = null;
+    setSpeakingIndex(null);
+    if (speechAvailable()) window.speechSynthesis.cancel();
+  }, [groupIndex]);
+
+  // Les minuteurs vivent le temps du mode cuisine (comme avant, quand ils
+  // disparaissaient avec lui) : on les vide à la fermeture.
+  useEffect(() => () => clearCookTimers(), []);
 
   const goPrevGroup = () => { triggerHaptic(10); setGroupIndex((i) => Math.max(0, i - 1)); };
   const goNextGroup = () => { triggerHaptic(10); setGroupIndex((i) => Math.min(groups.length - 1, i + 1)); };
@@ -106,6 +161,41 @@ export default function CookMode({ recipe, onClose, pressDuration = 750 }: CookM
       <div className="cookmode cookmode-list">
         <button className="modal-close" onClick={onClose} aria-label={t("common.close")}><X size={22} /></button>
         <div className="cookmode-progress">{t("cookMode.stepsDone", { done: totalDone, total: totalSteps })}</div>
+        {timers.length > 0 && (
+          <div className="cookmode-timers" role="list" aria-label={t("cookExtras.timers.title")}>
+            {timers.map((timer) => {
+              const isDone = timer.status === "done";
+              const time = isDone ? t("cookExtras.timers.done") : formatRemaining(getRemainingMs(timer, now));
+              return (
+                <div key={timer.key} role="listitem" className={`cookmode-timer-chip ${timer.status}`}>
+                  <button
+                    type="button"
+                    className="cookmode-timer-main"
+                    onClick={() => { triggerHaptic(10); setGroupIndex(timer.groupIndex); }}
+                    aria-label={t("cookExtras.timers.goToStep", { label: timer.label, time })}
+                  >
+                    <span className="cookmode-timer-label">{timer.label}</span>
+                    <span className="cookmode-timer-time">{time}</span>
+                  </button>
+                  {isDone ? (
+                    <button type="button" className="cookmode-timer-action" onClick={() => removeCookTimer(timer.key)} aria-label={t("cookExtras.timers.remove")}>
+                      <X size={14} />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="cookmode-timer-action"
+                      onClick={() => toggleCookTimer(timer.key)}
+                      aria-label={timer.status === "running" ? t("cookExtras.timers.pause") : t("cookExtras.timers.resume")}
+                    >
+                      {timer.status === "running" ? <Pause size={14} /> : <Play size={14} />}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
         <h2 className="dropcap-title">{translateRecipeText(recipe.title, language)}</h2>
 
         <div className="cookmode-ingredients-header">
@@ -148,12 +238,29 @@ export default function CookMode({ recipe, onClose, pressDuration = 750 }: CookM
         <div className="cookmode-steps">
           {currentGroup.steps.map((s, i) => {
             const duration = parseDurationMinutes(s);
+            const text = translateRecipeText(s, language);
+            const speaking = speakingIndex === i;
             return (
               <div key={i} className={`cookmode-step-card ${currentDone[i] ? "done" : ""}`} onClick={() => toggleDone(i)}>
                 <span className="step-check">{currentDone[i] && <Check size={14} />}</span>
                 <div className="step-body">
-                  <p className="cookmode-step-text">{translateRecipeText(s, language)}</p>
-                  {duration != null && <StepTimer minutes={duration} />}
+                  <p className="cookmode-step-text">{text}</p>
+                  {(duration != null || canSpeak) && (
+                    <div className="cookmode-step-actions">
+                      {duration != null && <StepTimer minutes={duration} groupIndex={groupIndex} stepIndex={i} label={text} />}
+                      {canSpeak && (
+                        <button
+                          type="button"
+                          className={`step-speak-btn ${speaking ? "speaking" : ""}`}
+                          onClick={(e) => toggleSpeak(e, i, text)}
+                          aria-label={speaking ? t("cookExtras.speech.stop") : t("cookExtras.speech.read")}
+                          aria-pressed={speaking}
+                        >
+                          {speaking ? <Square size={14} /> : <Volume2 size={16} />}
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             );

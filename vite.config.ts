@@ -175,6 +175,14 @@ export default defineConfig({
           { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
           { src: "/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
+        // Raccourcis d'un appui long sur l'icône de l'app installée (Android ;
+        // iOS ne les gère pas). Traités à l'ouverture par AppShell
+        // (paramètre ?raccourci=, retiré de l'adresse aussitôt lu).
+        shortcuts: [
+          { name: "Nouvelle recette", short_name: "Nouvelle recette", url: "/?raccourci=nouvelle-recette", icons: [{ src: "/icon-192.png", sizes: "192x192", type: "image/png" }] },
+          { name: "Liste de courses", short_name: "Courses", url: "/?raccourci=courses", icons: [{ src: "/icon-192.png", sizes: "192x192", type: "image/png" }] },
+          { name: "Planning des repas", short_name: "Planning", url: "/?raccourci=planning", icons: [{ src: "/icon-192.png", sizes: "192x192", type: "image/png" }] },
+        ],
       },
       workbox: {
         // Précache tout ce qui compose l'app elle-même : sans réseau,

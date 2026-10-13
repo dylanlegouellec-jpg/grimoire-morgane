@@ -218,7 +218,7 @@ export default function FridgeView({ recipes, pantry, setPantry, basics, search,
                 tabIndex={0}
                 aria-label={recipe.title}
               >
-                <div className="fridge-thumb"><DishArt recipe={recipe} /></div>
+                <div className="fridge-thumb"><DishArt recipe={recipe} size="thumb" /></div>
                 <div className="fridge-row-body">
                   <h5>{recipe.title}</h5>
                   {tier === "ready" ? (

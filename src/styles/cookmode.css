@@ -217,3 +217,46 @@
 .cookmode-nav { display: flex; gap: 12px; justify-content: space-between; margin-top: auto; }
 .cookmode-nav .seal { flex: 1; justify-content: center; }
 
+
+/* --- Actions d'une étape : minuteur + lecture à voix haute --- */
+.cookmode-step-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.step-speak-btn {
+  position: relative; flex-shrink: 0;
+  width: 32px; height: 32px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(217,180,92,0.5); background: rgba(217,180,92,0.12);
+  color: var(--gold-light); cursor: pointer;
+}
+.step-speak-btn.speaking { background: rgba(255,255,255,0.16); color: #fff; border-color: rgba(255,255,255,0.35); }
+/* Zone tactile agrandie (~44 px), sans changer le dessin (voir a11y.css). */
+.step-speak-btn::after { content: ""; position: absolute; inset: -6px; }
+
+/* --- Bandeau des minuteurs (tous les groupes d'étapes) --- */
+.cookmode-timers { display: flex; flex-wrap: wrap; gap: 8px; flex-shrink: 0; }
+.cookmode-timer-chip {
+  display: flex; align-items: center; gap: 2px; max-width: 100%; min-width: 0;
+  border-radius: 999px; border: 1px solid rgba(217,180,92,0.5); background: rgba(217,180,92,0.12);
+  color: var(--gold-light);
+}
+.cookmode-timer-chip.running { background: rgba(255,255,255,0.12); color: #fff; border-color: rgba(255,255,255,0.35); }
+.cookmode-timer-chip.done { background: rgba(95,154,74,0.25); color: #8fbf7a; border-color: #5f9a4a; animation: cookTimerDone 1.2s ease-in-out 3; }
+@keyframes cookTimerDone { 50% { box-shadow: 0 0 0 4px rgba(95,154,74,0.35); } }
+@media (prefers-reduced-motion: reduce) { .cookmode-timer-chip.done { animation: none; } }
+.cookmode-timer-main {
+  display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 32px;
+  padding: 4px 4px 4px 12px; background: none; border: none; color: inherit; cursor: pointer; text-align: left;
+}
+.cookmode-timer-label {
+  font-family: 'EB Garamond', serif; font-size: 0.88rem; min-width: 0; max-width: 150px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cookmode-timer-time {
+  font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.5px; text-transform: uppercase;
+  font-variant-numeric: tabular-nums; flex-shrink: 0;
+}
+.cookmode-timer-action {
+  position: relative; flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: none; border: none; color: inherit; cursor: pointer;
+}
+.cookmode-timer-action::after { content: ""; position: absolute; inset: -6px -2px; }
