@@ -68,10 +68,10 @@ export default function NavButton({ tabKey, label, Icon, active, onSelect, onLon
           apparaître la pastille d'un coup sec à sa nouvelle place — c'est
           ce qui donne l'effet de glissement d'un onglet à l'autre, sans
           calcul de position manuel. "inset:0" + "borderRadius: inherit"
-          (voir modalsBase.css.js, .nav-pill) : la pastille épouse
+          (voir modalsBase.css, .nav-pill) : la pastille épouse
           exactement la forme du bouton, qu'il soit rond (dock flottant en
           portrait) ou en rectangle arrondi (colonne latérale en paysage,
-          voir responsive.css.js) — sans avoir à dupliquer cette règle pour
+          voir responsive.css) — sans avoir à dupliquer cette règle pour
           les deux mises en page. */}
       {active && (
         <motion.span

@@ -6,7 +6,8 @@ import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motio
 import { triggerHaptic, categoryLabel, slugify, escapeHtml } from "../../utils/helpers";
 import { translateRecipeText } from "../../utils/recipeTranslation";
 import { useTranslation } from "../../contexts/LanguageContext";
-import { COOKBOOK_CSS } from "../../constants/styles/cookbook.css";
+// Texte du CSS du livre (?inline), repris dans le fichier HTML téléchargeable.
+import COOKBOOK_CSS from "../../styles/cookbook.css?inline";
 import { generateCookbookPdf, computeRecipeStartPages } from "../../utils/cookbookPdf";
 import { getResolvedPhotoDataUrl } from "../../utils/imageCache";
 import {
@@ -121,7 +122,7 @@ interface CookbookBuilderModalProps {
 /*                                                                          */
 /*  "Imprimer" repose sur la stratégie "impression navigateur" choisie          */
 /*  explicitement par l'utilisateur : window.print() + CSS @media print          */
-/*  (voir constants/styles/cookbook.css.js), avec le même repli conscient          */
+/*  (voir styles/cookbook.css), avec le même repli conscient          */
 /*  du mode PWA installée que ShareRecipeModal.jsx (doExportPDF) — iOS bloque       */
 /*  silencieusement window.print() dans ce contexte.                                 */
 /*                                                                                        */
@@ -283,7 +284,7 @@ export default function CookbookBuilderModal({ recipes, onClose, showToast }: Co
   // Vrai fichier .pdf (jsPDF + html2canvas, voir utils/cookbookPdf.js) : le
   // document déjà mis en page par CookbookDocument (docRef) doit d'abord
   // être réellement affiché hors champ visuel (classe --rendering, voir
-  // constants/styles/cookbook.css.js) — html2canvas ne peut rasteriser
+  // styles/cookbook.css) — html2canvas ne peut rasteriser
   // qu'un élément que le navigateur a vraiment mis en page.
   const doDownload = async () => {
     if (!requireSelection() || generatingPdf) return;

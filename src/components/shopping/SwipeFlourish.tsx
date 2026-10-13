@@ -9,7 +9,7 @@ import { SPRING_RELEASE } from "../../constants/motion";
 /*  par pixel + transition CSS). Sans risque de rejouer le bug de           */
 /*  useDismissibleSheet.js (arbitrage `touch-action` gagné par le            */
 /*  défilement natif) : ce glissement est HORIZONTAL ("x") alors que          */
-/*  `touch-action: pan-y` (voir misc.css.js) n'accorde le défilement natif      */
+/*  `touch-action: pan-y` (voir misc.css) n'accorde le défilement natif      */
 /*  qu'à la verticale — les deux axes ne se disputent jamais le même geste,       */
 /*  c'est justement l'association que Framer documente pour un drag             */
 /*  horizontal posé dans une page qui défile verticalement.                        */

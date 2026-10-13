@@ -1,12 +1,10 @@
 /* ------------------------------------------------------------------ */
 /*  NAV BASSE + MODALES (structure commune) + menu d'actions recette */
-/*  Extrait de styles.css.js (lignes 793-900 d'origine), pour       */
+/*  Extrait de styles/index.css (lignes 793-900 d'origine), pour       */
 /*  raccourcir un fichier CSS-in-JS jusque-là monolithique (~1700       */
-/*  lignes) — voir styles.css.js pour l'assemblage final et l'ordre     */
+/*  lignes) — voir styles/index.css pour l'assemblage final et l'ordre     */
 /*  de concaténation (déterminant pour la cascade CSS entre fichiers).  */
 /* ------------------------------------------------------------------ */
-
-export const MODALS_BASE_CSS: string = `
 /* --- Navigation basse : dock flottant façon iOS --------------------------
    Ne colle plus aux bords (avant : pleine largeur, voir l'historique git de
    ce fichier) — centrée avec une marge de chaque côté ET par rapport au bas
@@ -35,7 +33,7 @@ export const MODALS_BASE_CSS: string = `
      l'ancien "border-top" doré suffisait à le suggérer. Le taux d'opacité
      posé PAR-DESSUS ce flou reste réglable par l'utilisateur (Réglages >
      Apparence, 0 = verre dépoli seul, 1 = fond plein) — comportement de
-     --nav-bg-rgb/--nav-opacity inchangé, voir theme.css.js. */
+     --nav-bg-rgb/--nav-opacity inchangé, voir theme.css. */
   background: rgba(var(--nav-bg-rgb), var(--nav-opacity, 0));
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -72,8 +70,8 @@ export const MODALS_BASE_CSS: string = `
    Motion) juste en dessous — seule la couleur du texte change encore ici.
    "--gold-light" (pas "--gold") : contraste sur le fond sombre --chrome de
    la pastille, même choix déjà fait pour le bouton "+" flottant
-   (recipeCards.css.js) et pour cette même nav en colonne latérale paysage
-   (voir responsive.css.js, qui n'a plus besoin de redéfinir "background"
+   (recipeCards.css) et pour cette même nav en colonne latérale paysage
+   (voir responsive.css, qui n'a plus besoin de redéfinir "background"
    pour son propre onglet actif — seule .nav-pill le fait désormais, dans
    les deux mises en page). */
 .nav-btn.active { color: var(--gold-light); }
@@ -88,7 +86,7 @@ export const MODALS_BASE_CSS: string = `
    "inset: 0" + "border-radius: inherit" : épouse exactement la forme et la
    taille du bouton qui la porte, qu'il soit rond (dock flottant en
    portrait) ou en rectangle arrondi (colonne latérale en paysage, voir
-   responsive.css.js) — jamais besoin de dupliquer cette règle pour les deux
+   responsive.css) — jamais besoin de dupliquer cette règle pour les deux
    mises en page. "z-index: -1" : reste sous l'icône/le texte du bouton
    (contenu normal, non positionné — voir le commentaire de .nav-btn
    ci-dessus pour pourquoi ça reste bien confiné À CE bouton). */
@@ -107,11 +105,11 @@ export const MODALS_BASE_CSS: string = `
    ":where(html[data-standalone])" plutôt que "html[data-standalone] " tout
    court : :where() ramène la spécificité à zéro, donc cette règle pèse
    exactement comme ".bottom-nav" seul — sans ça, la règle paysage plus bas
-   (responsive.css.js, qui repasse .bottom-nav en colonne latérale statique
+   (responsive.css, qui repasse .bottom-nav en colonne latérale statique
    avec "position: static") perdrait la bataille de spécificité et
    resterait bloquée sur ce "bottom", même sur une tablette en PWA
-   installée. Voir .fab (recipeCards.css.js) et .grimoire-app
-   (theme.css.js), ajustés à l'identique pour garder le même espace de
+   installée. Voir .fab (recipeCards.css) et .grimoire-app
+   (theme.css), ajustés à l'identique pour garder le même espace de
    respiration au-dessus du FAB et au-dessus du contenu, mais eux aussi
    seulement en standalone. */
 :where(html[data-standalone="true"]) .bottom-nav { bottom: max(28px, calc(env(safe-area-inset-bottom) + 16px)); }
@@ -162,7 +160,7 @@ export const MODALS_BASE_CSS: string = `
    l'ancien cas (barre d'adresse en cours de rétractation) : fallback
    100dvh/0px si l'API n'existe pas. Contenu ICI à ce seul overlay (jamais
    html/body) : pas de lien avec le blocage de scroll déjà corrigé ailleurs
-   (voir shell.css.js), qui venait d'un tout autre problème
+   (voir shell.css), qui venait d'un tout autre problème
    (overscroll-behavior sur .app-content). */
 .modal, .grimoire-page {
   background: var(--parchment);
@@ -279,4 +277,3 @@ export const MODALS_BASE_CSS: string = `
    RecipeDetail.jsx) — la transition elle-même (spring) est configurée
    directement en JS sur ces éléments, plus aucune règle CSS dédiée ici. */
 
-`;

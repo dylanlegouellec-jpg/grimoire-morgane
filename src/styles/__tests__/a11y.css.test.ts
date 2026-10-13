@@ -1,9 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { A11Y_CSS } from "../a11y.css";
-import { THEME_CSS } from "../theme.css";
-import { CSS } from "../../styles.css";
+const A11Y_CSS = readFileSync(resolve(__dirname, "../a11y.css"), "utf8");
+const THEME_CSS = readFileSync(resolve(__dirname, "../theme.css"), "utf8");
+const INDEX_CSS = readFileSync(resolve(__dirname, "../index.css"), "utf8");
+
+const STYLES_DIR = resolve(__dirname, "..");
+// Tout le CSS de l'app (tous les fichiers de src/styles).
+const ALL_CSS = readdirSync(STYLES_DIR).filter((f) => f.endsWith(".css")).map((f) => readFileSync(resolve(STYLES_DIR, f), "utf8")).join("\n");
 
 /* Garde-fous de l'audit d'accessibilité : zoom autorisé, contour clavier,
    zones tactiles, contraste du texte doré et des boutons principaux. */
@@ -26,7 +30,7 @@ function lightToken(name: string): string {
 
 describe("accessibilité", () => {
   it("n'empêche plus le zoom à deux doigts", () => {
-    const html = readFileSync(resolve(__dirname, "../../../../index.html"), "utf8");
+    const html = readFileSync(resolve(__dirname, "../../../index.html"), "utf8");
     const viewportTags = html.match(/<meta name="viewport"[^>]*>/g) ?? [];
     expect(viewportTags).toHaveLength(1);
     expect(viewportTags[0]).not.toMatch(/user-scalable|maximum-scale/);
@@ -34,7 +38,8 @@ describe("accessibilité", () => {
   });
 
   it("charge les règles d'accessibilité en dernier", () => {
-    expect(CSS.trimEnd().endsWith(A11Y_CSS.trimEnd())).toBe(true);
+    const imports = [...INDEX_CSS.matchAll(/@import "\.\/([\w]+\.css)";/g)].map((m) => m[1]);
+    expect(imports[imports.length - 1]).toBe("a11y.css");
   });
 
   it("montre un contour au clavier et agrandit les petites zones tactiles", () => {
@@ -55,6 +60,6 @@ describe("accessibilité", () => {
   });
 
   it("n'utilise plus --gold comme couleur de texte (seulement --gold-text)", () => {
-    expect(CSS).not.toMatch(/(?<![-\w])color: var\(--gold\)/);
+    expect(ALL_CSS).not.toMatch(/(?<![-\w])color: var\(--gold\)/);
   });
 });

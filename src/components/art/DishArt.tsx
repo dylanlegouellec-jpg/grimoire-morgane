@@ -39,7 +39,7 @@ export default function DishArt({ recipe }: DishArtProps) {
   // besoin d'en construire un second.
   const [imgSrc, setImgSrc] = useState(rawUrl);
   const [imgFailed, setImgFailed] = useState(false);
-  // Voile chatoyant (voir .illus-shimmer, recipeCards.css.js) affiché tant
+  // Voile chatoyant (voir .illus-shimmer, recipeCards.css) affiché tant
   // que la photo n'a pas fini de se décoder — évite le passage brutal
   // "zone vide -> image nette" quand le réseau ou le cache sont lents.
   const [photoLoaded, setPhotoLoaded] = useState(false);

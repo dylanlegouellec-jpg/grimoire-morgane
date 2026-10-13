@@ -146,7 +146,7 @@ export default defineConfig({
         description: "Ton grimoire de recettes : plan de repas, frigo et liste de courses, même sans réseau.",
         start_url: "/",
         display: "standalone",
-        // Alignées sur --parchment (theme.css.js), pas un blanc cassé
+        // Alignées sur --parchment (theme.css), pas un blanc cassé
         // générique — sans ça, l'écran de démarrage (background_color) et
         // la barre d'état Android (theme_color) d'une PWA installée
         // affichaient une teinte visiblement différente du reste de l'app

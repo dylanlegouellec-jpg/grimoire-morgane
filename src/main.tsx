@@ -1,5 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+// Tout le style de l'app, chargé une seule fois (voir src/styles/index.css).
+import './styles/index.css'
 import GrimoireDeMorgane from './GrimoireDeMorgane'
 import PublicRecipeView from './components/recipe/PublicRecipeView'
 import type { PublicRecipe } from './components/recipe/PublicRecipeView'
@@ -57,7 +59,7 @@ if (navigatorStandalone || window.matchMedia("(display-mode: standalone)").match
   document.documentElement.setAttribute("data-standalone", "true");
 }
 
-// Détecte Android pour le CSS (voir .bottom-nav, modalsBase.css.js) : le
+// Détecte Android pour le CSS (voir .bottom-nav, modalsBase.css) : le
 // dock flottant du bas est descendu un peu plus près du bord sur cette
 // plateforme précise, à la demande — parfait tel quel sur iPhone, un peu
 // trop haut sur Android où env(safe-area-inset-bottom) vaut généralement 0
@@ -71,7 +73,7 @@ if (/Android/i.test(navigator.userAgent)) {
 }
 
 // Hauteur/décalage RÉELS de la zone visible (--app-vvh/--app-vv-offset),
-// utilisés par .modal-backdrop (modalsBase.css.js) à la place de
+// utilisés par .modal-backdrop (modalsBase.css) à la place de
 // "height: 100dvh" seul. Corrige un bug précis sur iOS : nos modales sont
 // en "position: fixed" ET s'ouvrent pendant que le <body> est LUI AUSSI
 // figé en "position: fixed" (voir useBodyScrollLock.js, nécessaire par
@@ -106,7 +108,7 @@ if (visualViewport) {
       document.documentElement.style.setProperty("--app-vv-offset", `${vv.offsetTop}px`);
     } else {
       // Pas de clavier : on retire nos variables plutôt que de les figer à
-      // une valeur — le repli CSS ("100dvh"/"0px", voir modalsBase.css.js)
+      // une valeur — le repli CSS ("100dvh"/"0px", voir modalsBase.css)
       // reprend la main. "dvh" suit déjà nativement, en douceur, le
       // rétractement de la barre d'adresse (c'est tout son rôle) ; le
       // resynchroniser nous-mêmes ici en JS, avec le décalage d'une frame

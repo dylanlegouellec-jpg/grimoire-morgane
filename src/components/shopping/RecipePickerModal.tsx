@@ -32,7 +32,7 @@ export default function RecipePickerModal({ recipes, onGenerate, onClose }: Reci
   const modalRef = useFocusTrap<HTMLDivElement>(onClose);
   // scrollRef pointe sur .recipe-picker-body (le corps défilant), PAS sur
   // la modale elle-même : celle-ci ne défile jamais (mise en page flex,
-  // voir shopping.css.js), c'est son corps interne qui déborde. Avec
+  // voir shopping.css), c'est son corps interne qui déborde. Avec
   // modalRef ici, atScrollTop() aurait toujours renvoyé "vrai" (la modale
   // n'a jamais de scrollTop propre), transformant tout tirage vers le bas
   // dans la liste — même en plein milieu d'un défilement normal — en
@@ -71,7 +71,7 @@ export default function RecipePickerModal({ recipes, onGenerate, onClose }: Reci
         {...sheet.panHandlers}
       >
         {/* En-tête fixe / corps scrollable (voir .recipe-picker-modal dans
-            styles.css.js) — le corps est la SEULE zone qui défile ; le
+            styles/index.css) — le corps est la SEULE zone qui défile ; le
             bouton "Générer la liste" est son dernier enfant, en sticky
             flottant (voir plus bas), pas un pied de page séparé. */}
         <div className="recipe-picker-header">
@@ -130,7 +130,7 @@ export default function RecipePickerModal({ recipes, onGenerate, onClose }: Reci
 
           {/* Bouton flottant, pas de bandeau : rendu à l'INTÉRIEUR du corps
               défilant (pas comme pied de page séparé) et "position: sticky"
-              (voir .recipe-picker-floating-footer dans styles.css.js) pour
+              (voir .recipe-picker-floating-footer dans styles/index.css) pour
               rester ancré en bas de la zone visible pendant le défilement,
               sans fond ni bordure propres — seul le sceau lui-même est
               visible et cliquable (pointer-events "none" sur le conteneur,

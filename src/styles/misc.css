@@ -1,12 +1,10 @@
 /* ------------------------------------------------------------------ */
 /*  DIVERS — flourish courses, liens, import/partage, export livre, toast */
-/*  Extrait de styles.css.js (lignes 1122-1198 d'origine), pour       */
+/*  Extrait de styles/index.css (lignes 1122-1198 d'origine), pour       */
 /*  raccourcir un fichier CSS-in-JS jusque-là monolithique (~1700       */
-/*  lignes) — voir styles.css.js pour l'assemblage final et l'ordre     */
+/*  lignes) — voir styles/index.css pour l'assemblage final et l'ordre     */
 /*  de concaténation (déterminant pour la cascade CSS entre fichiers).  */
 /* ------------------------------------------------------------------ */
-
-export const MISC_CSS: string = `
 /* --- Flourish glissant (onglet Courses) --- */
 .flourish-swipe {
   cursor: grab; touch-action: pan-y; user-select: none;
@@ -77,7 +75,7 @@ export const MISC_CSS: string = `
 /* --- Toast --- */
 .toast {
   /* "112px" (relevé depuis 78px) : .bottom-nav est désormais un dock
-     flottant avec sa propre marge basse (voir modalsBase.css.js) — ce
+     flottant avec sa propre marge basse (voir modalsBase.css) — ce
      toast doit dégager sa hauteur ET cette marge, pas juste l'ancienne
      barre soudée au bord. */
   position: fixed; bottom: 112px; left: 50%; transform: translateX(-50%);
@@ -88,4 +86,3 @@ export const MISC_CSS: string = `
   animation: fadeIn 0.25s ease;
 }
 
-`;

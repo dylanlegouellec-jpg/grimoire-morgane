@@ -1,4 +1,3 @@
-import { CSS } from "../constants/styles.css";
 import { triggerHaptic } from "../utils/helpers";
 import { Seal } from "../components/common";
 import { translateCurrent } from "../utils/i18n";
@@ -16,7 +15,6 @@ interface LoginScreenProps {
 export default function LoginScreen({ signInWithGoogle, showToast, toast }: LoginScreenProps) {
   return (
     <div className="loading-screen login-screen">
-      <style>{CSS}</style>
       <h1 className="login-title">Le Grimoire de Morgane</h1>
       <p className="hint" style={{ fontStyle: "normal", textAlign: "center" }}>
         {translateCurrent("ui.login.prompt")}

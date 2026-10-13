@@ -1,12 +1,10 @@
 /* ------------------------------------------------------------------ */
 /*  MODE CUISINE — étapes, molette de portions, feuille de quantité, listes */
-/*  Extrait de styles.css.js (lignes 1199-1404 d'origine), pour       */
+/*  Extrait de styles/index.css (lignes 1199-1404 d'origine), pour       */
 /*  raccourcir un fichier CSS-in-JS jusque-là monolithique (~1700       */
-/*  lignes) — voir styles.css.js pour l'assemblage final et l'ordre     */
+/*  lignes) — voir styles/index.css pour l'assemblage final et l'ordre     */
 /*  de concaténation (déterminant pour la cascade CSS entre fichiers).  */
 /* ------------------------------------------------------------------ */
-
-export const COOKMODE_CSS: string = `
 /* --- Mode cuisine --- */
 .cookmode-backdrop {
   position: fixed; inset: 0; z-index: 60; background: #2c221e;
@@ -219,4 +217,3 @@ export const COOKMODE_CSS: string = `
 .cookmode-nav { display: flex; gap: 12px; justify-content: space-between; margin-top: auto; }
 .cookmode-nav .seal { flex: 1; justify-content: center; }
 
-`;

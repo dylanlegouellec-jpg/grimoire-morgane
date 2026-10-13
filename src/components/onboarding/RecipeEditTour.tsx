@@ -57,7 +57,7 @@ export default function RecipeEditTour({ onFinish }: RecipeEditTourProps) {
   // Le formulaire ne défile pas quand il tient en entier : sans place pour
   // remonter la cible, elle resterait sous la carte d'explication (qui est
   // toujours en bas). La classe ci-dessous ajoute de la marge sous le
-  // formulaire pendant le tuto (voir .recipe-tour-active, onboarding.css.ts)
+  // formulaire pendant le tuto (voir .recipe-tour-active, onboarding.css)
   // pour que n'importe quel champ puisse être amené en haut de la fenêtre.
   useLayoutEffect(() => {
     document.body.classList.add("recipe-tour-active");

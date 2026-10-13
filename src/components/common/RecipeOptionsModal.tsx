@@ -106,7 +106,7 @@ export default function RecipeOptionsModal({ recipe, onClose, onUpdateRecipe, on
 
   // Portail vers <body> : sans ça, cette modale reste imbriquée dans
   // .app-content — le conteneur qui assure RÉELLEMENT le défilement de la
-  // page (voir shell.css.js, .app-content, forcé en overflow-y: auto par
+  // page (voir shell.css, .app-content, forcé en overflow-y: auto par
   // sa propre règle overflow-x: hidden). Un élément "position: fixed"
   // imbriqué dans un ancêtre scrollable AUTRE que <body> est un cas connu
   // de bug WebKit sur Safari iOS : il ne reste pas toujours calé sur le

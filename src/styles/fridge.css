@@ -1,12 +1,10 @@
 /* ------------------------------------------------------------------ */
 /*  FRIGO */
-/*  Extrait de styles.css.js (lignes 546-638 d'origine), pour       */
+/*  Extrait de styles/index.css (lignes 546-638 d'origine), pour       */
 /*  raccourcir un fichier CSS-in-JS jusque-là monolithique (~1700       */
-/*  lignes) — voir styles.css.js pour l'assemblage final et l'ordre     */
+/*  lignes) — voir styles/index.css pour l'assemblage final et l'ordre     */
 /*  de concaténation (déterminant pour la cascade CSS entre fichiers).  */
 /* ------------------------------------------------------------------ */
-
-export const FRIDGE_CSS: string = `
 /* --- Mon Frigo ---------------------------------------------------------
    Compteur global, accordéons par catégorie (au lieu du nuage de puces
    en vrac), et une liste "Réalisable avec ton frigo" triée par niveau de
@@ -103,4 +101,3 @@ export const FRIDGE_CSS: string = `
 .fridge-missing-far { color: var(--ink-soft); font-style: italic; }
 .fridge-show-more { display: block; margin: 10px auto 0; }
 
-`;

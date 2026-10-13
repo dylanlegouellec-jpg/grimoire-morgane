@@ -1,12 +1,10 @@
 /* ------------------------------------------------------------------ */
 /*  COURSES */
-/*  Extrait de styles.css.js (lignes 639-792 d'origine), pour       */
+/*  Extrait de styles/index.css (lignes 639-792 d'origine), pour       */
 /*  raccourcir un fichier CSS-in-JS jusque-là monolithique (~1700       */
-/*  lignes) — voir styles.css.js pour l'assemblage final et l'ordre     */
+/*  lignes) — voir styles/index.css pour l'assemblage final et l'ordre     */
 /*  de concaténation (déterminant pour la cascade CSS entre fichiers).  */
 /* ------------------------------------------------------------------ */
-
-export const SHOPPING_CSS: string = `
 /* --- Courses --- */
 /* Ligne "Liste 1  changer ▾" + toggle foyer/personnel (voir
    ShoppingView.jsx) : même principe que la ligne semaine de la
@@ -150,8 +148,8 @@ export const SHOPPING_CSS: string = `
   color: var(--ink-soft); font-size: 0.72rem;
 }
 /* Poignée de glisser-déposer des RAYONS entre eux (voir ShoppingAisleBlock.jsx)
-   — même geste/allure que .planning-meal-drag-handle (planning.css.js) et
-   .row-drag-handle (forms.css.js), toujours visible ici (pas de "mode
+   — même geste/allure que .planning-meal-drag-handle (planning.css) et
+   .row-drag-handle (forms.css), toujours visible ici (pas de "mode
    réorganisation" à activer : rien d'autre sur cet en-tête ne réagit au tap). */
 .aisle-drag-handle {
   /* 26px (relevé de 22px) : alignée sur ses deux jumelles (voir le
@@ -205,4 +203,3 @@ export const SHOPPING_CSS: string = `
   background: var(--surface-strong); color: var(--ink-soft); display: flex; align-items: center; justify-content: center; cursor: pointer;
 }
 
-`;

@@ -1,12 +1,10 @@
 /* ------------------------------------------------------------------ */
 /*  PLANIFICATION — semaine, jours, calendrier */
-/*  Extrait de styles.css.js (lignes 1618-1696 d'origine), pour       */
+/*  Extrait de styles/index.css (lignes 1618-1696 d'origine), pour       */
 /*  raccourcir un fichier CSS-in-JS jusque-là monolithique (~1700       */
-/*  lignes) — voir styles.css.js pour l'assemblage final et l'ordre     */
+/*  lignes) — voir styles/index.css pour l'assemblage final et l'ordre     */
 /*  de concaténation (déterminant pour la cascade CSS entre fichiers).  */
 /* ------------------------------------------------------------------ */
-
-export const PLANNING_CSS: string = `
 /* ------------------------------------------------------------------ */
 /*  PLANIFICATION — plan de repas hebdomadaire (voir PlanningView.jsx)   */
 /* ------------------------------------------------------------------ */
@@ -159,9 +157,9 @@ export const PLANNING_CSS: string = `
 .planning-send-wrap { margin: 8px 0 100px; display: flex; justify-content: center; }
 
 /* Bannière fixe de validation du mode réorganisation (voir PlanningView.jsx,
-   "reorderMode") — même ancrage bas que .toast (misc.css.js, bottom: 112px)
+   "reorderMode") — même ancrage bas que .toast (misc.css, bottom: 112px)
    pour rester juste au-dessus de .bottom-nav (désormais un dock flottant,
-   voir modalsBase.css.js) sans la chevaucher. Plus large qu'un toast
+   voir modalsBase.css) sans la chevaucher. Plus large qu'un toast
    (contenu + bouton "Terminer" côte à côte, pas un simple message), donc
    son propre style plutôt qu'une réutilisation de .toast. */
 .planning-reorder-banner {
@@ -223,4 +221,3 @@ export const PLANNING_CSS: string = `
 .calendar-picker-day.selected { background: var(--chrome); color: var(--gold-light); font-weight: 600; }
 .calendar-picker-day:active { background: var(--surface-strong); }
 .calendar-picker-day.selected:active { background: var(--chrome); }
-`;

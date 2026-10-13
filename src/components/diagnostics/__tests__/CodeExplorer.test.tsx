@@ -109,8 +109,8 @@ describe("CodeExplorer", () => {
     await user.click(byType);
     const panel = await screen.findByText(".tsx", { selector: ".code-type-name" });
     expect(panel).toBeInTheDocument();
-    // Les feuilles de style .css.ts sont comptées à part des autres .ts.
-    expect(screen.getByText(".css.ts", { selector: ".code-type-name" })).toBeInTheDocument();
+    // Les feuilles de style (src/styles/*.css) ont leur propre ligne.
+    expect(screen.getByText(".css", { selector: ".code-type-name" })).toBeInTheDocument();
     const names = [...document.querySelectorAll(".code-type-name")].map((n) => n.textContent);
     const tsxLines = __GRIMOIRE_CODE__.files.filter((f) => f.path.endsWith(".tsx")).reduce((sum, f) => sum + f.lines, 0);
     expect(names[0]).toBe(tsxLines > 0 ? names[0] : ".tsx");

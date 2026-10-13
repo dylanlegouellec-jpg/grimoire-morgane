@@ -1,12 +1,10 @@
 /* ------------------------------------------------------------------ */
 /*  THÈME — polices, variables de couleur (clair/sombre), fond de page */
-/*  Extrait de styles.css.js (lignes 7-135 d'origine), pour       */
+/*  Extrait de styles/index.css (lignes 7-135 d'origine), pour       */
 /*  raccourcir un fichier CSS-in-JS jusque-là monolithique (~1700       */
-/*  lignes) — voir styles.css.js pour l'assemblage final et l'ordre     */
+/*  lignes) — voir styles/index.css pour l'assemblage final et l'ordre     */
 /*  de concaténation (déterminant pour la cascade CSS entre fichiers).  */
 /* ------------------------------------------------------------------ */
-
-export const THEME_CSS: string = `
 :root {
   --parchment: #f1e6c8;
   --parchment-deep: #e6d5a8;
@@ -167,7 +165,7 @@ html, body {
   position: relative;
   padding-top: env(safe-area-inset-top);
   /* Relevé pour laisser la place au dock flottant (voir .bottom-nav,
-     modalsBase.css.js) : il ne colle plus au bord de l'écran, ce padding
+     modalsBase.css) : il ne colle plus au bord de l'écran, ce padding
      doit désormais couvrir sa marge basse ET sa propre hauteur, pas
      seulement l'ancienne barre pleine largeur (qui n'avait qu'une hauteur
      à couvrir). Valeur mesurée sur le rendu réel du dock (bottom + hauteur
@@ -190,12 +188,12 @@ html, body {
   overflow-y: visible;
 }
 /* Reprend, seulement en PWA installée, le +10px de hauteur donné à
-   .bottom-nav en portrait (voir modalsBase.css.js) : la dernière ligne de
+   .bottom-nav en portrait (voir modalsBase.css) : la dernière ligne de
    contenu défilable ne doit pas se retrouver plus serrée contre la barre
    dans l'app installée, sans changer quoi que ce soit dans un navigateur
    normal. .loading-screen exclu à dessein : rien n'y défile derrière la nav
    (elle n'est même pas montée à cet écran), ce padding n'y sert à rien.
-   ":where(...)" : voir le commentaire détaillé dans modalsBase.css.js —
+   ":where(...)" : voir le commentaire détaillé dans modalsBase.css —
    ramène la spécificité à zéro, par cohérence avec .bottom-nav/.fab. */
 :where(html[data-standalone="true"]) .grimoire-app { padding-bottom: 150px; }
 
@@ -235,4 +233,3 @@ html, body {
   *, *::before, *::after { transition: none; }
 }
 
-`;

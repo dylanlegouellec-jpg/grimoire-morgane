@@ -1,12 +1,10 @@
 /* ------------------------------------------------------------------ */
 /*  FORMULAIRE RECETTE — champs, ingrédients/étapes structurés */
-/*  Extrait de styles.css.js (lignes 1020-1121 d'origine), pour       */
+/*  Extrait de styles/index.css (lignes 1020-1121 d'origine), pour       */
 /*  raccourcir un fichier CSS-in-JS jusque-là monolithique (~1700       */
-/*  lignes) — voir styles.css.js pour l'assemblage final et l'ordre     */
+/*  lignes) — voir styles/index.css pour l'assemblage final et l'ordre     */
 /*  de concaténation (déterminant pour la cascade CSS entre fichiers).  */
 /* ------------------------------------------------------------------ */
-
-export const FORMS_CSS: string = `
 .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; font-size: 0.82rem; color: var(--ink-soft); font-family: 'Cinzel', serif; letter-spacing: 0.3px; max-width: 100%; }
 .field input, .field select, .field textarea {
   font-family: 'EB Garamond', serif; font-size: 1rem; color: var(--ink);
@@ -120,4 +118,3 @@ export const FORMS_CSS: string = `
 .form-footer { margin-top: 22px; padding-top: 4px; display: flex; flex-direction: column; gap: 4px; }
 .form-footer .seal { width: 100%; justify-content: center; }
 
-`;

@@ -42,7 +42,7 @@ export const FILTERS: FilterDef[] = [
 /*  retrouve simplement aussi sur ses autres appareils désormais. "fondu"       */
 /*  est le seul traitement plein cadre (bord à bord, comme avant cette           */
 /*  liste) ; les 5 autres encadrent la photo avec une marge (voir                  */
-/*  .detail-hero-inset, recipeCards.css.js) — un bord doré/festonné/corné            */
+/*  .detail-hero-inset, recipeCards.css) — un bord doré/festonné/corné            */
 /*  n'a de sens que si le fond de la page reste visible tout autour.                   */
 /* ------------------------------------------------------------------ */
 interface HeroTreatmentDef {

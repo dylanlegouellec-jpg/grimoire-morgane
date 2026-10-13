@@ -65,7 +65,7 @@ function RecipeCard({
   // d'annulation au scroll, retour haptique...), qui pouvait silencieusement
   // diverger de l'original à chaque évolution de l'un sans l'autre. Une
   // seule implémentation partagée élimine ce risque : l'animation
-  // d'enfoncement/rebond (voir .press-anim dans styles.css.js) est
+  // d'enfoncement/rebond (voir .press-anim dans styles/index.css) est
   // désormais identique, pas seulement similaire.
   const cardLongPress = useLongPress<HTMLDivElement>(() => setShowOptions(true), pressDuration);
   const prefersReducedMotion = useReducedMotion();

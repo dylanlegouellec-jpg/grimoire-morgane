@@ -78,9 +78,9 @@ export const CODE_GROUPS: CodeGroup[] = [
   },
   {
     id: "styles",
-    title: "src/constants/styles/ — feuilles de style",
-    summary: "Tout le CSS de l'app, écrit sous forme de texte TypeScript et découpé par domaine (thème, recettes, courses, plan…).",
-    prefixes: ["src/constants/styles/"],
+    title: "src/styles/ — feuilles de style",
+    summary: "Tout le CSS de l'app, en vrais fichiers .css découpés par domaine (thème, recettes, courses, plan…), rassemblés par index.css.",
+    prefixes: ["src/styles/"],
   },
   {
     id: "comp-recipe",
@@ -187,7 +187,7 @@ export const CODE_OVERVIEW: { title: string; text: string }[] = [
   {
     title: "6. L'apparence",
     text:
-      "Le CSS est écrit sous forme de texte TypeScript dans constants/styles/, assemblé par constants/styles.css.ts et injecté dans la page. Le thème clair/sombre repose sur des variables CSS que utils/theme.ts bascule. Les animations utilisent Framer Motion, avec leurs valeurs communes dans constants/motion.ts.",
+      "Le CSS est écrit sous forme de texte TypeScript dans styles/, assemblé par styles/index.css et injecté dans la page. Le thème clair/sombre repose sur des variables CSS que utils/theme.ts bascule. Les animations utilisent Framer Motion, avec leurs valeurs communes dans constants/motion.ts.",
   },
 ];
 
@@ -351,47 +351,47 @@ export const CODE_DOCS: Record<string, string> = {
     "Les constantes principales : onglets et filtres, habillages du visuel de recette, ingrédients « basiques » par défaut, accès à Supabase et recettes de démonstration.",
   "src/constants/motion.ts":
     "Les constantes d'animation partagées : courbes, ressorts, durées des cartes et des filtres, mouvement des modales. Un seul endroit pour garder la même sensation partout.",
-  "src/constants/styles.css.ts":
-    "Assemble tous les fichiers de styles en une seule chaîne CSS injectée dans l'app. L'ordre de concaténation compte pour la cascade CSS.",
   "src/constants/translations.ts":
     "Les dictionnaires français et anglais de tous les textes de l'interface, plus des libellés à plat pour traduire des textes déjà enregistrés dans les données.",
 
   /* --- Styles ---------------------------------------------------------- */
-  "src/constants/styles/a11y.css.ts":
+  "src/styles/index.css":
+    "Point d'entrée de tout le style, importé une seule fois au démarrage : rassemble les autres feuilles dans l'ordre qui compte pour la cascade (a11y.css en dernier).",
+  "src/styles/a11y.css":
     "Règles d'accessibilité chargées en dernier : contour visible au clavier, zones tactiles agrandies pour les petits boutons, et pas de zoom au double appui sur les boutons (le zoom à deux doigts, lui, est autorisé).",
-  "src/constants/styles/cookbook.css.ts":
+  "src/styles/cookbook.css":
     "Les styles du livre de cuisine : aperçu à l'écran et mise en page d'impression (pages, couverture).",
-  "src/constants/styles/cookmode.css.ts":
+  "src/styles/cookmode.css":
     "Les styles du mode cuisine : étapes en plein écran, molette de portions, feuille de quantité.",
-  "src/constants/styles/diagnostics.css.ts":
+  "src/styles/diagnostics.css":
     "Les styles du panneau de diagnostics : métriques, pastille de statut, mini console de logs et menus déroulants du code.",
-  "src/constants/styles/forms.css.ts":
+  "src/styles/forms.css":
     "Les styles du formulaire de recette : champs, listes d'ingrédients et d'étapes.",
-  "src/constants/styles/fridge.css.ts":
+  "src/styles/fridge.css":
     "Les styles de l'onglet Frigo : compteur, catégories dépliables, puces d'ingrédients.",
-  "src/constants/styles/household.css.ts":
+  "src/styles/household.css":
     "Les styles de la gestion des foyers : profil, changement de foyer, membres, lignes de réglages.",
-  "src/constants/styles/misc.css.ts":
+  "src/styles/misc.css":
     "Des styles divers : ornement des courses, liens, import et partage, export du livre, message temporaire (toast).",
-  "src/constants/styles/modalsBase.css.ts":
+  "src/styles/modalsBase.css":
     "La barre de navigation du bas (le dock flottant) et la structure commune des modales et des menus d'actions.",
-  "src/constants/styles/onboarding.css.ts":
+  "src/styles/onboarding.css":
     "Les styles du tutoriel guidé : le voile avec son trou de projecteur et la carte d'explication.",
-  "src/constants/styles/planning.css.ts":
+  "src/styles/planning.css":
     "Les styles de l'onglet Plan : semaine, jours, repas, calendrier, mode réorganisation.",
-  "src/constants/styles/publicRecipe.css.ts":
+  "src/styles/publicRecipe.css":
     "Les styles de la page publique d'une seule recette (lien de partage), indépendante du reste de l'app.",
-  "src/constants/styles/recipeCards.css.ts":
+  "src/styles/recipeCards.css":
     "Les styles des recettes : grille, carte, fiche détail, sceaux et bouton « + ».",
-  "src/constants/styles/responsive.css.ts":
+  "src/styles/responsive.css":
     "L'impression et la mise en page en paysage / grand écran (barre latérale, grille).",
-  "src/constants/styles/settingsIos.css.ts":
+  "src/styles/settingsIos.css":
     "Les styles des Réglages façon iOS : listes groupées et contrôle segmenté.",
-  "src/constants/styles/shell.css.ts":
+  "src/styles/shell.css":
     "Les styles de la coque : en-tête, recherche, filtres, zone de contenu, fondu et glissement entre onglets, et arrivée de l'app au lancement.",
-  "src/constants/styles/shopping.css.ts":
+  "src/styles/shopping.css":
     "Les styles de l'onglet Courses : listes, rayons, lignes d'articles, sélecteur de recettes.",
-  "src/constants/styles/theme.css.ts":
+  "src/styles/theme.css":
     "Les polices, les couleurs (variables clair et sombre), le fond de page et la mise en page de base de l'app.",
 
   /* --- Composants : recettes ------------------------------------------- */

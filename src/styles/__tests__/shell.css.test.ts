@@ -1,8 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { SHELL_CSS } from "../shell.css";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+const SHELL_CSS = readFileSync(resolve(__dirname, "../shell.css"), "utf8");
 
 /* ------------------------------------------------------------------ */
-/*  GARDE-FOUS du changement d'onglet (shell.css.ts) — du CSS pur, qu'on    */
+/*  GARDE-FOUS du changement d'onglet (shell.css) — du CSS pur, qu'on    */
 /*  ne peut pas vraiment "jouer" dans jsdom : on vérifie donc le texte       */
 /*  des règles. Retour utilisateur : au toucher, la page partait sur le        */
 /*  côté. La sortie d'un onglet doit rester un fondu sur place, et la           */

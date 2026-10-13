@@ -5,7 +5,6 @@ import { Heart, Search, Settings, Wand2 } from "lucide-react";
 
 import { FILTERS, TABS } from "../constants";
 import { SPRING_PILL, TAB_EXIT_MS } from "../constants/motion";
-import { CSS } from "../constants/styles.css";
 import { triggerHaptic, nextId, copyText } from "../utils/helpers";
 import { getCachedProfile, getProfile } from "../utils/profile";
 import { useTranslation } from "../contexts/LanguageContext";
@@ -290,7 +289,7 @@ export default function AppShell({
   // `tab` : l'onglet DEMANDÉ (la pastille de la barre du bas glisse tout de
   // suite). `shownTab` : l'onglet réellement affiché, en retard de TAB_EXIT_MS
   // pour laisser le contenu actuel se fondre avant que le nouveau n'entre
-  // (voir hooks/useExitThenSwitch.ts, et .tab-exit dans shell.css.ts) — même
+  // (voir hooks/useExitThenSwitch.ts, et .tab-exit dans shell.css) — même
   // bascule en deux temps que les filtres de recettes. Tout ce qui s'affiche
   // DANS la page (barre de recherche, filtres, contenu de l'onglet) suit
   // `shownTab` ; seuls la barre de navigation, le tutoriel et le geste de
@@ -326,7 +325,7 @@ export default function AppShell({
     }, 1500);
     return () => clearTimeout(timer);
   }, []);
-  // Sens du glissement entre onglets (voir .tab-transition et --tab-slide, shell.css.ts) —
+  // Sens du glissement entre onglets (voir .tab-transition et --tab-slide, shell.css) —
   // "avant" quand on va vers un onglet plus à droite dans la nav (Recettes
   // -> Plan -> Mon Frigo -> Courses), "arrière" sinon. Recalculé à CHAQUE
   // changement d'onglet (bouton de nav ou redirection programmatique comme
@@ -335,7 +334,7 @@ export default function AppShell({
   // touche `tab`, pour que ce calcul ne puisse pas être oublié à un
   // endroit et pas un autre.
   const [tabDirection, setTabDirection] = useState<"forward" | "backward">("forward");
-  // Décalage de départ de l'entrée (voir --tab-slide, shell.css.ts), commun au
+  // Décalage de départ de l'entrée (voir --tab-slide, shell.css), commun au
   // contenu de l'onglet ET à ses barres de recherche/filtres.
   const tabSlideStyle = { "--tab-slide": tabDirection === "forward" ? "18px" : "-18px" } as CSSProperties;
   const changeTab = useCallback((nextKey: string) => {
@@ -497,7 +496,7 @@ export default function AppShell({
   // au-dessus de la grille elle-même — confirmé : le défilement au geste
   // fonctionnait normalement dès que le pointeur était en dehors de cette
   // zone. En paysage, ce même faux positif passait inaperçu : .app-content
-  // y est un vrai conteneur de scroll (voir responsive.css.js), donc
+  // y est un vrai conteneur de scroll (voir responsive.css), donc
   // window.scrollTo(0,0) n'y avait aucun effet visible, contrairement au
   // mode portrait où c'est le document entier qui défile.
   //
@@ -558,7 +557,7 @@ export default function AppShell({
     };
   }, [setFilter]);
 
-  // Arrivée de l'app au lancement (voir .app-intro, shell.css.ts) : classe
+  // Arrivée de l'app au lancement (voir .app-intro, shell.css) : classe
   // posée au premier rendu puis retirée une fois les animations terminées
   // (~0,85 s), pour qu'elles ne rejouent JAMAIS ensuite — en particulier
   // quand .search-bar/.filter-bar sont remontées en revenant sur l'onglet
@@ -572,10 +571,9 @@ export default function AppShell({
 
   return (
     <div className={`grimoire-app${intro ? " app-intro" : ""}`}>
-      <style>{CSS}</style>
 
       {/* Regroupe en-tête/recherche/filtres/nav — en paysage (voir
-          responsive.css.js, .app-sidebar), cette colonne devient une
+          responsive.css, .app-sidebar), cette colonne devient une
           colonne flex indépendante (sa propre hauteur, min-height: 100vh),
           plutôt que de PARTAGER les mêmes lignes de grille CSS que
           .app-content juste en dessous. Avant ce correctif, .app-content
@@ -585,7 +583,7 @@ export default function AppShell({
           Plan/Courses sans recherche ni filtres du tout) — la nav latérale
           se décalait alors de haut en bas à chaque changement de filtre ou
           d'onglet (signalé avec vidéo à l'appui). En portrait, ce wrapper
-          est neutre ("display: contents", voir responsive.css.js) : aucun
+          est neutre ("display: contents", voir responsive.css) : aucun
           changement de rendu, les enfants restent directement dans le flux
           de .grimoire-app comme avant. */}
       <div className="app-sidebar">
@@ -716,7 +714,7 @@ export default function AppShell({
       )}
 
       {/* Dernier enfant de .app-sidebar (voir son commentaire plus haut) :
-          en paysage, "margin-top: auto" (responsive.css.js) la pousse tout
+          en paysage, "margin-top: auto" (responsive.css) la pousse tout
           en bas de cette colonne flex indépendante, quel que soit le
           contenu affiché à côté dans .app-content. */}
       <nav className="bottom-nav">
@@ -743,12 +741,12 @@ export default function AppShell({
             bloqué sur le message d'erreur en revenant sur cet onglet. */}
         <ErrorBoundary compact key={shownTab}>
         {/* Glissement horizontal léger entre onglets (voir .tab-transition,
-            shell.css.js) — "left"/opacity, jamais "transform" : plusieurs
+            shell.css) — "left"/opacity, jamais "transform" : plusieurs
             onglets contiennent un élément position:fixed propre (.fab en
             Recettes, .planning-reorder-banner en Planification) qui
             deviendrait sinon ancré à CE calque le temps de l'animation
             plutôt qu'au vrai viewport (même piège déjà documenté sur .view,
-            juste au-dessus dans le JSX d'origine — voir shell.css.js). Un
+            juste au-dessus dans le JSX d'origine — voir shell.css). Un
             simple décalage "left" ne crée jamais ce problème. */}
         <div
           className={`tab-transition${tabExiting ? " tab-exit" : ""}`}

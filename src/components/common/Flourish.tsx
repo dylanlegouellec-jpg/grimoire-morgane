@@ -15,7 +15,7 @@ import { EASE_OUT } from "../../constants/motion";
 // même temps (deux <motion.path> distincts plutôt qu'un seul tracé continu)
 // pour un effet d'"éclosion" depuis le centre plutôt qu'un simple tracé de
 // gauche à droite. "stroke=currentColor" : hérite du "color: var(--gold)"
-// déjà posé sur .flourish (modalsBase.css.js), pas besoin de dupliquer la
+// déjà posé sur .flourish (modalsBase.css), pas besoin de dupliquer la
 // couleur ici.
 const DRAW_TRANSITION: { duration: number; ease: [number, number, number, number] } = { duration: 0.55, ease: EASE_OUT };
 const DOT_TRANSITION = { delay: DRAW_TRANSITION.duration * 0.75, duration: 0.2 };

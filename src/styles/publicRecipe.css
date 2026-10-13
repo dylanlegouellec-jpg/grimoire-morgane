@@ -1,17 +1,16 @@
 /* ------------------------------------------------------------------ */
 /*  VUE PUBLIQUE D'UNE RECETTE — page racine autonome (voir              */
 /*  PublicRecipeView.jsx), délibérément DÉCOUPLÉE de .grimoire-app        */
-/*  (qui bascule en grille desktop via responsive.css.js) : cette page     */
+/*  (qui bascule en grille desktop via responsive.css) : cette page     */
 /*  n'a ni nav, ni en-tête, ni sidebar à faire tenir dans cette grille —     */
 /*  juste une seule carte recette centrée, quelle que soit la largeur.        */
 /* ------------------------------------------------------------------ */
-export const PUBLIC_RECIPE_CSS: string = `
 .public-recipe-page {
   font-family: 'EB Garamond', Georgia, serif;
   color: var(--ink);
   background: radial-gradient(ellipse at top left, var(--page-glow), transparent 60%), var(--parchment);
   min-height: 100vh;
-  /* .cookbook-page (voir cookbook.css.js) impose déjà sa propre largeur
+  /* .cookbook-page (voir cookbook.css) impose déjà sa propre largeur
      (max-width: 680px, margin: 0 auto) et se centre lui-même — cette
      enveloppe n'a qu'à laisser assez de place autour pour ça, plus un peu
      de padding vertical/horizontal pour ne pas coller aux bords sur mobile. */
@@ -27,4 +26,3 @@ export const PUBLIC_RECIPE_CSS: string = `
   font-style: italic;
   padding: 20px;
 }
-`;

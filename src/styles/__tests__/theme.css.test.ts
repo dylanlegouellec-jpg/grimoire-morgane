@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { THEME_CSS } from "../theme.css";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+const THEME_CSS = readFileSync(resolve(__dirname, "../theme.css"), "utf8");
 
 describe("page (CSS)", () => {
   it("désactive l'effet élastique de la page, qui laissait un grand vide au-dessus de l'en-tête sur iPhone", () => {

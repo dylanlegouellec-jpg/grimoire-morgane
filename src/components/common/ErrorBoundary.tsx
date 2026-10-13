@@ -1,6 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { RotateCcw } from "lucide-react";
-import { CSS } from "../../constants/styles.css";
 import { isChunkLoadError, reloadOnceForChunkError } from "../../utils/chunkReload";
 import { translateCurrent } from "../../utils/i18n";
 
@@ -75,13 +74,11 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
       );
     }
 
-    // Filet global : peut se déclencher avant même que le reste de l'app
-    // (donc <style>{CSS}</style>, normalement posé par AppShell/LoginScreen/
-    // LoadingScreen) n'ait eu la moindre chance de s'appliquer — l'inclure
-    // ici aussi garantit que cet écran reste lisible même dans ce cas.
+    // Filet global : le style de l'app est chargé dès le démarrage
+    // (src/styles/index.css, importé par main.tsx), donc cet écran reste mis
+    // en forme même si l'erreur survient avant tout le reste.
     return (
       <div className="loading-screen">
-        <style>{CSS}</style>
         <h1 className="login-title">Le Grimoire de Morgane</h1>
         <p className="hint" style={{ fontStyle: "normal", textAlign: "center" }}>
           {translateCurrent("modals.errorBoundary.globalMessage")}

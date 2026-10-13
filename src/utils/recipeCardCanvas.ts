@@ -79,7 +79,7 @@ const FONT_BODY_ITALIC = (size: number) => `italic 400 ${size}px 'EB Garamond', 
 
 // Charge les polices maison avant de mesurer/dessiner — sans ça, le tout
 // premier rendu (avant que le navigateur ait fini de charger les
-// webfonts importées dans styles.css.js) mesurerait avec une police de
+// webfonts importées dans styles/index.css) mesurerait avec une police de
 // repli puis dessinerait avec la vraie, décalant tout le texte.
 async function ensureFonts() {
   try {

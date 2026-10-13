@@ -3,15 +3,13 @@
 /*  impression), voir components/cookbook/CookbookDocument.jsx et          */
 /*  CookbookBuilderModal.jsx.                                               */
 /*                                                                             */
-/*  Même astuce que .print-sheet (responsive.css.js) mais étendue :            */
+/*  Même astuce que .print-sheet (responsive.css) mais étendue :            */
 /*  .cookbook-print-sheet reste caché à l'écran par défaut et n'apparaît         */
 /*  QUE dans le rendu d'impression (@media print) — SAUF quand le modificateur    */
 /*  .cookbook-print-sheet--preview est ajouté (bouton "Aperçu en direct"),         */
 /*  qui le rend visible en plein écran par-dessus l'éditeur, sans dupliquer         */
 /*  le balisage entre aperçu et impression réelle.                                 */
 /* ------------------------------------------------------------------ */
-
-export const COOKBOOK_CSS: string = `
 /* --- Éditeur (CookbookBuilderModal.jsx) --- */
 .cookbook-color-row { display: flex; gap: 10px; flex-wrap: wrap; padding: 4px 2px; }
 .cookbook-color-swatch {
@@ -374,4 +372,3 @@ export const COOKBOOK_CSS: string = `
     page-break-inside: avoid;
   }
 }
-`;
