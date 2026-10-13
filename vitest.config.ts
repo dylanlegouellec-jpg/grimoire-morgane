@@ -1,9 +1,9 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
-import { countGrimoireLoc } from "./scripts/countLoc";
-import { buildCodeManifest } from "./scripts/codeMap";
-import { getBuildInfo } from "./scripts/buildInfo";
+import { countGrimoireLoc } from "./scripts/countLoc.ts";
+import { buildCodeManifest } from "./scripts/codeMap.ts";
+import { getBuildInfo } from "./scripts/buildInfo.ts";
 
 /* ------------------------------------------------------------------ */
 /*  CONFIGURATION VITEST — séparée de vite.config.ts (qui porte le       */

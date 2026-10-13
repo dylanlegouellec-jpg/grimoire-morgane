@@ -2,9 +2,9 @@ import { fileURLToPath } from "node:url";
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
-import { countGrimoireLoc } from "./scripts/countLoc";
-import { buildCodeManifest } from "./scripts/codeMap";
-import { getBuildInfo } from "./scripts/buildInfo";
+import { countGrimoireLoc } from "./scripts/countLoc.ts";
+import { buildCodeManifest } from "./scripts/codeMap.ts";
+import { getBuildInfo } from "./scripts/buildInfo.ts";
 import type { WorkboxPlugin } from "workbox-core";
 
 // DishArt.tsx (handleImgError) retente une image en échec avec un
@@ -117,6 +117,11 @@ export default defineConfig({
     __GRIMOIRE_BUILD__: JSON.stringify({ commit: GRIMOIRE_BUILD.commit }),
   },
   build: {
+    // Minification du CSS par esbuild (comme avec Vite 5), pas Lightning CSS
+    // (défaut de Vite 8) : Lightning CSS supprimait le « backdrop-filter » de
+    // la barre de navigation (elle perdait son flou) et réécrivait d'autres
+    // règles. Le CSS produit par esbuild a été vérifié écran par écran.
+    cssMinify: "esbuild",
     rollupOptions: {
       output: { manualChunks: vendorChunk },
     },

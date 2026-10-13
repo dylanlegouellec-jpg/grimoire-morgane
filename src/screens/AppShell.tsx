@@ -8,7 +8,7 @@ import { useTranslation } from "../contexts/LanguageContext";
 import useTabNavigation from "../hooks/useTabNavigation";
 import useFilterSwipe from "../hooks/useFilterSwipe";
 
-import { NavButton } from "../components/common";
+import NavButton from "../components/common/NavButton";
 import ErrorBoundary from "../components/common/ErrorBoundary";
 import AppHeader from "./AppHeader";
 import TabBars from "./TabBars";
