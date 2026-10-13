@@ -71,10 +71,8 @@ function Disclosure({ className = "", header, children, defaultOpen = false }: D
   );
 }
 
-// Le type d'un fichier d'après son nom : ".css.ts" à part (ce sont les feuilles
-// de style, écrites en TypeScript), sinon l'extension.
+// Le type d'un fichier d'après son extension (.tsx, .ts, .css, .json…).
 function fileType(path: string): string {
-  if (path.endsWith(".css.ts")) return ".css.ts";
   const dot = path.lastIndexOf(".");
   return dot === -1 ? path : path.slice(dot);
 }
@@ -131,7 +129,7 @@ export default function CodeExplorer() {
     [files]
   );
   const totalLines = useMemo(() => files.reduce((sum, f) => sum + f.lines, 0), [files]);
-  // Lignes et fichiers par type (.tsx, .ts, .css.ts, .json…), du plus gros au plus petit.
+  // Lignes et fichiers par type (.tsx, .ts, .css, .json…), du plus gros au plus petit.
   const byType = useMemo(() => {
     const totals = new Map<string, { files: number; lines: number }>();
     for (const f of files) {

@@ -1,7 +1,6 @@
-export const A11Y_CSS: string = `
 /* ------------------------------------------------------------------ */
 /*  ACCESSIBILITÉ (audit du 13/10/2026) — chargé en DERNIER (voir        */
-/*  styles.css.ts) pour compléter les règles des composants sans les      */
+/*  styles/index.css) pour compléter les règles des composants sans les      */
 /*  réécrire.                                                             */
 /* ------------------------------------------------------------------ */
 
@@ -50,4 +49,3 @@ button, a, input, select, textarea, label, summary, [role="button"] {
 .row-drag-handle::after { inset: -7px -3px; }
 .fav-btn::after,
 .modal-close::after { inset: -7px; }
-`;

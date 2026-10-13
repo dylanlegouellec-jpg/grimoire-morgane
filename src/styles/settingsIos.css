@@ -1,12 +1,10 @@
 /* ------------------------------------------------------------------ */
 /*  RÉGLAGES — liste groupée façon iOS, contrôle segmenté */
-/*  Extrait de styles.css.js (lignes 1545-1617 d'origine), pour       */
+/*  Extrait de styles/index.css (lignes 1545-1617 d'origine), pour       */
 /*  raccourcir un fichier CSS-in-JS jusque-là monolithique (~1700       */
-/*  lignes) — voir styles.css.js pour l'assemblage final et l'ordre     */
+/*  lignes) — voir styles/index.css pour l'assemblage final et l'ordre     */
 /*  de concaténation (déterminant pour la cascade CSS entre fichiers).  */
 /* ------------------------------------------------------------------ */
-
-export const SETTINGS_IOS_CSS: string = `
 /* ------------------------------------------------------------------ */
 /*  RÉGLAGES — liste groupée façon iOS (Human Interface Guidelines)     */
 /*  Utilisé par SecretSettingsModal et ses sous-panneaux (Apparence &   */
@@ -144,4 +142,3 @@ export const SETTINGS_IOS_CSS: string = `
 }
 .modal-back:active { background: var(--modal-close-bg); }
 
-`;

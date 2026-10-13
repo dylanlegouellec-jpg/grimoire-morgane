@@ -1,4 +1,3 @@
-export const ONBOARDING_CSS: string = `
 /* ------------------------------------------------------------------ */
 /*  TUTORIEL GUIDÉ (ONBOARDING) — voir components/onboarding/            */
 /*  OnboardingTour.jsx pour la logique (mesure/positionnement du trou,    */
@@ -9,7 +8,7 @@ export const ONBOARDING_CSS: string = `
 /*  60 ; CookMode, 60) : le tuto ferme toujours la modale Réglages AVANT       */
 /*  de s'ouvrir (voir SecretSettingsModal.jsx, bouton "Revoir le tutoriel"),     */
 /*  mais reste au-dessus de son animation de sortie pendant le court instant       */
-/*  où les deux coexistent. Sous le toast (70, misc.css.js), qui doit rester         */
+/*  où les deux coexistent. Sous le toast (70, misc.css), qui doit rester         */
 /*  visible même pendant le tuto.                                                      */
 /* ------------------------------------------------------------------ */
 .onboarding-overlay {
@@ -43,7 +42,7 @@ export const ONBOARDING_CSS: string = `
   text-align: center;
   color: var(--ink);
 }
-/* Même décalage qu'Android pour .bottom-nav (voir modalsBase.css.js,
+/* Même décalage qu'Android pour .bottom-nav (voir modalsBase.css,
    data-platform="android") : la carte doit rester au-dessus du dock quel
    que soit son propre décalage bas sur cette plateforme précise. */
 :where(html[data-platform="android"]) .onboarding-card {
@@ -79,4 +78,3 @@ export const ONBOARDING_CSS: string = `
   font-family: 'EB Garamond', serif; font-style: italic; font-size: 0.9rem;
   color: var(--ink); text-decoration: underline; cursor: pointer;
 }
-`;

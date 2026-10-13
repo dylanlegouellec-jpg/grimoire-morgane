@@ -356,7 +356,7 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
           qu'un élément réellement mis en page par le navigateur), même
           technique que CookbookBuilderModal.jsx (--rendering). 800px de large
           pour rester dans le mode 2 colonnes de .cookbook-recipe-columns (voir
-          la @container query, cookbook.css.js) quelle que soit la largeur
+          la @container query, cookbook.css) quelle que soit la largeur
           réelle de l'écran visiteur. */}
       <div style={{ position: "fixed", left: -9999, top: 0, width: 800 }} aria-hidden="true">
         <div ref={pdfSheetRef}>

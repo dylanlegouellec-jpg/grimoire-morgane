@@ -6,7 +6,7 @@
 /*  recopiée une dizaine de fois, avec le risque qu'une copie dérive.          */
 /*  Seules les valeurs réellement partagées sont ici : un réglage propre à      */
 /*  un seul composant (ex. le ressort du tutoriel) reste dans son fichier.      */
-/*  Le CSS pur (@keyframes de styles/*.css.ts) ne peut pas importer ces          */
+/*  Le CSS pur (@keyframes de styles/*.css) ne peut pas importer ces             */
 /*  constantes — ses valeurs sont tenues à la main, avec un commentaire qui       */
 /*  renvoie ici quand elles doivent rester alignées.                               */
 /* ------------------------------------------------------------------ */
@@ -46,16 +46,16 @@ export const ENTER_STAGGER_MAX_INDEX = 6;
 
 // --- Changement d'onglet -----------------------------------------------
 // L'ancien contenu se fond (TAB_EXIT_DURATION_S), PUIS le nouveau entre
-// (animation d'entrée .tab-transition, shell.css.ts). Même mécanique et mêmes
+// (animation d'entrée .tab-transition, shell.css). Même mécanique et mêmes
 // durées que le changement de filtre des recettes. Le CSS ne peut pas importer
-// ces constantes : la durée de .tab-exit (shell.css.ts) est écrite à la main et
+// ces constantes : la durée de .tab-exit (shell.css) est écrite à la main et
 // doit rester égale à TAB_EXIT_DURATION_S.
 export const TAB_EXIT_DURATION_S = 0.16;
 export const TAB_EXIT_MS = Math.round(TAB_EXIT_DURATION_S * 1000) + 10;
 
 // --- Glissements entre vues -------------------------------------------
 // Bascule Foyer/Personnel (Planning, Courses) : même durée/courbe que le
-// glissement entre onglets principaux (.tab-transition, shell.css.ts).
+// glissement entre onglets principaux (.tab-transition, shell.css).
 export const SCOPE_SWITCH_DURATION_S = 0.24;
 export const SCOPE_SWITCH_SLIDE_PX = 14;
 

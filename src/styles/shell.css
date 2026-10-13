@@ -1,18 +1,16 @@
 /* ------------------------------------------------------------------ */
 /*  COQUILLE — en-tête, barre de recherche, filtres, zone de contenu */
-/*  Extrait de styles.css.js (lignes 136-288 d'origine), pour       */
+/*  Extrait de styles/index.css (lignes 136-288 d'origine), pour       */
 /*  raccourcir un fichier CSS-in-JS jusque-là monolithique (~1700       */
-/*  lignes) — voir styles.css.js pour l'assemblage final et l'ordre     */
+/*  lignes) — voir styles/index.css pour l'assemblage final et l'ordre     */
 /*  de concaténation (déterminant pour la cascade CSS entre fichiers).  */
 /* ------------------------------------------------------------------ */
-
-export const SHELL_CSS: string = `
 /* Wrapper neutre par défaut (portrait) : ses enfants (en-tête, recherche,
    filtres, nav basse) restent directement dans le flux normal de
    .grimoire-app, exactement comme avant son introduction — "display:
    contents" retire le wrapper lui-même de l'arbre de mise en page sans
    toucher au rendu de ses enfants. Redéfini en colonne flex indépendante
-   UNIQUEMENT en paysage (voir responsive.css.js, .app-sidebar) : c'est ce
+   UNIQUEMENT en paysage (voir responsive.css, .app-sidebar) : c'est ce
    mode-là qui a besoin d'une colonne dont la hauteur ne dépend jamais de
    .app-content. */
 .app-sidebar { display: contents; }
@@ -190,7 +188,7 @@ export const SHELL_CSS: string = `
 /* --- Pastille glissante — Framer Motion (layoutId, voir AppShell.jsx et
    RecipePickerModal.jsx) --------------------------------------------------
    Rendue à l'INTÉRIEUR du bouton actif (contrairement à .nav-pill,
-   modalsBase.css.js, même principe sinon) : "position: absolute; inset: 0"
+   modalsBase.css, même principe sinon) : "position: absolute; inset: 0"
    épouse tout le bouton, "z-index: -1" la garde sous son texte (contenu
    normal, non positionné) — confinée à CE bouton grâce à ".filter-pill"
    ci-dessus, déjà "position: relative; z-index: 1" (établit sa propre zone
@@ -211,7 +209,7 @@ export const SHELL_CSS: string = `
      déployé :
      "overflow-x: hidden" ci-dessus, SANS overflow-y assorti, ne laisse
      PAS overflow-y à "visible" comme on pourrait le croire (et comme le
-     déclarait — inutilement — .grimoire-app, voir theme.css.js) : la
+     déclarait — inutilement — .grimoire-app, voir theme.css) : la
      spec CSS force le calcul d'un axe "visible" à "auto" dès que l'AUTRE
      axe ne l'est pas, QUELLE QUE SOIT la valeur écrite ou son absence.
      Aucune manière d'y échapper en déclarant explicitement "visible" —
@@ -323,4 +321,3 @@ export const SHELL_CSS: string = `
 
 .hint { color: var(--ink-soft); font-style: italic; font-size: 0.92rem; margin: 4px 0 14px; }
 
-`;

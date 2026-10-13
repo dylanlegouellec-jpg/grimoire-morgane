@@ -59,7 +59,7 @@ interface OnboardingTourProps {
 /*  anticipé interne à un composant qui reste, lui, toujours monté).                */
 /*                                                                                    */
 /*  Un seul <motion.div> "trou" (voir .onboarding-hole plus bas, styles/               */
-/*  onboarding.css.js) sert de fond assombri ET de découpe à la fois, via                */
+/*  onboarding.css) sert de fond assombri ET de découpe à la fois, via                */
 /*  la technique du box-shadow géant (0 0 0 9999px) : au lieu de basculer                  */
 /*  entre "fond plein" (étape de bienvenue, aucune cible) et "fond troué"                    */
 /*  (étapes suivantes), l'étape de bienvenue anime juste ce même trou vers                     */
@@ -74,8 +74,8 @@ interface OnboardingTourProps {
 /*  getBoundingClientRect() à chaque changement d'étape — jamais une position                                  */
 /*  calculée à la main, pour rester juste quelle que soit la mise en page en                                     */
 /*  cours (dock flottant en portrait, colonne latérale en paysage, voir                                            */
-/*  responsive.css.js, ainsi que le décalage propre à Android/PWA, voir                                              */
-/*  modalsBase.css.js) : la même logique fonctionne sans aucune condition                                              */
+/*  responsive.css, ainsi que le décalage propre à Android/PWA, voir                                              */
+/*  modalsBase.css) : la même logique fonctionne sans aucune condition                                              */
 /*  supplémentaire sur ces trois variantes.                                                                               */
 /* ------------------------------------------------------------------ */
 export default function OnboardingTour({ currentTab, changeTab, onFinish, onStartRecipeTour }: OnboardingTourProps) {

@@ -1,0 +1,35 @@
+/* ------------------------------------------------------------------ */
+/*  STYLES DU GRIMOIRE — point d'entrée unique, importé une seule fois   */
+/*  par src/main.tsx. Vite rassemble ces fichiers, les minifie (les      */
+/*  commentaires ne partent pas en production) et les sert comme une      */
+/*  vraie feuille de style, mise en cache par le navigateur à part du     */
+/*  JavaScript.                                                           */
+/*                                                                        */
+/*  Avant : le même CSS vivait dans des chaînes de texte TypeScript        */
+/*  (src/constants/styles/*.css.ts), réinjectées par <style>{CSS}</style> */
+/*  à chaque changement d'écran (chargement, connexion, app) — environ     */
+/*  160 Ko relus et réappliqués à chaque fois.                              */
+/*                                                                        */
+/*  L'ORDRE ci-dessous est celui de l'ancienne concaténation, à garder :   */
+/*  deux règles de même spécificité se départagent par leur ordre          */
+/*  d'apparition (voir par ex. .modal.recipe-picker-modal dans             */
+/*  modalsBase.css). a11y.css reste en DERNIER : il complète les règles   */
+/*  des composants.                                                         */
+/* ------------------------------------------------------------------ */
+@import "./theme.css";
+@import "./shell.css";
+@import "./recipeCards.css";
+@import "./fridge.css";
+@import "./shopping.css";
+@import "./modalsBase.css";
+@import "./household.css";
+@import "./forms.css";
+@import "./misc.css";
+@import "./cookmode.css";
+@import "./responsive.css";
+@import "./settingsIos.css";
+@import "./planning.css";
+@import "./onboarding.css";
+@import "./cookbook.css";
+@import "./diagnostics.css";
+@import "./a11y.css";

@@ -79,7 +79,7 @@ export function storeTextSize(size: TextSize): void {
 }
 
 // Applique la taille de texte sur <html data-text-size="..."> — même
-// principe que applyTheme() dans utils/theme.js (styles.css.js cible
+// principe que applyTheme() dans utils/theme.js (styles/index.css cible
 // html[data-text-size="large"] pour agrandir le rem de base).
 export function applyTextSize(size: TextSize): void {
   if (typeof document !== "undefined" && document.documentElement) {
@@ -203,7 +203,7 @@ export function storeNavOpacity(value: number): void {
 
 // Exposé en variable CSS sur <html> (donc :root) plutôt qu'en style inline
 // sur la nav : la mise en page paysage redéfinit son fond de son côté (voir
-// responsive.css.js), le CSS reste ainsi seul juge de qui s'en sert. Même
+// responsive.css), le CSS reste ainsi seul juge de qui s'en sert. Même
 // principe qu'applyTheme()/applyTextSize(), qui posent un attribut.
 export function applyNavOpacity(value: number): void {
   if (typeof document !== "undefined" && document.documentElement) {

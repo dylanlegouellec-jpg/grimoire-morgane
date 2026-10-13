@@ -203,7 +203,7 @@ export default function RecipesView({
       </div>
       {/* whileTap plutôt qu'un ".fab:active" en CSS : pas d'effet d'enfoncement
           existant sur ce bouton (contrairement à .seal, qui a déjà le sien —
-          voir recipeCards.css.js — non repris ici pour ne pas y toucher). */}
+          voir recipeCards.css — non repris ici pour ne pas y toucher). */}
       <motion.button className="fab" aria-label={t("recipes.addRecipe")} whileTap={{ scale: 0.88 }} onClick={() => { triggerHaptic(15); onAddRequest(); }}>
         <Plus size={22} />
       </motion.button>

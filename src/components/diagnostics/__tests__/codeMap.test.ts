@@ -53,7 +53,7 @@ describe("descriptions du code", () => {
 
 describe("groupOfPath", () => {
   it("choisit le préfixe le plus long (styles > constantes, composants partagés > composants)", () => {
-    expect(groupOfPath("src/constants/styles/theme.css.ts")?.id).toBe("styles");
+    expect(groupOfPath("src/styles/theme.css")?.id).toBe("styles");
     expect(groupOfPath("src/constants/motion.ts")?.id).toBe("constants");
     expect(groupOfPath("src/components/common/Seal.tsx")?.id).toBe("comp-common");
   });

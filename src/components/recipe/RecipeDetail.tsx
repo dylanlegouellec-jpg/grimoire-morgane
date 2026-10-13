@@ -28,7 +28,7 @@ const ShareRecipeModal = lazy(() => import("../common/ShareRecipeModal"));
 
 // Décalage max (px) de la photo par rapport au défilement du panneau — voir
 // heroImageY plus bas. Doit rester sous la marge donnée à
-// .detail-hero-parallax (inset -12%, recipeCards.css.js) pour ne jamais
+// .detail-hero-parallax (inset -12%, recipeCards.css) pour ne jamais
 // découvrir de bord vide de l'image pendant le glissement.
 const HERO_PARALLAX_RANGE_PX = 24;
 
@@ -146,7 +146,7 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
   // 0 (photo en haut du panneau, position de départ) à 1 (photo entièrement
   // sortie par le haut) — tout l'effet se joue donc pendant que la photo
   // quitte l'écran, jamais après. N'a d'effet que dans la mise en page
-  // mobile à une colonne (voir responsive.css.js) : en paysage/desktop, la
+  // mobile à une colonne (voir responsive.css) : en paysage/desktop, la
   // colonne photo est fixe et ne défile pas, "scrollYProgress" reste à 0.
   const heroRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress: heroScrollProgress } = useScroll({

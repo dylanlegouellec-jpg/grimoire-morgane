@@ -22,7 +22,7 @@
          (qui reste possible), mais il empêche le zoom automatique, gênant,
          quand on touche un champ de saisie. Sur Android, il bloquerait le
          zoom : il n'y est donc pas mis. Le double appui qui zoomait est
-         neutralisé par touch-action sur les boutons (a11y.css.ts). -->
+         neutralisé par touch-action sur les boutons (a11y.css). -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script>
       (function () {
@@ -36,13 +36,13 @@
          racine, qui a été retiré pour éviter d'avoir deux manifestes
          divergents. -->
     <title>Le Grimoire de Morgane</title>
-    <!-- Chargées ici, PAS via @import dans theme.css.js (retiré) : un
+    <!-- Chargées ici, PAS via @import dans theme.css (retiré) : un
          @import doit être la ou les toute(s) première(s) règle(s) d'une
          feuille de style, et tant que la ressource importée n'a pas fini de
          charger, la spec CSS bloque l'application de TOUT LE RESTE de
          CETTE MÊME feuille — pas seulement des règles de police. Le CSS de
          toute l'app tient dans une seule chaîne concaténée injectée par
-         AppShell.jsx (voir styles.css.js), et THEME_CSS (qui portait cet
+         AppShell.jsx (voir styles/index.css), et THEME_CSS (qui portait cet
          @import) est le premier morceau concaténé : son import était donc
          littéralement la première ligne de CE bloc <style> unique. Le temps
          de l'aller-retour réseau vers Google Fonts (visible sur captures :
@@ -71,7 +71,7 @@
          constaté sur Chrome desktop et Android (jamais sur iOS Safari, qui
          implémente cette intersection différemment). Son seul rôle réel —
          bloquer le double-tap pour zoomer — est désormais assuré sur les
-         seuls éléments touchables (boutons, liens, champs : a11y.css.ts),
+         seuls éléments touchables (boutons, liens, champs : a11y.css),
          jamais à la racine. Retirée : chaque élément gère
          désormais son propre touch-action (voir .recipe-card notamment)
          sans restriction globale imposée par la racine.
@@ -79,7 +79,7 @@
          cohérent avec les autres conteneurs défilants de l'app, RETIRÉ : en
          mode portrait, c'est le document lui-même (html/body) qui défile —
          aucun conteneur borné à proximité (voir .grimoire-app, overflow-y:
-         visible volontaire, theme.css.js). "contain" semblait alors
+         visible volontaire, theme.css). "contain" semblait alors
          provoquer un rebond élastique répété au geste (tactile/pavé tactile)
          au lieu d'un simple défilement, sur Chrome desktop comme d'après les
          essais de l'utilisateur — la valeur par défaut ("auto") laisse le
@@ -87,7 +87,7 @@
          à la racine du document.
          min-height: 100dvh également RETIRÉ (redondant de toute façon avec
          min-height: 100vh déjà posé sur .grimoire-app/.loading-screen, voir
-         theme.css.js) : "dvh" n'a de sens que sur mobile (barre d'adresse qui
+         theme.css) : "dvh" n'a de sens que sur mobile (barre d'adresse qui
          apparaît/disparaît) et a des bugs de recalcul connus sur certains
          Chromium desktop — un traceur sur window.scrollTo() a confirmé que le
          rebond au geste sur la grille de recettes n'est déclenché par AUCUN
@@ -162,7 +162,7 @@
     </script>
     <!-- Écran de démarrage : peint par le navigateur dès le HTML reçu, donc
          avant tout JavaScript (sinon : page blanche le temps de charger le
-         bundle). Mêmes couleurs que --parchment/--gold (theme.css.ts), en
+         bundle). Mêmes couleurs que --parchment/--gold (theme.css), en
          clair et en sombre. Retiré en fondu par dismissSplash()
          (utils/splash.ts) dès que l'app a monté son premier écran. -->
     <style>

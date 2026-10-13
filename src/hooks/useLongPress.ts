@@ -24,7 +24,7 @@ interface PressEventLike {
 /*  défilement (qui doit l'annuler tout de suite).                        */
 /*                                                                        */
 /*  `pressState` ("idle" | "pressing" | "fired") pilote l'animation        */
-/*  d'enfoncement/rebond partagée (voir .press-anim dans styles.css.js) : */
+/*  d'enfoncement/rebond partagée (voir .press-anim dans styles/index.css) : */
 /*  scale(0.95) tant que l'appui est maintenu, puis un léger rebond au      */
 /*  moment où le geste se déclenche réellement.                            */
 /* ------------------------------------------------------------------ */
@@ -98,7 +98,7 @@ export default function useLongPress<T extends HTMLElement = HTMLElement>(onLong
     // À TEMPS — sur un appareil sous charge (CPU faible, thread principal
     // occupé), ces événements peuvent être livrés en retard, après même que
     // ce minuteur ait déjà déclenché l'appui long. `touch-action: pan-y`
-    // (voir recipeCards.css.js) laisse pourtant le navigateur défiler la
+    // (voir recipeCards.css) laisse pourtant le navigateur défiler la
     // page sur le thread de composition sans attendre JS — la page a donc
     // déjà réellement bougé même si `move()` n'a encore rien vu passer.
     // Comparer le défilement réel juste avant de déclencher rattrape ce

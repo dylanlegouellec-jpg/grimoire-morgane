@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { CSS } from "../../constants/styles.css";
-import { PUBLIC_RECIPE_CSS } from "../../constants/styles/publicRecipe.css";
+import "../../styles/publicRecipe.css";
 import { LanguageProvider, useTranslation } from "../../contexts/LanguageContext";
 import { getStoredLanguage } from "../../utils/localSettings";
 import { translateRecipeText } from "../../utils/recipeTranslation";
@@ -167,8 +166,6 @@ export default function PublicRecipeView({ recipe }: PublicRecipeViewProps) {
   return (
     <LanguageProvider language={getStoredLanguage()}>
       <div className="public-recipe-page">
-        <style>{CSS}</style>
-        <style>{PUBLIC_RECIPE_CSS}</style>
         {recipe ? <RecipeContent recipe={recipe} /> : <InvalidLink />}
       </div>
     </LanguageProvider>

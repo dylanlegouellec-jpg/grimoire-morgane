@@ -312,7 +312,7 @@ export default function PlanningView({ recipes, mealPlan, onAddMeal, onRemoveMea
           <motion.div
             key={scope}
             // Même display:flex column + gap que .planning-days (voir
-            // planning.css.js), SANS sa marge (déjà portée par le
+            // planning.css), SANS sa marge (déjà portée par le
             // conteneur parent ci-dessus, elle doublerait sinon) : ce
             // wrapper devient le nouveau parent direct des blocs
             // `.planning-day`, qui perdraient sinon leur espacement (`gap`

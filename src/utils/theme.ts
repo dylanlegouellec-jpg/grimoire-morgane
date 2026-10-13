@@ -35,7 +35,7 @@ export function resolveTheme(theme: ThemeSetting): ResolvedTheme {
   return systemPrefersDark() ? "dark" : "light";
 }
 
-// Même couleurs que --parchment (theme.css.js) pour chaque thème — copiées
+// Même couleurs que --parchment (theme.css) pour chaque thème — copiées
 // ici plutôt que lues depuis une variable CSS : au tout premier appel (au
 // démarrage), la feuille de style vient à peine d'être posée et une lecture
 // via getComputedStyle serait fragile (dépend de l'ordre de chargement),
@@ -63,7 +63,7 @@ function replaceThemeColorMeta(color: string): void {
   meta.replaceWith(fresh);
 }
 
-// Applique le thème résolu sur <html data-theme="..."> pour que styles.css.js
+// Applique le thème résolu sur <html data-theme="..."> pour que styles/index.css
 // puisse cibler [data-theme="dark"] partout où c'est nécessaire — et sur la
 // balise <meta name="theme-color"> (voir index.html), pour que la barre
 // d'état d'une PWA installée (iOS/Android) affiche la même teinte que le

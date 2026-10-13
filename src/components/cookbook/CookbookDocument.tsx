@@ -17,7 +17,7 @@ import type { NutriscoreGrade } from "../../utils/nutriscoreClient";
 /*  Un seul arbre JSX pour les deux usages (voir CookbookBuilderModal.jsx) : */
 /*  le parent bascule entre "aperçu à l'écran" et "impression réelle" via     */
 /*  une simple classe CSS ajoutée à l'enveloppe (.cookbook-print-sheet vs      */
-/*  .cookbook-print-sheet--preview, voir styles/cookbook.css.js), jamais en     */
+/*  .cookbook-print-sheet--preview, voir styles/cookbook.css), jamais en     */
 /*  dupliquant le balisage — même principe que .print-sheet dans                */
 /*  ShareRecipeModal.jsx, étendu ici à un document multi-recettes.                */
 /* ------------------------------------------------------------------ */

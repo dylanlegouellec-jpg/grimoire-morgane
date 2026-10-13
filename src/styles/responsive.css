@@ -1,12 +1,10 @@
 /* ------------------------------------------------------------------ */
 /*  IMPRESSION + MODE PAYSAGE (media queries) */
-/*  Extrait de styles.css.js (lignes 1405-1544 d'origine), pour       */
+/*  Extrait de styles/index.css (lignes 1405-1544 d'origine), pour       */
 /*  raccourcir un fichier CSS-in-JS jusque-là monolithique (~1700       */
-/*  lignes) — voir styles.css.js pour l'assemblage final et l'ordre     */
+/*  lignes) — voir styles/index.css pour l'assemblage final et l'ordre     */
 /*  de concaténation (déterminant pour la cascade CSS entre fichiers).  */
 /* ------------------------------------------------------------------ */
-
-export const RESPONSIVE_CSS: string = `
 /* ==================================================================== */
 /*  MODE PAYSAGE (mobiles/tablettes en rotation, écrans larges)         */
 /*  Sidebar fixe à gauche (titre, recherche, filtres, navigation) +     */
@@ -38,7 +36,7 @@ export const RESPONSIVE_CSS: string = `
     grid-template-areas: "sidebar content";
     align-content: start;
     min-height: 100vh;
-    /* Le padding-bottom: 130px hérité du mode portrait (theme.css.js,
+    /* Le padding-bottom: 130px hérité du mode portrait (theme.css,
        dégagement pour le dock flottant) n'a plus lieu d'être ici : la nav
        redevient un panneau intégré à la sidebar (voir .bottom-nav plus bas),
        jamais un dock superposé en bas d'écran. Sans ce reset, 130px de vide
@@ -60,7 +58,7 @@ export const RESPONSIVE_CSS: string = `
     min-height: 100vh;
   }
 
-  /* "border-bottom: none" : le filet du mode portrait (shell.css.js, séparateur
+  /* "border-bottom: none" : le filet du mode portrait (shell.css, séparateur
      sous le titre avant la barre de recherche) se retrouvait collé contre la
      barre de recherche juste en dessous — le padding du bas de l'en-tête
      (12px) et la marge du haut de .search-bar (0 en paysage) laissent bien
@@ -81,7 +79,7 @@ export const RESPONSIVE_CSS: string = `
 
   /* Navigation basse -> menu latéral vertical, sous les filtres. Redevient
      un panneau intégré à la sidebar plutôt qu'un dock flottant (voir
-     modalsBase.css.js) : "position: static" retire tout le traitement
+     modalsBase.css) : "position: static" retire tout le traitement
      "flottant" (fond verre/flou, bordure, ombre, coins en pilule) qui n'a
      de sens que posé PAR-DESSUS un contenu qui défile derrière — ici, la
      sidebar paysage est un panneau fixe de la mise en page elle-même, pas
@@ -99,7 +97,7 @@ export const RESPONSIVE_CSS: string = `
     width: 100%; padding: 10px 14px; border-radius: 10px;
     color: var(--ink-soft); font-size: 0.78rem;
   }
-  /* Pas de "background" ici (retiré) : .nav-pill (modalsBase.css.js,
+  /* Pas de "background" ici (retiré) : .nav-pill (modalsBase.css,
      Framer Motion) le fournit déjà, avec "border-radius: inherit" qui
      épouse ici le rectangle de .nav-btn ci-dessus plutôt que la pilule du
      dock flottant en portrait — aucune règle à dupliquer pour ce mode. */
@@ -121,12 +119,12 @@ export const RESPONSIVE_CSS: string = `
 
   /* --- Fiche recette : deux colonnes, sans long défilement vertical ---
      "min(84vh, calc(var(--app-vvh) - ...))", pas "84vh" seul : ce bloc
-     paysage (tablette/iPhone tourné) est concaténé APRÈS modalsBase.css.js
-     dans styles.css.js et cible le même élément que ".modal, .grimoire-page"
+     paysage (tablette/iPhone tourné) est concaténé APRÈS modalsBase.css
+     dans styles/index.css et cible le même élément que ".modal, .grimoire-page"
      (voir RecipeDetail.jsx, className="modal grimoire-page detail-scroll..."),
      donc gagne à l'ordre de la cascade — sans --app-vvh ici, ce bloc
      réintroduisait tel quel le bug de hauteur figée déjà corrigé une fois
-     dans modalsBase.css.js (dvh/vh ne suivent jamais le clavier virtuel). */
+     dans modalsBase.css (dvh/vh ne suivent jamais le clavier virtuel). */
   .detail-scroll { max-width: 900px; max-height: min(84vh, var(--app-vvh, 84vh)); }
   .detail-columns {
     display: grid;
@@ -156,4 +154,3 @@ export const RESPONSIVE_CSS: string = `
   .recipes-grid { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
 }
 
-`;

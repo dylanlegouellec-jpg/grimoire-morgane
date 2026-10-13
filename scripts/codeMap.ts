@@ -45,7 +45,7 @@ const ROOT_FILES = [
   "vercel.json",
 ];
 const CODE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx"];
-const LISTED_EXTENSIONS = new Set([...CODE_EXTENSIONS, ".html", ".json", ".md", ".sql"]);
+const LISTED_EXTENSIONS = new Set([...CODE_EXTENSIONS, ".css", ".html", ".json", ".md", ".sql"]);
 const IGNORED_DIRS = new Set(["node_modules", "dist"]);
 
 // Les tests (dossiers __tests__ / src/test, fichiers *.test.*) ne sont pas

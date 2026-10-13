@@ -1,12 +1,10 @@
 /* ------------------------------------------------------------------ */
 /*  FOYER (admin/profil/switch/ligne de réglage) + listes ingrédients/étapes */
-/*  Extrait de styles.css.js (lignes 901-1019 d'origine), pour       */
+/*  Extrait de styles/index.css (lignes 901-1019 d'origine), pour       */
 /*  raccourcir un fichier CSS-in-JS jusque-là monolithique (~1700       */
-/*  lignes) — voir styles.css.js pour l'assemblage final et l'ordre     */
+/*  lignes) — voir styles/index.css pour l'assemblage final et l'ordre     */
 /*  de concaténation (déterminant pour la cascade CSS entre fichiers).  */
 /* ------------------------------------------------------------------ */
-
-export const HOUSEHOLD_CSS: string = `
 /* --- Panneau admin du foyer (Réglages secrets) --- */
 .household-add-row { display: flex; gap: 8px; align-items: center; }
 .household-email-input {
@@ -126,4 +124,3 @@ export const HOUSEHOLD_CSS: string = `
 .ingredient-list li, .steps-list li { margin-bottom: 5px; font-size: 0.95rem; }
 .recipe-notes { font-style: italic; color: var(--ink-soft); font-size: 0.92rem; line-height: 1.5; margin: 0 0 12px; }
 
-`;

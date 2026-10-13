@@ -16,7 +16,8 @@ import { join, extname } from "node:path";
 // .js/.jsx (~2100 lignes), la quasi-totalité de l'app étant devenue
 // invisible pour lui du jour au lendemain malgré un vrai code qui, lui,
 // continuait de grossir normalement.
-const EXTENSIONS = new Set([".js", ".jsx", ".ts", ".tsx"]);
+// .css : les feuilles de style de src/styles (avant, du CSS dans des .ts).
+const EXTENSIONS = new Set([".js", ".jsx", ".ts", ".tsx", ".css"]);
 const IGNORE_DIRS = new Set(["node_modules", "dist"]);
 
 export function countGrimoireLoc(rootDir: string): number {
