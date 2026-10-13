@@ -1,25 +1,21 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, lazy, Suspense } from "react";
-import type { ChangeEvent, CSSProperties, Dispatch, SetStateAction } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useEffect, useRef, useState, lazy, Suspense } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { Heart, Search, Settings, Wand2 } from "lucide-react";
 
 import { FILTERS, TABS } from "../constants";
-import { SPRING_PILL, TAB_EXIT_MS } from "../constants/motion";
+import { SPRING_PILL } from "../constants/motion";
 import { triggerHaptic, nextId, copyText } from "../utils/helpers";
 import { getCachedProfile, getProfile } from "../utils/profile";
 import { useTranslation } from "../contexts/LanguageContext";
-import useExitThenSwitch from "../hooks/useExitThenSwitch";
+import useTabNavigation from "../hooks/useTabNavigation";
+import useFilterSwipe from "../hooks/useFilterSwipe";
 
 import { NavButton } from "../components/common";
 import ErrorBoundary from "../components/common/ErrorBoundary";
 import UpdateBanner from "../components/common/UpdateBanner";
 import { RecipesView, RecipeForm, RecipeDetail, CookMode } from "../components/recipe";
 import type { Recipe } from "../hooks/useRecipes";
-import type { MealPlanEntry } from "../hooks/useMealPlan";
-import type { ShoppingList } from "../hooks/useShoppingLists";
-import type { Household } from "../utils/auth";
-import type { ViewScope } from "../utils/localSettings";
-import type { ParsedRecipe } from "../utils/templateParser";
+import type { RecipesApi, PantryApi, MealPlanApi, ShoppingApi, SettingsApi, HouseholdApi, SyncApi } from "./appShellTypes";
 
 // Chargés à la demande (React.lazy), importés directement depuis leur
 // fichier — jamais depuis le barrel components/*/index.js, qui est déjà
@@ -55,132 +51,6 @@ const ViewLoadingFallback = () => (
     <Wand2 className="spin-wand" size={22} />
   </div>
 );
-
-export interface RecipesApi {
-  recipes: Recipe[];
-  saveRecipe: (recipe: Recipe) => void;
-  importRecipe: (parsed: ParsedRecipe, label: string) => void;
-  deleteRecipe: (id: string) => void;
-  toggleFavorite: (id: string) => void;
-  exportGrimoire: () => void;
-  handleImportFile: (e: ChangeEvent<HTMLInputElement>) => void;
-}
-
-export interface PantryApi {
-  pantry: string[];
-  setPantry: Dispatch<SetStateAction<string[]>>;
-  basics: string[];
-  moveBasicToVariable: (name: string) => void;
-  removeBasic: (name: string) => void;
-  resetPantry: () => void;
-}
-
-export interface MealPlanApi {
-  mealPlan: MealPlanEntry[];
-  addMealPlanEntry: (
-    date: string,
-    mealType: string,
-    recipeId: string | null,
-    customTitle: string | null,
-    scope: "household" | "personal",
-    userId: string | null,
-    courseType: string | null
-  ) => void;
-  removeMealPlanEntry: (id: string) => void;
-  removeMealPlanEntries: (ids: string[]) => void;
-  updateMealPlanEntry: (id: string, updates: Partial<MealPlanEntry>) => void;
-  reorderMealPlanEntries: (orderedIds: string[]) => void;
-  moveMealPlanSection: (entryIds: string[], newMealType: string) => void;
-}
-
-export interface ShoppingApi {
-  shoppingLists: ShoppingList[];
-  visibleShoppingLists: ShoppingList[];
-  activeListId: string | null;
-  openShoppingList: (id: string) => void;
-  shoppingScope: ViewScope;
-  setShoppingScope: (scope: string) => void;
-  createShoppingList: () => void;
-  renameShoppingList: (id: string | null, name: string) => void;
-  deleteShoppingList: (id: string) => void;
-  addManualItem: (name: string) => void;
-  toggleShoppingItem: (id: string) => void;
-  deleteShoppingItem: (id: string) => void;
-  adjustShoppingQty: (id: string, delta: number) => void;
-  setShoppingItemQty: (id: string, qty: number, unit: string) => void;
-  generateShoppingList: (recipes: Recipe[], ids: string[]) => void;
-  resetActiveList: () => void;
-}
-
-export interface SettingsApi {
-  theme: string;
-  setTheme: (value: string) => void;
-  pressDuration: number;
-  setPressDuration: (value: number) => void;
-  showNutriscore: boolean;
-  setShowNutriscore: (value: boolean) => void;
-  navOpacity: number;
-  setNavOpacity: (value: number) => void;
-  heroTreatment: string;
-  setHeroTreatment: (value: string) => void;
-  iconStyle: string;
-  setIconStyle: (value: string) => void;
-  textSize: string;
-  setTextSize: (value: string) => void;
-  language: string;
-  setLanguage: (value: string) => void;
-  hasCompletedOnboarding: boolean;
-  setHasCompletedOnboarding: (value: boolean) => void;
-  onboardingResolved: boolean;
-}
-
-export interface HouseholdApiUser {
-  id: string;
-  email?: string;
-}
-
-export interface HouseholdMemberLike {
-  user_id: string;
-  role: string;
-  display_name?: string;
-  email?: string;
-  avatar_url?: string;
-}
-
-export interface HouseholdApi {
-  user: HouseholdApiUser | null;
-  householdId: string | null;
-  households: Household[];
-  onSwitchHousehold: (id: string) => void;
-  onCreateHousehold: (name: string) => Promise<void>;
-  onRenameHousehold: (id: string, name: string) => Promise<void>;
-  onDeleteHousehold: (id: string) => Promise<void>;
-  onRequestJoinHousehold: (id: string) => Promise<void>;
-  onGetPendingHouseholdRequests: (householdId: string) => Promise<HouseholdMemberLike[]>;
-  onApproveHouseholdMember: (householdId: string | null, userId: string) => Promise<void>;
-  onRejectHouseholdMember: (householdId: string | null, userId: string) => Promise<void>;
-  onRefreshHouseholds?: () => void;
-  signOut: () => void;
-}
-
-// Recette décodée depuis un lien/code reçu (voir GrimoireDeMorgane.jsx) —
-// aussi peu fiable que PublicRecipe (PublicRecipeView.tsx) : jamais
-// revalidée, seul `title` est garanti pour l'affichage de confirmation
-// (ImportConfirmModal).
-export interface PendingImportRecipe {
-  title: string;
-  [key: string]: unknown;
-}
-
-export interface SyncApi {
-  offlineQueueSize: number;
-  connectionStatus: string;
-  onRetryConnection?: () => void;
-  pendingImport: PendingImportRecipe | null;
-  setPendingImport: Dispatch<SetStateAction<PendingImportRecipe | null>>;
-  pendingHouseholdJoin: string | null;
-  setPendingHouseholdJoin: Dispatch<SetStateAction<string | null>>;
-}
 
 interface AppShellProps {
   recipesApi: RecipesApi;
@@ -286,66 +156,10 @@ export default function AppShell({
     setPendingHouseholdJoin,
   } = syncApi;
 
-  // `tab` : l'onglet DEMANDÉ (la pastille de la barre du bas glisse tout de
-  // suite). `shownTab` : l'onglet réellement affiché, en retard de TAB_EXIT_MS
-  // pour laisser le contenu actuel se fondre avant que le nouveau n'entre
-  // (voir hooks/useExitThenSwitch.ts, et .tab-exit dans shell.css) — même
-  // bascule en deux temps que les filtres de recettes. Tout ce qui s'affiche
-  // DANS la page (barre de recherche, filtres, contenu de l'onglet) suit
-  // `shownTab` ; seuls la barre de navigation, le tutoriel et le geste de
-  // balayage restent sur `tab`.
-  const [tab, setTab] = useState("recettes");
-  const prefersReducedMotion = useReducedMotion();
-  const { shown: shownTab, exiting: tabExiting } = useExitThenSwitch(tab, TAB_EXIT_MS, Boolean(prefersReducedMotion));
-  // Remet la page en haut À LA BASCULE (le contenu est alors déjà fondu, donc
-  // le saut ne se voit pas) : sinon, depuis un onglet défilé vers un onglet
-  // plus court, le navigateur recale lui-même le défilement d'un coup, en
-  // plein milieu de la transition (mesuré : 600 -> 203 px). En paysage, c'est
-  // .app-content qui défile, pas la page. Pas au premier montage.
-  const tabScrollMountedRef = useRef(false);
-  useLayoutEffect(() => {
-    if (!tabScrollMountedRef.current) {
-      tabScrollMountedRef.current = true;
-      return;
-    }
-    window.scrollTo(0, 0);
-    if (appContentRef.current) appContentRef.current.scrollTop = 0;
-  }, [shownTab]);
-  // Précharge les trois onglets chargés à la demande (Plan, Frigo, Courses)
-  // peu après le lancement, hors du chemin critique : sans ça, le premier
-  // changement d'onglet montrait la baguette de chargement entre la sortie du
-  // contenu actuel et l'entrée du nouveau, le temps de récupérer son chunk. Un
-  // chunk déjà importé ici est servi tout de suite à React.lazy. Aucun octet
-  // de plus à télécharger au final : la PWA précache déjà tous les chunks.
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      void import("../components/planning/PlanningView");
-      void import("../components/fridge/FridgeView");
-      void import("../components/shopping/ShoppingView");
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, []);
-  // Sens du glissement entre onglets (voir .tab-transition et --tab-slide, shell.css) —
-  // "avant" quand on va vers un onglet plus à droite dans la nav (Recettes
-  // -> Plan -> Mon Frigo -> Courses), "arrière" sinon. Recalculé à CHAQUE
-  // changement d'onglet (bouton de nav ou redirection programmatique comme
-  // "Envoyer vers la liste de courses" depuis Planification), jamais figé
-  // une fois pour toutes : `changeTab` est le seul point d'entrée qui
-  // touche `tab`, pour que ce calcul ne puisse pas être oublié à un
-  // endroit et pas un autre.
-  const [tabDirection, setTabDirection] = useState<"forward" | "backward">("forward");
-  // Décalage de départ de l'entrée (voir --tab-slide, shell.css), commun au
-  // contenu de l'onglet ET à ses barres de recherche/filtres.
-  const tabSlideStyle = { "--tab-slide": tabDirection === "forward" ? "18px" : "-18px" } as CSSProperties;
-  const changeTab = useCallback((nextKey: string) => {
-    setTab((prevKey) => {
-      if (nextKey === prevKey) return prevKey;
-      const prevIndex = TABS.findIndex((tb) => tb.key === prevKey);
-      const nextIndex = TABS.findIndex((tb) => tb.key === nextKey);
-      setTabDirection(nextIndex >= prevIndex ? "forward" : "backward");
-      return nextKey;
-    });
-  }, []);
+  // Navigation entre onglets (onglet demandé / affiché, sens du glissement,
+  // retour en haut à la bascule) : voir hooks/useTabNavigation.ts.
+  const appContentRef = useRef<HTMLElement | null>(null);
+  const { tab, shownTab, tabExiting, tabSlideStyle, changeTab } = useTabNavigation(appContentRef);
   const [filter, setFilter] = useState("tout");
   const [search, setSearch] = useState("");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
@@ -433,8 +247,6 @@ export default function AppShell({
   // appel — ce composant n'a pas à connaître ce détail de stockage.
   const resetOnboarding = () => setHasCompletedOnboarding(false);
 
-  const touchStart = useRef<{ x: number; y: number; scrollY: number } | null>(null);
-  const appContentRef = useRef<HTMLElement | null>(null);
 
   // Photo de profil affichée dans le bouton de réglages de l'en-tête —
   // cache-first (voir utils/profile.js) : s'affiche instantanément avec la
@@ -479,83 +291,9 @@ export default function AppShell({
 
   const filterIndex = FILTERS.findIndex((f) => f.key === filter);
 
-  // Swipe horizontal : bascule les filtres Recettes ("Tout"/"Salé"/"Sucré").
-  //
-  // Avant : l'axe était verrouillé DÉFINITIVEMENT dès les 10 premiers
-  // pixels de mouvement, sur un simple `dx > dy` — sans marge, et sans
-  // jamais être reconsidéré ensuite. Un balayage vertical (scroll) qui
-  // commence avec ne serait-ce qu'un tout petit bruit horizontal (courant
-  // avec un pavé tactile Windows à deux doigts, ou un vrai doigt qui n'est
-  // jamais parfaitement vertical) se retrouvait alors verrouillé "x" pour
-  // toute la suite du geste, même s'il devenait ensuite clairement
-  // vertical. En fin de geste, `Math.abs(dx) >= 55` pouvait alors être
-  // atteint par la seule dérive horizontale accumulée sur un long
-  // défilement, déclenchant setFilter() — qui remet le défilement à zéro
-  // (voir RecipesView.jsx, l'effet sur [filter, favoritesOnly]). Posé sur
-  // .app-content (voir plus bas), donc uniquement quand le geste commence
-  // au-dessus de la grille elle-même — confirmé : le défilement au geste
-  // fonctionnait normalement dès que le pointeur était en dehors de cette
-  // zone. En paysage, ce même faux positif passait inaperçu : .app-content
-  // y est un vrai conteneur de scroll (voir responsive.css), donc
-  // window.scrollTo(0,0) n'y avait aucun effet visible, contrairement au
-  // mode portrait où c'est le document entier qui défile.
-  //
-  // Plus de verrouillage précoce : la décision ne se prend qu'à la fin du
-  // geste, sur le déplacement cumulé RÉEL depuis le début (pas un
-  // échantillon des 10 premiers pixels), avec une marge nette (pas juste
-  // "plus horizontal que vertical", mais NETTEMENT plus). Filet de sécurité
-  // supplémentaire : si le défilement a par ailleurs réellement bougé
-  // pendant ce geste, ce n'était de toute façon pas une intention de
-  // changer de filtre, quel que soit le dx mesuré (même principe déjà
-  // appliqué à l'appui long, voir hooks/useLongPress.js).
-  // Toujours les dernières valeurs, sans jamais réattacher les écouteurs
-  // natifs ci-dessous (même principe que useFocusTrap.js/useLongPress.js).
-  const tabRef = useRef(tab);
-  tabRef.current = tab;
-  const filterIndexRef = useRef(filterIndex);
-  filterIndexRef.current = filterIndex;
-
-  // Attachés nativement en { passive: true } plutôt que via les props JSX
-  // onTouchStart/onTouchEnd — repéré dans Chrome DevTools (Rendering >
-  // "Scrolling performance issues") : ce geste était posé sur .app-content,
-  // le conteneur COMMUN à tous les onglets (Recettes, Frigo...), et
-  // apparaissait comme cause potentielle de "main thread scroll repaint" /
-  // "touch event listener" sur chacun d'eux, pas seulement la grille de
-  // recettes. Ce hook n'appelle jamais preventDefault() sur un événement
-  // tactile, donc { passive: true } est toujours sûr ici — voir
-  // hooks/useLongPress.js, qui a reçu le même traitement.
-  useEffect(() => {
-    const node = appContentRef.current;
-    if (!node) return undefined;
-    const handleTouchStart = (e: TouchEvent) => {
-      touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, scrollY: window.scrollY };
-    };
-    const handleTouchEnd = (e: TouchEvent) => {
-      const start = touchStart.current;
-      touchStart.current = null;
-      if (start == null || tabRef.current !== "recettes") return;
-      const dx = e.changedTouches[0].clientX - start.x;
-      const dy = e.changedTouches[0].clientY - start.y;
-      if (Math.abs(dx) < 55) return;
-      if (Math.abs(dx) < Math.abs(dy) * 1.5) return;
-      if (Math.abs(window.scrollY - start.scrollY) > 5) return;
-      const next = dx < 0
-        ? Math.min(filterIndexRef.current + 1, FILTERS.length - 1)
-        : Math.max(filterIndexRef.current - 1, 0);
-      setFilter(FILTERS[next].key);
-    };
-    const opts = { passive: true };
-    node.addEventListener("touchstart", handleTouchStart, opts);
-    node.addEventListener("touchend", handleTouchEnd, opts);
-    // Le DOM du 3e argument de removeEventListener (EventListenerOptions)
-    // est plus strict que celui d'addEventListener (AddEventListenerOptions,
-    // qui seul déclare `passive`) — même repli que useLongPress.ts.
-    const removeOpts = opts as unknown as EventListenerOptions;
-    return () => {
-      node.removeEventListener("touchstart", handleTouchStart, removeOpts);
-      node.removeEventListener("touchend", handleTouchEnd, removeOpts);
-    };
-  }, [setFilter]);
+  // Balayage horizontal sur la grille : passe au filtre voisin (voir
+  // hooks/useFilterSwipe.ts).
+  useFilterSwipe(appContentRef, tab, filterIndex, setFilter);
 
   // Arrivée de l'app au lancement (voir .app-intro, shell.css) : classe
   // posée au premier rendu puis retirée une fois les animations terminées
