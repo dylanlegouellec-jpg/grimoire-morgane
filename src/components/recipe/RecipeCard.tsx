@@ -56,7 +56,7 @@ function RecipeCard({
   // Le repli local ne sert que pour les recettes qui n'ont pas encore ce
   // champ (démo, recettes créées avant l'ajout de la colonne).
   const nutri = (recipe.nutriscoreGrade || estimateNutriscoreLocal(recipe.ingredients, recipe.category)) as NutriscoreGrade;
-  const { language, dict } = useTranslation();
+  const { language, dict, t } = useTranslation();
   const [showOptions, setShowOptions] = useState(false);
 
   // Même appui long, au geste près, que celui des membres du foyer, de la
@@ -224,7 +224,7 @@ function RecipeCard({
                 onToggleFavorite(recipe.id);
                 triggerHaptic(15);
               }}
-              aria-label={recipe.favorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+              aria-label={t(recipe.favorite ? "recipes.removeFavorite" : "recipes.addFavorite")}
               aria-pressed={recipe.favorite}
             >
               <Heart size={16} fill={recipe.favorite ? "currentColor" : "none"} />

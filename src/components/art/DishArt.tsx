@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ILLUSTRATIONS, resolveIllustrationKey } from "./illustrations";
+import { translateCurrent } from "../../utils/i18n";
 
 let dishArtCounter = 0;
 
@@ -160,7 +161,7 @@ export default function DishArt({ recipe }: DishArtProps) {
           // normalement une carte de recette pour la première fois.
           crossOrigin="anonymous"
           src={imgSrc ?? undefined}
-          alt={recipe.title || "Illustration de la recette"}
+          alt={recipe.title || translateCurrent("recipeUi.detail.illustrationAlt")}
           className="illus-photo"
           draggable="false"
           loading="lazy"

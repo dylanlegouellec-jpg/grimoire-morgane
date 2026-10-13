@@ -3,6 +3,7 @@ import { Wand2, X } from "lucide-react";
 import { motion } from "motion/react";
 import { parseRecipeTemplate, TEMPLATE_PLACEHOLDER } from "../../utils/templateParser";
 import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
+import { useTranslation } from "../../contexts/LanguageContext";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
@@ -15,6 +16,7 @@ interface TextTemplateImportModalProps {
 }
 
 export default function TextTemplateImportModal({ onClose, onImport }: TextTemplateImportModalProps) {
+  const { t } = useTranslation();
   useBodyScrollLock(true);
   const modalRef = useFocusTrap<HTMLDivElement>(onClose);
   const sheet = useDismissibleSheet(onClose, { scrollRef: modalRef });
@@ -24,7 +26,7 @@ export default function TextTemplateImportModal({ onClose, onImport }: TextTempl
   const submit = () => {
     const parsed = parseRecipeTemplate(text);
     if (!parsed) {
-      setError("Impossible de lire cette fiche — vérifie qu'elle commence bien par \"Recette de : …\".");
+      setError(t("modals.textTemplate.parseError"));
       return;
     }
     onImport(parsed);
@@ -42,14 +44,11 @@ export default function TextTemplateImportModal({ onClose, onImport }: TextTempl
         {...MODAL_SHEET_MOTION}
         {...sheet.panHandlers}
       >
-        <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
-        <h2 className="dropcap-title">Importer ma fiche texte</h2>
+        <button className="modal-close" onClick={onClose} aria-label={t("common.close")}><X size={20} /></button>
+        <h2 className="dropcap-title">{t("modals.textTemplate.title")}</h2>
         <Flourish />
         <p className="hint" style={{ fontStyle: "normal" }}>
-          Colle ta fiche telle quelle, avec les intitulés "Recette de", "Nombre de parts", "Temps de préparation",
-          "Matériel spécifique", "Ingrédients", "Préparation" et "Remarques". Dans les ingrédients ou la préparation,
-          une ligne comme "Biscuit madeleine :" ou "Pour l'insert :" devient automatiquement un titre de sous-section
-          plutôt qu'un ingrédient ou une étape.
+          {t("modals.textTemplate.hint")}
         </p>
         <textarea
           rows={12}
@@ -59,7 +58,7 @@ export default function TextTemplateImportModal({ onClose, onImport }: TextTempl
           placeholder={TEMPLATE_PLACEHOLDER}
         />
         {error && <p className="import-error">{error}</p>}
-        <Seal tone="gold" onClick={submit}><Wand2 size={16} /> Analyser et importer</Seal>
+        <Seal tone="gold" onClick={submit}><Wand2 size={16} /> {t("modals.textTemplate.submit")}</Seal>
       </motion.div>
     </motion.div>
   );

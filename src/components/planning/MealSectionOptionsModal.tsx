@@ -75,7 +75,7 @@ export default function MealSectionOptionsModal({ mealLabel, reorderMode, onTogg
         {...MODAL_SHEET_MOTION}
         {...sheet.panHandlers}
       >
-        <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
+        <button className="modal-close" onClick={onClose} aria-label={t("common.close")}><X size={20} /></button>
         <h2 className="dropcap-title">{mealLabel}</h2>
         <Flourish />
 

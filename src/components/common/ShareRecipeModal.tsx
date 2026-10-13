@@ -290,7 +290,7 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
           onClick={(e) => e.stopPropagation()}
           {...MODAL_SHEET_MOTION}
         >
-          <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
+          <button className="modal-close" onClick={onClose} aria-label={t("common.close")}><X size={20} /></button>
           <h2 className="dropcap-title">{t("share.title", { title: translateRecipeText(recipe.title, language) })}</h2>
           <Flourish />
 

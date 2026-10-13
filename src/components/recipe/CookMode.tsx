@@ -104,7 +104,7 @@ export default function CookMode({ recipe, onClose, pressDuration = 750 }: CookM
   return (
     <div className="cookmode-backdrop">
       <div className="cookmode cookmode-list">
-        <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={22} /></button>
+        <button className="modal-close" onClick={onClose} aria-label={t("common.close")}><X size={22} /></button>
         <div className="cookmode-progress">{t("cookMode.stepsDone", { done: totalDone, total: totalSteps })}</div>
         <h2 className="dropcap-title">{translateRecipeText(recipe.title, language)}</h2>
 
@@ -134,11 +134,11 @@ export default function CookMode({ recipe, onClose, pressDuration = 750 }: CookM
 
         {groups.length > 1 && (
           <div className="group-nav">
-            <button type="button" className="group-nav-btn" onClick={goPrevGroup} disabled={groupIndex === 0}>◀</button>
+            <button type="button" className="group-nav-btn" onClick={goPrevGroup} disabled={groupIndex === 0} aria-label={t("cookMode.previousGroup")}>◀</button>
             <span className="group-nav-label">
               {currentGroup.title ? translateRecipeText(currentGroup.title, language) : t("cookMode.group", { index: groupIndex + 1 })} <em>({groupIndex + 1}/{groups.length})</em>
             </span>
-            <button type="button" className="group-nav-btn" onClick={goNextGroup} disabled={groupIndex === groups.length - 1}>▶</button>
+            <button type="button" className="group-nav-btn" onClick={goNextGroup} disabled={groupIndex === groups.length - 1} aria-label={t("cookMode.nextGroup")}>▶</button>
           </div>
         )}
         {groups.length === 1 && currentGroup.title && (

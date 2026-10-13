@@ -3,6 +3,7 @@ import { AlertTriangle, Check, Trash2, X } from "lucide-react";
 import { motion } from "motion/react";
 import { triggerHaptic } from "../../utils/helpers";
 import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
+import { useTranslation } from "../../contexts/LanguageContext";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
@@ -24,6 +25,7 @@ interface HouseholdOptionsModalProps {
 /*  même esprit que RecipeOptionsModal pour les recettes.               */
 /* ------------------------------------------------------------------ */
 export default function HouseholdOptionsModal({ household, onClose, onRename, onDelete, isOnlyHousehold }: HouseholdOptionsModalProps) {
+  const { t } = useTranslation();
   const [name, setName] = useState(household.name);
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -44,7 +46,7 @@ export default function HouseholdOptionsModal({ household, onClose, onRename, on
       onClose();
     } catch (err) {
       console.error(err);
-      setError("Échec du renommage.");
+      setError(t("modals.householdOptions.renameFailed"));
     } finally {
       setSaving(false);
     }
@@ -59,7 +61,7 @@ export default function HouseholdOptionsModal({ household, onClose, onRename, on
       onClose();
     } catch (err) {
       console.error(err);
-      setError((err instanceof Error && err.message) || "Échec de la suppression.");
+      setError((err instanceof Error && err.message) || t("modals.householdOptions.deleteFailed"));
       setDeleting(false);
     }
   };
@@ -75,7 +77,7 @@ export default function HouseholdOptionsModal({ household, onClose, onRename, on
         {...MODAL_SHEET_MOTION}
         {...sheet.panHandlers}
       >
-        <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
+        <button className="modal-close" onClick={onClose} aria-label={t("common.close")}><X size={20} /></button>
         <h2 className="dropcap-title">{household.name}</h2>
         <Flourish />
 
@@ -89,7 +91,7 @@ export default function HouseholdOptionsModal({ household, onClose, onRename, on
             autoFocus
           />
           <button type="button" className="seal seal-gold" onClick={handleRename} disabled={saving || !name.trim()}>
-            <Check size={16} /> {saving ? "…" : "Renommer"}
+            <Check size={16} /> {saving ? "…" : t("modals.householdOptions.rename")}
           </button>
         </div>
 
@@ -102,17 +104,17 @@ export default function HouseholdOptionsModal({ household, onClose, onRename, on
               disabled={isOnlyHousehold}
             >
               <Trash2 size={18} />
-              <span>{isOnlyHousehold ? "Impossible de supprimer ton unique foyer" : "Supprimer ce foyer"}</span>
+              <span>{isOnlyHousehold ? t("modals.householdOptions.cannotDeleteOnly") : t("modals.householdOptions.delete")}</span>
             </button>
           ) : (
             <>
               <p className="hint recipe-options-error" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <AlertTriangle size={16} /> Toutes les recettes, listes et données de ce foyer seront supprimées définitivement.
+                <AlertTriangle size={16} /> {t("modals.householdOptions.deleteWarning")}
               </p>
               <div className="cookmode-nav">
-                <Seal tone="gold" onClick={() => setConfirmingDelete(false)}>Annuler</Seal>
+                <Seal tone="gold" onClick={() => setConfirmingDelete(false)}>{t("common.cancel")}</Seal>
                 <Seal tone="gold" onClick={handleDelete} haptic={30}>
-                  {deleting ? "Suppression…" : "Confirmer la suppression"}
+                  {deleting ? t("modals.householdOptions.deleting") : t("modals.householdOptions.confirmDelete")}
                 </Seal>
               </div>
             </>

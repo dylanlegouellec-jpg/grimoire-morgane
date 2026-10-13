@@ -6,6 +6,8 @@
 /*  recopier soi-même dans une recette (voir RecipeLinkImportModal.jsx).      */
 /* ------------------------------------------------------------------ */
 
+import { translateCurrent } from "./i18n";
+
 const ENDPOINT = "/api/extract-recipe-from-link";
 const TIMEOUT_MS = 12000;
 
@@ -33,14 +35,14 @@ export async function fetchCaptionFromLink(url: string): Promise<ExtractedCaptio
       TIMEOUT_MS
     );
   } catch {
-    throw new Error("Impossible de contacter le serveur — vérifie ta connexion et réessaie.");
+    throw new Error(translateCurrent("messages.linkImport.unreachable"));
   }
   const data = await res.json().catch(() => null);
   if (!res.ok) {
-    throw new Error((data && data.error) || `Erreur serveur (${res.status})`);
+    throw new Error((data && data.error) || translateCurrent("messages.linkImport.serverError", { status: res.status }));
   }
   if (!data || !data.caption) {
-    throw new Error("Réponse invalide du serveur.");
+    throw new Error(translateCurrent("messages.linkImport.invalidResponse"));
   }
   return data;
 }

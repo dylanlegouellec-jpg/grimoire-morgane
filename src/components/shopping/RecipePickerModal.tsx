@@ -10,6 +10,7 @@ import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
 import Flourish from "../common/Flourish";
 import Seal from "../common/Seal";
+import { useTranslation } from "../../contexts/LanguageContext";
 import type { Recipe } from "../../hooks/useRecipes";
 
 interface RecipePickerModalProps {
@@ -26,6 +27,7 @@ interface RecipePickerModalProps {
 /*  hooks/useShoppingLists.js.                                             */
 /* ------------------------------------------------------------------ */
 export default function RecipePickerModal({ recipes, onGenerate, onClose }: RecipePickerModalProps) {
+  const { t, dict } = useTranslation();
   useBodyScrollLock(true);
   const modalRef = useFocusTrap<HTMLDivElement>(onClose);
   // scrollRef pointe sur .recipe-picker-body (le corps défilant), PAS sur
@@ -73,8 +75,8 @@ export default function RecipePickerModal({ recipes, onGenerate, onClose }: Reci
             bouton "Générer la liste" est son dernier enfant, en sticky
             flottant (voir plus bas), pas un pied de page séparé. */}
         <div className="recipe-picker-header">
-          <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
-          <h2 className="dropcap-title">Générer à partir de recettes</h2>
+          <button className="modal-close" onClick={onClose} aria-label={t("common.close")}><X size={20} /></button>
+          <h2 className="dropcap-title">{t("shopping.generateFromRecipes")}</h2>
           <Flourish />
 
           <div className="filter-bar recipe-picker-filters">
@@ -99,28 +101,28 @@ export default function RecipePickerModal({ recipes, onGenerate, onClose }: Reci
                       transition={SPRING_PILL}
                     />
                   )}
-                  {f.label}
+                  {t(`filters.${f.key}`)}
                 </button>
               );
             })}
           </div>
 
           <div className="shopping-actions">
-            <button type="button" className="link-btn" onClick={selectAll}><CheckSquare size={14} /> Tout cocher</button>
-            <button type="button" className="link-btn" onClick={selectNone}><Square size={14} /> Tout décocher</button>
+            <button type="button" className="link-btn" onClick={selectAll}><CheckSquare size={14} /> {t("ui.shopping.checkAll")}</button>
+            <button type="button" className="link-btn" onClick={selectNone}><Square size={14} /> {t("ui.shopping.uncheckAll")}</button>
           </div>
         </div>
 
         <div className="recipe-picker-body" ref={bodyRef}>
           {filtered.length === 0 ? (
-            <p className="hint">Aucune recette dans cette catégorie.</p>
+            <p className="hint">{t("ui.shopping.noRecipeInCategory")}</p>
           ) : (
             <div className="recipe-select-list">
               {filtered.map((r) => (
                 <label className="recipe-select-row card" key={r.id}>
                   <input type="checkbox" checked={selected.includes(r.id)} onChange={() => toggleRecipe(r.id)} />
                   <span>{r.title}</span>
-                  <span className={`chip ${categoryClass(r)}`}>{categoryLabel(r)}</span>
+                  <span className={`chip ${categoryClass(r)}`}>{(dict.labels as Record<string, string>)[categoryLabel(r)] || categoryLabel(r)}</span>
                 </label>
               ))}
             </div>
@@ -138,7 +140,7 @@ export default function RecipePickerModal({ recipes, onGenerate, onClose }: Reci
           {selected.length > 0 && (
             <div className="recipe-picker-floating-footer">
               <Seal tone="gold" onClick={handleGenerate}>
-                <ShoppingBasket size={16} /> Générer la liste ({selected.length} recette{selected.length > 1 ? "s" : ""})
+                <ShoppingBasket size={16} /> {t("ui.shopping.generateList", { count: selected.length, plural: selected.length > 1 ? "s" : "" })}
               </Seal>
             </div>
           )}

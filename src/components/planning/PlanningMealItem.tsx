@@ -4,6 +4,7 @@ import { GripVertical } from "lucide-react";
 import { triggerHaptic } from "../../utils/haptics";
 import useLongPress from "../../hooks/useLongPress";
 import MealOptionsModal from "./MealOptionsModal";
+import { useTranslation } from "../../contexts/LanguageContext";
 
 const LONG_PRESS_DURATION_MS = 500;
 
@@ -51,6 +52,7 @@ interface PlanningMealItemProps {
 /*  le clic normal, sans jamais déclencher de glissement par erreur.                               */
 /* ------------------------------------------------------------------ */
 export default function PlanningMealItem({ entry, bulleted, label, reorderMode, onCommitOrder, onEdit, onDelete }: PlanningMealItemProps) {
+  const { t } = useTranslation();
   const [showOptions, setShowOptions] = useState(false);
   const itemLongPress = useLongPress<HTMLDivElement>(() => setShowOptions(true), LONG_PRESS_DURATION_MS);
   const dragControls = useDragControls();
@@ -86,7 +88,7 @@ export default function PlanningMealItem({ entry, bulleted, label, reorderMode, 
             <button
               type="button"
               className="planning-meal-drag-handle"
-              aria-label="Glisser pour réordonner"
+              aria-label={t("ui.planning.dragToReorder")}
               onPointerDown={startDrag}
             >
               <GripVertical size={16} />

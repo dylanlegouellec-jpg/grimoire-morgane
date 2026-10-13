@@ -1,6 +1,7 @@
 import { CSS } from "../constants/styles.css";
 import { triggerHaptic } from "../utils/helpers";
 import { Seal } from "../components/common";
+import { translateCurrent } from "../utils/i18n";
 
 /* ------------------------------------------------------------------ */
 /*  ÉCRAN DE CONNEXION (Google via Supabase Auth)                      */
@@ -18,7 +19,7 @@ export default function LoginScreen({ signInWithGoogle, showToast, toast }: Logi
       <style>{CSS}</style>
       <h1 className="login-title">Le Grimoire de Morgane</h1>
       <p className="hint" style={{ fontStyle: "normal", textAlign: "center" }}>
-        Connecte-toi pour retrouver ton grimoire.
+        {translateCurrent("ui.login.prompt")}
       </p>
       <Seal
         tone="gold"
@@ -26,11 +27,11 @@ export default function LoginScreen({ signInWithGoogle, showToast, toast }: Logi
           triggerHaptic(15);
           signInWithGoogle().catch((err: unknown) => {
             console.error(err);
-            showToast((err instanceof Error && err.message) || "Connexion impossible.");
+            showToast((err instanceof Error && err.message) || translateCurrent("ui.login.failed"));
           });
         }}
       >
-        Se connecter avec Google
+        {translateCurrent("ui.login.signInWithGoogle")}
       </Seal>
       {/* Zone annoncée par les lecteurs d'écran (toujours présente, le
           message y apparaît) : sans elle, les confirmations restaient muettes. */}

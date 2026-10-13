@@ -4,6 +4,7 @@ import { nextId } from "../utils/helpers";
 import { normalizeIngredientList } from "../utils/ingredients";
 import { resolveIllustrationKey } from "../components/art";
 import { insertRow, updateRow, deleteRow, mapRecipeToRow } from "../utils/supabase";
+import { translateCurrent } from "../utils/i18n";
 import type { NormalizedIngredient } from "../utils/ingredients";
 import type { StepEntry } from "../utils/helpers";
 import type { ChangeEvent } from "react";
@@ -86,7 +87,7 @@ export default function useRecipes({ householdId, initialRecipes = [], showToast
       }
     } catch (err) {
       console.error(err);
-      showToast("Échec de la sauvegarde en base Supabase.");
+      showToast(translateCurrent("messages.recipes.saveFailed"));
     }
   }, [householdId, showToast]);
 
@@ -139,7 +140,7 @@ export default function useRecipes({ householdId, initialRecipes = [], showToast
     } catch (err) {
       console.error(err);
       setRecipes(previous);
-      showToast("Suppression impossible en base Supabase.");
+      showToast(translateCurrent("messages.recipes.deleteFailed"));
     }
   }, [showToast]);
 
@@ -154,7 +155,7 @@ export default function useRecipes({ householdId, initialRecipes = [], showToast
     } catch (err) {
       console.error(err);
       setRecipes((prev) => prev.map((r) => (r.id === id ? { ...r, favorite: !nextFav } : r)));
-      showToast("Échec de la mise à jour du favori.");
+      showToast(translateCurrent("messages.recipes.favoriteFailed"));
     }
   }, [showToast]);
 
@@ -169,9 +170,9 @@ export default function useRecipes({ householdId, initialRecipes = [], showToast
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      showToast("Grimoire exporté !");
+      showToast(translateCurrent("messages.recipes.exported"));
     } catch {
-      showToast("Export impossible sur cet appareil.");
+      showToast(translateCurrent("messages.recipes.exportFailed"));
     }
   }, [showToast]);
 
@@ -202,9 +203,9 @@ export default function useRecipes({ householdId, initialRecipes = [], showToast
             try { await insertRow("recipes", mapRecipeToRow(r as unknown as Record<string, unknown>, householdId)); } catch { /* on continue les autres */ }
           }
         }
-        showToast(`${imported.length} recette(s) importée(s) !`);
+        showToast(translateCurrent("messages.recipes.imported", { count: imported.length }));
       } catch {
-        showToast("Fichier de grimoire illisible.");
+        showToast(translateCurrent("messages.recipes.importUnreadable"));
       }
     };
     reader.readAsText(file);

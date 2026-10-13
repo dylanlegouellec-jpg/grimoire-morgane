@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { fetchCaptionFromLink } from "../../utils/recipeLinkImportClient";
 import { copyText } from "../../utils/helpers";
 import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
+import { useTranslation } from "../../contexts/LanguageContext";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
@@ -28,6 +29,7 @@ type Status = "idle" | "loading" | "done" | "error";
 /*  par AppShell sur le même mécanisme que le "+" habituel) pour coller.          */
 /* ------------------------------------------------------------------ */
 export default function RecipeLinkImportModal({ onClose, onCreateRecipe }: RecipeLinkImportModalProps) {
+  const { t } = useTranslation();
   useBodyScrollLock(true);
   const modalRef = useFocusTrap<HTMLDivElement>(onClose);
   const sheet = useDismissibleSheet(onClose, { scrollRef: modalRef });
@@ -48,7 +50,7 @@ export default function RecipeLinkImportModal({ onClose, onCreateRecipe }: Recip
       setCaption(data.caption);
       setStatus("done");
     } catch (err) {
-      setError((err instanceof Error && err.message) || "Récupération impossible.");
+      setError((err instanceof Error && err.message) || t("modals.linkImport.fetchFailed"));
       setStatus("error");
     }
   };
@@ -75,17 +77,14 @@ export default function RecipeLinkImportModal({ onClose, onCreateRecipe }: Recip
         {...MODAL_SHEET_MOTION}
         {...sheet.panHandlers}
       >
-        <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
-        <h2 className="dropcap-title">Importer depuis un lien</h2>
+        <button className="modal-close" onClick={onClose} aria-label={t("common.close")}><X size={20} /></button>
+        <h2 className="dropcap-title">{t("modals.linkImport.title")}</h2>
         <Flourish />
 
         {status !== "done" && (
           <>
             <p className="hint" style={{ fontStyle: "normal" }}>
-              Colle un lien Instagram (Reel/Post) ou TikTok public — on récupère sa légende pour toi, à recopier
-              ensuite dans les champs de la recette (pas d'extraction automatique en ingrédients/étapes ici).
-              Fonctionne mieux avec TikTok : Instagram bloque souvent la lecture automatique de ses posts, même
-              publics — si ça échoue, ouvre le post toi-même et copie sa légende à la main.
+              {t("modals.linkImport.hint")}
             </p>
             <input
               type="url"
@@ -93,13 +92,13 @@ export default function RecipeLinkImportModal({ onClose, onCreateRecipe }: Recip
               style={{ width: "100%" }}
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://www.tiktok.com/@... ou https://www.instagram.com/..."
+              placeholder={t("modals.linkImport.placeholder")}
               disabled={status === "loading"}
             />
             {status === "error" && <p className="import-error">{error}</p>}
             <div style={{ marginTop: 14 }}>
               <Seal tone="gold" onClick={handleFetch} disabled={status === "loading" || !url.trim()}>
-                <Search size={16} /> {status === "loading" ? "Récupération en cours…" : "Récupérer la légende"}
+                <Search size={16} /> {status === "loading" ? t("modals.linkImport.fetching") : t("modals.linkImport.fetch")}
               </Seal>
             </div>
           </>
@@ -108,8 +107,7 @@ export default function RecipeLinkImportModal({ onClose, onCreateRecipe }: Recip
         {status === "done" && (
           <>
             <p className="hint" style={{ fontStyle: "normal" }}>
-              Voici la légende du post. Copie-la et colle les bons morceaux dans le titre, les ingrédients et les
-              étapes de ta nouvelle recette.
+              {t("modals.linkImport.doneHint")}
             </p>
             <textarea
               readOnly
@@ -120,10 +118,10 @@ export default function RecipeLinkImportModal({ onClose, onCreateRecipe }: Recip
             />
             <div className="cookmode-nav" style={{ marginTop: 14 }}>
               <Seal tone="gold" onClick={handleCopy}>
-                {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? "Copié !" : "Copier le texte"}
+                {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? t("modals.linkImport.copied") : t("modals.linkImport.copyText")}
               </Seal>
               <Seal tone="gold" onClick={handleCreateRecipe}>
-                <PenLine size={16} /> Créer une nouvelle recette
+                <PenLine size={16} /> {t("modals.linkImport.createRecipe")}
               </Seal>
             </div>
           </>

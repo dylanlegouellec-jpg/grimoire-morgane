@@ -160,7 +160,7 @@ export default function AddMealModal({
           // Pas de "retour" en édition : date et moment sont figés, cette
           // étape recette est la seule — juste fermer, dans le coin GAUCHE
           // (voir .meal-course-select ci-dessous, qui garde le droit).
-          <button className="modal-back" onClick={onClose} aria-label="Fermer">
+          <button className="modal-back" onClick={onClose} aria-label={t("common.close")}>
             <X size={20} />
           </button>
         ) : !isFirstStep ? (
@@ -168,7 +168,7 @@ export default function AddMealModal({
             <ChevronLeft size={20} /> {backLabels[step]}
           </button>
         ) : (
-          <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
+          <button className="modal-close" onClick={onClose} aria-label={t("common.close")}><X size={20} /></button>
         )}
         {step === "recipe" && mealType && mealTypeHasCourse(mealType) && (
           // <option> ne peut pas rendre une icône lucide (contenu texte

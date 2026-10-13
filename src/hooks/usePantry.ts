@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { DEFAULT_BASICS } from "../constants";
 import { ingredientKey, triggerHaptic } from "../utils/helpers";
+import { translateCurrent } from "../utils/i18n";
 
 interface UsePantryParams {
   initialPantry?: string[];
@@ -24,20 +25,20 @@ export default function usePantry({ initialPantry, initialBasics, showToast, add
     const key = ingredientKey(name);
     setBasics((prev) => prev.filter((b) => b !== name));
     setPantry((prev) => (prev.includes(key) ? prev : [...prev, key]));
-    showToast(`${name} déplacé vers les ingrédients variables.`);
+    showToast(translateCurrent("messages.pantry.movedToVariable", { name }));
     triggerHaptic(15);
   }, [showToast]);
 
   const removeBasic = useCallback(async (name: string) => {
     setBasics((prev) => prev.filter((b) => b !== name));
     if (addManualItemToShoppingList) await addManualItemToShoppingList(name);
-    showToast(`${name} retiré des basiques et ajouté à la liste de courses.`);
+    showToast(translateCurrent("messages.pantry.basicRemoved", { name }));
     triggerHaptic(20);
   }, [showToast, addManualItemToShoppingList]);
 
   const resetPantry = useCallback(() => {
     setPantry([]);
-    showToast("Frigo réinitialisé !");
+    showToast(translateCurrent("messages.pantry.reset"));
     triggerHaptic([60, 30, 60]);
   }, [showToast]);
 

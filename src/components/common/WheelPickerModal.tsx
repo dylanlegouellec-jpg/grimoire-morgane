@@ -2,6 +2,7 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { motion } from "motion/react";
 import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
+import { useTranslation } from "../../contexts/LanguageContext";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import PortionWheel from "../recipe/PortionWheel";
@@ -47,6 +48,7 @@ interface WheelPickerModalProps {
 /*  sortie anime tout de même avec Framer Motion (MODAL_SHEET_MOTION).     */
 /* ------------------------------------------------------------------ */
 export default function WheelPickerModal({ title, hint, columns, onSave, onClose }: WheelPickerModalProps) {
+  const { t } = useTranslation();
   useBodyScrollLock(true);
   const modalRef = useFocusTrap<HTMLDivElement>(onClose);
   const [values, setValues] = useState<Record<string, number>>(() =>
@@ -68,7 +70,7 @@ export default function WheelPickerModal({ title, hint, columns, onSave, onClose
         onClick={(e) => e.stopPropagation()}
         {...MODAL_SHEET_MOTION}
       >
-        <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
+        <button className="modal-close" onClick={onClose} aria-label={t("common.close")}><X size={20} /></button>
         <h2 className="dropcap-title">{title}</h2>
         <Flourish />
         {hint && <p className="hint" style={{ fontStyle: "normal" }}>{hint}</p>}
@@ -87,7 +89,7 @@ export default function WheelPickerModal({ title, hint, columns, onSave, onClose
           ))}
         </div>
         <div className="cookmode-nav" style={{ marginTop: 18 }}>
-          <Seal tone="gold" onClick={handleSave}>Enregistrer</Seal>
+          <Seal tone="gold" onClick={handleSave}>{t("common.save")}</Seal>
         </div>
       </motion.div>
     </motion.div>

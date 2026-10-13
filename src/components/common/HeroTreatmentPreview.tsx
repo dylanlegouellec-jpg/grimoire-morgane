@@ -18,6 +18,7 @@ interface HeroTreatmentCardProps {
 // l'aperçu ET par RecipeDetail.jsx pour la vraie fiche — jamais deux
 // implémentations à maintenir en parallèle qui pourraient diverger.
 function HeroTreatmentCard({ treatment, mini }: HeroTreatmentCardProps) {
+  const { t } = useTranslation();
   return (
     <div className={`hero-preview-frame ${mini ? "hero-preview-mini" : ""}`}>
       <div className={`detail-hero hero-preview-hero ${heroTreatmentClassName(treatment)}`}>
@@ -27,7 +28,7 @@ function HeroTreatmentCard({ treatment, mini }: HeroTreatmentCardProps) {
         <HeroTreatment treatment={treatment} />
         {isLegendTreatment(treatment) && (
           <div className="hero-legende-caption">
-            <span className="chip chip-sucre">Sucré</span>
+            <span className="chip chip-sucre">{t("filters.sucre")}</span>
           </div>
         )}
       </div>

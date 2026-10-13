@@ -1,6 +1,7 @@
 import { Beef, Carrot, CupSoda, Milk, Package, SprayCan, Wheat } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { NormalizedIngredient, Ingredient } from "./ingredients";
+import { translateCurrent } from "./i18n";
 
 /* ------------------------------------------------------------------ */
 /*  RAYONS DE COURSES                                                  */
@@ -174,7 +175,8 @@ export function formatDurationMinutes(totalMinutes: number): string {
   const days = Math.floor(mins / 1440);
   const h = Math.floor((mins % 1440) / 60);
   const m = mins % 60;
-  if (days) return h ? `${days} j ${h} h` : `${days} j`;
+  const d = translateCurrent("common.dayShort");
+  if (days) return h ? `${days} ${d} ${h} h` : `${days} ${d}`;
   if (h && m) return `${h} h ${m} min`;
   if (h) return `${h} h`;
   return `${m} min`;
@@ -460,7 +462,7 @@ export function buildPrintHTML(
     <ol>${g.steps.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}</ol>`
     )
     .join("");
-  const carbsLine = recipe.carbs ? `<span>${Math.round(recipe.carbs * servings)} g glucides (total)</span>` : "";
+  const carbsLine = recipe.carbs ? `<span>${Math.round(recipe.carbs * servings)} ${escapeHtml(translateCurrent("share.carbsTotalSuffix"))}</span>` : "";
   const isSucreCat = normalize(recipe.category) === "sucre";
   const photoHtml = includePhoto && recipe.imageUrl
     ? `<div class="photo-wrap"><img class="photo" src="${escapeHtml(recipe.imageUrl)}" alt="" /></div>`
@@ -469,7 +471,7 @@ export function buildPrintHTML(
     ? `<span class="nutri-circle" style="background:${nutriColor}">${escapeHtml(nutriGrade)}</span>`
     : "";
   const notesHtml = includeNotes && recipe.notes
-    ? `<h2>Remarques &amp; astuces</h2><p class="notes">${escapeHtml(recipe.notes)}</p>`
+    ? `<h2>${escapeHtml(translateCurrent("share.printNotesTitle"))}</h2><p class="notes">${escapeHtml(recipe.notes)}</p>`
     : "";
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>${escapeHtml(recipe.title)}</title>
 <style>
@@ -504,25 +506,25 @@ export function buildPrintHTML(
   <div class="sheet">
     ${photoHtml}
     <div class="badges">
-      <span class="chip" style="background:${isSucreCat ? "#5a3a63" : "#7c3232"}">${isSucreCat ? "Sucré" : "Salé"}</span>
+      <span class="chip" style="background:${isSucreCat ? "#5a3a63" : "#7c3232"}">${escapeHtml(translateCurrent(isSucreCat ? "filters.sucre" : "filters.sale"))}</span>
       ${nutriHtml}
     </div>
     <h1>${escapeHtml(recipe.title)}</h1>
-    <p class="type">Le Grimoire de Morgane</p>
-    <div class="meta"><span>⏱ ${recipe.time} min</span><span>👥 ${servings} pers.</span>${carbsLine}</div>
+    <p class="type">${escapeHtml(translateCurrent("share.printSignature"))}</p>
+    <div class="meta"><span>⏱ ${recipe.time} ${escapeHtml(translateCurrent("share.minutesShort"))}</span><span>👥 ${servings} ${escapeHtml(translateCurrent("share.servingsShort"))}</span>${carbsLine}</div>
     <div class="flourish">❦</div>
     <div class="columns">
       <div>
-        <h2>Ingrédients</h2>
+        <h2>${escapeHtml(translateCurrent("share.printIngredients"))}</h2>
         ${ingredientsHtml}
       </div>
       <div>
-        <h2>Préparation</h2>
+        <h2>${escapeHtml(translateCurrent("share.printPreparation"))}</h2>
         ${stepsHtml}
       </div>
     </div>
     ${notesHtml}
-    <div class="footer">Le Grimoire de Morgane 📜</div>
+    <div class="footer">${escapeHtml(translateCurrent("share.printFooter"))}</div>
   </div>
 </body></html>`;
 }

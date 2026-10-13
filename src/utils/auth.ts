@@ -1,5 +1,6 @@
 import { getSupabaseClient } from "./supabaseClient";
 import { fetchTable, updateRow } from "./supabase";
+import { translateCurrent } from "./i18n";
 import type { Session } from "@supabase/supabase-js";
 
 export interface Household {
@@ -34,7 +35,7 @@ function withTimeout<T>(promise: PromiseLike<T>, ms: number, timeoutMessage: str
 
 export async function signInWithGoogle(): Promise<void> {
   const client = getSupabaseClient();
-  if (!client) throw new Error("Supabase non configuré");
+  if (!client) throw new Error(translateCurrent("messages.household.notConfigured"));
   const { error } = await client.auth.signInWithOAuth({
     provider: "google",
     options: {
@@ -85,11 +86,11 @@ export async function getMyHouseholds(): Promise<Household[]> {
 // si la deuxième requête échouait en plein milieu).
 export async function createHousehold(name: string): Promise<string> {
   const client = getSupabaseClient();
-  if (!client) throw new Error("Supabase non configuré");
+  if (!client) throw new Error(translateCurrent("messages.household.notConfigured"));
   const { data, error } = await withTimeout(
     client.rpc("create_household", { p_name: name }),
     RPC_TIMEOUT_MS,
-    "Délai dépassé lors de la création du foyer."
+    translateCurrent("messages.household.createTimeout")
   );
   if (error) throw error;
   return data; // uuid du nouveau foyer
@@ -100,7 +101,7 @@ export async function createHousehold(name: string): Promise<string> {
 // manque au moment du clic.
 export async function renameHousehold(householdId: string, name: string) {
   const trimmed = (name || "").trim();
-  if (!trimmed) throw new Error("Le nom du foyer ne peut pas être vide.");
+  if (!trimmed) throw new Error(translateCurrent("messages.household.nameEmpty"));
   return updateRow("households", householdId, { name: trimmed });
 }
 
@@ -111,11 +112,11 @@ export async function renameHousehold(householdId: string, name: string) {
 // foyer actif.
 export async function deleteHousehold(householdId: string): Promise<void> {
   const client = getSupabaseClient();
-  if (!client) throw new Error("Supabase non configuré");
+  if (!client) throw new Error(translateCurrent("messages.household.notConfigured"));
   const { error } = await withTimeout(
     client.rpc("delete_household", { p_household_id: householdId }),
     RPC_TIMEOUT_MS,
-    "Délai dépassé lors de la suppression du foyer."
+    translateCurrent("messages.household.deleteTimeout")
   );
   if (error) throw error;
 }
@@ -144,11 +145,11 @@ export async function getHouseholdMembers(householdId: string | null | undefined
 // l'appli — voir le message d'erreur renvoyé par la RPC côté SQL).
 export async function addUserToHousehold(email: string, householdId: string): Promise<void> {
   const client = getSupabaseClient();
-  if (!client) throw new Error("Supabase non configuré");
+  if (!client) throw new Error(translateCurrent("messages.household.notConfigured"));
   const { error } = await withTimeout(
     client.rpc("add_user_to_household", { user_email: email, target_household_id: householdId }),
     RPC_TIMEOUT_MS,
-    "Délai dépassé lors de l'ajout du membre."
+    translateCurrent("messages.household.addMemberTimeout")
   );
   if (error) throw error;
 }
@@ -165,11 +166,11 @@ export async function addUserToHousehold(email: string, householdId: string): Pr
 // approveHouseholdMember ci-dessous).
 export async function requestJoinHousehold(householdId: string): Promise<void> {
   const client = getSupabaseClient();
-  if (!client) throw new Error("Supabase non configuré");
+  if (!client) throw new Error(translateCurrent("messages.household.notConfigured"));
   const { error } = await withTimeout(
     client.rpc("request_join_household", { p_household_id: householdId }),
     RPC_TIMEOUT_MS,
-    "Délai dépassé lors de la demande d'adhésion."
+    translateCurrent("messages.household.joinRequestTimeout")
   );
   if (error) throw error;
 }
@@ -195,22 +196,22 @@ export async function getPendingHouseholdRequests(householdId: string | null | u
 
 export async function approveHouseholdMember(householdId: string, userId: string): Promise<void> {
   const client = getSupabaseClient();
-  if (!client) throw new Error("Supabase non configuré");
+  if (!client) throw new Error(translateCurrent("messages.household.notConfigured"));
   const { error } = await withTimeout(
     client.rpc("approve_household_member", { p_household_id: householdId, p_user_id: userId }),
     RPC_TIMEOUT_MS,
-    "Délai dépassé lors de la validation du membre."
+    translateCurrent("messages.household.approveTimeout")
   );
   if (error) throw error;
 }
 
 export async function rejectHouseholdMember(householdId: string, userId: string): Promise<void> {
   const client = getSupabaseClient();
-  if (!client) throw new Error("Supabase non configuré");
+  if (!client) throw new Error(translateCurrent("messages.household.notConfigured"));
   const { error } = await withTimeout(
     client.rpc("reject_household_member", { p_household_id: householdId, p_user_id: userId }),
     RPC_TIMEOUT_MS,
-    "Délai dépassé lors du refus du membre."
+    translateCurrent("messages.household.rejectTimeout")
   );
   if (error) throw error;
 }
@@ -223,22 +224,22 @@ export async function rejectHouseholdMember(householdId: string, userId: string)
 
 export async function changeHouseholdMemberRole(householdId: string, userId: string, newRole: string): Promise<void> {
   const client = getSupabaseClient();
-  if (!client) throw new Error("Supabase non configuré");
+  if (!client) throw new Error(translateCurrent("messages.household.notConfigured"));
   const { error } = await withTimeout(
     client.rpc("change_household_member_role", { p_household_id: householdId, p_user_id: userId, p_new_role: newRole }),
     RPC_TIMEOUT_MS,
-    "Délai dépassé lors du changement de rôle."
+    translateCurrent("messages.household.roleTimeout")
   );
   if (error) throw error;
 }
 
 export async function removeHouseholdMember(householdId: string, userId: string): Promise<void> {
   const client = getSupabaseClient();
-  if (!client) throw new Error("Supabase non configuré");
+  if (!client) throw new Error(translateCurrent("messages.household.notConfigured"));
   const { error } = await withTimeout(
     client.rpc("remove_household_member", { p_household_id: householdId, p_user_id: userId }),
     RPC_TIMEOUT_MS,
-    "Délai dépassé lors du retrait du membre."
+    translateCurrent("messages.household.removeTimeout")
   );
   if (error) throw error;
 }
@@ -251,11 +252,11 @@ export async function removeHouseholdMember(householdId: string, userId: string)
 // supprime alors, voir la fonction SQL leave_household).
 export async function leaveHousehold(householdId: string): Promise<void> {
   const client = getSupabaseClient();
-  if (!client) throw new Error("Supabase non configuré");
+  if (!client) throw new Error(translateCurrent("messages.household.notConfigured"));
   const { error } = await withTimeout(
     client.rpc("leave_household", { p_household_id: householdId }),
     RPC_TIMEOUT_MS,
-    "Délai dépassé lors de la sortie du foyer."
+    translateCurrent("messages.household.leaveTimeout")
   );
   if (error) throw error;
 }

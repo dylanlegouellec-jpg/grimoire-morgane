@@ -2,6 +2,7 @@ import { Component, type ErrorInfo, type ReactNode } from "react";
 import { RotateCcw } from "lucide-react";
 import { CSS } from "../../constants/styles.css";
 import { isChunkLoadError, reloadOnceForChunkError } from "../../utils/chunkReload";
+import { translateCurrent } from "../../utils/i18n";
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -66,9 +67,9 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
       // d'onglet pour s'en sortir même sans "Réessayer".
       return (
         <div className="view" style={{ textAlign: "center", paddingTop: 40 }}>
-          <p className="hint">Cet écran a rencontré un problème inattendu.</p>
+          <p className="hint">{translateCurrent("modals.errorBoundary.compactMessage")}</p>
           <button type="button" className="seal" onClick={this.handleRetry}>
-            <RotateCcw size={15} /> Réessayer
+            <RotateCcw size={15} /> {translateCurrent("modals.errorBoundary.retry")}
           </button>
         </div>
       );
@@ -83,8 +84,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
         <style>{CSS}</style>
         <h1 className="login-title">Le Grimoire de Morgane</h1>
         <p className="hint" style={{ fontStyle: "normal", textAlign: "center" }}>
-          Une erreur inattendue est survenue. Tes recettes restent en sécurité —
-          seul cet affichage a rencontré un problème.
+          {translateCurrent("modals.errorBoundary.globalMessage")}
         </p>
         {this.state.detail && (
           <p className="hint" style={{ fontStyle: "normal", textAlign: "center", fontSize: "0.7rem", opacity: 0.7, wordBreak: "break-word" }}>
@@ -92,7 +92,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
           </p>
         )}
         <button type="button" className="seal" onClick={() => window.location.reload()}>
-          <RotateCcw size={15} /> Recharger l'application
+          <RotateCcw size={15} /> {translateCurrent("modals.errorBoundary.reload")}
         </button>
       </div>
     );

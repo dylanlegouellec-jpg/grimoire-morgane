@@ -236,7 +236,7 @@ export default function SecretSettingsModal({
           {...MODAL_SHEET_MOTION}
           {...mainSheet.panHandlers}
         >
-          <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
+          <button className="modal-close" onClick={onClose} aria-label={t("common.close")}><X size={20} /></button>
 
           {/* Estompe tout le contenu (pas la feuille/son fond) pendant le
               tirage — voir useDismissibleSheet.js pour pourquoi la feuille

@@ -40,7 +40,7 @@ export default function DeleteMealSectionConfirmModal({ mealLabel, onConfirm, on
         {...MODAL_SHEET_MOTION}
         {...sheet.panHandlers}
       >
-        <button className="modal-close" onClick={onCancel} aria-label="Fermer"><X size={20} /></button>
+        <button className="modal-close" onClick={onCancel} aria-label={t("common.close")}><X size={20} /></button>
         <h2 className="dropcap-title">{t("planning.deleteSectionConfirmTitle")}</h2>
         <Flourish />
         <p className="hint" style={{ fontStyle: "normal" }}>

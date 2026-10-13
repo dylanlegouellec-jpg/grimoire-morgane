@@ -63,7 +63,7 @@ interface ShoppingItemRowProps {
 }
 
 function ShoppingItemRow({ item, checked, onToggle, onAdjust, onDelete, onOpenWheel, pressDuration }: ShoppingItemRowProps) {
-  const { language } = useTranslation();
+  const { language, t } = useTranslation();
   const x = useMotionValue(0);
   const prefersReducedMotion = useReducedMotion();
   // useLongPress déclenche déjà lui-même un retour haptique à l'ouverture
@@ -131,7 +131,7 @@ function ShoppingItemRow({ item, checked, onToggle, onAdjust, onDelete, onOpenWh
                 type="button"
                 whileTap={{ scale: 0.82 }}
                 onClick={(e) => { e.stopPropagation(); onAdjust(item.id, -1); }}
-                aria-label={`Diminuer la quantité de ${translateRecipeText(item.name, language)}`}
+                aria-label={t("ui.shopping.decreaseQty", { name: translateRecipeText(item.name, language) })}
               >
                 <Minus size={11} />
               </motion.button>
@@ -139,7 +139,7 @@ function ShoppingItemRow({ item, checked, onToggle, onAdjust, onDelete, onOpenWh
                 type="button"
                 whileTap={{ scale: 0.82 }}
                 onClick={(e) => { e.stopPropagation(); onAdjust(item.id, 1); }}
-                aria-label={`Augmenter la quantité de ${translateRecipeText(item.name, language)}`}
+                aria-label={t("ui.shopping.increaseQty", { name: translateRecipeText(item.name, language) })}
               >
                 <Plus size={11} />
               </motion.button>
