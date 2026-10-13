@@ -327,6 +327,8 @@ export const CODE_DOCS: Record<string, string> = {
     "Quand un écran chargé à la demande n'existe plus sur le serveur (app restée ouverte pendant une mise à jour), recharge la page une seule fois au lieu d'afficher l'écran d'erreur.",
   "src/utils/shoppingOps.ts":
     "Les modifications d'articles d'une liste de courses (ajouter, cocher, quantité, retirer, vider) : les applique sur l'appareil comme le fait le serveur, et garde de côté celles pas encore confirmées pour les réappliquer sur ce que le serveur renvoie.",
+  "src/utils/i18n.ts":
+    "Trouve le texte d'une clé de traduction dans la langue choisie (avec repli sur le français), pour les composants comme pour le reste du code (messages des hooks, écran d'erreur).",
   "src/utils/splash.ts":
     "Retire en fondu l'écran de démarrage de index.html, une fois que l'app a affiché son premier écran.",
   "src/utils/supabase.ts":

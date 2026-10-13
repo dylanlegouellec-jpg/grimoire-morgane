@@ -161,7 +161,7 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
   // Même principe que RecipeCard : valeur stockée, calculée une seule
   // fois côté serveur à la création/édition — aucun appel réseau ici.
   const nutri = (recipe?.nutriscoreGrade || estimateNutriscoreLocal(rawIngredients as never, recipe?.category)) as NutriscoreGrade;
-  const { language, dict } = useTranslation();
+  const { language, dict, t } = useTranslation();
   const prefersReducedMotion = useReducedMotion();
 
   // Fige le <body> (technique position:fixed, fiable sur iOS Safari —
@@ -266,7 +266,7 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
         onTouchMove={composedTouchMove}
       >
         <div className="detail-drag-handle" aria-hidden="true" />
-        <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
+        <button className="modal-close" onClick={onClose} aria-label={t("common.close")}><X size={20} /></button>
 
         <div className="detail-columns">
           <div className="detail-info-col">
@@ -316,30 +316,30 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
             <div className="card-meta" style={{ marginBottom: 10 }}>
               <span><Clock size={13} /> {recipe.time || 0} min</span>
               {recipe.carbs ? (
-                <span className="carbs-badge"><CategoryIcon emoji="🍞" icon={Wheat} size={13} /> {Math.round(recipe.carbs * servings)} g glucides</span>
+                <span className="carbs-badge"><CategoryIcon emoji="🍞" icon={Wheat} size={13} /> {t("recipeUi.detail.carbs", { value: Math.round(recipe.carbs * servings) })}</span>
               ) : null}
             </div>
             <div className="portions-adjuster">
-              <span><Users size={14} /> Portions</span>
+              <span><Users size={14} /> {t("recipeUi.detail.servings")}</span>
               <div className="portions-stepper">
-                <motion.button type="button" whileTap={{ scale: 0.85 }} onClick={() => { triggerHaptic(10); setServings((s) => Math.max(1, Number(s) - 1)); }} aria-label="Diminuer le nombre de portions"><Minus size={14} /></motion.button>
+                <motion.button type="button" whileTap={{ scale: 0.85 }} onClick={() => { triggerHaptic(10); setServings((s) => Math.max(1, Number(s) - 1)); }} aria-label={t("recipeUi.detail.decreaseServings")}><Minus size={14} /></motion.button>
                 <AnimatedNumber value={servings} />
-                <motion.button type="button" whileTap={{ scale: 0.85 }} onClick={() => { triggerHaptic(10); setServings((s) => Number(s) + 1); }} aria-label="Augmenter le nombre de portions"><Plus size={14} /></motion.button>
+                <motion.button type="button" whileTap={{ scale: 0.85 }} onClick={() => { triggerHaptic(10); setServings((s) => Number(s) + 1); }} aria-label={t("recipeUi.detail.increaseServings")}><Plus size={14} /></motion.button>
               </div>
             </div>
             <div className="detail-actions">
               <Seal tone="gold" onClick={() => onCook && onCook(recipe)}>
-                <ChefHat size={16} /> Lancer la préparation
+                <ChefHat size={16} /> {t("recipeUi.detail.startCooking")}
               </Seal>
               <Seal tone="gold" onClick={() => setShowShare(true)}>
-                <Share2 size={16} /> Partager la recette
+                <Share2 size={16} /> {t("recipeUi.detail.shareRecipe")}
               </Seal>
             </div>
             <Flourish />
           </div>
 
           <div className="detail-body-col">
-            <h4>Ingrédients {ratio !== 1 && <span className="scaled-note">(ajustés pour {servings} pers.)</span>}</h4>
+            <h4>{t("recipeUi.detail.ingredients")} {ratio !== 1 && <span className="scaled-note">{t("recipeUi.detail.scaledFor", { count: servings })}</span>}</h4>
             <ul className="ingredient-list">
               {scaledIngredients.map((ing, i) => {
                 if (typeof ing === "string") {
@@ -363,7 +363,7 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
                 );
               })}
             </ul>
-            <h4>Préparation</h4>
+            <h4>{t("recipeUi.detail.preparation")}</h4>
             {groupSteps(safeSteps as unknown as StepEntry[]).map((group, gi) => (
               <div key={gi} className="steps-group">
                 {group.title && <h5 className="steps-group-title">{translateRecipeText(group.title, language)}</h5>}
@@ -378,7 +378,7 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
             ))}
             {recipe.notes && (
               <>
-                <h4>Remarques &amp; astuces</h4>
+                <h4>{t("recipeUi.detail.notes")}</h4>
                 <p className="recipe-notes">{translateRecipeText(recipe.notes, language)}</p>
               </>
             )}

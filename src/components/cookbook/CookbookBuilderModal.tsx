@@ -75,6 +75,7 @@ function CookbookCoverPreview({ config }: CookbookConfigPreviewProps) {
 // colonnes, sections visibles) reflète les réglages en direct ; le contenu
 // (titre, lignes) reste volontairement un simple gabarit.
 function CookbookRecipePreview({ config }: CookbookConfigPreviewProps) {
+  const { t } = useTranslation();
   return (
     <div className="cookbook-recipe-mini">
       {config.photoSize !== "aucune" && (
@@ -84,7 +85,7 @@ function CookbookRecipePreview({ config }: CookbookConfigPreviewProps) {
         <span className="cookbook-recipe-mini-chip" />
         {config.showNutrition && <span className="cookbook-recipe-mini-nutri" />}
       </div>
-      <p className="cookbook-recipe-mini-title">Titre de la recette</p>
+      <p className="cookbook-recipe-mini-title">{t("ui.cookbook.previewRecipeTitle")}</p>
       {config.showTime && <p className="cookbook-recipe-mini-meta">⏱ · 👥</p>}
       <div className="cookbook-recipe-mini-columns">
         {config.showIngredients && (

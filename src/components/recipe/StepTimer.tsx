@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef, type MouseEvent } from "react";
 import { Clock, Pause, Play } from "lucide-react";
 import { requestNotificationPermission, showLocalNotification } from "../../utils/notifications";
+import { useTranslation } from "../../contexts/LanguageContext";
 
 interface StepTimerProps {
   minutes: number;
 }
 
 export default function StepTimer({ minutes }: StepTimerProps) {
+  const { t } = useTranslation();
   const fullSeconds = minutes * 60;
   const [seconds, setSeconds] = useState(fullSeconds);
   const [running, setRunning] = useState(false);
@@ -22,8 +24,8 @@ export default function StepTimer({ minutes }: StepTimerProps) {
             // Pour prévenir même quand le téléphone est ailleurs/l'écran
             // éteint — l'ancien état "Terminé !" sur l'écran ne sert à rien
             // si personne ne regarde le mode cuisine à cet instant précis.
-            showLocalNotification("Minuteur terminé", {
-              body: `${minutes} min écoulées`,
+            showLocalNotification(t("recipeUi.timer.notificationTitle"), {
+              body: t("recipeUi.timer.notificationBody", { minutes }),
               icon: "/Icon.jpeg",
               tag: "grimoire-cookmode-timer",
             });
@@ -46,12 +48,12 @@ export default function StepTimer({ minutes }: StepTimerProps) {
   const Icon = seconds === 0 ? Clock : running ? Pause : seconds === fullSeconds ? Clock : Play;
   const label =
     seconds === 0
-      ? "Terminé !"
+      ? t("recipeUi.timer.done")
       : running
       ? fmt(seconds)
       : seconds === fullSeconds
-      ? `Lancer (${minutes} min)`
-      : `Reprendre (${fmt(seconds)})`;
+      ? t("recipeUi.timer.start", { minutes })
+      : t("recipeUi.timer.resume", { time: fmt(seconds) });
 
   return (
     <button

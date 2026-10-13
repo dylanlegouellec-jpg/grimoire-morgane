@@ -45,6 +45,7 @@ import LoginScreen from "./screens/LoginScreen";
 import AppShell from "./screens/AppShell";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { IconStyleProvider } from "./contexts/IconStyleContext";
+import { translateCurrent } from "./utils/i18n";
 import type { Recipe } from "./hooks/useRecipes";
 import type { ShoppingList } from "./hooks/useShoppingLists";
 import type { MealPlanEntry } from "./hooks/useMealPlan";
@@ -118,7 +119,7 @@ export default function GrimoireDeMorgane() {
   useEffect(() => {
     if (isGuestMode && !guestToastShownRef.current) {
       guestToastShownRef.current = true;
-      showToast("Mode invité — recettes de démonstration, rien n'est sauvegardé.");
+      showToast(translateCurrent("ui.app.guestModeToast"));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -406,7 +407,7 @@ export default function GrimoireDeMorgane() {
   const hasLocalData = Array.isArray(localCache.recipes) && localCache.recipes.length > 0;
 
   if (!sync.ready) {
-    return <LoadingScreen message="Ouverture du grimoire…" />;
+    return <LoadingScreen message={translateCurrent("ui.loading.openingGrimoire")} />;
   }
 
   // Le mode invité (?atelier=1, voir plus haut) contourne complètement
@@ -415,9 +416,9 @@ export default function GrimoireDeMorgane() {
   // vrais utilisateurs ci-dessous.
   if (!isGuestMode) {
     if (SUPABASE_READY && !hasLocalData) {
-      if (authLoading) return <LoadingScreen message="Vérification de la session…" />;
+      if (authLoading) return <LoadingScreen message={translateCurrent("ui.loading.checkingSession")} />;
       if (!user) return <LoginScreen signInWithGoogle={signInWithGoogle} showToast={showToast} toast={toast} />;
-      if (householdLoading && !householdId) return <LoadingScreen message="Ouverture de ton foyer…" />;
+      if (householdLoading && !householdId) return <LoadingScreen message={translateCurrent("ui.loading.openingHousehold")} />;
     } else if (SUPABASE_READY && hasLocalData && !authLoading && !user) {
       // Vérification en ligne aboutie (pas juste "encore en cours") et
       // réellement concluante : pas de session. On protège quand même le

@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { SUPABASE_READY } from "../constants";
 import { nextId, guessAisle, ingredientKey, isShoppingListInScope, triggerHaptic } from "../utils/helpers";
 import { insertRow, updateRow, deleteRow, callRpc, mapShoppingListToRow } from "../utils/supabase";
+import { translateCurrent } from "../utils/i18n";
 import { applyShoppingOps, addPendingShoppingOps, settlePendingShoppingOps, withPendingShoppingOps, type ShoppingOp } from "../utils/shoppingOps";
 import { getStoredShoppingScope, storeShoppingScope, getStoredActiveShoppingListId, storeActiveShoppingListId } from "../utils/localSettings";
 import type { ViewScope } from "../utils/localSettings";
@@ -135,7 +136,7 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
     if (SUPABASE_READY && householdId) {
       insertRow("shopping_lists", mapShoppingListToRow(newList as unknown as Record<string, unknown>, householdId)).catch((err) => {
         console.error(err);
-        showToast("Échec de la création de la liste.");
+        showToast(translateCurrent("messages.shopping.createFailed"));
       });
     }
     return id;
@@ -148,7 +149,7 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
         await updateRow("shopping_lists", id, { name });
       } catch (err) {
         console.error(err);
-        showToast("Échec du renommage.");
+        showToast(translateCurrent("messages.shopping.renameFailed"));
       }
     }
   }, [showToast]);
@@ -162,7 +163,7 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
         await deleteRow("shopping_lists", id);
       } catch (err) {
         console.error(err);
-        showToast("Échec de la suppression.");
+        showToast(translateCurrent("messages.shopping.deleteFailed"));
       }
     }
   }, [showToast]);
@@ -203,7 +204,7 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
       .catch((err) => {
         settlePendingShoppingOps(listId, token);
         console.error(err);
-        showToast("Impossible d'enregistrer la modification de la liste.");
+        showToast(translateCurrent("messages.shopping.saveChangeFailed"));
       });
   }, [createShoppingList, householdId, showToast]);
 
@@ -289,14 +290,14 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
       added.forEach((item) => ops.push({ op: "append", item }));
       return ops;
     });
-    showToast("Liste de courses générée !");
+    showToast(translateCurrent("messages.shopping.generated"));
     triggerHaptic(15);
   }, [applyToActiveList, showToast]);
 
   const resetActiveList = useCallback(() => {
     if (!activeListIdRef.current) return;
     applyToActiveList(() => [{ op: "clear" }]);
-    showToast("Liste réinitialisée !");
+    showToast(translateCurrent("messages.shopping.reset"));
     triggerHaptic([60, 30, 60]);
   }, [applyToActiveList, showToast]);
 

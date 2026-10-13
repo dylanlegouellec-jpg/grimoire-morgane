@@ -3,6 +3,7 @@ import { Copy, X } from "lucide-react";
 import { motion } from "motion/react";
 import { copyText } from "../../utils/helpers";
 import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
+import { useTranslation } from "../../contexts/LanguageContext";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
@@ -15,6 +16,7 @@ interface TextShareModalProps {
 }
 
 export default function TextShareModal({ title, text, onClose }: TextShareModalProps) {
+  const { t } = useTranslation();
   useBodyScrollLock(true);
   const ref = useRef<HTMLTextAreaElement>(null);
   const modalRef = useFocusTrap<HTMLDivElement>(onClose);
@@ -36,9 +38,9 @@ export default function TextShareModal({ title, text, onClose }: TextShareModalP
         {...MODAL_SHEET_MOTION}
         {...sheet.panHandlers}
       >
-        <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
+        <button className="modal-close" onClick={onClose} aria-label={t("common.close")}><X size={20} /></button>
         <h2 className="dropcap-title">{title}</h2>
-        <p className="hint" style={{ margin: "4px 0 12px" }}>Ton navigateur a bloqué la copie automatique — sélectionne et copie le texte ci-dessous.</p>
+        <p className="hint" style={{ margin: "4px 0 12px" }}>{t("modals.textShare.hint")}</p>
         <textarea ref={ref} className="share-textarea" readOnly value={text} rows={8} onClick={(e) => e.currentTarget.select()} />
         <Seal
           tone="gold"
@@ -47,7 +49,7 @@ export default function TextShareModal({ title, text, onClose }: TextShareModalP
             if (ok) onClose();
           }}
         >
-          <Copy size={16} /> Copier
+          <Copy size={16} /> {t("modals.textShare.copy")}
         </Seal>
       </motion.div>
     </motion.div>

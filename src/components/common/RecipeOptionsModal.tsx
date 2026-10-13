@@ -6,6 +6,7 @@ import { triggerHaptic } from "../../utils/helpers";
 import { generateAIIllustration } from "../../utils/aiIllustration";
 import { uploadRecipeImage } from "../../utils/imageUpload";
 import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
+import { useTranslation } from "../../contexts/LanguageContext";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
@@ -31,6 +32,7 @@ interface RecipeOptionsModalProps {
 /*  démontage.                                                          */
 /* ------------------------------------------------------------------ */
 export default function RecipeOptionsModal({ recipe, onClose, onUpdateRecipe, onRequestDelete, onEdit, householdId, showToast }: RecipeOptionsModalProps) {
+  const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [generating, setGenerating] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -52,7 +54,7 @@ export default function RecipeOptionsModal({ recipe, onClose, onUpdateRecipe, on
     e.target.value = ""; // permet de reprendre la même photo une prochaine fois
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      setError("Ce fichier n'est pas une image.");
+      setError(t("modals.recipeOptions.notAnImage"));
       return;
     }
     setError(null);
@@ -67,8 +69,8 @@ export default function RecipeOptionsModal({ recipe, onClose, onUpdateRecipe, on
       onClose();
     } catch (err) {
       console.error(err);
-      setError("Envoi de la photo impossible pour le moment (réseau ou stockage indisponible).");
-      if (showToast) showToast("Échec de l'envoi de la photo — réessaie plus tard.");
+      setError(t("modals.recipeOptions.uploadError"));
+      if (showToast) showToast(t("modals.recipeOptions.uploadFailedToast"));
     } finally {
       setUploading(false);
     }
@@ -84,7 +86,7 @@ export default function RecipeOptionsModal({ recipe, onClose, onUpdateRecipe, on
       onClose();
     } catch (err) {
       console.error(err);
-      setError("Génération IA indisponible pour le moment.");
+      setError(t("modals.recipeOptions.aiError"));
     } finally {
       setGenerating(false);
     }
@@ -122,7 +124,7 @@ export default function RecipeOptionsModal({ recipe, onClose, onUpdateRecipe, on
         {...MODAL_SHEET_MOTION}
         {...sheet.panHandlers}
       >
-        <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
+        <button className="modal-close" onClick={onClose} aria-label={t("common.close")}><X size={20} /></button>
         <h2 className="dropcap-title">{recipe.title}</h2>
         <Flourish />
 
@@ -130,30 +132,30 @@ export default function RecipeOptionsModal({ recipe, onClose, onUpdateRecipe, on
           {onEdit && (
             <button type="button" className="recipe-option-row" onClick={() => { triggerHaptic(15); onClose(); onEdit(recipe); }}>
               <Pencil size={18} />
-              <span>Modifier la recette</span>
+              <span>{t("modals.recipeOptions.edit")}</span>
             </button>
           )}
 
           <button type="button" className="recipe-option-row" onClick={handlePhotoClick} disabled={uploading}>
             <Camera size={18} className={uploading ? "spin-wand" : ""} />
-            <span>{uploading ? "Envoi de la photo…" : "Ajouter ma propre photo"}</span>
+            <span>{uploading ? t("modals.recipeOptions.uploadingPhoto") : t("modals.recipeOptions.addPhoto")}</span>
           </button>
 
           <button type="button" className="recipe-option-row" onClick={handleGenerateAI} disabled={generating}>
             <Sparkles size={18} className={generating ? "spin-wand" : ""} />
-            <span>{generating ? "Génération en cours…" : "Générer une illustration par IA"}</span>
+            <span>{generating ? t("modals.recipeOptions.generating") : t("modals.recipeOptions.generateAI")}</span>
           </button>
 
           {recipe.imageUrl && (
             <button type="button" className="recipe-option-row" onClick={handleRemoveImage}>
               <ImageOff size={18} />
-              <span>Supprimer l'image personnalisée</span>
+              <span>{t("modals.recipeOptions.removeImage")}</span>
             </button>
           )}
 
           <button type="button" className="recipe-option-row danger" onClick={handleDelete}>
             <Trash2 size={18} />
-            <span>Supprimer la recette</span>
+            <span>{t("modals.recipeOptions.delete")}</span>
           </button>
         </div>
 

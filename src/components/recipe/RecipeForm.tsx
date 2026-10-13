@@ -19,6 +19,7 @@ import Seal from "../common/Seal";
 import WheelPickerModal from "../common/WheelPickerModal";
 import UnsavedChangesModal from "../common/UnsavedChangesModal";
 import type { Recipe } from "../../hooks/useRecipes";
+import { useTranslation } from "../../contexts/LanguageContext";
 
 /* ------------------------------------------------------------------ */
 /*  UNITÉS DISPONIBLES POUR LES INGRÉDIENTS                            */
@@ -36,6 +37,17 @@ export const UNIT_OPTIONS = [
   { value: "c. à café", label: "c. à café" },
   { value: "", label: "Sans unité" },
 ];
+
+// Libellé AFFICHÉ de chaque unité selon la langue active — la `value`
+// enregistrée avec la recette (ci-dessus) ne change jamais. Les unités
+// absentes de cette table (g, kg, ml...) s'affichent telles quelles.
+const UNIT_LABEL_KEYS: Record<string, string> = {
+  "pièce": "recipeUi.form.units.piece",
+  "pincée": "recipeUi.form.units.pinch",
+  "c. à soupe": "recipeUi.form.units.tbsp",
+  "c. à café": "recipeUi.form.units.tsp",
+  "": "recipeUi.form.units.none",
+};
 
 interface IngredientSectionRow {
   id: string;
@@ -92,6 +104,7 @@ interface IngredientRowProps {
 }
 
 function IngredientRow({ row, onUpdateRow, onRemoveRow, canRemove }: IngredientRowProps) {
+  const { t } = useTranslation();
   const dragControls = useDragControls();
   const startDrag = (e: ReactPointerEvent<HTMLButtonElement>) => { triggerHaptic(15); dragControls.start(e); };
   const commitDrag = () => triggerHaptic(12);
@@ -99,23 +112,23 @@ function IngredientRow({ row, onUpdateRow, onRemoveRow, canRemove }: IngredientR
   if (row.isSection) {
     return (
       <Reorder.Item value={row} as="div" className="ingredient-section-row" dragListener={false} dragControls={dragControls} onDragEnd={commitDrag}>
-        <button type="button" className="row-drag-handle" onPointerDown={startDrag} aria-label="Glisser pour réordonner">⠿</button>
+        <button type="button" className="row-drag-handle" onPointerDown={startDrag} aria-label={t("recipeUi.form.dragToReorder")}>⠿</button>
         <input
           type="text"
           className="ing-section-title"
           value={row.title}
           onChange={(e) => onUpdateRow(row.id, "title", e.target.value)}
-          placeholder="Titre de la section (ex. Crème diplomate)"
+          placeholder={t("recipeUi.form.ingredientSectionPlaceholder")}
         />
         {canRemove && (
-          <button type="button" className="ing-remove" onClick={() => onRemoveRow(row.id)} aria-label="Supprimer cette section">✕</button>
+          <button type="button" className="ing-remove" onClick={() => onRemoveRow(row.id)} aria-label={t("recipeUi.form.removeSection")}>✕</button>
         )}
       </Reorder.Item>
     );
   }
   return (
     <Reorder.Item value={row} as="div" className="ingredient-row" dragListener={false} dragControls={dragControls} onDragEnd={commitDrag}>
-      <button type="button" className="row-drag-handle" onPointerDown={startDrag} aria-label="Glisser pour réordonner">⠿</button>
+      <button type="button" className="row-drag-handle" onPointerDown={startDrag} aria-label={t("recipeUi.form.dragToReorder")}>⠿</button>
       {/* Texte + clavier décimal (comme les valeurs nutritionnelles plus bas) :
           avec type="number", « 0,5 » tapé sur iPhone arrivait vide et la
           quantité était enregistrée à 0 sans prévenir. Voir parseQuantity. */}
@@ -125,7 +138,7 @@ function IngredientRow({ row, onUpdateRow, onRemoveRow, canRemove }: IngredientR
         className="ing-qty"
         value={row.qty}
         onChange={(e) => onUpdateRow(row.id, "qty", e.target.value)}
-        placeholder="Qté"
+        placeholder={t("recipeUi.form.qtyPlaceholder")}
       />
       <select
         className="ing-unit"
@@ -133,7 +146,7 @@ function IngredientRow({ row, onUpdateRow, onRemoveRow, canRemove }: IngredientR
         onChange={(e) => onUpdateRow(row.id, "unit", e.target.value)}
       >
         {UNIT_OPTIONS.map((u) => (
-          <option key={u.label} value={u.value}>{u.label}</option>
+          <option key={u.label} value={u.value}>{u.value in UNIT_LABEL_KEYS ? t(UNIT_LABEL_KEYS[u.value]) : u.label}</option>
         ))}
       </select>
       <input
@@ -141,10 +154,10 @@ function IngredientRow({ row, onUpdateRow, onRemoveRow, canRemove }: IngredientR
         className="ing-name"
         value={row.name}
         onChange={(e) => onUpdateRow(row.id, "name", e.target.value)}
-        placeholder="Nom de l'ingrédient"
+        placeholder={t("recipeUi.form.ingredientNamePlaceholder")}
       />
       {canRemove && (
-        <button type="button" className="ing-remove" onClick={() => onRemoveRow(row.id)} aria-label="Supprimer cet ingrédient">✕</button>
+        <button type="button" className="ing-remove" onClick={() => onRemoveRow(row.id)} aria-label={t("recipeUi.form.removeIngredient")}>✕</button>
       )}
     </Reorder.Item>
   );
@@ -159,6 +172,7 @@ interface StepRowProps {
 }
 
 function StepRow({ row, idx, onUpdateRow, onRemoveRow, canRemove }: StepRowProps) {
+  const { t } = useTranslation();
   const dragControls = useDragControls();
   const startDrag = (e: ReactPointerEvent<HTMLButtonElement>) => { triggerHaptic(15); dragControls.start(e); };
   const commitDrag = () => triggerHaptic(12);
@@ -166,33 +180,33 @@ function StepRow({ row, idx, onUpdateRow, onRemoveRow, canRemove }: StepRowProps
   if (row.isSection) {
     return (
       <Reorder.Item value={row} as="div" className="step-section-row" dragListener={false} dragControls={dragControls} onDragEnd={commitDrag}>
-        <button type="button" className="row-drag-handle" onPointerDown={startDrag} aria-label="Glisser pour réordonner">⠿</button>
+        <button type="button" className="row-drag-handle" onPointerDown={startDrag} aria-label={t("recipeUi.form.dragToReorder")}>⠿</button>
         <input
           type="text"
           className="step-section-title"
           value={row.title}
           onChange={(e) => onUpdateRow(row.id, "title", e.target.value)}
-          placeholder="Titre de la section (ex. Garniture)"
+          placeholder={t("recipeUi.form.stepSectionPlaceholder")}
         />
         {canRemove && (
-          <button type="button" className="step-remove" onClick={() => onRemoveRow(row.id)} aria-label="Supprimer cette section">✕</button>
+          <button type="button" className="step-remove" onClick={() => onRemoveRow(row.id)} aria-label={t("recipeUi.form.removeSection")}>✕</button>
         )}
       </Reorder.Item>
     );
   }
   return (
     <Reorder.Item value={row} as="div" className="step-row" dragListener={false} dragControls={dragControls} onDragEnd={commitDrag}>
-      <button type="button" className="row-drag-handle" onPointerDown={startDrag} aria-label="Glisser pour réordonner">⠿</button>
+      <button type="button" className="row-drag-handle" onPointerDown={startDrag} aria-label={t("recipeUi.form.dragToReorder")}>⠿</button>
       <span className="step-row-num">{idx + 1}</span>
       <input
         type="text"
         className="step-text"
         value={row.text}
         onChange={(e) => onUpdateRow(row.id, "text", e.target.value)}
-        placeholder={`Étape ${idx + 1}`}
+        placeholder={t("recipeUi.form.stepPlaceholder", { n: idx + 1 })}
       />
       {canRemove && (
-        <button type="button" className="step-remove" onClick={() => onRemoveRow(row.id)} aria-label="Supprimer cette étape">✕</button>
+        <button type="button" className="step-remove" onClick={() => onRemoveRow(row.id)} aria-label={t("recipeUi.form.removeStep")}>✕</button>
       )}
     </Reorder.Item>
   );
@@ -223,6 +237,7 @@ interface LongPressAddHandlers {
 
 export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, pressDuration = 750 }: RecipeFormProps) {
   useBodyScrollLock(true);
+  const { t } = useTranslation();
   const isEdit = !!initialRecipe;
   const [title, setTitle] = useState<string>(initialRecipe ? initialRecipe.title : "");
   const [category, setCategory] = useState<string>(initialRecipe ? initialRecipe.category : "Salé");
@@ -413,7 +428,7 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
     try {
       const result = await estimateNutritionOnline(buildIngredientsFromRows(), Number(servings) || 4);
       if (!result) {
-        setNutritionError("Estimation impossible — pas assez d'ingrédients reconnus. Tu peux saisir les valeurs à la main.");
+        setNutritionError(t("recipeUi.form.nutritionEstimateError"));
         return;
       }
       setCalories(result.calories);
@@ -428,7 +443,7 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
   const submit = async (e: { preventDefault: () => void }) => {
     e.preventDefault();
     if (!canSubmit || saving) {
-      if (!canSubmit) setFormError("Il manque le nom, les ingrédients ou les étapes de la recette.");
+      if (!canSubmit) setFormError(t("recipeUi.form.missingFields"));
       return;
     }
     const ingredients = buildIngredientsFromRows();
@@ -481,7 +496,7 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
     const code = extractCodeFromInput(importText);
     const parsed = decodeRecipeCode(code);
     if (!parsed) {
-      setImportError("Ce code ne semble pas valide.");
+      setImportError(t("recipeUi.form.importInvalid"));
       return;
     }
     onSave({ ...parsed, id: nextId(), favorite: false } as unknown as Recipe);
@@ -501,9 +516,9 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
         {...MODAL_SHEET_MOTION}
         {...sheet.panHandlers}
       >
-        <button type="button" className="modal-close" onClick={attemptClose} aria-label="Fermer"><X size={20} /></button>
+        <button type="button" className="modal-close" onClick={attemptClose} aria-label={t("common.close")}><X size={20} /></button>
         <h2 className="dropcap-title" {...(isEdit ? {} : secretImport)}>
-          {isEdit ? "Modifier la recette" : "Invoquer une recette"}
+          {isEdit ? t("recipeUi.form.titleEdit") : t("recipeUi.form.titleNew")}
         </h2>
 
         {!isEdit && importUnlocked && (
@@ -512,31 +527,31 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
               rows={3}
               value={importText}
               onChange={(e) => { setImportText(e.target.value); setImportError(""); }}
-              placeholder="Colle ici le lien ou le code de recette reçu…"
+              placeholder={t("recipeUi.form.importPlaceholder")}
             />
             {importError && <p className="import-error">{importError}</p>}
             <div className="import-panel-actions">
-              <button type="button" className="link-btn" onClick={() => { setImportUnlocked(false); setImportError(""); }}>Annuler</button>
-              <Seal type="button" tone="gold" onClick={submitImport}>Importer</Seal>
+              <button type="button" className="link-btn" onClick={() => { setImportUnlocked(false); setImportError(""); }}>{t("common.cancel")}</button>
+              <Seal type="button" tone="gold" onClick={submitImport}>{t("recipeUi.form.importAction")}</Seal>
             </div>
           </div>
         )}
 
         <Flourish />
         <label className="field" data-tour="recipe-title">
-          <span>Nom de la recette</span>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex. Galette des rois" required />
+          <span>{t("recipeUi.form.nameLabel")}</span>
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("recipeUi.form.namePlaceholder")} required />
         </label>
         <div className="field-row" data-tour="recipe-meta">
           <label className="field">
-            <span>Catégorie</span>
+            <span>{t("recipeUi.form.categoryLabel")}</span>
             <select value={category} onChange={(e) => setCategory(e.target.value)}>
-              <option value="Salé">Salé</option>
-              <option value="Sucré">Sucré</option>
+              <option value="Salé">{t("filters.sale")}</option>
+              <option value="Sucré">{t("filters.sucre")}</option>
             </select>
           </label>
           <label className="field">
-            <span>Temps</span>
+            <span>{t("recipeUi.form.timeLabel")}</span>
             <button
               type="button"
               className="wheel-trigger-btn"
@@ -546,13 +561,13 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
             </button>
           </label>
           <label className="field">
-            <span>Portions</span>
+            <span>{t("recipeUi.form.servingsLabel")}</span>
             <button
               type="button"
               className="wheel-trigger-btn"
               onClick={() => { triggerHaptic(15); setShowServingsWheel(true); }}
             >
-              {Number(servings) || 1} pers.
+              {t("recipeUi.form.servingsValue", { count: Number(servings) || 1 })}
             </button>
           </label>
         </div>
@@ -562,7 +577,7 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
           data-tour="recipe-nutrition"
           onClick={() => { triggerHaptic(10); setShowNutrition((v) => !v); }}
         >
-          <span>Valeurs nutritionnelles (par portion)</span>
+          <span>{t("recipeUi.form.nutritionToggle")}</span>
           <ChevronDown size={16} className={`nutrition-chevron ${showNutrition ? "open" : ""}`} />
         </button>
         {showNutrition && (
@@ -573,34 +588,34 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
               onClick={handleEstimateNutrition}
               disabled={estimatingNutrition}
             >
-              <Sparkles size={15} /> {estimatingNutrition ? "Estimation en cours…" : "Estimer la nutrition"}
+              <Sparkles size={15} /> {estimatingNutrition ? t("recipeUi.form.estimating") : t("recipeUi.form.estimateNutrition")}
             </button>
             {nutritionError && <p className="hint" style={{ fontStyle: "normal" }}>{nutritionError}</p>}
             <div className="field-row">
               <label className="field field-discreet">
-                <span>Calories (kcal)</span>
-                <input type="text" inputMode="decimal" value={calories} onChange={onDecimalChange(setCalories)} placeholder="Ex. 320" />
+                <span>{t("recipeUi.form.caloriesLabel")}</span>
+                <input type="text" inputMode="decimal" value={calories} onChange={onDecimalChange(setCalories)} placeholder={t("recipeUi.form.examplePlaceholder", { value: 320 })} />
               </label>
               <label className="field field-discreet">
-                <span>Protéines (g)</span>
-                <input type="text" inputMode="decimal" value={protein} onChange={onDecimalChange(setProtein)} placeholder="Ex. 12" />
+                <span>{t("recipeUi.form.proteinLabel")}</span>
+                <input type="text" inputMode="decimal" value={protein} onChange={onDecimalChange(setProtein)} placeholder={t("recipeUi.form.examplePlaceholder", { value: 12 })} />
               </label>
             </div>
             <div className="field-row">
               <label className="field field-discreet">
-                <span>Glucides (g)</span>
-                <input type="text" inputMode="decimal" value={carbs} onChange={onDecimalChange(setCarbs)} placeholder="Ex. 30" />
+                <span>{t("recipeUi.form.carbsLabel")}</span>
+                <input type="text" inputMode="decimal" value={carbs} onChange={onDecimalChange(setCarbs)} placeholder={t("recipeUi.form.examplePlaceholder", { value: 30 })} />
               </label>
               <label className="field field-discreet">
-                <span>Lipides (g)</span>
-                <input type="text" inputMode="decimal" value={fat} onChange={onDecimalChange(setFat)} placeholder="Ex. 9" />
+                <span>{t("recipeUi.form.fatLabel")}</span>
+                <input type="text" inputMode="decimal" value={fat} onChange={onDecimalChange(setFat)} placeholder={t("recipeUi.form.examplePlaceholder", { value: 9 })} />
               </label>
             </div>
           </div>
         )}
 
         <label className="field">
-          <span>Ingrédients</span>
+          <span>{t("recipeUi.form.ingredientsLabel")}</span>
         </label>
         <Reorder.Group as="div" className="ingredient-rows" data-tour="recipe-ingredients" axis="y" values={ingredientRows} onReorder={setIngredientRows}>
           {ingredientRows.map((row) => (
@@ -614,11 +629,11 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
           ))}
         </Reorder.Group>
         <button type="button" className="link-btn add-ingredient-btn" data-tour="recipe-add-ingredient" {...ingredientAddPress}>
-          + Ajouter un ingrédient <span className="long-press-hint">(maintenir {formatPressDuration(pressDuration)} : titre de section)</span>
+          {t("recipeUi.form.addIngredient")} <span className="long-press-hint">{t("recipeUi.form.longPressHint", { duration: formatPressDuration(pressDuration) })}</span>
         </button>
 
         <label className="field">
-          <span>Étapes de préparation</span>
+          <span>{t("recipeUi.form.stepsLabel")}</span>
         </label>
         <Reorder.Group as="div" className="step-rows" data-tour="recipe-steps" axis="y" values={stepRows} onReorder={setStepRows}>
           {stepRows.map((row, idx) => (
@@ -633,23 +648,23 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
           ))}
         </Reorder.Group>
         <button type="button" className="link-btn add-step-btn" data-tour="recipe-add-step" {...stepAddPress}>
-          + Ajouter une étape <span className="long-press-hint">(maintenir {formatPressDuration(pressDuration)} : titre de section)</span>
+          {t("recipeUi.form.addStep")} <span className="long-press-hint">{t("recipeUi.form.longPressHint", { duration: formatPressDuration(pressDuration) })}</span>
         </button>
 
         <label className="field" data-tour="recipe-notes">
-          <span>Remarques / Astuces — facultatif</span>
+          <span>{t("recipeUi.form.notesLabel")}</span>
           <textarea
             rows={3}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Ex. Peut se préparer la veille, remplacer le beurre par…"
+            placeholder={t("recipeUi.form.notesPlaceholder")}
           />
         </label>
 
         <div className="form-footer" data-tour="recipe-save">
           {formError && <p className="import-error">{formError}</p>}
           <Seal type="submit" tone="gold" disabled={!canSubmit} haptic={[100, 50, 40, 50, 150]}>
-            <Wand2 size={16} /> {isEdit ? "Enregistrer les modifications" : "Sceller la recette"}
+            <Wand2 size={16} /> {isEdit ? t("recipeUi.form.saveChanges") : t("recipeUi.form.sealRecipe")}
           </Seal>
           {isEdit && (
             <button
@@ -657,7 +672,7 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
               className="link-btn delete-recipe-btn"
               onClick={() => { triggerHaptic(30); onDelete(initialRecipe!.id); onClose(); }}
             >
-              Supprimer cette recette
+              {t("recipeUi.form.deleteRecipe")}
             </button>
           )}
         </div>
@@ -667,8 +682,8 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
     <AnimatePresence>
       {showTimeWheel && (
         <WheelPickerModal
-          title="Temps de préparation"
-          hint="Fais glisser les roues pour ajuster la durée."
+          title={t("recipeUi.form.timeWheelTitle")}
+          hint={t("recipeUi.form.timeWheelHint")}
           columns={[
             { key: "h", initialValue: Math.floor((Number(time) || 0) / 60), min: 0, max: 23, suffix: "h" },
             { key: "m", initialValue: (Number(time) || 0) % 60, min: 0, max: 59, suffix: "min" },
@@ -681,9 +696,9 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
     <AnimatePresence>
       {showServingsWheel && (
         <WheelPickerModal
-          title="Portions"
-          hint="Fais glisser la roue pour ajuster le nombre de portions."
-          columns={[{ key: "servings", initialValue: Number(servings) || 1, min: 1, max: 24, suffix: "pers." }]}
+          title={t("recipeUi.form.servingsLabel")}
+          hint={t("recipeUi.form.servingsWheelHint")}
+          columns={[{ key: "servings", initialValue: Number(servings) || 1, min: 1, max: 24, suffix: t("recipeUi.form.servingsSuffix") }]}
           onSave={({ servings: s }) => setServings(s)}
           onClose={() => setShowServingsWheel(false)}
         />

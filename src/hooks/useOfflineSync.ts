@@ -17,6 +17,7 @@ import { markSyncSuccess } from "../utils/syncStatus";
 import { getOfflineQueueSize } from "../utils/offlineQueue";
 import { saveLocalCache } from "../utils/localCache";
 import { prefetchRecipeImages } from "../utils/imageCache";
+import { translateCurrent } from "../utils/i18n";
 import type { Dispatch, SetStateAction } from "react";
 import type { LocalCacheData } from "../utils/localCache";
 import type { ConnectionStatus } from "./useConnectionStatus";
@@ -191,7 +192,7 @@ export default function useOfflineSync({
           setMealPlan([]);
           setShoppingLists([]);
           setActiveListId(null);
-          showToast("Supabase non configuré — mode démo en mémoire.");
+          showToast(translateCurrent("messages.sync.notConfiguredDemo"));
         }
         setReady(true);
         return;
@@ -241,9 +242,9 @@ export default function useOfflineSync({
       } catch (err) {
         console.error(err);
         if (hasCache) {
-          showToast("Hors-ligne — dernières données synchronisées affichées.");
+          showToast(translateCurrent("messages.sync.offlineCached"));
         } else {
-          showToast("Connexion Supabase impossible — mode démo en mémoire.");
+          showToast(translateCurrent("messages.sync.connectionFailedDemo"));
           setRecipes(demoRecipes() as unknown as Recipe[]);
         }
       } finally {
@@ -334,7 +335,7 @@ export default function useOfflineSync({
         .then(() => { lastSyncedPantryRef.current = serialized; pantryDirtyRef.current = false; })
         .catch((err) => {
           console.error("Échec de sauvegarde du frigo :", err);
-          showToast("Impossible d'enregistrer le frigo — réessaie plus tard.");
+          showToast(translateCurrent("messages.sync.pantrySaveFailed"));
           // pantryDirtyRef reste à true : cette modification locale n'a
           // jamais été confirmée en base, un écho Realtime ne doit donc
           // toujours pas pouvoir l'écraser (voir le commentaire plus haut).
@@ -353,7 +354,7 @@ export default function useOfflineSync({
         .then(() => { lastSyncedBasicsRef.current = serialized; basicsDirtyRef.current = false; })
         .catch((err) => {
           console.error("Échec de sauvegarde des basiques :", err);
-          showToast("Impossible d'enregistrer les basiques — réessaie plus tard.");
+          showToast(translateCurrent("messages.sync.basicsSaveFailed"));
         });
     }, SAVE_DEBOUNCE_MS);
     return () => { if (basicsSaveTimerRef.current) clearTimeout(basicsSaveTimerRef.current); };
@@ -369,7 +370,7 @@ export default function useOfflineSync({
         .then(() => { lastSyncedMealPlanRef.current = serialized; mealPlanDirtyRef.current = false; })
         .catch((err) => {
           console.error("Échec de sauvegarde du plan de repas :", err);
-          showToast("Impossible d'enregistrer le plan de repas — réessaie plus tard.");
+          showToast(translateCurrent("messages.sync.mealPlanSaveFailed"));
         });
     }, SAVE_DEBOUNCE_MS);
     return () => { if (mealPlanSaveTimerRef.current) clearTimeout(mealPlanSaveTimerRef.current); };
@@ -420,18 +421,18 @@ export default function useOfflineSync({
     // pu s'afficher, jamais vu par l'utilisateur.
     if (flushed > 0 || dropped > 0 || (conflicts && conflicts.length)) {
       const parts: string[] = [];
-      if (flushed > 0) parts.push(`${flushed} modification(s) resynchronisée(s)`);
+      if (flushed > 0) parts.push(translateCurrent("messages.sync.flushed", { count: flushed }));
       if (dropped > 0) {
         parts.push(
           dropped > 1
-            ? `${dropped} abandonnées après plusieurs échecs`
-            : "1 abandonnée après plusieurs échecs"
+            ? translateCurrent("messages.sync.droppedMany", { count: dropped })
+            : translateCurrent("messages.sync.droppedOne")
         );
       }
       if (conflicts && conflicts.length) {
-        const labels: Record<string, string> = { pantry: "le frigo", basics: "les basiques", meal_plan: "le plan de repas" };
+        const labels: Record<string, string> = { pantry: translateCurrent("messages.sync.fieldPantry"), basics: translateCurrent("messages.sync.fieldBasics"), meal_plan: translateCurrent("messages.sync.fieldMealPlan") };
         const fields = [...new Set(conflicts.flatMap((c) => c.keys))].map((k) => labels[k] || k);
-        parts.push(`ta modification hors-ligne de ${fields.join(" et ")} n'a pas pu être conservée (modifié ailleurs entre-temps)`);
+        parts.push(translateCurrent("messages.sync.conflict", { fields: fields.join(translateCurrent("messages.sync.fieldsJoiner")) }));
       }
       showToast(`${parts.join(", ")}.`);
     }
@@ -472,7 +473,7 @@ export default function useOfflineSync({
       // qui ne passe déjà lui-même à "offline" qu'après deux échecs
       // consécutifs, jamais sur un simple aléa réseau isolé.
       if (prevStatus !== "offline") {
-        showToast("Connexion perdue — les modifications seront synchronisées au retour du réseau.");
+        showToast(translateCurrent("messages.sync.connectionLost"));
       }
       return;
     }

@@ -62,7 +62,7 @@ export default function JoinHouseholdConfirmModal({ householdId, onRequestJoin, 
         {...MODAL_SHEET_MOTION}
         {...sheet.panHandlers}
       >
-        <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
+        <button className="modal-close" onClick={onClose} aria-label={t("common.close")}><X size={20} /></button>
         <h2 className="dropcap-title">{t("household.joinInviteTitle")}</h2>
         <Flourish />
         <p className="hint" style={{ fontStyle: "normal" }}>

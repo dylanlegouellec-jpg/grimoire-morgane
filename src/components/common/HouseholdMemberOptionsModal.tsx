@@ -86,7 +86,7 @@ export default function HouseholdMemberOptionsModal({ member, householdId, onClo
         {...MODAL_SHEET_MOTION}
         {...sheet.panHandlers}
       >
-        <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
+        <button className="modal-close" onClick={onClose} aria-label={t("common.close")}><X size={20} /></button>
         <h2 className="dropcap-title">{name}</h2>
         <Flourish />
 

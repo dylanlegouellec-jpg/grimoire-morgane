@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import { motion } from "motion/react";
 import { triggerHaptic } from "../../utils/haptics";
 import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
+import { useTranslation } from "../../contexts/LanguageContext";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
@@ -36,6 +37,7 @@ interface QuantitySheetProps {
 }
 
 export default function QuantitySheet({ item, onChange, onClose }: QuantitySheetProps) {
+  const { t } = useTranslation();
   useBodyScrollLock(true);
   const modalRef = useFocusTrap<HTMLDivElement>(onClose);
   const sheet = useDismissibleSheet(onClose, { scrollRef: modalRef });
@@ -47,6 +49,8 @@ export default function QuantitySheet({ item, onChange, onClose }: QuantitySheet
     setValue(String(qp.value));
     setUnit(qp.unit);
   };
+  // Libellé affiché seulement — la valeur enregistrée reste `u` (« unité », « sachet »...).
+  const unitLabel = (u: string) => (u === "unité" ? t("modals.quantity.unitUnit") : u === "sachet" ? t("modals.quantity.unitSachet") : u);
   const pickUnit = (u: string) => {
     triggerHaptic(10);
     setUnit(u);
@@ -69,7 +73,7 @@ export default function QuantitySheet({ item, onChange, onClose }: QuantitySheet
         {...MODAL_SHEET_MOTION}
         {...sheet.panHandlers}
       >
-        <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
+        <button className="modal-close" onClick={onClose} aria-label={t("common.close")}><X size={20} /></button>
         <h2 className="dropcap-title">{item.name}</h2>
         <Flourish />
 
@@ -84,7 +88,7 @@ export default function QuantitySheet({ item, onChange, onClose }: QuantitySheet
           autoFocus
         />
 
-        <p className="ios-group-title">Raccourcis</p>
+        <p className="ios-group-title">{t("modals.quantity.quickPicks")}</p>
         <div className="qty-sheet-quick-picks">
           {QUICK_PICKS.map((qp) => (
             <button key={qp.label} type="button" className="qty-sheet-chip" onClick={() => applyQuickPick(qp)}>
@@ -93,7 +97,7 @@ export default function QuantitySheet({ item, onChange, onClose }: QuantitySheet
           ))}
         </div>
 
-        <p className="ios-group-title">Unité</p>
+        <p className="ios-group-title">{t("modals.quantity.unit")}</p>
         <div className="qty-sheet-units">
           {UNIT_OPTIONS.map((u) => (
             <button
@@ -102,13 +106,13 @@ export default function QuantitySheet({ item, onChange, onClose }: QuantitySheet
               className={`qty-sheet-unit-pill ${unit === u ? "active" : ""}`}
               onClick={() => pickUnit(u)}
             >
-              {u}
+              {unitLabel(u)}
             </button>
           ))}
         </div>
 
         <div className="qty-sheet-save">
-          <Seal tone="gold" onClick={handleSave}>Enregistrer</Seal>
+          <Seal tone="gold" onClick={handleSave}>{t("common.save")}</Seal>
         </div>
       </motion.div>
     </motion.div>

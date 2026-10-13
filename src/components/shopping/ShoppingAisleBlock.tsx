@@ -5,6 +5,7 @@ import { aisleIcon, aisleVectorIcon } from "../../utils/helpers";
 import { triggerHaptic } from "../../utils/haptics";
 import CategoryIcon from "../common/CategoryIcon";
 import ShoppingItemRow from "./ShoppingItemRow";
+import { useTranslation } from "../../contexts/LanguageContext";
 import type { ShoppingItem } from "../../hooks/useShoppingLists";
 
 interface ShoppingItemRowSharedProps {
@@ -38,6 +39,7 @@ interface ShoppingAisleBlockProps {
 /*  leur ordre — `list` arrive déjà triée par ShoppingView.jsx.                          */
 /* ------------------------------------------------------------------ */
 export default function ShoppingAisleBlock({ aisle, list, aisleLabel, onCommitOrder, itemProps }: ShoppingAisleBlockProps) {
+  const { t } = useTranslation();
   const dragControls = useDragControls();
   const startDrag = (e: ReactPointerEvent<HTMLButtonElement>) => { triggerHaptic(15); dragControls.start(e); };
   // Un seul retour haptique + une seule écriture localStorage, au
@@ -59,7 +61,7 @@ export default function ShoppingAisleBlock({ aisle, list, aisleLabel, onCommitOr
           type="button"
           className="aisle-drag-handle"
           onPointerDown={startDrag}
-          aria-label="Glisser pour réordonner ce rayon"
+          aria-label={t("ui.shopping.dragAisle")}
         >
           <GripVertical size={16} />
         </button>

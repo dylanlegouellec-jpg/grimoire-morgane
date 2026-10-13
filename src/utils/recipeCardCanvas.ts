@@ -1,5 +1,6 @@
 import { groupIngredients, groupSteps, categoryLabel } from "./helpers";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "./nutriscore";
+import { translateCurrent } from "./i18n";
 import type { StepEntry } from "./helpers";
 import type { NormalizedIngredient, Ingredient } from "./ingredients";
 import type { NutriscoreGrade } from "./nutriscoreClient";
@@ -291,13 +292,13 @@ function buildBlocks(
   push({ type: "title", lines: titleLines.length ? titleLines : [recipe.title || ""], height: (titleLines.length || 1) * 62 });
   push({ type: "spacer", height: 14 });
 
-  const metaText = `⏱ ${recipe.time || 0} min     👥 ${servings} pers.`;
+  const metaText = `⏱ ${recipe.time || 0} ${translateCurrent("share.minutesShort")}     👥 ${servings} ${translateCurrent("share.servingsShort")}`;
   push({ type: "meta", text: metaText, height: 42 });
   push({ type: "spacer", height: 20 });
   push({ type: "flourish", height: 46 });
   push({ type: "spacer", height: 18 });
 
-  push({ type: "sectionHeader", text: "Ingrédients", height: 50 });
+  push({ type: "sectionHeader", text: translateCurrent("share.printIngredients"), height: 50 });
   push({ type: "spacer", height: 8 });
   const ingredientGroups = groupIngredients(ingredients);
   layoutItemGroups(ctx, ingredientGroups, {
@@ -308,7 +309,7 @@ function buildBlocks(
   }).forEach(push);
 
   push({ type: "spacer", height: 34 });
-  push({ type: "sectionHeader", text: "Préparation", height: 50 });
+  push({ type: "sectionHeader", text: translateCurrent("share.printPreparation"), height: 50 });
   push({ type: "spacer", height: 8 });
   const stepGroups = groupSteps(recipe.steps).map((g) => ({
     title: g.title,
@@ -325,7 +326,7 @@ function buildBlocks(
 
   if (includeNotes && recipe.notes) {
     push({ type: "spacer", height: 34 });
-    push({ type: "sectionHeader", text: "Remarques & astuces", height: 50 });
+    push({ type: "sectionHeader", text: translateCurrent("share.printNotesTitle"), height: 50 });
     push({ type: "spacer", height: 8 });
     ctx.font = FONT_BODY_ITALIC(26);
     const noteLines = wrapText(ctx, recipe.notes, CONTENT_WIDTH);
@@ -354,6 +355,7 @@ function drawBlocks(
   const centerX = canvasWidth / 2;
   const catLabel = categoryLabel(recipe);
   const catColor = catLabel === "Sucré" ? palette.plum : palette.wine;
+  const catDisplay = translateCurrent(catLabel === "Sucré" ? "filters.sucre" : "filters.sale");
 
   let y = 0;
   blocks.forEach((block) => {
@@ -387,7 +389,7 @@ function drawBlocks(
         const pillFont = FONT_LABEL(24);
         ctx.font = pillFont;
         const pillPaddingX = 26;
-        const pillWidth = ctx.measureText(catLabel.toUpperCase()).width + pillPaddingX * 2;
+        const pillWidth = ctx.measureText(catDisplay.toUpperCase()).width + pillPaddingX * 2;
         const pillHeight = 46;
         const circleDiameter = block.nutriGrade ? 52 : 0;
         const gap = block.nutriGrade ? 18 : 0;
@@ -400,7 +402,7 @@ function drawBlocks(
         ctx.fill();
         ctx.fillStyle = "#f6ecd2";
         ctx.textAlign = "center";
-        ctx.fillText(catLabel.toUpperCase(), bx + pillWidth / 2, midY + 8);
+        ctx.fillText(catDisplay.toUpperCase(), bx + pillWidth / 2, midY + 8);
 
         if (block.nutriGrade) {
           const cx = bx + pillWidth + gap + circleDiameter / 2;
@@ -502,7 +504,7 @@ function drawBlocks(
         ctx.font = FONT_LABEL(24);
         ctx.fillStyle = palette.gold;
         ctx.textAlign = "center";
-        ctx.fillText("Le Grimoire de Morgane 📜", centerX, y + 50);
+        ctx.fillText(translateCurrent("share.printFooter"), centerX, y + 50);
         ctx.textAlign = "left";
         break;
       }

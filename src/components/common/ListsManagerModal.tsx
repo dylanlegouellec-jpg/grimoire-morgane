@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import Flourish from "./Flourish";
 import Seal from "./Seal";
 import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
+import { useTranslation } from "../../contexts/LanguageContext";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
@@ -15,9 +16,10 @@ import type { ShoppingList } from "../../hooks/useShoppingLists";
 // soit sans ambiguïté quelle portée on est en train de gérer. Omis, le
 // modal se comporte comme avant (titre générique, ex. gestionnaire de
 // recettes s'il en existait un autre usage).
+// Clés de traduction (voir modals.lists.*), résolues au rendu par t().
 const SCOPE_TITLES: Record<string, string> = {
-  household: "Listes du foyer",
-  personal: "Mes listes personnelles",
+  household: "modals.lists.scopeHousehold",
+  personal: "modals.lists.scopePersonal",
 };
 
 interface ListsManagerModalProps {
@@ -32,6 +34,7 @@ interface ListsManagerModalProps {
 }
 
 export default function ListsManagerModal({ lists, activeListId, scope, onOpen, onCreate, onRename, onDelete, onClose }: ListsManagerModalProps) {
+  const { t } = useTranslation();
   const [armedDeleteId, setArmedDeleteId] = useState<string | null>(null);
   // Sans second appui dans les 3 s, le bouton se désarme tout seul.
   useEffect(() => {
@@ -65,11 +68,11 @@ export default function ListsManagerModal({ lists, activeListId, scope, onOpen, 
         {...MODAL_SHEET_MOTION}
         {...sheet.panHandlers}
       >
-        <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
-        <h2 className="dropcap-title">{scope ? SCOPE_TITLES[scope] : "Mes listes de courses"}</h2>
+        <button className="modal-close" onClick={onClose} aria-label={t("common.close")}><X size={20} /></button>
+        <h2 className="dropcap-title">{scope ? (SCOPE_TITLES[scope] && t(SCOPE_TITLES[scope])) : t("modals.lists.title")}</h2>
         <Flourish />
         {lists.length === 0 ? (
-          <p className="hint">Aucune liste pour l'instant.</p>
+          <p className="hint">{t("modals.lists.empty")}</p>
         ) : (
           <div className="lists-manager">
             {lists.map((list) => (
@@ -93,10 +96,10 @@ export default function ListsManagerModal({ lists, activeListId, scope, onOpen, 
                 ) : (
                   <button type="button" className="lists-manager-name" onClick={() => { onOpen(list.id); onClose(); }}>
                     {list.name}
-                    <span className="lists-manager-count">{list.items.length} article{list.items.length > 1 ? "s" : ""}</span>
+                    <span className="lists-manager-count">{t("modals.lists.itemCount", { count: list.items.length, plural: list.items.length > 1 ? "s" : "" })}</span>
                   </button>
                 )}
-                <button type="button" className="lists-manager-icon-btn" onClick={() => startRename(list)} aria-label="Renommer">✎</button>
+                <button type="button" className="lists-manager-icon-btn" onClick={() => startRename(list)} aria-label={t("modals.lists.rename")}>✎</button>
                 {/* Deux appuis pour supprimer : le premier arme le bouton
                     (« Supprimer ? »), le second confirme. Un seul appui
                     effaçait la liste entière sans prévenir. */}
@@ -107,16 +110,16 @@ export default function ListsManagerModal({ lists, activeListId, scope, onOpen, 
                     if (armedDeleteId === list.id) { setArmedDeleteId(null); onDelete(list.id); }
                     else setArmedDeleteId(list.id);
                   }}
-                  aria-label={armedDeleteId === list.id ? "Confirmer la suppression" : "Supprimer"}
+                  aria-label={armedDeleteId === list.id ? t("modals.lists.confirmDelete") : t("common.delete")}
                 >
-                  {armedDeleteId === list.id ? "Supprimer ?" : "✕"}
+                  {armedDeleteId === list.id ? t("modals.lists.deleteArmed") : "✕"}
                 </button>
               </div>
             ))}
           </div>
         )}
         <Seal tone="gold" onClick={() => { onCreate(); onClose(); }}>
-          <Plus size={16} /> Nouvelle liste
+          <Plus size={16} /> {t("modals.lists.newList")}
         </Seal>
       </motion.div>
     </motion.div>

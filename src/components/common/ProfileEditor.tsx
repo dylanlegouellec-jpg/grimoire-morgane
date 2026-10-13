@@ -4,6 +4,7 @@ import { Check, UserCircle2, X } from "lucide-react";
 import { saveProfile, uploadAvatar } from "../../utils/profile";
 import { triggerHaptic } from "../../utils/helpers";
 import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
+import { useTranslation } from "../../contexts/LanguageContext";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
@@ -41,6 +42,7 @@ interface ProfileEditorProps {
 /*  hors-ligne que le reste de l'app (voir utils/profile.js).             */
 /* ------------------------------------------------------------------ */
 export default function ProfileEditor({ user, profile, onClose, onSaved, showToast }: ProfileEditorProps) {
+  const { t } = useTranslation();
   useBodyScrollLock(true);
   const modalRef = useFocusTrap<HTMLDivElement>(onClose);
   const sheet = useDismissibleSheet(onClose, { scrollRef: modalRef });
@@ -72,10 +74,10 @@ export default function ProfileEditor({ user, profile, onClose, onSaved, showToa
       await saveProfile(user.id, { avatarUrl: url });
       setAvatarUrl(url);
       onSaved && onSaved({ avatar_url: url });
-      showToast && showToast("Photo de profil mise à jour !");
+      showToast && showToast(t("modals.profile.photoUpdatedToast"));
     } catch (err) {
       console.error(err);
-      showToast && showToast("Échec de l'envoi de la photo.");
+      showToast && showToast(t("modals.profile.photoFailedToast"));
     } finally {
       setUploading(false);
     }
@@ -90,11 +92,11 @@ export default function ProfileEditor({ user, profile, onClose, onSaved, showToa
       const trimmedUsername = username.trim();
       await saveProfile(user.id, { firstName: trimmedFirst, lastName: trimmedLast, username: trimmedUsername, birthDate });
       onSaved && onSaved({ first_name: trimmedFirst, last_name: trimmedLast, username: trimmedUsername, birth_date: birthDate || null });
-      showToast && showToast("Profil mis à jour !");
+      showToast && showToast(t("modals.profile.savedToast"));
       onClose();
     } catch (err) {
       console.error(err);
-      showToast && showToast("Échec de l'enregistrement du profil.");
+      showToast && showToast(t("modals.profile.saveFailedToast"));
     } finally {
       setSaving(false);
     }
@@ -111,32 +113,32 @@ export default function ProfileEditor({ user, profile, onClose, onSaved, showToa
         {...MODAL_SHEET_MOTION}
         {...sheet.panHandlers}
       >
-        <button className="modal-close" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
-        <h2 className="dropcap-title">Modifier le profil</h2>
+        <button className="modal-close" onClick={onClose} aria-label={t("common.close")}><X size={20} /></button>
+        <h2 className="dropcap-title">{t("modals.profile.title")}</h2>
         <Flourish />
 
         <div className="profile-editor-row" style={{ marginBottom: 18 }}>
-          <button type="button" className="avatar-picker" onClick={handleAvatarClick} disabled={uploading} title="Changer la photo" aria-label="Changer la photo">
+          <button type="button" className="avatar-picker" onClick={handleAvatarClick} disabled={uploading} title={t("modals.profile.changePhoto")} aria-label={t("modals.profile.changePhoto")}>
             {avatarUrl ? <img src={avatarUrl} alt="" className="avatar-img" loading="lazy" decoding="async" /> : <UserCircle2 size={26} />}
           </button>
           <p className="hint" style={{ fontStyle: "normal", margin: 0 }}>
-            {uploading ? "Envoi de la photo…" : "Touche la photo pour la changer."}
+            {uploading ? t("modals.profile.uploadingPhoto") : t("modals.profile.tapPhotoHint")}
           </p>
         </div>
         <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleAvatarChange} />
 
         <div className="field-row">
           <label className="field">
-            <span>Prénom</span>
-            <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Morgane" />
+            <span>{t("modals.profile.firstName")}</span>
+            <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder={t("modals.profile.firstNamePlaceholder")} />
           </label>
           <label className="field">
-            <span>Nom</span>
-            <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Dupont" />
+            <span>{t("modals.profile.lastName")}</span>
+            <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder={t("modals.profile.lastNamePlaceholder")} />
           </label>
         </div>
         <label className="field">
-          <span>Nom d'utilisateur / Surnom</span>
+          <span>{t("modals.profile.username")}</span>
           <input
             type="text"
             value={username}
@@ -146,17 +148,17 @@ export default function ProfileEditor({ user, profile, onClose, onSaved, showToa
           />
         </label>
         <p className="hint" style={{ fontStyle: "normal", marginTop: 2 }}>
-          Le surnom est visible par les autres membres de tes foyers.
+          {t("modals.profile.usernameHint")}
         </p>
 
         <label className="field" style={{ marginTop: 12 }}>
-          <span>Date de naissance</span>
+          <span>{t("modals.profile.birthDate")}</span>
           <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} max={new Date().toISOString().slice(0, 10)} />
         </label>
 
         <div className="cookmode-nav" style={{ marginTop: 16 }}>
           <button type="button" className="seal seal-gold" onClick={handleSave} disabled={saving}>
-            <Check size={16} /> {saving ? "Enregistrement…" : "Enregistrer"}
+            <Check size={16} /> {saving ? t("modals.profile.saving") : t("common.save")}
           </button>
         </div>
       </motion.div>
