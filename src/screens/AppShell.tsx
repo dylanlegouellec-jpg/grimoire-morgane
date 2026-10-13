@@ -1,18 +1,17 @@
 import { useEffect, useRef, useState, lazy, Suspense } from "react";
-import { AnimatePresence, motion } from "motion/react";
-import { Heart, Search, Settings, Wand2 } from "lucide-react";
+import { AnimatePresence } from "motion/react";
+import { Wand2 } from "lucide-react";
 
 import { FILTERS, TABS } from "../constants";
-import { SPRING_PILL } from "../constants/motion";
-import { triggerHaptic, nextId, copyText } from "../utils/helpers";
-import { getCachedProfile, getProfile } from "../utils/profile";
+import { nextId, copyText } from "../utils/helpers";
 import { useTranslation } from "../contexts/LanguageContext";
 import useTabNavigation from "../hooks/useTabNavigation";
 import useFilterSwipe from "../hooks/useFilterSwipe";
 
 import { NavButton } from "../components/common";
 import ErrorBoundary from "../components/common/ErrorBoundary";
-import UpdateBanner from "../components/common/UpdateBanner";
+import AppHeader from "./AppHeader";
+import TabBars from "./TabBars";
 import { RecipesView, RecipeForm, RecipeDetail, CookMode } from "../components/recipe";
 import type { Recipe } from "../hooks/useRecipes";
 import type { RecipesApi, PantryApi, MealPlanApi, ShoppingApi, SettingsApi, HouseholdApi, SyncApi } from "./appShellTypes";
@@ -248,20 +247,6 @@ export default function AppShell({
   const resetOnboarding = () => setHasCompletedOnboarding(false);
 
 
-  // Photo de profil affichée dans le bouton de réglages de l'en-tête —
-  // cache-first (voir utils/profile.js) : s'affiche instantanément avec la
-  // dernière valeur connue, même hors ligne, puis se rafraîchit dès que le
-  // réseau répond. Remplace l'ancien déclencheur "triple-clic sur le
-  // titre" : le titre n'ouvre plus rien, ce bouton est l'unique porte
-  // d'entrée vers les réglages.
-  const [headerProfile, setHeaderProfile] = useState(() => getCachedProfile());
-  useEffect(() => {
-    if (!user) return undefined;
-    let cancelled = false;
-    getProfile(user.id).then((p) => { if (!cancelled && p) setHeaderProfile(p); });
-    return () => { cancelled = true; };
-  }, [user]);
-  const headerAvatarUrl = (headerProfile && (headerProfile.avatar_url as string | undefined)) || null;
 
   const shareText = async (text: string, label: string) => {
     const ok = await copyText(text);
@@ -325,131 +310,27 @@ export default function AppShell({
           changement de rendu, les enfants restent directement dans le flux
           de .grimoire-app comme avant. */}
       <div className="app-sidebar">
-      <header className="app-header">
-        <button
-          type="button"
-          className={`app-header-settings-btn ${headerAvatarUrl ? "has-avatar" : ""}`}
-          onClick={() => { triggerHaptic(15); setShowSecretSettings(true); }}
-          aria-label={t("settings.title")}
-        >
-          {headerAvatarUrl ? (
-            <span className="app-header-avatar-wrap">
-              <img
-                src={headerAvatarUrl}
-                alt=""
-                className="app-header-avatar"
-                loading="lazy"
-                decoding="async"
-                draggable="false"
-                onContextMenu={(e) => e.preventDefault()}
-              />
-              <span
-                className={`connection-status-dot app-header-status-dot connection-status-${connectionStatus || "checking"}`}
-                aria-hidden="true"
-              />
-            </span>
-          ) : (
-            <Settings size={20} />
-          )}
-        </button>
-        <h1>Le Grimoire de Morgane</h1>
-        <p className="subtitle">{t("app.subtitle")}</p>
-        {connectionStatus === "offline" && (
-          <p className="offline-banner">
-            {t("app.offline")}
-            {onRetryConnection && (
-              <button type="button" className="offline-banner-retry" onClick={() => { triggerHaptic(10); onRetryConnection(); }}>
-                {t("app.offlineRetry")}
-              </button>
-            )}
-          </p>
-        )}
-        <UpdateBanner />
-        {offlineQueueSize > 0 && (
-          <p className="offline-queue-badge">
-            {t("app.syncPending", { count: offlineQueueSize, plural: offlineQueueSize > 1 ? "s" : "" })}
-          </p>
-        )}
-      </header>
+      <AppHeader
+        user={user}
+        connectionStatus={connectionStatus}
+        onRetryConnection={onRetryConnection}
+        offlineQueueSize={offlineQueueSize}
+        onOpenSettings={() => setShowSecretSettings(true)}
+      />
 
-      {/* Recherche + filtres (Recettes) et recherche (Frigo) : font PARTIE du
-          contenu de l'onglet — mêmes classes, même fondu de sortie, même
-          entrée, même `key` que le contenu juste en dessous. Ils se fondent
-          avec l'ancien contenu, puis le nouveau (barres + contenu) entre
-          ensemble : la mise en page ne change que quand tout est invisible.
-          Deux essais précédents, abandonnés : (1) des barres qui changeaient
-          d'un coup à la bascule — elles restaient opaques pendant que le
-          contenu se fondait, puis disparaissaient en une image, et tout sautait
-          de 56 à 105 px ; (2) des barres animées en hauteur dès le clic — la
-          barre du NOUVEL onglet glissait au-dessus de l'ancien contenu encore
-          affiché et le repoussait vers le bas (enregistrement iPhone à l'appui). */}
-      {(shownTab === "recettes" || shownTab === "frigo") && (
-        <div
-          key={shownTab}
-          className={`tab-bars tab-transition${tabExiting ? " tab-exit" : ""}`}
-          style={tabSlideStyle}
-        >
-          {shownTab === "recettes" && (
-            <>
-              <div className="search-bar">
-                <Search size={15} />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={t("app.searchRecipePlaceholder")}
-                  aria-label={t("app.searchRecipePlaceholder")}
-                />
-              </div>
-              <div className="filter-bar">
-                {FILTERS.map((f) => {
-                  const active = filter === f.key;
-                  return (
-                    <button
-                      key={f.key}
-                      className={`filter-pill ${active ? "active" : ""}`}
-                      onClick={() => { triggerHaptic(10); setFilter(f.key); }}
-                    >
-                      {/* Pastille dorée glissante — Framer Motion (layoutId
-                          "recettes-filter-pill", propre à cette barre : un autre
-                          layoutId que celui de RecipePickerModal.jsx, chacun
-                          avec son propre état "filter" local, jamais les deux
-                          montés à la fois de toute façon mais autant éviter tout
-                          risque de collision). */}
-                      {active && (
-                        <motion.span
-                          layoutId="recettes-filter-pill"
-                          className="filter-indicator"
-                          transition={SPRING_PILL}
-                        />
-                      )}
-                      {t(`filters.${f.key}`)}
-                    </button>
-                  );
-                })}
-                <button
-                  className={`filter-pill heart-pill ${favoritesOnly ? "active" : ""}`}
-                  onClick={() => { triggerHaptic(10); setFavoritesOnly((v) => !v); }}
-                  title={t("app.favoritesTitle")}
-                >
-                  <Heart size={13} fill={favoritesOnly ? "currentColor" : "none"} /> {t("app.favorites")}
-                </button>
-              </div>
-
-            </>
-          )}
-          {shownTab === "frigo" && (
-            <div className="search-bar">
-              <Search size={15} />
-              <input
-                value={fridgeSearch}
-                onChange={(e) => setFridgeSearch(e.target.value)}
-                placeholder={t("app.searchFridgePlaceholder")}
-                aria-label={t("app.searchFridgePlaceholder")}
-              />
-            </div>
-          )}
-        </div>
-      )}
+      <TabBars
+        shownTab={shownTab}
+        tabExiting={tabExiting}
+        tabSlideStyle={tabSlideStyle}
+        search={search}
+        onSearchChange={setSearch}
+        filter={filter}
+        onFilterChange={setFilter}
+        favoritesOnly={favoritesOnly}
+        onFavoritesOnlyChange={setFavoritesOnly}
+        fridgeSearch={fridgeSearch}
+        onFridgeSearchChange={setFridgeSearch}
+      />
 
       {/* Dernier enfant de .app-sidebar (voir son commentaire plus haut) :
           en paysage, "margin-top: auto" (responsive.css) la pousse tout
