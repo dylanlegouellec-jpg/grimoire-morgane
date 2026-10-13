@@ -15,17 +15,17 @@ export const DIAGNOSTICS_CSS: string = `
 .diagnostics-log-header + .segmented { margin-bottom: 8px; }
 
 .diagnostics-tone-good { color: var(--forest); }
-.diagnostics-tone-warn { color: var(--gold); }
+.diagnostics-tone-warn { color: var(--gold-text); }
 .diagnostics-tone-bad { color: var(--wine); }
 
 .diagnostics-status-dot { font-weight: 600; padding: 2px 10px; border-radius: 999px; font-size: 0.85rem; }
 .diagnostics-status-dot--online { color: var(--forest); background: rgba(62,122,62,0.14); }
 .diagnostics-status-dot--offline { color: var(--wine); background: rgba(124,50,50,0.14); }
-.diagnostics-status-dot--checking { color: var(--gold); background: rgba(179,135,42,0.14); }
+.diagnostics-status-dot--checking { color: var(--gold-text); background: rgba(179,135,42,0.14); }
 
 .diagnostics-log-header { display: flex; align-items: center; justify-content: space-between; margin-top: 18px; }
 .diagnostics-log-clear {
-  background: none; border: none; color: var(--gold); font-size: 0.85rem; font-weight: 600; cursor: pointer; padding: 4px 6px;
+  background: none; border: none; color: var(--gold-text); font-size: 0.85rem; font-weight: 600; cursor: pointer; padding: 4px 6px;
 }
 .diagnostics-log {
   max-height: 220px; overflow-y: auto; background: var(--surface-soft); border: 1px solid var(--line);
@@ -39,7 +39,7 @@ export const DIAGNOSTICS_CSS: string = `
 .diagnostics-log-entry--error .diagnostics-log-level,
 .diagnostics-log-entry--error .diagnostics-log-message { color: var(--wine); }
 .diagnostics-log-entry--warn .diagnostics-log-level,
-.diagnostics-log-entry--warn .diagnostics-log-message { color: var(--gold); }
+.diagnostics-log-entry--warn .diagnostics-log-message { color: var(--gold-text); }
 .diagnostics-log-entry--network .diagnostics-log-level,
 .diagnostics-log-entry--network .diagnostics-log-message { color: var(--plum); }
 
@@ -88,5 +88,5 @@ export const DIAGNOSTICS_CSS: string = `
 .code-chip--more { font-family: 'EB Garamond', serif; font-style: italic; font-size: 0.78rem; }
 .code-type-name { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.85rem; color: var(--ink); }
 .code-overview-step { margin-bottom: 4px; }
-.code-overview-title { margin: 0 0 3px; font-family: 'Cinzel', serif; font-size: 0.74rem; letter-spacing: 0.4px; color: var(--gold); }
+.code-overview-title { margin: 0 0 3px; font-family: 'Cinzel', serif; font-size: 0.74rem; letter-spacing: 0.4px; color: var(--gold-text); }
 `;

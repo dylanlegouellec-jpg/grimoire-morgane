@@ -14,11 +14,11 @@ export const FRIDGE_CSS: string = `
 .fridge-counter {
   display: inline-flex; align-items: center; gap: 6px;
   font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.5px; text-transform: uppercase;
-  color: var(--gold); background: rgba(179,135,42,0.12); border: 1px solid rgba(179,135,42,0.3);
+  color: var(--gold-text); background: rgba(179,135,42,0.12); border: 1px solid rgba(179,135,42,0.3);
   border-radius: 999px; padding: 6px 14px; margin-bottom: 16px;
 }
 .basics-title {
-  font-family: 'Cinzel', serif; font-size: 0.85rem; letter-spacing: 0.5px; color: var(--gold);
+  font-family: 'Cinzel', serif; font-size: 0.85rem; letter-spacing: 0.5px; color: var(--gold-text);
   margin: 4px 0 8px; display: flex; align-items: baseline; gap: 8px;
 }
 /* Variante repliable (accordéon), voir FridgeView.jsx : mêmes réglages
@@ -44,14 +44,14 @@ export const FRIDGE_CSS: string = `
    les deux boutons (⇄ et ✕) sans qu'ils se touchent. */
 .basic-action {
   width: 24px; height: 24px; border-radius: 50%; border: none;
-  background: rgba(179,135,42,0.2); color: var(--gold); font-size: 0.7rem;
+  background: rgba(179,135,42,0.2); color: var(--gold-text); font-size: 0.7rem;
   display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
 }
 .basic-action-remove { background: rgba(124,50,50,0.15); color: var(--wine); }
 
 .fridge-quick-add {
   display: flex; align-items: center; gap: 6px; width: 100%;
-  font-family: 'EB Garamond', serif; font-style: italic; font-size: 0.88rem; color: var(--gold);
+  font-family: 'EB Garamond', serif; font-style: italic; font-size: 0.88rem; color: var(--gold-text);
   background: none; border: 1px dashed rgba(179,135,42,0.5); border-radius: 10px;
   padding: 10px 12px; margin-bottom: 10px; cursor: pointer;
 }

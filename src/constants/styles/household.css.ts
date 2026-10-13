@@ -31,7 +31,7 @@ export const HOUSEHOLD_CSS: string = `
 }
 .household-admin-badge {
   flex-shrink: 0; font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.5px; text-transform: uppercase;
-  color: var(--gold); background: rgba(179,135,42,0.15); border: 1px solid rgba(179,135,42,0.4);
+  color: var(--gold-text); background: rgba(179,135,42,0.15); border: 1px solid rgba(179,135,42,0.4);
   border-radius: 999px; padding: 2px 8px;
 }
 .household-member-badge {

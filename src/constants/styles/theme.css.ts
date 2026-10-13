@@ -14,6 +14,10 @@ export const THEME_CSS: string = `
   --ink-soft: #5c4a30;
   --gold: #b3872a;
   --gold-light: #d9b45c;
+  /* Doré utilisé pour du TEXTE : #b3872a ne donnait que 2,6:1 sur le
+     parchemin (minimum lisible : 4,5:1). Plus sombre ici, 5,3:1. --gold
+     reste inchangé pour les fonds, liserés et icônes. */
+  --gold-text: #755812;
   --wine: #7c3232;
   --plum: #5a3a63;
   --line: rgba(42,32,19,0.18);
@@ -52,11 +56,14 @@ export const THEME_CSS: string = `
      lisible dessus. Distinct de --gold/--gold-light (utilisés ailleurs pour
      du texte/liserés sur fond clair) — voir l'override sombre ci-dessous
      pour le contraste inverse recherché sur fond noir. */
-  --seal-bg: linear-gradient(180deg, #d99a4a, #b87333);
-  --seal-bg-hover: #a8651f;
-  --seal-border: rgba(180,115,40,0.35);
+  /* Ambre assombri (audit d'accessibilité) : le texte clair n'avait que
+     2,3:1 en haut du dégradé (#d99a4a). Maintenant 4,4:1 en haut, 6,2:1 en
+     bas — même teinte, simplement plus profonde. */
+  --seal-bg: linear-gradient(180deg, #a5642a, #84501c);
+  --seal-bg-hover: #7a4a18;
+  --seal-border: rgba(132,80,28,0.45);
   --seal-text: #fff7ec;
-  --seal-shadow: #8a651c;
+  --seal-shadow: #5f3a12;
 }
 
 /* --- Thème Sombre — même esprit grimoire/parchemin, en veille de nuit --- */
@@ -67,6 +74,7 @@ export const THEME_CSS: string = `
   --ink-soft: #c9b993;
   --gold: #d97706;
   --gold-light: #f3ad4b;
+  --gold-text: var(--gold);
   --wine: #c1666b;
   --plum: #a884b8;
   --line: rgba(231,229,228,0.14);
@@ -193,12 +201,12 @@ html, body {
 
 .loading-screen {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 12px; min-height: 100%; color: var(--gold);
+  gap: 12px; min-height: 100%; color: var(--gold-text);
 }
 .loading-screen p { color: var(--ink-soft); font-style: italic; }
 .view-loading {
   display: flex; align-items: center; justify-content: center;
-  min-height: 200px; color: var(--gold);
+  min-height: 200px; color: var(--gold-text);
 }
 .login-screen { padding: 24px; text-align: center; }
 .login-title { font-family: 'Cinzel Decorative', 'Cinzel', serif; font-size: 1.6rem; color: var(--ink); margin: 0; }

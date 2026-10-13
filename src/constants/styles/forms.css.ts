@@ -55,7 +55,7 @@ export const FORMS_CSS: string = `
 .nutrition-fields { margin-bottom: 10px; }
 .nutrition-estimate-btn {
   display: flex; align-items: center; gap: 6px; margin-bottom: 12px;
-  color: var(--gold); font-family: 'EB Garamond', serif; font-size: 0.92rem;
+  color: var(--gold-text); font-family: 'EB Garamond', serif; font-size: 0.92rem;
 }
 .nutrition-estimate-btn:disabled { opacity: 0.6; cursor: default; }
 
@@ -63,7 +63,7 @@ export const FORMS_CSS: string = `
 .ingredient-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 6px; }
 .row-drag-handle {
   flex-shrink: 0; width: 26px; height: 30px; border: none; border-radius: 6px;
-  background: rgba(179,135,42,0.15); color: var(--gold); font-size: 15px; line-height: 1;
+  background: rgba(179,135,42,0.15); color: var(--gold-text); font-size: 15px; line-height: 1;
   display: flex; align-items: center; justify-content: center;
   cursor: grab; touch-action: none; user-select: none;
 }
@@ -87,7 +87,7 @@ export const FORMS_CSS: string = `
 }
 .ingredient-section-row { display: flex; gap: 8px; align-items: center; max-width: 100%; }
 .ing-section-title {
-  flex: 1; min-width: 0; font-family: 'Cinzel', serif; font-size: 0.82rem; letter-spacing: 0.3px; color: var(--gold);
+  flex: 1; min-width: 0; font-family: 'Cinzel', serif; font-size: 0.82rem; letter-spacing: 0.3px; color: var(--gold-text);
   background: rgba(179,135,42,0.1); border: 1px solid rgba(179,135,42,0.4); border-radius: 8px; padding: 8px 10px;
 }
 .add-ingredient-btn { display: block; margin: 2px 0 18px; }
@@ -112,7 +112,7 @@ export const FORMS_CSS: string = `
 }
 .step-section-row { display: flex; gap: 8px; align-items: center; max-width: 100%; }
 .step-section-title {
-  flex: 1; min-width: 0; font-family: 'Cinzel', serif; font-size: 0.82rem; letter-spacing: 0.3px; color: var(--gold);
+  flex: 1; min-width: 0; font-family: 'Cinzel', serif; font-size: 0.82rem; letter-spacing: 0.3px; color: var(--gold-text);
   background: rgba(179,135,42,0.1); border: 1px solid rgba(179,135,42,0.4); border-radius: 8px; padding: 8px 10px;
 }
 .add-step-btn { display: block; margin: 2px 0 18px; }

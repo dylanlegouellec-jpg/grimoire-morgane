@@ -113,7 +113,7 @@ export const SETTINGS_IOS_CSS: string = `
 .settings-slider-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .settings-slider-value {
   flex-shrink: 0;
-  font-family: 'Cinzel', serif; font-size: 0.78rem; letter-spacing: 0.5px; color: var(--gold);
+  font-family: 'Cinzel', serif; font-size: 0.78rem; letter-spacing: 0.5px; color: var(--gold-text);
 }
 .settings-slider {
   -webkit-appearance: none; appearance: none;
@@ -140,7 +140,7 @@ export const SETTINGS_IOS_CSS: string = `
   position: absolute; top: 14px; left: 14px; z-index: 5;
   display: flex; align-items: center;
   background: none; border: none; padding: 5px 8px 5px 2px; border-radius: 8px;
-  color: var(--gold); font-family: 'EB Garamond', serif; font-size: 0.95rem; cursor: pointer;
+  color: var(--gold-text); font-family: 'EB Garamond', serif; font-size: 0.95rem; cursor: pointer;
 }
 .modal-back:active { background: var(--modal-close-bg); }
 

@@ -16,7 +16,7 @@ export const MISC_CSS: string = `
 
 /* --- Petits liens texte --- */
 .link-btn {
-  background: none; border: none; color: var(--gold);
+  background: none; border: none; color: var(--gold-text);
   font-family: 'Cinzel', serif; font-size: 0.66rem; letter-spacing: 0.5px;
   display: inline-flex; align-items: center; gap: 5px;
   cursor: pointer; padding: 4px 0; text-transform: uppercase;
@@ -46,7 +46,7 @@ export const MISC_CSS: string = `
 .cookbook-export-tile {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
   padding: 16px 8px; border-radius: 14px; border: 1px solid var(--line);
-  background: var(--surface); color: var(--gold); cursor: pointer;
+  background: var(--surface); color: var(--gold-text); cursor: pointer;
   font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.3px; text-align: center;
 }
 .cookbook-export-tile:disabled { opacity: 0.55; cursor: default; }
