@@ -19,6 +19,8 @@ interface AppearanceSettingsModalProps {
   onSetHeroTreatment: (value: string) => void;
   iconStyle: string;
   onSetIconStyle: (value: string) => void;
+  recipeSort: string;
+  onSetRecipeSort: (value: string) => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -39,6 +41,8 @@ export default function AppearanceSettingsModal({
   onSetHeroTreatment,
   iconStyle,
   onSetIconStyle,
+  recipeSort,
+  onSetRecipeSort,
 }: AppearanceSettingsModalProps) {
   const { t } = useTranslation();
 
@@ -51,6 +55,12 @@ export default function AppearanceSettingsModal({
   const ICON_STYLE_OPTIONS = [
     { value: "emoji", label: t("settings.iconStyleEmoji") },
     { value: "vector", label: t("settings.iconStyleVector"), icon: Sparkles },
+  ];
+
+  const RECIPE_SORT_OPTIONS = [
+    { value: "name", label: t("settings.recipeSortName") },
+    { value: "recent", label: t("settings.recipeSortRecent") },
+    { value: "quick", label: t("settings.recipeSortQuick") },
   ];
 
   return (
@@ -78,6 +88,14 @@ export default function AppearanceSettingsModal({
       <div className="ios-group ios-group-padded">
         <SegmentedControl options={LANGUAGE_OPTIONS} value={language} onChange={onSetLanguage} ariaLabel={t("settings.languageTitle")} />
       </div>
+
+      <p className="ios-group-title">{t("settings.recipeSortTitle")}</p>
+      <div className="ios-group ios-group-padded">
+        <SegmentedControl options={RECIPE_SORT_OPTIONS} value={recipeSort} onChange={onSetRecipeSort} ariaLabel={t("settings.recipeSortTitle")} />
+      </div>
+      <p className="hint" style={{ fontStyle: "normal", marginTop: 8 }}>
+        {t("settings.recipeSortHint")}
+      </p>
 
       <p className="ios-group-title">{t("settings.navigationSection")}</p>
       <div className="ios-group">

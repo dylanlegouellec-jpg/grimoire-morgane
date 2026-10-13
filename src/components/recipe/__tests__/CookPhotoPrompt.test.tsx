@@ -14,9 +14,9 @@ import { uploadRecipeImage } from "../../../utils/imageUpload";
 import { resetCookTimersForTests } from "../../../utils/cookTimers";
 import type { Recipe } from "../../../hooks/useRecipes";
 
-/* Photo du plat en fin de mode cuisine : envoi via uploadRecipeImage (simulé),
-   demande avant de remplacer une photo personnelle, recette inchangée en cas
-   d'échec. Sélecteurs par classes / data-testid : indépendants des textes. */
+/* Photo du plat en fin de mode cuisine, proposée seulement pour une recette
+   sans photo : envoi via uploadRecipeImage (simulé), recette inchangée en
+   cas d'échec. Sélecteurs par classes / data-testid : indépendants des textes. */
 
 const BASE = {
   id: "r1",
@@ -35,8 +35,6 @@ const upload = vi.mocked(uploadRecipeImage);
 beforeEach(() => {
   upload.mockReset();
   resetCookTimersForTests();
-  URL.createObjectURL = vi.fn(() => "blob:preview");
-  URL.revokeObjectURL = vi.fn();
 });
 afterEach(() => {
   cleanup();
@@ -71,40 +69,16 @@ describe("CookPhotoPrompt", () => {
     expect(screen.getByTestId("cook-photo-gallery")).not.toHaveAttribute("capture");
   });
 
-  it("une illustration IA est remplacée sans question (mode invité : sans foyer)", async () => {
-    upload.mockResolvedValue("https://x/new.webp");
+  it("« Reprendre une photo » remplace directement celle qui vient d'être envoyée", async () => {
+    upload.mockResolvedValueOnce("https://x/1.webp").mockResolvedValueOnce("https://x/2.webp");
     const onUpdate = vi.fn();
-    render(<CookPhotoPrompt recipe={{ ...BASE, imageUrl: "https://x/ia.png", imageSource: "ia" }} onUpdateRecipe={onUpdate} />);
+    render(<CookPhotoPrompt recipe={BASE} onUpdateRecipe={onUpdate} />);
+    pick("cook-photo-camera");
+    await waitFor(() => expect(document.querySelector(".cookmode-photo-saved")).toBeInTheDocument());
     pick("cook-photo-gallery");
-    expect(upload).toHaveBeenCalledWith(expect.any(File), null);
-    await waitFor(() => expect(onUpdate).toHaveBeenCalled());
-    expect(onUpdate.mock.calls[0][0]).toMatchObject({ imageUrl: "https://x/new.webp", imageSource: "photo" });
-  });
-
-  it("photo personnelle existante : demande avant de remplacer, « garder » ne change rien", async () => {
-    upload.mockResolvedValue("https://x/new.webp");
-    const onUpdate = vi.fn();
-    const recipe = { ...BASE, imageUrl: "https://x/old.webp", imageSource: "photo" };
-    render(<CookPhotoPrompt recipe={recipe} onUpdateRecipe={onUpdate} />);
-
-    pick("cook-photo-camera");
-    expect(upload).not.toHaveBeenCalled();
-    expect(document.querySelector(".cookmode-photo-compare")).toBeInTheDocument();
-    fireEvent.click(document.querySelector(".cookmode-photo-link")!);
-    expect(document.querySelector(".cookmode-photo-compare")).not.toBeInTheDocument();
-    expect(upload).not.toHaveBeenCalled();
-    expect(onUpdate).not.toHaveBeenCalled();
-
-    pick("cook-photo-camera");
-    fireEvent.click(document.querySelector(".cookmode-photo .seal")!);
-    await waitFor(() => expect(onUpdate).toHaveBeenCalledWith({ ...recipe, imageUrl: "https://x/new.webp", imageSource: "photo" }));
-  });
-
-  it("ancienne recette (photo sans imageSource) : considérée comme personnelle", () => {
-    render(<CookPhotoPrompt recipe={{ ...BASE, imageUrl: "https://x/old.jpg" }} onUpdateRecipe={vi.fn()} />);
-    pick("cook-photo-camera");
-    expect(upload).not.toHaveBeenCalled();
-    expect(document.querySelector(".cookmode-photo-compare")).toBeInTheDocument();
+    expect(upload).toHaveBeenLastCalledWith(expect.any(File), null);
+    await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(2));
+    expect(onUpdate.mock.calls[1][0]).toMatchObject({ imageUrl: "https://x/2.webp", imageSource: "photo" });
   });
 
   it("échec de l'envoi : message d'erreur, recette non modifiée", async () => {
@@ -147,6 +121,28 @@ describe("CookMode — photo du plat", () => {
     expect(section).not.toHaveClass("ready");
     document.querySelectorAll<HTMLElement>(".cookmode-step-card").forEach((c) => fireEvent.click(c));
     expect(document.querySelector(".cookmode-photo")).toHaveClass("ready");
+  });
+
+  it("absente si la recette a déjà une photo personnelle", () => {
+    render(<CookMode recipe={{ ...BASE, imageUrl: "https://x/old.webp", imageSource: "photo" }} onClose={() => {}} onUpdateRecipe={vi.fn()} />);
+    expect(document.querySelector(".cookmode-photo")).not.toBeInTheDocument();
+  });
+
+  it("absente si la recette a une illustration IA (ou une ancienne photo sans source)", () => {
+    const { unmount } = render(<CookMode recipe={{ ...BASE, imageUrl: "https://x/ia.png", imageSource: "ia" }} onClose={() => {}} onUpdateRecipe={vi.fn()} />);
+    expect(document.querySelector(".cookmode-photo")).not.toBeInTheDocument();
+    unmount();
+    render(<CookMode recipe={{ ...BASE, imageUrl: "https://x/old.jpg" }} onClose={() => {}} onUpdateRecipe={vi.fn()} />);
+    expect(document.querySelector(".cookmode-photo")).not.toBeInTheDocument();
+  });
+
+  it("reste affichée après l'envoi de la photo (même si la recette reçue change)", async () => {
+    upload.mockResolvedValue("https://x/new.webp");
+    const { rerender } = render(<CookMode recipe={BASE} onClose={() => {}} onUpdateRecipe={vi.fn()} />);
+    pick("cook-photo-camera");
+    await waitFor(() => expect(document.querySelector(".cookmode-photo-saved")).toBeInTheDocument());
+    rerender(<CookMode recipe={{ ...BASE, imageUrl: "https://x/new.webp", imageSource: "photo" }} onClose={() => {}} onUpdateRecipe={vi.fn()} />);
+    expect(document.querySelector(".cookmode-photo-saved")).toBeInTheDocument();
   });
 
   it("absente si le mode cuisine n'a pas de quoi enregistrer la recette", () => {

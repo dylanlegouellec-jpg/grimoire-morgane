@@ -169,7 +169,7 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
   // overflow:hidden seul ne suffit pas) tant que la fiche recette est
   // ouverte, pour empêcher l'arrière-plan de défiler en même temps que
   // le panneau glissé vers le bas. Restauré à la fermeture.
-  useBodyScrollLock(true);
+  const isPresent = useBodyScrollLock(true);
 
   if (!recipe) return null;
 
@@ -253,7 +253,7 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
   };
 
   return (
-    <motion.div className="modal-backdrop" onClick={onClose} {...MODAL_BACKDROP_MOTION}>
+    <motion.div className="modal-backdrop" onClick={onClose} {...MODAL_BACKDROP_MOTION} style={isPresent ? undefined : { pointerEvents: "none" }}>
       <motion.div
         className="modal grimoire-page detail-scroll modal-swipeable"
         role="dialog"

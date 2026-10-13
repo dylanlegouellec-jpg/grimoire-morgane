@@ -218,18 +218,34 @@
 .cookmode-nav .seal { flex: 1; justify-content: center; }
 
 
-/* --- Actions d'une étape : minuteur + lecture à voix haute --- */
+/* --- Actions d'une étape : minuteur --- */
 .cookmode-step-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.step-speak-btn {
-  position: relative; flex-shrink: 0;
-  width: 32px; height: 32px; border-radius: 50%;
-  display: inline-flex; align-items: center; justify-content: center;
-  border: 1px solid rgba(217,180,92,0.5); background: rgba(217,180,92,0.12);
-  color: var(--gold-light); cursor: pointer;
+
+/* --- Lecture à voix haute par appui long sur une étape (CookMode.tsx) ---
+   Pas de menu contextuel / loupe / sélection de texte iOS pendant l'appui ;
+   touch-action: pan-y laisse le défilement vertical au navigateur. */
+.cookmode-step-card {
+  -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: pan-y;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
-.step-speak-btn.speaking { background: rgba(255,255,255,0.16); color: #fff; border-color: rgba(255,255,255,0.35); }
-/* Zone tactile agrandie (~44 px), sans changer le dessin (voir a11y.css). */
-.step-speak-btn::after { content: ""; position: absolute; inset: -6px; }
+.cookmode-step-card:focus-visible { outline: 2px solid var(--gold-light); outline-offset: 2px; }
+.cookmode-step-card.pressing { background: rgba(217,180,92,0.1); }
+/* Étape en cours de lecture : léger halo doré qui « respire ». */
+.cookmode-step-card.speaking {
+  border-color: var(--gold-light);
+  box-shadow: 0 0 0 1px rgba(217,180,92,0.35), 0 0 14px rgba(217,180,92,0.25);
+  animation: cookStepSpeaking 1.8s ease-in-out infinite;
+}
+@keyframes cookStepSpeaking {
+  50% { box-shadow: 0 0 0 1px rgba(217,180,92,0.55), 0 0 22px rgba(217,180,92,0.4); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cookmode-step-card { transition: none; }
+  .cookmode-step-card.speaking { animation: none; }
+}
 
 /* --- Bandeau des minuteurs (tous les groupes d'étapes) --- */
 .cookmode-timers { display: flex; flex-wrap: wrap; gap: 8px; flex-shrink: 0; }
@@ -293,25 +309,55 @@
 }
 .cookmode-photo-btn.primary { background: var(--gold-light); color: #2c221e; border-color: var(--gold-light); }
 .cookmode-photo-btn:disabled { opacity: 0.55; cursor: progress; }
-.cookmode-photo-btn:focus-visible,
-.cookmode-photo-link:focus-visible,
-.cookmode-photo .seal:focus-visible { outline: 2px solid var(--chrome-text); outline-offset: 3px; }
-.cookmode-photo-link {
-  min-height: 44px; padding: 8px 6px; background: none; border: none; cursor: pointer;
-  font-family: 'EB Garamond', serif; font-size: 1rem; color: var(--chrome-text);
-  text-decoration: underline; text-underline-offset: 3px;
-}
-.cookmode-photo-link:disabled { opacity: 0.5; cursor: not-allowed; }
-.cookmode-photo-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.cookmode-photo-compare figure { margin: 0; display: flex; flex-direction: column; gap: 4px; }
-.cookmode-photo-compare img {
-  width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px;
-  border: 1px solid rgba(217,180,92,0.35); background: rgba(255,255,255,0.06);
-}
-.cookmode-photo-compare figcaption {
-  font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.5px; text-transform: uppercase;
-  color: var(--chrome-text); opacity: 0.7; text-align: center;
-}
+.cookmode-photo-btn:focus-visible { outline: 2px solid var(--chrome-text); outline-offset: 3px; }
 .cookmode-photo-error { margin: 0; font-size: 0.92rem; color: #f2a39b; }
 /* Champs fichier réels mais invisibles : déclenchés par les boutons ci-dessus. */
 .cookmode-photo-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* --- Disposition : enveloppes de colonnes (CookMode.tsx) ---
+   En portrait, .cookmode-side / .cookmode-main sont transparentes
+   (display: contents) : leurs enfants restent des éléments directs de la
+   colonne flex .cookmode — rendu identique à avant leur ajout. */
+.cookmode-side, .cookmode-main { display: contents; }
+
+/* --- Paysage sur téléphone (iPhone couché : ~844×390, 932×430) ---
+   Deux colonnes sur toute la largeur : à gauche titre, progression,
+   minuteurs, ingrédients et navigation entre groupes ; à droite les étapes,
+   qui défilent seules. Chaque colonne défile indépendamment ; le bouton
+   fermer reste fixe en haut à droite (hors des zones défilantes). Marges
+   latérales augmentées des zones sûres (encoche / Dynamic Island). */
+@media (orientation: landscape) and (max-height: 500px) {
+  .cookmode {
+    max-width: none;
+    display: grid;
+    grid-template-columns: minmax(220px, 2fr) minmax(0, 3fr);
+    grid-template-rows: minmax(0, 1fr);
+    gap: 0 24px;
+    padding: 0 calc(16px + env(safe-area-inset-right)) 0 calc(16px + env(safe-area-inset-left));
+    overflow: hidden;
+  }
+  .cookmode-side, .cookmode-main {
+    display: flex; flex-direction: column; gap: 12px;
+    min-height: 0; min-width: 0;
+    overflow-y: auto; overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-top: calc(16px + env(safe-area-inset-top));
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  }
+  /* Laisse la place du bouton fermer au-dessus de la première étape ;
+     marges latérales : le halo de l'étape lue n'est pas rogné. */
+  .cookmode-main { padding: calc(54px + env(safe-area-inset-top)) 6px calc(16px + env(safe-area-inset-bottom)); }
+  .cookmode .modal-close {
+    top: calc(12px + env(safe-area-inset-top));
+    right: calc(12px + env(safe-area-inset-right));
+    /* Opaque : les étapes défilent dessous. */
+    background: #4a3d36;
+  }
+  .cookmode .dropcap-title { font-size: 1.15rem; }
+  .cookmode-steps { flex: 0 0 auto; gap: 10px; }
+  .cookmode-step-card { padding: 12px; }
+  .cookmode-step-text { font-size: 1.05rem; line-height: 1.45; }
+  /* Toute la hauteur restante de la colonne pour la liste d'ingrédients. */
+  .cookmode-ingredients { max-height: none; flex: 0 0 auto; }
+  .cookmode-main > .seal { flex-shrink: 0; }
+}

@@ -14,7 +14,8 @@ import type { Recipe } from "../../../hooks/useRecipes";
 
 /* Mode cuisine : minuteurs conservés d'un groupe à l'autre, bandeau des
    minuteurs (retour au groupe, pause, « Terminé », retrait), lecture à voix
-   haute (une seule à la fois, sans cocher l'étape). */
+   haute par appui long sur une étape (une seule à la fois, sans cocher
+   l'étape ; appui court = cocher), disposition en deux colonnes. */
 
 const RECIPE = {
   title: "Pot-au-feu",
@@ -120,36 +121,114 @@ describe("CookMode — lecture à voix haute", () => {
     vi.unstubAllGlobals();
   });
 
-  const speakBtn = (text: string) => card(text).querySelector(".step-speak-btn") as HTMLElement;
+  const PRESS = 400;
+  // Appui long au doigt : touchstart, attente, touchend, puis le clic que
+  // le navigateur émet encore au relâchement.
+  const longPress = (el: HTMLElement) => {
+    fireEvent.touchStart(el, { touches: [{ clientX: 10, clientY: 10 }] });
+    act(() => { vi.advanceTimersByTime(PRESS + 50); });
+    fireEvent.touchEnd(el);
+    // Événements souris « de compatibilité » émis par Chrome/Safari au
+    // relâchement — y compris après un appui plus long que 1 s.
+    fireEvent.mouseDown(el);
+    fireEvent.mouseUp(el);
+    fireEvent.click(el);
+  };
 
-  it("lit l'étape affichée en français sans la cocher, et un second appui l'arrête", () => {
-    render(<CookMode recipe={RECIPE} onClose={() => {}} />);
-    fireEvent.click(speakBtn(STEP1));
+  it("un appui long lit l'étape en français sans la cocher, un second l'arrête", () => {
+    render(<CookMode recipe={RECIPE} onClose={() => {}} pressDuration={PRESS} />);
+    expect(document.querySelector(".step-speak-btn")).not.toBeInTheDocument();
+    longPress(card(STEP1));
     expect(speak).toHaveBeenCalledTimes(1);
     const utterance = speak.mock.calls[0][0] as FakeUtterance;
     expect(utterance.text).toBe(STEP1);
     expect(utterance.lang).toBe("fr-FR");
     expect(card(STEP1)).not.toHaveClass("done");
-    expect(speakBtn(STEP1)).toHaveAttribute("aria-pressed", "true");
+    expect(card(STEP1)).toHaveClass("speaking");
 
     cancel.mockClear();
-    fireEvent.click(speakBtn(STEP1));
+    longPress(card(STEP1));
     expect(cancel).toHaveBeenCalled();
     expect(speak).toHaveBeenCalledTimes(1);
-    expect(speakBtn(STEP1)).toHaveAttribute("aria-pressed", "false");
+    expect(card(STEP1)).not.toHaveClass("speaking");
+    expect(card(STEP1)).not.toHaveClass("done");
+  });
+
+  it("un appui court coche l'étape sans lire, et le clic suivant un appui long ne coche pas", () => {
+    render(<CookMode recipe={RECIPE} onClose={() => {}} pressDuration={PRESS} />);
+    fireEvent.touchStart(card(STEP1), { touches: [{ clientX: 10, clientY: 10 }] });
+    act(() => { vi.advanceTimersByTime(100); });
+    fireEvent.touchEnd(card(STEP1));
+    fireEvent.click(card(STEP1));
+    expect(card(STEP1)).toHaveClass("done");
+    expect(card(STEP1)).toHaveAttribute("aria-checked", "true");
+    act(() => { vi.advanceTimersByTime(PRESS * 2); });
+    expect(speak).not.toHaveBeenCalled();
+
+    // Appui long sur une étape cochée : lecture, l'étape reste cochée.
+    longPress(card(STEP1));
+    expect(speak).toHaveBeenCalledTimes(1);
+    expect(card(STEP1)).toHaveClass("done");
+  });
+
+  it("appui long à la souris (ordinateur) : lit sans cocher", () => {
+    render(<CookMode recipe={RECIPE} onClose={() => {}} pressDuration={PRESS} />);
+    fireEvent.mouseDown(card("Saler"));
+    act(() => { vi.advanceTimersByTime(PRESS + 50); });
+    fireEvent.mouseUp(card("Saler"));
+    fireEvent.click(card("Saler"));
+    expect(speak).toHaveBeenCalledTimes(1);
+    expect(card("Saler")).not.toHaveClass("done");
+  });
+
+  it("appui très long (plus d'une seconde) : toujours pas de coche au relâchement", () => {
+    render(<CookMode recipe={RECIPE} onClose={() => {}} pressDuration={PRESS} />);
+    fireEvent.touchStart(card(STEP1), { touches: [{ clientX: 10, clientY: 10 }] });
+    act(() => { vi.advanceTimersByTime(1500); });
+    fireEvent.touchEnd(card(STEP1));
+    fireEvent.mouseDown(card(STEP1));
+    fireEvent.mouseUp(card(STEP1));
+    fireEvent.click(card(STEP1));
+    expect(speak).toHaveBeenCalledTimes(1);
+    expect(card(STEP1)).not.toHaveClass("done");
+  });
+
+  it("le doigt qui défile annule l'appui long (pas de lecture)", () => {
+    render(<CookMode recipe={RECIPE} onClose={() => {}} pressDuration={PRESS} />);
+    fireEvent.touchStart(card(STEP1), { touches: [{ clientX: 10, clientY: 10 }] });
+    fireEvent.touchMove(card(STEP1), { touches: [{ clientX: 10, clientY: 40 }] });
+    act(() => { vi.advanceTimersByTime(PRESS + 50); });
+    fireEvent.touchEnd(card(STEP1));
+    expect(speak).not.toHaveBeenCalled();
+  });
+
+  it("clavier : Entrée / Espace cochent, l'astuce d'appui long est annoncée", () => {
+    render(<CookMode recipe={RECIPE} onClose={() => {}} />);
+    const c = card(STEP1);
+    expect(c).toHaveAttribute("role", "checkbox");
+    expect(c).toHaveAttribute("tabindex", "0");
+    expect(c).toHaveAttribute("aria-description");
+    fireEvent.keyDown(c, { key: "Enter" });
+    expect(card(STEP1)).toHaveClass("done");
+    fireEvent.keyDown(card(STEP1), { key: " " });
+    expect(card(STEP1)).not.toHaveClass("done");
+    expect(speak).not.toHaveBeenCalled();
   });
 
   it("une seule lecture à la fois, coupée au changement de groupe et à la fermeture", () => {
-    const { unmount } = render(<CookMode recipe={RECIPE} onClose={() => {}} />);
-    fireEvent.click(speakBtn(STEP1));
+    const { unmount } = render(<CookMode recipe={RECIPE} onClose={() => {}} pressDuration={PRESS} />);
+    longPress(card(STEP1));
     cancel.mockClear();
-    fireEvent.click(speakBtn("Saler"));
+    longPress(card("Saler"));
     expect(cancel).toHaveBeenCalled();
-    expect(speakBtn(STEP1)).toHaveAttribute("aria-pressed", "false");
-    expect(speakBtn("Saler")).toHaveAttribute("aria-pressed", "true");
+    expect(card(STEP1)).not.toHaveClass("speaking");
+    expect(card("Saler")).toHaveClass("speaking");
     // La fin (via cancel) de l'ancienne lecture ne réinitialise pas la nouvelle.
     act(() => { (speak.mock.calls[0][0] as FakeUtterance).onend?.(); });
-    expect(speakBtn("Saler")).toHaveAttribute("aria-pressed", "true");
+    expect(card("Saler")).toHaveClass("speaking");
+    // Fin naturelle de la lecture en cours : l'indice visuel disparaît.
+    act(() => { (speak.mock.calls[1][0] as FakeUtterance).onend?.(); });
+    expect(card("Saler")).not.toHaveClass("speaking");
 
     cancel.mockClear();
     nextGroup();
@@ -159,9 +238,26 @@ describe("CookMode — lecture à voix haute", () => {
     expect(cancel).toHaveBeenCalled();
   });
 
-  it("n'affiche pas le bouton sans synthèse vocale", () => {
+  it("sans synthèse vocale : l'appui long ne lit rien et l'étape reste cochable", () => {
     delete (window as { speechSynthesis?: unknown }).speechSynthesis;
+    render(<CookMode recipe={RECIPE} onClose={() => {}} pressDuration={PRESS} />);
+    expect(card(STEP1)).not.toHaveAttribute("aria-description");
+    longPress(card(STEP1));
+    expect(speak).not.toHaveBeenCalled();
+    // Pas d'appui long possible : le relâchement compte comme un appui court.
+    expect(card(STEP1)).toHaveClass("done");
+  });
+});
+
+describe("CookMode — disposition", () => {
+  it("colonne latérale (titre, ingrédients) et colonne principale (étapes)", () => {
     render(<CookMode recipe={RECIPE} onClose={() => {}} />);
-    expect(document.querySelector(".step-speak-btn")).not.toBeInTheDocument();
+    const side = document.querySelector(".cookmode-side") as HTMLElement;
+    const main = document.querySelector(".cookmode-main") as HTMLElement;
+    expect(side.querySelector(".dropcap-title")).toBeInTheDocument();
+    expect(side.querySelector(".cookmode-ingredients-header")).toBeInTheDocument();
+    expect(main.querySelector(".cookmode-steps")).toBeInTheDocument();
+    // Le bouton fermer reste hors des colonnes défilantes.
+    expect(document.querySelector(".cookmode > .modal-close")).toBeInTheDocument();
   });
 });

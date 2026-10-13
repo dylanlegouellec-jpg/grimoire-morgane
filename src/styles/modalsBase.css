@@ -90,10 +90,13 @@
    mises en page. "z-index: -1" : reste sous l'icône/le texte du bouton
    (contenu normal, non positionné — voir le commentaire de .nav-btn
    ci-dessus pour pourquoi ça reste bien confiné À CE bouton). */
+/* Désormais UNE seule pastille, enfant direct de .bottom-nav, placée et
+   dimensionnée par NavPill.tsx (x/y/largeur/hauteur du bouton actif,
+   mesurés dans la barre) — premier enfant, donc peinte sous les boutons. */
 .nav-pill {
-  position: absolute; inset: 0; z-index: -1;
-  border-radius: inherit;
+  position: absolute; top: 0; left: 0; z-index: 0;
   background: var(--chrome);
+  pointer-events: none;
 }
 /* Dock un peu plus haut, mais SEULEMENT dans l'app installée (PWA) — pas
    dans un onglet de navigateur normal, ni sur PC/Android en mode web.

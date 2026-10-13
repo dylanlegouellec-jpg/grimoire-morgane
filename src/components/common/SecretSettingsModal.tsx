@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Activity, BookOpen, ChevronLeft, ChevronRight, Compass, Home, LogOut, Palette, Pencil, Save, SlidersHorizontal, UserCircle2, X } from "lucide-react";
+import { Activity, BookOpen, ChevronLeft, ChevronRight, Compass, Home, LogOut, Palette, Pencil, Save, SlidersHorizontal, Sparkles, UserCircle2, X } from "lucide-react";
 import { triggerHaptic } from "../../utils/helpers";
 import { getCachedProfile, getProfile } from "../../utils/profile";
 import type { ProfileRow } from "../../utils/profile";
@@ -16,10 +16,13 @@ import ProfileEditor from "./ProfileEditor";
 import AppearanceSettingsModal from "./AppearanceSettingsModal";
 import AccessibilitySettingsModal from "./AccessibilitySettingsModal";
 import DataBackupModal from "./DataBackupModal";
+import NutritionBatchModal from "./NutritionBatchModal";
+import type { Recipe } from "../../hooks/useRecipes";
+import type { SaveRecipeFn } from "../../utils/nutritionBatch";
 import HouseholdManagerModal from "./HouseholdManagerModal";
 import type { Household } from "../../utils/auth";
 
-type SettingsView = "main" | "appearance" | "accessibility" | "backup" | "household";
+type SettingsView = "main" | "appearance" | "accessibility" | "backup" | "household" | "nutrition";
 
 interface SecretSettingsModalUser {
   id: string;
@@ -35,6 +38,8 @@ interface HouseholdMemberLike {
 }
 
 interface SecretSettingsModalProps {
+  recipeSort: string;
+  onSetRecipeSort: (value: string) => void;
   onClose: () => void;
   connectionStatus: string;
   onExport: () => void;
@@ -75,6 +80,8 @@ interface SecretSettingsModalProps {
   onReplayRecipeTour: () => void;
   onOpenCookbookBuilder: () => void;
   onOpenDiagnostics: () => void;
+  recipes: Recipe[];
+  onSaveRecipe: SaveRecipeFn<Recipe>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -99,6 +106,8 @@ interface SecretSettingsModalProps {
 /*  fond/bordure/bouton de retour — portés ici par la coquille de la sous-vue.         */
 /* ------------------------------------------------------------------ */
 export default function SecretSettingsModal({
+  recipeSort,
+  onSetRecipeSort,
   onClose,
   connectionStatus,
   onExport,
@@ -139,6 +148,8 @@ export default function SecretSettingsModal({
   onReplayRecipeTour,
   onOpenCookbookBuilder,
   onOpenDiagnostics,
+  recipes,
+  onSaveRecipe,
 }: SecretSettingsModalProps) {
   const { t } = useTranslation();
   const [activeView, setActiveView] = useState<SettingsView>("main");
@@ -311,6 +322,11 @@ export default function SecretSettingsModal({
               <span className="ios-row-title">{t("settings.backup")}</span>
               <ChevronRight size={18} className="ios-chevron" />
             </button>
+            <button type="button" className="ios-row" onClick={() => { triggerHaptic(15); setActiveView("nutrition"); }}>
+              <span className="ios-row-icon" style={{ background: "var(--plum)" }}><Sparkles size={16} /></span>
+              <span className="ios-row-title">{t("nutritionBatch.settingsRow")}</span>
+              <ChevronRight size={18} className="ios-chevron" />
+            </button>
             {user && (
               <button type="button" className="ios-row" onClick={() => { triggerHaptic(15); setActiveView("household"); }}>
                 <span className="ios-row-icon" style={{ background: "var(--gold)" }}><Home size={16} /></span>
@@ -412,6 +428,8 @@ export default function SecretSettingsModal({
               onSetHeroTreatment={onSetHeroTreatment}
               iconStyle={iconStyle}
               onSetIconStyle={onSetIconStyle}
+              recipeSort={recipeSort}
+              onSetRecipeSort={onSetRecipeSort}
             />
           )}
           {activeView === "accessibility" && (
@@ -429,6 +447,9 @@ export default function SecretSettingsModal({
               onImportTextRecipe={() => { onImportTextRecipe(); closeAll(); }}
               onImportLink={() => { onImportLink(); closeAll(); }}
             />
+          )}
+          {activeView === "nutrition" && (
+            <NutritionBatchModal recipes={recipes} onSaveRecipe={onSaveRecipe} connectionStatus={connectionStatus} onClose={goToMain} />
           )}
           {activeView === "household" && (
             <HouseholdManagerModal

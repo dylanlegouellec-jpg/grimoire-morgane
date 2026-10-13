@@ -2,8 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { Plus } from "lucide-react";
 import { normalize, triggerHaptic } from "../../utils/helpers";
-import { buildSearchEntry, matchesSearch, parseQuery, sortRecipes, RECIPE_SORTS, type RecipeSort } from "../../utils/recipeSearch";
-import { getStoredRecipeSort, storeRecipeSort } from "../../utils/localSettings";
+import { buildSearchEntry, matchesSearch, parseQuery, sortRecipes, type RecipeSort } from "../../utils/recipeSearch";
 import { useTranslation } from "../../contexts/LanguageContext";
 import RecipeCard from "./RecipeCard";
 import type { Recipe } from "../../hooks/useRecipes";
@@ -27,6 +26,8 @@ interface RecipesViewProps {
   showNutriscore?: boolean;
   householdId: string | null;
   showToast?: (msg: string) => void;
+  /** Ordre de la grille, choisi dans Réglages > Apparence (voir AppShell). */
+  sort?: RecipeSort;
 }
 
 export default function RecipesView({
@@ -46,6 +47,7 @@ export default function RecipesView({
   showNutriscore,
   householdId,
   showToast,
+  sort = "name",
 }: RecipesViewProps) {
   const { t } = useTranslation();
   // Recherche tolérante (accents, fautes de frappe, plusieurs mots) : voir
@@ -53,14 +55,6 @@ export default function RecipesView({
   // préparé qu'une fois par liste de recettes, pas à chaque frappe.
   const terms = useMemo(() => parseQuery(search), [search]);
   const searchIndex = useMemo(() => new Map(recipes.map((r) => [r.id, buildSearchEntry(r)])), [recipes]);
-
-  // Ordre de la grille (Nom / Plus récentes / Plus rapides), mémorisé sur l'appareil.
-  const [sort, setSort] = useState<RecipeSort>(getStoredRecipeSort);
-  const changeSort = (next: RecipeSort) => {
-    triggerHaptic(10);
-    setSort(next);
-    storeRecipeSort(next);
-  };
 
   // Triée UNE SEULE FOIS sur TOUTES les recettes, pas seulement celles du
   // filtre actif (voir visibleIds ci-dessous, qui décide seule quelles
@@ -196,7 +190,7 @@ export default function RecipesView({
     <div className="view">
       {/* Grimoire encore vide (nouvel utilisateur) : un accueil qui dit quoi
           faire, au lieu de « aucune recette ne correspond à ta recherche ». */}
-      {recipes.length === 0 ? (
+      {recipes.length === 0 && (
         <div className="recipes-welcome">
           <h2 className="recipes-welcome-title">{t("recipes.welcome.title")}</h2>
           <p className="hint">{t("recipes.welcome.body")}</p>
@@ -210,17 +204,6 @@ export default function RecipesView({
               </button>
             )}
           </div>
-        </div>
-      ) : (
-        <div className="recipes-toolbar">
-          <label className="recipes-sort">
-            <span>{t("recipes.sort.label")}</span>
-            <select value={sort} onChange={(e) => changeSort(e.target.value as RecipeSort)}>
-              {RECIPE_SORTS.map((key) => (
-                <option key={key} value={key}>{t(`recipes.sort.${key}`)}</option>
-              ))}
-            </select>
-          </label>
         </div>
       )}
       {recipes.length > 0 && !hasVisible && (

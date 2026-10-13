@@ -335,12 +335,26 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
     triggerHaptic(15);
   }, [applyToActiveList, showToast]);
 
+  // « Annuler » (toast, 5 s) remet tous les articles, dans leur ordre et avec
+  // leurs coches, dans la liste vidée (même si on a changé de liste depuis).
   const resetActiveList = useCallback(() => {
-    if (!activeListIdRef.current) return;
+    const listId = activeListIdRef.current;
+    if (!listId) return;
+    const previous = listsRef.current.find((l) => l.id === listId)?.items ?? [];
     applyToActiveList(() => [{ op: "clear" }]);
-    showToast(translateCurrent("messages.shopping.reset"));
     triggerHaptic([60, 30, 60]);
-  }, [applyToActiveList, showToast]);
+    if (!previous.length) {
+      showToast(translateCurrent("messages.shopping.reset"));
+      return;
+    }
+    showToast(translateCurrent("messages.shopping.reset"), {
+      label: translateCurrent("common.undo"),
+      onAction: () => applyToList(listId, (current) => {
+        const present = new Set(current.map((it) => it.id));
+        return previous.filter((it) => !present.has(it.id)).map((item): ShoppingOp => ({ op: "append", item }));
+      }),
+    });
+  }, [applyToActiveList, applyToList, showToast]);
 
   return {
     shoppingLists,
