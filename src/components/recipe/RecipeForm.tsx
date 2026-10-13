@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { useEffect, useLayoutEffect, useState, useRef, type CSSProperties } from "react";
+import { AnimatePresence, motion, useReducedMotion, type TargetAndTransition } from "motion/react";
 import { Wand2, X } from "lucide-react";
 import { nextId, extractCodeFromInput, decodeRecipeCode, triggerHaptic, formatDurationMinutes } from "../../utils/helpers";
 import { fetchNutriscoreGrade } from "../../utils/nutriscoreClient";
@@ -30,8 +30,27 @@ import {
 } from "./form/recipeFormRows";
 import { IngredientsEditor, StepsEditor } from "./form/RowEditors";
 import NutritionSection from "./form/NutritionSection";
+import {
+  FLIGHT_MS,
+  INK_INTRO_MS,
+  SEAL_CLOSE_MS,
+  SEAL_HAPTIC,
+  SEAL_IMPACT_MS,
+  cardFlightTarget,
+  markRecipeSealed,
+  playInkReveal,
+  type InkOrigin,
+} from "./form/createAnimations";
+import { QuillTitle, WaxSeal } from "./form/QuillAndSeal";
 
 export { UNIT_OPTIONS } from "./form/recipeFormRows";
+
+// Gouttelettes de la tache d'encre : angle (deg), distance (px), taille
+// (px), décalage (ms) — voir .ink-drop, styles/createAnimations.css.
+const INK_DROPS: Array<[number, number, number, number]> = [
+  [-150, 70, 14, 0], [-118, 96, 9, 20], [-96, 64, 11, 10], [-172, 104, 8, 30], [-134, 128, 6, 40], [-72, 92, 8, 25], [-196, 74, 7, 15],
+];
+const inkVars = (o: InkOrigin) => ({ "--ink-x": `${o.x}px`, "--ink-y": `${o.y}px` }) as CSSProperties;
 
 /* ------------------------------------------------------------------ */
 /*  Les morceaux du formulaire vivent dans ./form/ :                    */
@@ -50,13 +69,17 @@ interface RecipeFormProps {
   onDelete: (id: string) => void;
   initialRecipe?: Recipe | null;
   pressDuration?: number;
+  /** Centre du « + » qui a demandé la création : ouverture en tache
+   *  d'encre depuis ce point (voir form/createAnimations.ts). Absent =
+   *  ouverture normale (édition, tuto, raccourci d'icône...). */
+  inkOrigin?: InkOrigin | null;
 }
 
 /* ------------------------------------------------------------------ */
 /*  FORMULAIRE DE RECETTE (création / édition)                         */
 /* ------------------------------------------------------------------ */
 
-export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, pressDuration = 750 }: RecipeFormProps) {
+export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, pressDuration = 750, inkOrigin }: RecipeFormProps) {
   const isPresent = useBodyScrollLock(true);
   const { t } = useTranslation();
   const isEdit = !!initialRecipe;
@@ -79,6 +102,38 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
   const [showServingsWheel, setShowServingsWheel] = useState(false);
   const [showUnsavedConfirm, setShowUnsavedConfirm] = useState(false);
 
+  // --- Animations (voir form/createAnimations.ts) ---------------------
+  // « Réduire les animations » : ni tache d'encre ni sceau, la feuille
+  // garde sa sortie/entrée habituelle (simple fondu via MotionConfig).
+  const prefersReducedMotion = useReducedMotion();
+  // Tache d'encre : CRÉATION depuis le « + » uniquement, décidée une fois
+  // au montage.
+  const [inkIntro, setInkIntro] = useState(() => !!inkOrigin && !initialRecipe && !prefersReducedMotion);
+  const [inkStart] = useState(() => inkOrigin);
+  const inkRef = useRef<HTMLDivElement | null>(null);
+  const backdropRef = useRef<HTMLDivElement | null>(null);
+  useLayoutEffect(() => {
+    if (!inkIntro || !inkStart) return undefined;
+    const cancel = playInkReveal(inkRef.current, backdropRef.current, inkStart);
+    const timer = setTimeout(() => setInkIntro(false), INK_INTRO_MS);
+    return () => { clearTimeout(timer); cancel(); };
+  }, [inkIntro, inkStart]);
+  // Cachet de cire : position du sceau dans la feuille pendant le scellage,
+  // puis cible du vol vers la carte (exit Framer) et fermeture demandée.
+  const [sealTop, setSealTop] = useState<number | null>(null);
+  const [flightExit, setFlightExit] = useState<TargetAndTransition | null>(null);
+  const [closeRequested, setCloseRequested] = useState(false);
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => timersRef.current.forEach(clearTimeout), []);
+  // Fermeture APRÈS le rendu qui a posé `flightExit` : AnimatePresence
+  // joue la sortie avec les dernières props reçues.
+  const closedRef = useRef(false);
+  useEffect(() => {
+    if (!closeRequested || closedRef.current) return;
+    closedRef.current = true;
+    onClose();
+  }, [closeRequested, onClose]);
+
   // État "modifié" (dirty) : compare un instantané JSON des champs
   // pertinents à leur valeur au tout premier rendu (voir rowsSnapshot).
   const buildSnapshot = () =>
@@ -91,6 +146,7 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
   // clic sur le fond, tirage vers le bas) : jamais de fermeture silencieuse
   // d'un changement non enregistré, voir UnsavedChangesModal ci-dessous.
   const attemptClose = () => {
+    if (sealTop !== null) return; // scellage en cours : la feuille se ferme d'elle-même
     if (isDirty) { setShowUnsavedConfirm(true); return; }
     onClose();
   };
@@ -137,13 +193,22 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
         : resolveIllustrationKey({ title: title.trim(), category });
 
     setSaving(true);
+    // Le sceau tombe DÈS l'appui, en parallèle du calcul du Nutri-Score et
+    // de l'enregistrement — jamais l'enregistrement après l'animation.
+    const sealed = !prefersReducedMotion;
+    const startedAt = Date.now();
+    if (sealed) {
+      const f = formRef.current;
+      setSealTop(f ? f.scrollTop + f.clientHeight * 0.42 : 240);
+      timersRef.current.push(setTimeout(() => { triggerHaptic(SEAL_HAPTIC); playSuccessSound(); }, SEAL_IMPACT_MS));
+    }
     // Nutri-Score recalculé UNIQUEMENT ici (création/édition) — jamais à
     // l'affichage. L'appel a un timeout et un repli local intégrés
     // (voir utils/nutriscoreClient.js) : il ne peut donc jamais bloquer
     // indéfiniment ni faire échouer l'enregistrement de la recette.
     const nutriscoreGrade = await fetchNutriscoreGrade(ingredients, category);
 
-    onSave({
+    const recipe: Recipe = {
       id: isEdit ? initialRecipe!.id : nextId(),
       title: title.trim(),
       category,
@@ -161,10 +226,36 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
       nutriscoreGrade,
       imageUrl: isEdit ? initialRecipe!.imageUrl || null : null,
       imageSource: isEdit ? initialRecipe!.imageSource || null : null,
-    });
-    playSuccessSound();
-    setSaving(false);
-    onClose();
+    };
+    try {
+      onSave(recipe);
+    } catch (err) {
+      // Échec de l'enregistrement : le sceau s'efface, le formulaire reste
+      // ouvert (rien n'est perdu).
+      timersRef.current.forEach(clearTimeout);
+      setSealTop(null);
+      setSaving(false);
+      throw err;
+    }
+    if (!sealed) {
+      playSuccessSound();
+      markRecipeSealed(recipe.id, 200);
+      setSaving(false);
+      onClose();
+      return;
+    }
+    timersRef.current.push(setTimeout(() => {
+      const flight = cardFlightTarget(formRef.current, recipe.id);
+      if (flight) {
+        setFlightExit({
+          ...flight,
+          opacity: [1, 1, 0],
+          transition: { duration: FLIGHT_MS / 1000, ease: [0.5, 0, 0.25, 1], opacity: { duration: FLIGHT_MS / 1000, times: [0, 0.75, 1] } },
+        });
+      }
+      markRecipeSealed(recipe.id, flight ? FLIGHT_MS - 220 : 160);
+      setCloseRequested(true);
+    }, Math.max(0, SEAL_CLOSE_MS - (Date.now() - startedAt))));
   };
 
   const submitImport = () => {
@@ -180,20 +271,44 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
 
   return (
     <>
-    <motion.div className="modal-backdrop" onClick={attemptClose} {...MODAL_BACKDROP_MOTION} style={isPresent ? undefined : { pointerEvents: "none" }}>
+    {inkIntro && inkStart && (
+      <>
+        <div ref={inkRef} className="ink-blot" aria-hidden="true" style={inkVars(inkStart)} />
+        <div className="ink-drops" aria-hidden="true" style={inkVars(inkStart)}>
+          {INK_DROPS.map(([a, d, size, delay], i) => (
+            <span key={i} className="ink-drop" style={{ "--a": `${a}deg`, "--d": `${d}px`, "--s": `${size}px`, "--delay": `${delay}ms` } as CSSProperties} />
+          ))}
+        </div>
+      </>
+    )}
+    <motion.div
+      ref={backdropRef}
+      className="modal-backdrop"
+      onClick={attemptClose}
+      {...MODAL_BACKDROP_MOTION}
+      // Tache d'encre : le fond et la feuille sont déjà à leur état final,
+      // c'est le clip-path circulaire (playInkReveal) qui les révèle.
+      initial={inkIntro ? false : MODAL_BACKDROP_MOTION.initial}
+      // Vol vers la carte : la feuille est DANS ce fond, un fondu du fond
+      // l'effacerait avec lui — seul l'assombrissement s'éteint.
+      exit={flightExit ? { backgroundColor: "rgba(20,14,4,0)", transition: { duration: FLIGHT_MS / 1000 } } : MODAL_BACKDROP_MOTION.exit}
+      style={isPresent ? undefined : { pointerEvents: "none" }}
+    >
       <motion.form
         ref={setFormRef}
-        className="modal grimoire-page form-clean modal-swipeable"
+        className={`modal grimoire-page form-clean modal-swipeable${inkIntro ? " form-ink-cascade" : ""}`}
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
         {...MODAL_SHEET_MOTION}
+        initial={inkIntro ? false : MODAL_SHEET_MOTION.initial}
+        exit={flightExit ?? MODAL_SHEET_MOTION.exit}
         {...sheet.panHandlers}
       >
         <button type="button" className="modal-close" onClick={attemptClose} aria-label={t("common.close")}><X size={20} /></button>
         <h2 className="dropcap-title" {...(isEdit ? {} : secretImport)}>
-          {isEdit ? t("recipeUi.form.titleEdit") : t("recipeUi.form.titleNew")}
+          {isEdit ? t("recipeUi.form.titleEdit") : <QuillTitle text={t("recipeUi.form.titleNew")} play={inkIntro} />}
         </h2>
 
         {!isEdit && importUnlocked && (
@@ -268,7 +383,7 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
 
         <div className="form-footer" data-tour="recipe-save">
           {formError && <p className="import-error">{formError}</p>}
-          <Seal type="submit" tone="gold" disabled={!canSubmit} haptic={[100, 50, 40, 50, 150]}>
+          <Seal type="submit" tone="gold" disabled={!canSubmit} haptic={prefersReducedMotion ? [100, 50, 40, 50, 150] : 12}>
             <Wand2 size={16} /> {isEdit ? t("recipeUi.form.saveChanges") : t("recipeUi.form.sealRecipe")}
           </Seal>
           {isEdit && (
@@ -281,6 +396,7 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
             </button>
           )}
         </div>
+        {sealTop !== null && <WaxSeal top={sealTop} />}
       </motion.form>
     </motion.div>
 

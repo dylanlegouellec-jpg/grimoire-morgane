@@ -1,0 +1,219 @@
+/* ------------------------------------------------------------------ */
+/*  CRÉATION ET ENREGISTREMENT D'UNE RECETTE — tache d'encre, titre à   */
+/*  la plume, champs en cascade, cachet de cire, halo de la carte.      */
+/*  Mécanique et minutages : components/recipe/form/createAnimations.ts  */
+/*  (les délais ci-dessous en ms doivent rester alignés sur ses          */
+/*  constantes). Uniquement transform/opacity/clip-path : rien ne        */
+/*  déclenche de recalcul de mise en page pendant l'animation.           */
+/* ------------------------------------------------------------------ */
+
+:root {
+  /* Cire à cacheter : bordeaux profond, identique dans les deux thèmes
+     (la cire est de la cire) — --wine éclairci du thème sombre serait rose. */
+  --wax-hi: #b8424b;
+  --wax-mid: #7c1f29;
+  --wax-deep: #4a0c14;
+  --spark-core: #fff3c4;
+  --spark-edge: #e2ad3c;
+}
+
+/* --- A) Tache d'encre ------------------------------------------------ */
+/* Calque plein écran posé JUSTE AVANT le fond de la modale (même
+   z-index : l'ordre du DOM le met dessous). Il ne capte les touchers que
+   le temps que la page s'ouvre (pas de tap « à travers » vers la grille) ;
+   ensuite la page le recouvre entièrement, puis il est retiré du DOM. */
+.ink-blot {
+  position: fixed; inset: 0; z-index: 55;
+  background:
+    radial-gradient(circle at var(--ink-x, 85%) var(--ink-y, 85%), #3b2c19 0, var(--chrome) 34%, #120c05 100%);
+  clip-path: circle(0 at var(--ink-x, 85%) var(--ink-y, 85%));
+  will-change: clip-path, opacity;
+}
+/* Thème sombre : la page est presque noire, une encre un peu plus chaude
+   et plus claire au centre garde la tache lisible avant que la page ne
+   s'ouvre dedans. */
+[data-theme="dark"] .ink-blot {
+  background:
+    radial-gradient(circle at var(--ink-x, 85%) var(--ink-y, 85%), #5a4224 0, #33261a 38%, #0d0905 100%);
+}
+/* Gouttelettes projetées par l'impact de la plume, aussitôt rattrapées
+   par la tache. */
+.ink-drops { position: fixed; inset: 0; z-index: 55; pointer-events: none; }
+.ink-drop {
+  position: absolute; left: var(--ink-x); top: var(--ink-y);
+  width: var(--s); height: var(--s); margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2);
+  border-radius: 50%; background: var(--chrome);
+  opacity: 0;
+  animation: ink-drop 300ms cubic-bezier(0.2, 0.7, 0.3, 1) var(--delay, 0ms) both;
+}
+@keyframes ink-drop {
+  0% { opacity: 0; transform: rotate(var(--a)) translateX(14px) scale(0.6); }
+  10% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(var(--a)) translateX(var(--d)) scale(1); }
+}
+
+/* Titre écrit à la plume (QuillTitle). */
+.quill-title { position: relative; display: inline-block; }
+.quill-char {
+  animation: quill-char 220ms ease-out backwards;
+  white-space: pre;
+}
+@keyframes quill-char {
+  0% { opacity: 0; color: var(--gold-text); }
+  45% { opacity: 1; color: var(--gold-text); }
+  100% { opacity: 1; }
+}
+.quill-nib-track {
+  position: absolute; inset: 0; pointer-events: none;
+  transform: translateX(0);
+  animation:
+    quill-track var(--quill-write) linear var(--quill-start) both,
+    quill-nib-fade calc(var(--quill-write) + 260ms) ease-out var(--quill-start) both;
+}
+.quill-nib {
+  position: absolute; left: 1px; top: 4%; height: 84%; width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, rgba(243,214,140,0), var(--gold-light) 35%, var(--gold));
+  transform: skewX(-24deg);
+  box-shadow: 0 0 6px 1px rgba(232,190,90,0.65);
+}
+@keyframes quill-track { from { transform: translateX(0); } to { transform: translateX(100%); } }
+@keyframes quill-nib-fade {
+  0% { opacity: 0; }
+  12% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+/* Texte complet pour les lecteurs d'écran (les lettres animées sont
+   aria-hidden). */
+.quill-sr {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
+/* Champs en cascade pendant que la page s'ouvre. Ordre des enfants du
+   formulaire : 1 fermer, 2 titre (déjà animé), 3 fleuron, 4 nom,
+   5 catégorie/temps/parts, 6 nutrition, 7 ingrédients, 8 étapes, 9 notes,
+   10 pied. Les délais suivent INK_INTRO_MS (createAnimations.ts). */
+.form-ink-cascade > * { animation: ink-field-in 300ms cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+.form-ink-cascade > :nth-child(2) { animation: none; }
+.form-ink-cascade > :nth-child(1) { animation-delay: 420ms; }
+.form-ink-cascade > :nth-child(3) { animation-delay: 300ms; }
+.form-ink-cascade > :nth-child(4) { animation-delay: 340ms; }
+.form-ink-cascade > :nth-child(5) { animation-delay: 380ms; }
+.form-ink-cascade > :nth-child(6) { animation-delay: 420ms; }
+.form-ink-cascade > :nth-child(7) { animation-delay: 460ms; }
+.form-ink-cascade > :nth-child(8) { animation-delay: 500ms; }
+.form-ink-cascade > :nth-child(n+9) { animation-delay: 540ms; }
+@keyframes ink-field-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* --- B) Cachet de cire ------------------------------------------------ */
+/* Dans la feuille (position absolue dans son contenu défilant) : il vole
+   avec elle vers la carte ensuite. Chute 0-360 ms (SEAL_IMPACT_MS), puis
+   écrasement, rebond, repos vers 640 ms. */
+.wax-seal-stage {
+  position: absolute; left: 50%; width: 112px; height: 112px; margin: -56px 0 0 -56px;
+  z-index: 6; pointer-events: none;
+}
+.wax-seal-drop {
+  position: absolute; inset: 0;
+  animation: wax-drop 640ms both;
+  will-change: transform, opacity;
+}
+@keyframes wax-drop {
+  0% { opacity: 0; transform: translateY(-110px) scale(2.4) rotate(-18deg); animation-timing-function: cubic-bezier(0.5, 0, 0.92, 0.55); }
+  20% { opacity: 1; }
+  56% { opacity: 1; transform: translateY(0) scale(1) rotate(0); animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1); }
+  64% { transform: translateY(3px) scale(1.17, 0.84); animation-timing-function: ease-in-out; }
+  77% { transform: translateY(-2px) scale(0.95, 1.05); animation-timing-function: ease-in-out; }
+  89% { transform: translateY(0) scale(1.02, 0.98); animation-timing-function: ease-out; }
+  100% { opacity: 1; transform: none; }
+}
+.wax-seal-shadow {
+  position: absolute; left: 6%; right: 6%; bottom: -8%; height: 30%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(30,10,5,0.5), rgba(30,10,5,0));
+  animation: wax-shadow 640ms both;
+}
+@keyframes wax-shadow {
+  0% { opacity: 0; transform: translate(30px, 60px) scale(2.2); animation-timing-function: cubic-bezier(0.5, 0, 0.92, 0.55); }
+  56% { opacity: 0.9; transform: translate(2px, 4px) scale(1); }
+  64% { opacity: 0.95; transform: translate(2px, 5px) scale(1.2, 0.9); }
+  100% { opacity: 0.75; transform: translate(2px, 4px) scale(1); }
+}
+/* Onde dorée de l'impact. */
+.wax-seal-splash {
+  position: absolute; inset: 4px; border-radius: 50%;
+  border: 2px solid var(--gold-light);
+  opacity: 0;
+  animation: wax-splash 460ms cubic-bezier(0.2, 0.7, 0.3, 1) 360ms both;
+}
+@keyframes wax-splash {
+  0% { opacity: 0; transform: scale(0.9); }
+  8% { opacity: 0.85; }
+  100% { opacity: 0; transform: scale(1.75); }
+}
+.wax-stop-hi { stop-color: var(--wax-hi); }
+.wax-stop-mid { stop-color: var(--wax-mid); }
+.wax-stop-deep { stop-color: var(--wax-deep); }
+.wax-rim-dark { stroke: var(--wax-deep); opacity: 0.75; }
+.wax-letter, .wax-letter-light { font-family: 'Cinzel', serif; font-weight: 700; font-size: 44px; }
+.wax-letter { fill: var(--wax-deep); opacity: 0.9; }
+.wax-letter-light { fill: rgba(255, 205, 200, 0.32); }
+
+/* Éclats dorés (étoiles à quatre branches). */
+.wax-sparks { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
+.wax-spark {
+  position: absolute; left: calc(var(--s) / -2); top: calc(var(--s) / -2);
+  width: var(--s); height: var(--s);
+  background: radial-gradient(circle, var(--spark-core) 0, var(--spark-core) 18%, var(--spark-edge) 60%, rgba(226,173,60,0) 80%);
+  clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%);
+  opacity: 0;
+  animation: wax-spark 560ms cubic-bezier(0.15, 0.8, 0.3, 1) calc(360ms + var(--delay, 0ms)) both;
+}
+@keyframes wax-spark {
+  0% { opacity: 0; transform: rotate(var(--a)) translateX(44px) scale(1.8); }
+  6% { opacity: 1; }
+  60% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(var(--a)) translateX(var(--d)) scale(0.4) rotate(160deg); }
+}
+
+/* Halo doré de la carte qui vient d'être scellée (RecipeCard,
+   useSealedPulse) : petit atterrissage puis lueur qui s'éteint. Durée
+   totale = SEAL_PULSE_MS. */
+.recipe-card.card-sealed {
+  position: relative;
+  animation: card-sealed-land 620ms cubic-bezier(0.34, 1.56, 0.64, 1), card-sealed-glow 1300ms ease-out;
+}
+.recipe-card.card-sealed::after {
+  content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 2.5px var(--gold-light), inset 0 0 30px rgba(226,173,60,0.6);
+  animation: card-sealed-ring 1300ms ease-out both;
+}
+@keyframes card-sealed-land {
+  0% { transform: scale(0.93); }
+  45% { transform: scale(1.035); }
+  100% { transform: scale(1); }
+}
+@keyframes card-sealed-glow {
+  0%, 100% { box-shadow: inset 0 0 26px rgba(124,90,66,0.06), 0 2px 0 rgba(42,32,19,0.06), 0 6px 14px rgba(42,32,19,0.07); }
+  30% { box-shadow: inset 0 0 26px rgba(124,90,66,0.06), 0 0 0 2px rgba(217,180,92,0.75), 0 0 26px 4px rgba(226,173,60,0.55); }
+}
+@keyframes card-sealed-ring {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Le JS ne joue déjà ni la tache ni le sceau dans ce cas ; filet de
+     sécurité, et halo de la carte réduit à un simple fondu. */
+  .ink-blot, .ink-drops, .wax-seal-stage { display: none; }
+  .quill-char, .quill-nib-track, .form-ink-cascade > * { animation: none; }
+  .recipe-card.card-sealed { animation: none; }
+}

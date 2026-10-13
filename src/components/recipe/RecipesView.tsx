@@ -5,7 +5,9 @@ import { normalize, triggerHaptic } from "../../utils/helpers";
 import { buildSearchEntry, matchesSearch, parseQuery, sortRecipes, type RecipeSort } from "../../utils/recipeSearch";
 import { useTranslation } from "../../contexts/LanguageContext";
 import RecipeCard from "./RecipeCard";
+import BodyPortal from "../common/BodyPortal";
 import type { Recipe } from "../../hooks/useRecipes";
+import { inkOriginFromElement, type InkOrigin } from "./form/createAnimations";
 import { ENTER_STAGGER_MAX_INDEX, ENTER_STAGGER_MS, FILTER_EXIT_MS } from "../../constants/motion";
 
 interface RecipesViewProps {
@@ -14,7 +16,9 @@ interface RecipesViewProps {
   search: string;
   favoritesOnly: boolean;
   onToggleFavorite: (id: string) => void;
-  onAddRequest: () => void;
+  /** Demande de création ; `origin` = centre du bouton touché (ouverture
+   *  du formulaire en tache d'encre depuis ce point, voir RecipeForm). */
+  onAddRequest: (origin?: InkOrigin) => void;
   /** Ouvre l'import d'une recette (lien). Affiché sur l'écran d'accueil d'un grimoire vide. */
   onImportRequest?: () => void;
   onOpen: (recipe: Recipe) => void;
@@ -195,7 +199,7 @@ export default function RecipesView({
           <h2 className="recipes-welcome-title">{t("recipes.welcome.title")}</h2>
           <p className="hint">{t("recipes.welcome.body")}</p>
           <div className="recipes-welcome-actions">
-            <button type="button" className="seal seal-gold" onClick={() => { triggerHaptic(15); onAddRequest(); }}>
+            <button type="button" className="seal seal-gold" onClick={(e) => { triggerHaptic(15); onAddRequest(inkOriginFromElement(e.currentTarget)); }}>
               <Plus size={16} aria-hidden="true" /> {t("recipes.welcome.add")}
             </button>
             {onImportRequest && (
@@ -235,9 +239,11 @@ export default function RecipesView({
       {/* whileTap plutôt qu'un ".fab:active" en CSS : pas d'effet d'enfoncement
           existant sur ce bouton (contrairement à .seal, qui a déjà le sien —
           voir recipeCards.css — non repris ici pour ne pas y toucher). */}
-      <motion.button className="fab" aria-label={t("recipes.addRecipe")} whileTap={{ scale: 0.88 }} onClick={() => { triggerHaptic(15); onAddRequest(); }}>
-        <Plus size={22} />
-      </motion.button>
+      <BodyPortal>
+        <motion.button className="fab" aria-label={t("recipes.addRecipe")} whileTap={{ scale: 0.88 }} onClick={(e) => { triggerHaptic(15); onAddRequest(inkOriginFromElement(e.currentTarget)); }}>
+          <Plus size={22} />
+        </motion.button>
+      </BodyPortal>
     </div>
   );
 }

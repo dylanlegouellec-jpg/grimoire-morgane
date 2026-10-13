@@ -18,6 +18,15 @@ import { reloadOnceForChunkError } from './utils/chunkReload'
 import { notifyUpdateAvailable, registerUpdateHandler, startUpdateChecks } from './utils/appUpdate'
 import { MotionConfig } from 'motion/react'
 
+// Chaque fenêtre ouverte (fiche, Réglages…) ajoute une entrée d'historique,
+// retirée par un history.back() à sa fermeture (voir hooks/useFocusTrap.ts).
+// Le navigateur restaurait alors d'office la position de défilement notée à
+// l'OUVERTURE de la fenêtre : si on avait déjà fait défiler la liste juste
+// après la fermeture, la page revenait brusquement en arrière. L'app gère
+// elle-même ses positions (useBodyScrollLock, onglets) : pas de restauration
+// automatique.
+if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual'
+
 // Patché avant tout le reste : le Panneau de Diagnostics (Réglages du
 // Grimoire) doit pouvoir montrer les logs/erreurs survenus dès le tout
 // début du chargement de l'app, pas seulement ceux postérieurs à

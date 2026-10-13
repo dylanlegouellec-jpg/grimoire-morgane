@@ -11,8 +11,12 @@
 /*  zone principale scrollable à droite (grille de recettes en 3-4      */
 /*  colonnes). La fiche recette bascule en deux colonnes pour éviter    */
 /*  les longs défilements verticaux.                                    */
+/*  Deuxième condition (téléphone couché, hauteur ≤ 500px) : même mise   */
+/*  en page à colonne latérale, y compris sous 768px de large (iPhone SE  */
+/*  couché : 667×375), puis resserrée pour la faible hauteur par le bloc  */
+/*  « TÉLÉPHONE EN PAYSAGE » en fin de fichier.                           */
 /* ==================================================================== */
-@media (orientation: landscape) and (min-width: 768px) {
+@media (orientation: landscape) and (min-width: 768px), (orientation: landscape) and (max-height: 500px) {
   /* Plus de max-width ici (1400px retiré) : sur un grand écran, l'app
      restait centrée avec deux grandes bandes vides de chaque côté au lieu
      d'utiliser tout l'espace disponible — la sidebar (toujours 300px,
@@ -155,3 +159,167 @@
   .recipes-grid { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
 }
 
+
+/* ==================================================================== */
+/*  TÉLÉPHONE EN PAYSAGE (hauteur ≤ 500px : iPhone couché, 667×375 à     */
+/*  932×430). Même condition que le mode cuisine (cookmode.css) et que   */
+/*  CookMode.tsx. Reprend la colonne latérale du bloc ci-dessus (qui     */
+/*  s'applique aussi à ces écrans, voir sa condition) en la resserrant : */
+/*  avec 375px de haut, le titre sur deux lignes, la recherche, les      */
+/*  quatre filtres empilés et la navigation ne tenaient pas — la page    */
+/*  entière défilait, emportant la navigation hors de l'écran. Ici :     */
+/*  colonne et contenu défilent chacun de leur côté, sur exactement la   */
+/*  hauteur de l'écran ; les feuilles (modales) prennent presque toute   */
+/*  la hauteur, avec des en-têtes plus courts et un bouton fermer qui    */
+/*  reste visible en haut pendant le défilement.                         */
+/*  Zones sûres : index.html n'a pas "viewport-fit=cover" (retiré, voir  */
+/*  son commentaire), iOS garde donc la page hors de l'encoche et les    */
+/*  env(safe-area-inset-*) valent 0 — gardés en max() pour le cas où.    */
+/*  Rien ici ne touche au portrait ni à la tablette/l'ordinateur.        */
+/* ==================================================================== */
+@media (orientation: landscape) and (max-height: 500px) {
+  :root { --ls-sidebar: clamp(200px, 27vw, 250px); }
+
+  /* --- Colonne latérale + contenu, chacun sa propre zone de défilement.
+     "height: 100%" (chaîne html/body/#root, voir theme.css) plutôt que
+     100vh, pour la même raison qu'en portrait. */
+  .grimoire-app {
+    grid-template-columns: var(--ls-sidebar) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    height: 100%; min-height: 0;
+  }
+  .app-sidebar {
+    min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+    scrollbar-width: none;
+    padding-left: env(safe-area-inset-left);
+  }
+  .app-sidebar::-webkit-scrollbar { display: none; }
+  /* Si la colonne déborde (texte agrandi, bandeau de mise à jour…), elle
+     défile : ses blocs ne doivent pas se tasser les uns sur les autres. */
+  .app-sidebar > * { flex-shrink: 0; }
+  .app-content {
+    max-height: none; min-height: 0; height: 100%;
+    /* Bas : le bouton "+" flottant ne cache jamais la dernière ligne. */
+    padding: 14px max(18px, calc(env(safe-area-inset-right) + 12px)) 84px 18px;
+  }
+
+  .app-header { padding: 12px 14px 8px; }
+  .app-header h1 { font-size: 1rem; line-height: 1.25; padding-right: 38px; }
+  .subtitle { display: none; }
+  .app-header-settings-btn { top: 10px; right: 10px; width: 32px; height: 32px; }
+  /* Bandeaux « hors ligne » / « nouvelle version » : toute la largeur de
+     la colonne (leur max-width centrée de 340px débordait), texte au-dessus
+     des boutons. */
+  .offline-banner, .update-banner, .offline-queue-badge { margin: 8px 0 0; max-width: none; }
+  .update-banner, .offline-banner { flex-wrap: wrap; border-radius: 14px; padding: 6px 8px; row-gap: 4px; }
+  .update-banner-text { flex-basis: 100%; text-align: center; }
+
+  .search-bar { margin: 0 12px 8px; padding: 6px 10px; }
+  .search-bar input { font-size: 0.9rem; min-width: 0; }
+
+  /* Filtres en grille 2×2 plutôt qu'en colonne de quatre. */
+  .filter-bar {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+    padding: 0 12px 8px;
+  }
+  .filter-pill { padding: 6px 8px; font-size: 0.64rem; letter-spacing: 0.5px; }
+  .heart-pill { justify-content: center; }
+
+  .bottom-nav { margin: 0 12px 10px; margin-top: auto; padding-top: 6px; gap: 2px; }
+  .nav-btn { padding: 7px 12px; font-size: 0.72rem; }
+
+  .recipes-grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+
+  .fab { right: max(16px, calc(env(safe-area-inset-right) + 10px)); bottom: 14px; width: 48px; height: 48px; }
+
+  /* Toast et bannière de réorganisation : en bas, centrés sur la zone de
+     contenu (plus de dock à dégager en bas d'écran). */
+  .toast { bottom: 14px; left: calc(50% + var(--ls-sidebar) / 2); max-width: calc(100vw - var(--ls-sidebar) - 96px); }
+
+  /* --- Feuilles (modales) : presque toute la hauteur, en-têtes resserrés. */
+  .modal, .grimoire-page,
+  .modal.recipe-options-modal, .modal.planning-step-modal,
+  .modal.household-manager-modal, .modal.recipe-picker-modal {
+    max-height: min(calc(100dvh - 10px), calc(var(--app-vvh, 100dvh) - 10px));
+  }
+  .modal, .grimoire-page {
+    max-width: min(560px, 100%);
+    padding: 16px max(20px, env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+  }
+  .modal.household-manager-modal { padding-bottom: 20px; }
+  .modal.form-clean { max-width: min(720px, 100%); }
+  .modal .dropcap-title { margin: 6px 0 2px; font-size: 1.15rem; }
+  .modal .flourish { margin: 4px 0 8px; }
+  .modal h4 { margin: 12px 0 6px; }
+
+  /* Fermer / retour : collés en haut de la feuille pendant le défilement.
+     "sticky" + flottant de hauteur nulle (margin-bottom négative) : ils ne
+     prennent aucune place dans le flux, comme l'ancien "absolute", mais ne
+     partent plus avec le contenu. */
+  .modal > .modal-close {
+    position: sticky; top: 0; float: right;
+    margin: -4px -6px -30px 0;
+    /* Fond rendu opaque (même teinte qu'au repos, posée sur le parchemin) :
+       le texte défile dessous. */
+    background: linear-gradient(var(--modal-close-bg), var(--modal-close-bg)), var(--parchment);
+    box-shadow: 0 1px 4px rgba(20,14,4,0.18);
+  }
+  .modal > .modal-back {
+    position: sticky; top: 0; float: left;
+    margin: -4px 0 -40px -8px;
+    /* Pastille opaque : passe par-dessus le contenu qui défile dessous. */
+    padding: 5px 12px 5px 4px; border-radius: 999px;
+    background: var(--parchment);
+    box-shadow: 0 1px 4px rgba(20,14,4,0.18);
+  }
+
+  /* Filtres DANS une feuille (« Générer à partir de recettes ») : en ligne
+     défilante comme en portrait, pas en colonne comme dans la colonne
+     latérale (le bloc ci-dessus visait toutes les .filter-bar). */
+  .modal .filter-bar {
+    display: flex; flex-direction: row; align-items: center;
+    overflow-x: auto; padding: 0 0 8px;
+  }
+  .modal .filter-pill { padding: 6px 14px; font-size: 0.66rem; }
+
+  /* --- Fiche recette : une seule zone de défilement (la feuille), plus de
+     seconde colonne défilant à part — le geste « tirer pour fermer »
+     (useDismissibleSheet) ne regarde que le défilement de la feuille. */
+  .detail-scroll { max-width: min(900px, 100%); }
+  .detail-columns { grid-template-columns: minmax(200px, 34%) minmax(0, 1fr); gap: 22px; }
+  .detail-body-col { max-height: none; overflow: visible; padding-right: 0; }
+  .detail-info-col .detail-hero { margin: 0; width: 100%; aspect-ratio: 16/9; }
+  .detail-info-col .dropcap-title { font-size: 1.1rem; }
+  .detail-actions { gap: 8px; }
+  .detail-body-col > h4:first-child { margin-top: 4px; padding-right: 30px; }
+
+  /* Apparence : l'aperçu de la photo de fiche, en pleine largeur, faisait
+     toute la hauteur de l'écran. */
+  .hero-preview-big .detail-hero.hero-preview-hero { max-width: 280px; margin: 0 auto; }
+
+  /* Calendriers (ajout / déplacement d'un repas) : cases carrées de toute la
+     largeur = 6 semaines bien plus hautes que l'écran. ":root" : planning.css
+     est chargé après ce fichier (voir styles/index.css). */
+  :root .calendar-picker-day { aspect-ratio: auto; width: 36px; height: 34px; justify-self: center; }
+  :root .calendar-picker-nav { margin-bottom: 6px; }
+
+  /* --- Tutoriels : carte d'explication resserrée, en bas, centrée sur la
+     zone de contenu (la navigation mise en avant est dans la colonne de
+     gauche) ; centrée sur l'écran pour le tuto « modifier une recette »
+     (le formulaire est une feuille centrée). ":root" : onboarding.css est
+     chargé après ce fichier. */
+  :root .onboarding-card {
+    left: calc(var(--ls-sidebar) + (100vw - var(--ls-sidebar)) / 2);
+    bottom: max(10px, env(safe-area-inset-bottom));
+    width: min(480px, calc(100vw - var(--ls-sidebar) - 24px));
+    padding: 10px 18px 8px;
+  }
+  :root .recipe-tour-active .onboarding-card { left: 50%; width: min(520px, calc(100vw - 24px)); }
+  :root .onboarding-card-icon { width: 30px; height: 30px; margin-bottom: 2px; }
+  :root .onboarding-card-icon svg { width: 16px; height: 16px; }
+  :root .onboarding-card .dropcap-title { font-size: 1.05rem; margin: 2px 0 0; }
+  :root .onboarding-card .flourish { margin: 2px 0 4px; }
+  :root .onboarding-card p { font-size: 0.92rem; line-height: 1.35; }
+  :root .onboarding-step-counter { margin: 4px 0 0 !important; }
+  :root .onboarding-footer { margin-top: 6px; }
+}

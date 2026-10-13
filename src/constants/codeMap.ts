@@ -383,6 +383,8 @@ export const CODE_DOCS: Record<string, string> = {
     "Les styles du livre de cuisine : aperçu à l'écran et mise en page d'impression (pages, couverture).",
   "src/styles/nutritionBatch.css":
     "Styles de l'écran d'estimation nutritionnelle en lot (liste des recettes, barre de progression, états).",
+  "src/styles/createAnimations.css":
+    "Styles des animations de création et d'enregistrement d'une recette : tache d'encre, plume, champs en cascade, cachet de cire et halo de la carte.",
   "src/styles/cookmode.css":
     "Les styles du mode cuisine : étapes en plein écran, molette de portions, feuille de quantité.",
   "src/styles/diagnostics.css":
@@ -435,6 +437,10 @@ export const CODE_DOCS: Record<string, string> = {
     "La fiche détail d'une recette : photo avec effet de parallaxe, ingrédients, étapes, et les actions (cuisiner, modifier, partager).",
   "src/components/recipe/RecipeForm.tsx":
     "Le formulaire de création et de modification d'une recette : garde l'état de la recette, l'enregistre, et demande confirmation si des modifications ne sont pas enregistrées. Ses morceaux sont dans recipe/form/.",
+  "src/components/recipe/form/createAnimations.ts":
+    "Mécanique des animations de création et d'enregistrement d'une recette : minutages, tache d'encre depuis le bouton « + », vol de la feuille vers sa carte et halo doré de la carte scellée.",
+  "src/components/recipe/form/QuillAndSeal.tsx":
+    "Dessins animés du formulaire de recette : le titre écrit à la plume lettre par lettre et le cachet de cire qui tombe à l'enregistrement.",
   "src/components/recipe/form/recipeFormRows.ts":
     "Données du formulaire de recette : unités proposées, forme des rangées d'ingrédients et d'étapes, et passage recette <-> rangées (ouverture, enregistrement, détection des modifications).",
   "src/components/recipe/form/FormRows.tsx":
@@ -553,6 +559,8 @@ export const CODE_DOCS: Record<string, string> = {
     "Le menu d'actions d'une recette (appui long sur une carte) : photo, illustration générée par IA et autres actions.",
   "src/components/common/Toast.tsx":
     "Message éphémère en bas d'écran (texte de useToast), avec un bouton d'action facultatif comme « Annuler » après une suppression.",
+  "src/components/common/BodyPortal.tsx":
+    "Rend un bouton fixé à l'écran (le « + » flottant) directement à la racine de la page, hors des onglets animés : Safari sur iPhone le coupait parfois à moitié pendant l'arrivée d'un onglet.",
   "src/components/common/DocumentTitle.tsx":
     "Le titre de l'onglet du navigateur : affiche le nom de la recette ouverte (balise <title> de React 19), et le titre normal revient à la fermeture.",
   "src/components/common/NutritionBatchModal.tsx":

@@ -426,3 +426,25 @@ export function storeRecipeSort(sort: StoredRecipeSort): void {
     /* rien à faire si le stockage échoue */
   }
 }
+
+/* --- Geste « retour » qui referme les fenêtres (voir hooks/useFocusTrap.ts) ---
+   Activé par défaut : glisser depuis le bord gauche (iPhone) ou le bouton
+   retour (Android) referme la fenêtre ouverte. Désactivé : les fenêtres
+   n'ajoutent plus d'entrée d'historique, ce geste ne referme plus rien. */
+const BACK_GESTURE_KEY = "grimoire_back_gesture_closes";
+
+export function getStoredBackGestureCloses(): boolean {
+  try {
+    return localStorage.getItem(BACK_GESTURE_KEY) !== "0";
+  } catch {
+    return true;
+  }
+}
+
+export function storeBackGestureCloses(value: boolean): void {
+  try {
+    localStorage.setItem(BACK_GESTURE_KEY, value ? "1" : "0");
+  } catch {
+    /* rien à faire si le stockage échoue */
+  }
+}

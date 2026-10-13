@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "../../contexts/LanguageContext";
-import { getStoredSoundEffects, storeSoundEffects, getStoredHapticFeedback, storeHapticFeedback } from "../../utils/localSettings";
+import { getStoredSoundEffects, storeSoundEffects, getStoredHapticFeedback, storeHapticFeedback, getStoredBackGestureCloses, storeBackGestureCloses } from "../../utils/localSettings";
 import { playClickSound } from "../../utils/audioUtils";
 import { triggerHaptic } from "../../utils/haptics";
 import Flourish from "./Flourish";
@@ -56,6 +56,12 @@ export default function AccessibilitySettingsModal({
     if (value) triggerHaptic(15);
   };
 
+  const [backGesture, setBackGestureState] = useState(() => getStoredBackGestureCloses());
+  const setBackGesture = (value: boolean) => {
+    storeBackGestureCloses(value);
+    setBackGestureState(value);
+  };
+
   return (
     <>
       <h2 className="dropcap-title" style={{ marginTop: 34 }}>{t("settings.accessibility")}</h2>
@@ -98,6 +104,13 @@ export default function AccessibilitySettingsModal({
             <span className="settings-row-sub">{t("settings.hapticFeedbackHint")}</span>
           </div>
           <Switch checked={hapticFeedback} onChange={setHapticFeedback} label={t("settings.hapticFeedback")} />
+        </div>
+        <div className="settings-row">
+          <div className="settings-row-label">
+            <span className="settings-row-title">{t("settings.backGesture")}</span>
+            <span className="settings-row-sub">{t("settings.backGestureHint")}</span>
+          </div>
+          <Switch checked={backGesture} onChange={setBackGesture} label={t("settings.backGesture")} />
         </div>
       </div>
     </>

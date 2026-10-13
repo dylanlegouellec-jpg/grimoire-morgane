@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { getStoredBackGestureCloses } from "../utils/localSettings";
 
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -74,7 +75,12 @@ export default function useFocusTrap<T extends HTMLElement = HTMLElement>(onClos
     let closedByBack = false;
     const modalId = nextModalId++;
     modalStack.push(modalId);
-    window.history.pushState({ grimoireModal: true }, "");
+    // Réglage « Le geste retour ferme les fenêtres » (Accessibilité) : lu à
+    // l'ouverture et gardé pour TOUTE la vie de cette fenêtre — la changer
+    // pendant qu'elle est ouverte ne doit pas désaccorder son entrée
+    // d'historique (ajoutée ou non) de son retrait à la fermeture.
+    const usesHistory = getStoredBackGestureCloses();
+    if (usesHistory) window.history.pushState({ grimoireModal: true }, "");
     const handlePopState = () => {
       // NE PAS remettre `suppressNextPopstate` à false ici (voir sa
       // déclaration plus haut) : popstate est un événement UNIQUE livré à
@@ -100,7 +106,7 @@ export default function useFocusTrap<T extends HTMLElement = HTMLElement>(onClos
       closedByBack = true;
       if (onCloseRef.current) onCloseRef.current();
     };
-    window.addEventListener("popstate", handlePopState);
+    if (usesHistory) window.addEventListener("popstate", handlePopState);
 
     const getFocusable = (): HTMLElement[] =>
       Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter((el) => el.offsetParent !== null);
@@ -142,7 +148,7 @@ export default function useFocusTrap<T extends HTMLElement = HTMLElement>(onClos
 
     return () => {
       container.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("popstate", handlePopState);
+      if (usesHistory) window.removeEventListener("popstate", handlePopState);
       const idx = modalStack.indexOf(modalId);
       if (idx !== -1) modalStack.splice(idx, 1);
       // Fermeture "normale" (croix, Échap, backdrop, tirer pour fermer) :
@@ -151,7 +157,7 @@ export default function useFocusTrap<T extends HTMLElement = HTMLElement>(onClos
       // causé ce démontage. suppressNextPopstate évite qu'une AUTRE modale
       // encore montée (voir sa déclaration plus haut) ne prenne CE
       // history.back() pour un vrai retour utilisateur et se referme aussi.
-      if (!closedByBack) {
+      if (usesHistory && !closedByBack) {
         suppressNextPopstate = true;
         window.history.back();
         // Filet de sécurité : si AUCUNE autre modale n'est montée pour

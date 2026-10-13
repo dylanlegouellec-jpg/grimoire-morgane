@@ -67,3 +67,31 @@ describe("useFocusTrap — pile de modales imbriquées", () => {
     expect(onOuterClose).not.toHaveBeenCalled();
   });
 });
+
+describe("useFocusTrap — réglage « le geste retour ferme les fenêtres »", () => {
+  it("activé (défaut) : une entrée d'historique par fenêtre, retirée à la fermeture", () => {
+    localStorage.removeItem("grimoire_back_gesture_closes");
+    const push = vi.spyOn(window.history, "pushState");
+    const back = vi.spyOn(window.history, "back").mockImplementation(() => {});
+    const { unmount } = render(<Modal onClose={() => {}} />);
+    expect(push).toHaveBeenCalledTimes(1);
+    unmount();
+    expect(back).toHaveBeenCalledTimes(1);
+    push.mockRestore(); back.mockRestore();
+  });
+
+  it("désactivé : aucune entrée d'historique, et un « retour » ne ferme rien", () => {
+    localStorage.setItem("grimoire_back_gesture_closes", "0");
+    const push = vi.spyOn(window.history, "pushState");
+    const back = vi.spyOn(window.history, "back").mockImplementation(() => {});
+    const onClose = vi.fn();
+    const { unmount } = render(<Modal onClose={onClose} />);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    expect(push).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+    unmount();
+    expect(back).not.toHaveBeenCalled();
+    push.mockRestore(); back.mockRestore();
+    localStorage.removeItem("grimoire_back_gesture_closes");
+  });
+});

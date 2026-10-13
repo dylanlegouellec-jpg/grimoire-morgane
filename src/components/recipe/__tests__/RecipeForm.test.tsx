@@ -53,7 +53,9 @@ describe("RecipeForm", () => {
     });
     expect(saved.ingredients).toEqual(RECIPE.ingredients);
     expect(saved.steps).toEqual(RECIPE.steps);
-    expect(onClose).toHaveBeenCalled();
+    // La feuille se referme après le cachet de cire (≈ 0,8 s, voir
+    // form/createAnimations.ts) — l'enregistrement, lui, est immédiat.
+    await waitFor(() => expect(onClose).toHaveBeenCalled(), { timeout: 2500 });
   });
 
   it("la nutrition accepte la virgule décimale et les ingrédients ajoutés sont enregistrés", async () => {
