@@ -766,6 +766,7 @@ export default function AppShell({
             openRecipeId={openRecipe ? openRecipe.id : null}
             onRequestDelete={setDeleteTarget}
             onUpdateRecipe={saveRecipe}
+            onEdit={setFormTarget}
             pressDuration={pressDuration}
             showNutriscore={showNutriscore}
             householdId={householdId}

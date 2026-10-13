@@ -18,6 +18,7 @@ interface RecipesViewProps {
   openRecipeId: string | null;
   onRequestDelete: (recipe: Recipe) => void;
   onUpdateRecipe: (recipe: Recipe) => void;
+  onEdit?: (recipe: Recipe) => void;
   pressDuration?: number;
   showNutriscore?: boolean;
   householdId: string | null;
@@ -35,6 +36,7 @@ export default function RecipesView({
   openRecipeId,
   onRequestDelete,
   onUpdateRecipe,
+  onEdit,
   pressDuration,
   showNutriscore,
   householdId,
@@ -190,6 +192,7 @@ export default function RecipesView({
             onToggleFavorite={onToggleFavorite}
             onRequestDelete={onRequestDelete}
             onUpdateRecipe={onUpdateRecipe}
+            onEdit={onEdit}
             enterDelay={Math.min(visibleIndexById.get(r.id) || 0, ENTER_STAGGER_MAX_INDEX) * ENTER_STAGGER_MS}
             pressDuration={pressDuration}
             showNutriscore={showNutriscore}
