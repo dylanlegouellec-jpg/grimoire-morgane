@@ -335,6 +335,10 @@ export const CODE_DOCS: Record<string, string> = {
     "Une traduction approximative du français vers l'anglais pour les textes de recettes, à l'aide d'un dictionnaire. Ce n'est pas une vraie traduction automatique.",
   "src/utils/chunkReload.ts":
     "Quand un écran chargé à la demande n'existe plus sur le serveur (app restée ouverte pendant une mise à jour), recharge la page une seule fois au lieu d'afficher l'écran d'erreur.",
+  "src/utils/cookTimers.ts":
+    "Magasin partagé des minuteurs du mode cuisine : plusieurs minuteurs en même temps, basés sur une heure de fin (justes même onglet en veille), conservés d'un groupe d'étapes à l'autre et vidés à la fermeture. Envoie la notification de fin une seule fois par minuteur et se lit via useCookTimers().",
+  "src/utils/thumbnails.ts":
+    "Miniatures des photos de recettes : dérive le chemin et l'URL publique de la miniature (~480 px) d'une photo du bucket recipe-images, et retient pour la session les miniatures manquantes et les rattrapages déjà tentés.",
   "src/utils/shoppingOps.ts":
     "Les modifications d'articles d'une liste de courses (ajouter, cocher, quantité, retirer, vider) : les applique sur l'appareil comme le fait le serveur, et garde de côté celles pas encore confirmées pour les réappliquer sur ce que le serveur renvoie.",
   "src/utils/i18n.ts":
@@ -523,6 +527,8 @@ export const CODE_DOCS: Record<string, string> = {
     "L'import d'une recette depuis un lien Instagram ou TikTok : affiche la légende récupérée, à recopier dans une nouvelle recette.",
   "src/components/common/RecipeOptionsModal.tsx":
     "Le menu d'actions d'une recette (appui long sur une carte) : photo, illustration générée par IA et autres actions.",
+  "src/components/common/Toast.tsx":
+    "Message éphémère en bas d'écran (texte de useToast), avec un bouton d'action facultatif comme « Annuler » après une suppression.",
   "src/components/common/Seal.tsx":
     "Le bouton en forme de sceau, utilisé pour l'action principale d'un écran.",
   "src/components/common/SecretSettingsModal.tsx":

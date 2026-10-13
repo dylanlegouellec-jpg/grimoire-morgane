@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { ILLUSTRATIONS, resolveIllustrationKey } from "./illustrations";
 import { translateCurrent } from "../../utils/i18n";
+import { isThumbKnownMissing, markThumbMissing, thumbUrlFor } from "../../utils/thumbnails";
+import { backfillThumbnail } from "../../utils/imageUpload";
 
 let dishArtCounter = 0;
 
@@ -20,9 +22,23 @@ interface DishArtRecipe {
 
 interface DishArtProps {
   recipe: DishArtRecipe;
+  // "thumb" : vignette de la grille (cartes, frigo) — charge la miniature
+  // ~480px de la photo (voir utils/thumbnails.ts) au lieu de la pleine
+  // taille. "full" (défaut) : fiche recette / héros, comportement
+  // d'origine. Défaut "full" pour qu'un appelant oublié reste net plutôt
+  // que flou en grand.
+  size?: "thumb" | "full";
 }
 
-export default function DishArt({ recipe }: DishArtProps) {
+// Source initiale : la miniature en mode "thumb" quand la photo en a une
+// (bucket recipe-images uniquement) et qu'elle n'a pas déjà manqué
+// pendant cette session ; la photo elle-même sinon.
+function initialSrc(rawUrl: string | null | undefined, size: DishArtProps["size"]): string | null | undefined {
+  if (size !== "thumb" || !rawUrl || isThumbKnownMissing(rawUrl)) return rawUrl;
+  return thumbUrlFor(rawUrl) || rawUrl;
+}
+
+export default function DishArt({ recipe, size = "full" }: DishArtProps) {
   const idRef = useRef<string | null>(null);
   if (idRef.current === null) idRef.current = `dish-${dishArtCounter++}`;
   const artUid = idRef.current;
@@ -37,7 +53,13 @@ export default function DishArt({ recipe }: DishArtProps) {
   // vectorielle du Grimoire déjà prévue pour les recettes sans photo —
   // c'est déjà le "placeholder élégant aux couleurs du Grimoire", pas
   // besoin d'en construire un second.
-  const [imgSrc, setImgSrc] = useState(rawUrl);
+  const [imgSrc, setImgSrc] = useState(() => initialSrc(rawUrl, size));
+  // true tant que l'<img> affiche la miniature (voir handleImgError : son
+  // échec bascule sur la pleine taille, sans retry ni placeholder).
+  const usingThumbRef = useRef(imgSrc !== rawUrl);
+  // true quand la pleine taille a dû remplacer une miniature manquante :
+  // une fois chargée, elle sert à fabriquer la miniature (backfillThumbnail).
+  const needsBackfillRef = useRef(false);
   const [imgFailed, setImgFailed] = useState(false);
   // Voile chatoyant (voir .illus-shimmer, recipeCards.css) affiché tant
   // que la photo n'a pas fini de se décoder — évite le passage brutal
@@ -55,7 +77,10 @@ export default function DishArt({ recipe }: DishArtProps) {
   if (lastUrlRef.current !== rawUrl) {
     lastUrlRef.current = rawUrl;
     if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
-    setImgSrc(rawUrl);
+    const nextSrc = initialSrc(rawUrl, size);
+    usingThumbRef.current = nextSrc !== rawUrl;
+    needsBackfillRef.current = false;
+    setImgSrc(nextSrc);
     setImgFailed(false);
     setPhotoLoaded(false);
     retryCountRef.current = 0;
@@ -69,11 +94,40 @@ export default function DishArt({ recipe }: DishArtProps) {
   // callback ref ne se redéclencherait donc pas au fil des changements de
   // source (retry anti-cache, nouvelle photo choisie...).
   const imgElRef = useRef<HTMLImageElement | null>(null);
+  // Photo nette à l'écran. Si c'est la pleine taille chargée faute de
+  // miniature, on en tire la miniature manquante en tâche de fond — sans
+  // jamais retarder l'affichage (backfillThumbnail ne lève jamais et ne
+  // tente qu'une fois par photo et par session).
+  const handlePhotoReady = () => {
+    setPhotoLoaded(true);
+    const node = imgElRef.current;
+    if (needsBackfillRef.current && node && rawUrl) {
+      needsBackfillRef.current = false;
+      void backfillThumbnail(node, rawUrl);
+    }
+  };
   useEffect(() => {
     const node = imgElRef.current;
-    if (node && node.complete && node.naturalWidth > 0) setPhotoLoaded(true);
+    if (node && node.complete && node.naturalWidth > 0) handlePhotoReady();
+    // handlePhotoReady ne lit que des refs et rawUrl, déjà lié à imgSrc.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imgSrc]);
   const handleImgError = () => {
+    // Miniature introuvable (photo envoyée avant les miniatures -> 400/404)
+    // ou momentanément injoignable : bascule IMMÉDIATE sur la pleine
+    // taille, même hors-ligne (elle peut être dans le cache du service
+    // worker, voir utils/imageCache.ts), sans consommer de retry. Le voile
+    // chatoyant reste affiché pendant ce temps (photoLoaded toujours
+    // false) : aucun clignotement visible. Mémorisé pour la session
+    // (markThumbMissing) : les remontages suivants de la carte vont
+    // directement à la pleine taille, sans reproduire l'erreur.
+    if (usingThumbRef.current && rawUrl) {
+      usingThumbRef.current = false;
+      needsBackfillRef.current = true;
+      markThumbMissing(rawUrl);
+      setImgSrc(rawUrl);
+      return;
+    }
     // Hors-ligne, cet échec signifie forcément que l'image n'est pas dans le
     // cache du service worker (sinon CacheFirst l'aurait servie sans jamais
     // déclencher onError, voir vite.config.js) — un retry avec un paramètre
@@ -166,7 +220,7 @@ export default function DishArt({ recipe }: DishArtProps) {
           draggable="false"
           loading="lazy"
           decoding="async"
-          onLoad={() => setPhotoLoaded(true)}
+          onLoad={handlePhotoReady}
           onError={handleImgError}
         />
         <div className="illus-photo-guard" aria-hidden="true" />

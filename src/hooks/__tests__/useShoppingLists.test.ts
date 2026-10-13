@@ -76,3 +76,34 @@ describe("useShoppingLists — modifications article par article", () => {
     expect(items[1]).toMatchObject({ name: "Basilic", qty: 1 });
   });
 });
+
+describe("useShoppingLists — « Annuler » après une suppression", () => {
+  it("retirer un article propose « Annuler », qui le remet dans sa liste", () => {
+    callRpcMock.mockReturnValue(new Promise(() => {}));
+    const showToast = vi.fn();
+    const { result } = renderHook(() =>
+      useShoppingLists({ householdId: "h1", userId: "u1", initialLists: [list([item("a"), item("b", true)])], initialActiveListId: "l1", showToast })
+    );
+    act(() => result.current.deleteShoppingItem("b"));
+    expect(result.current.shoppingLists[0].items.map((it) => it.id)).toEqual(["a"]);
+    const action = showToast.mock.calls.at(-1)?.[1];
+    expect(action?.label).toBeTruthy();
+    act(() => action.onAction());
+    expect(result.current.shoppingLists[0].items).toEqual([item("a"), item("b", true)]);
+    expect(callRpcMock).toHaveBeenLastCalledWith("shopping_list_apply", { p_list_id: "l1", p_ops: [{ op: "append", item: item("b", true) }] });
+  });
+
+  it("supprimer une liste propose « Annuler », qui la recrée avec le même id", () => {
+    const showToast = vi.fn();
+    const { result } = renderHook(() =>
+      useShoppingLists({ householdId: "h1", userId: "u1", initialLists: [list([item("a")])], initialActiveListId: "l1", showToast })
+    );
+    act(() => { void result.current.deleteShoppingList("l1"); });
+    expect(result.current.shoppingLists).toEqual([]);
+    const action = showToast.mock.calls.find((c) => c[1])?.[1];
+    act(() => action.onAction());
+    expect(result.current.shoppingLists.map((l) => l.id)).toEqual(["l1"]);
+    expect(result.current.activeListId).toBe("l1");
+    expect(insertRowMock).toHaveBeenCalledWith("shopping_lists", expect.objectContaining({ id: "l1" }), );
+  });
+});

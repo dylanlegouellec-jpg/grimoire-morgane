@@ -7,6 +7,7 @@ import { applyShoppingOps, addPendingShoppingOps, settlePendingShoppingOps, with
 import { getStoredShoppingScope, storeShoppingScope, getStoredActiveShoppingListId, storeActiveShoppingListId } from "../utils/localSettings";
 import type { ViewScope } from "../utils/localSettings";
 import type { Recipe } from "./useRecipes";
+import type { ShowToast } from "./useToast";
 
 export interface ShoppingItem {
   id: string;
@@ -30,7 +31,7 @@ interface UseShoppingListsParams {
   userId?: string | null;
   initialLists?: ShoppingList[];
   initialActiveListId?: string | null;
-  showToast: (msg: string) => void;
+  showToast: ShowToast;
 }
 
 /* ------------------------------------------------------------------ */
@@ -154,10 +155,32 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
     }
   }, [showToast]);
 
+  // Remet une liste supprimée (bouton « Annuler » du toast) : même id, mêmes
+  // articles, renvoyée au serveur comme une création.
+  const restoreShoppingList = useCallback((list: ShoppingList, wasActive: boolean) => {
+    if (listsRef.current.some((l) => l.id === list.id)) return;
+    setShoppingLists((prev) => (prev.some((l) => l.id === list.id) ? prev : [...prev, list]));
+    if (wasActive) setActiveListId(list.id);
+    if (SUPABASE_READY && householdId) {
+      insertRow("shopping_lists", mapShoppingListToRow(list as unknown as Record<string, unknown>, householdId)).catch((err) => {
+        console.error(err);
+        showToast(translateCurrent("messages.shopping.createFailed"));
+      });
+    }
+  }, [householdId, showToast]);
+
   const deleteShoppingList = useCallback(async (id: string) => {
+    const removed = listsRef.current.find((l) => l.id === id);
+    const wasActive = activeListIdRef.current === id;
     setShoppingLists((prev) => prev.filter((l) => l.id !== id));
     setActiveListId((cur) => (cur === id ? null : cur));
     triggerHaptic(30);
+    if (removed) {
+      showToast(translateCurrent("messages.shopping.listDeleted"), {
+        label: translateCurrent("common.undo"),
+        onAction: () => restoreShoppingList(removed, wasActive),
+      });
+    }
     if (SUPABASE_READY) {
       try {
         await deleteRow("shopping_lists", id);
@@ -166,7 +189,7 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
         showToast(translateCurrent("messages.shopping.deleteFailed"));
       }
     }
-  }, [showToast]);
+  }, [restoreShoppingList, showToast]);
 
   // Applique des modifications d'articles à la liste active (en la créant
   // d'abord si besoin) — point de passage commun de toutes les actions
@@ -174,14 +197,9 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
   // utils/shoppingOps.ts), jamais la liste entière : deux personnes qui
   // cochent en même temps ne s'écrasent plus. `buildOps` reçoit les articles
   // actuels, pour les actions qui en dépendent (cocher, quantités, générer).
-  const applyToActiveList = useCallback((buildOps: (items: ShoppingItem[]) => ShoppingOp[]) => {
-    const listId = activeListIdRef.current;
-    const current = listId ? listsRef.current.find((l) => l.id === listId) : undefined;
-    if (!listId || !current) {
-      const ops = buildOps([]);
-      createShoppingList(undefined, undefined, applyShoppingOps([], ops));
-      return;
-    }
+  const applyToList = useCallback((listId: string, buildOps: (items: ShoppingItem[]) => ShoppingOp[]) => {
+    const current = listsRef.current.find((l) => l.id === listId);
+    if (!current) return;
     const ops = buildOps(current.items);
     if (!ops.length) return;
     // Mise à jour immédiate de la référence aussi : deux appuis très rapides
@@ -206,7 +224,17 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
         console.error(err);
         showToast(translateCurrent("messages.shopping.saveChangeFailed"));
       });
-  }, [createShoppingList, householdId, showToast]);
+  }, [householdId, showToast]);
+
+  const applyToActiveList = useCallback((buildOps: (items: ShoppingItem[]) => ShoppingOp[]) => {
+    const listId = activeListIdRef.current;
+    if (!listId || !listsRef.current.some((l) => l.id === listId)) {
+      const ops = buildOps([]);
+      createShoppingList(undefined, undefined, applyShoppingOps([], ops));
+      return;
+    }
+    applyToList(listId, buildOps);
+  }, [applyToList, createShoppingList]);
 
   const addManualItem = useCallback((name: string) => {
     applyToActiveList(() => [{ op: "add", item: { id: nextId(), name, qty: 1, unit: "", checked: false, aisle: guessAisle(name) } }]);
@@ -225,10 +253,23 @@ export default function useShoppingLists({ householdId, userId, initialLists = [
   // Suppression d'un seul article — geste de swipe gauche sur une ligne
   // (voir ShoppingItemRow.jsx), à distinguer de resetActiveList (vide
   // toute la liste).
+  // « Annuler » (toast, 5 s) remet l'article dans SA liste, même si on a
+  // changé de liste entre-temps : en tête s'il y était, sinon à la fin.
   const deleteShoppingItem = useCallback((id: string) => {
     triggerHaptic(20);
+    const listId = activeListIdRef.current;
+    const items = listsRef.current.find((l) => l.id === listId)?.items ?? [];
+    const index = items.findIndex((it) => it.id === id);
     applyToActiveList(() => [{ op: "remove", id }]);
-  }, [applyToActiveList]);
+    if (!listId || index < 0) return;
+    const item = items[index];
+    showToast(translateCurrent("messages.shopping.itemDeleted", { name: item.name }), {
+      label: translateCurrent("common.undo"),
+      onAction: () => applyToList(listId, (current) => (
+        current.some((it) => it.id === id) ? [] : [{ op: index === 0 ? "add" : "append", item }]
+      )),
+    });
+  }, [applyToActiveList, applyToList, showToast]);
 
   const adjustShoppingQty = useCallback((id: string, delta: number) => {
     triggerHaptic(10);

@@ -23,19 +23,28 @@ export default function useTabNavigation(appContentRef: RefObject<HTMLElement | 
   const [tab, setTab] = useState("recettes");
   const prefersReducedMotion = useReducedMotion();
   const { shown: shownTab, exiting: tabExiting } = useExitThenSwitch(tab, TAB_EXIT_MS, Boolean(prefersReducedMotion));
-  // Remet la page en haut À LA BASCULE (le contenu est alors déjà fondu, donc
-  // le saut ne se voit pas) : sinon, depuis un onglet défilé vers un onglet
-  // plus court, le navigateur recale lui-même le défilement d'un coup, en
-  // plein milieu de la transition (mesuré : 600 -> 203 px). En paysage, c'est
-  // .app-content qui défile, pas la page. Pas au premier montage.
+  // Position de défilement de chaque onglet : les onglets restent en mémoire
+  // (<Activity>, voir AppShell), on retrouve donc aussi l'endroit où on en
+  // était. Notée au moment où on QUITTE l'onglet (dans changeTab, avant que la
+  // page ne change de hauteur), pour l'onglet réellement affiché.
+  const shownTabRef = useRef(shownTab);
+  shownTabRef.current = shownTab;
+  const scrollPositionsRef = useRef<Record<string, { page: number; content: number }>>({});
+  // Applique la position de l'onglet À LA BASCULE (le contenu est alors déjà
+  // fondu, donc le saut ne se voit pas) : en haut pour un onglet jamais vu,
+  // sinon là où on l'avait laissé. Sans ça, depuis un onglet défilé vers un
+  // onglet plus court, le navigateur recalait lui-même le défilement d'un
+  // coup, en plein milieu de la transition (mesuré : 600 -> 203 px). En
+  // paysage, c'est .app-content qui défile, pas la page. Pas au premier montage.
   const tabScrollMountedRef = useRef(false);
   useLayoutEffect(() => {
     if (!tabScrollMountedRef.current) {
       tabScrollMountedRef.current = true;
       return;
     }
-    window.scrollTo(0, 0);
-    if (appContentRef.current) appContentRef.current.scrollTop = 0;
+    const saved = scrollPositionsRef.current[shownTab];
+    window.scrollTo(0, saved ? saved.page : 0);
+    if (appContentRef.current) appContentRef.current.scrollTop = saved ? saved.content : 0;
   }, [shownTab, appContentRef]);
   // Précharge les trois onglets chargés à la demande (Plan, Frigo, Courses)
   // peu après le lancement, hors du chemin critique : sans ça, le premier
@@ -64,6 +73,12 @@ export default function useTabNavigation(appContentRef: RefObject<HTMLElement | 
   // contenu de l'onglet ET à ses barres de recherche/filtres.
   const tabSlideStyle = { "--tab-slide": tabDirection === "forward" ? "18px" : "-18px" } as CSSProperties;
   const changeTab = useCallback((nextKey: string) => {
+    if (nextKey !== shownTabRef.current) {
+      scrollPositionsRef.current[shownTabRef.current] = {
+        page: window.scrollY,
+        content: appContentRef.current ? appContentRef.current.scrollTop : 0,
+      };
+    }
     setTab((prevKey) => {
       if (nextKey === prevKey) return prevKey;
       const prevIndex = TABS.findIndex((tb) => tb.key === prevKey);
@@ -71,7 +86,7 @@ export default function useTabNavigation(appContentRef: RefObject<HTMLElement | 
       setTabDirection(nextIndex >= prevIndex ? "forward" : "backward");
       return nextKey;
     });
-  }, []);
+  }, [appContentRef]);
 
   return { tab, shownTab, tabExiting, tabSlideStyle, changeTab };
 }

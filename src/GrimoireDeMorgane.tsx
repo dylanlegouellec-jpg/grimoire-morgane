@@ -108,7 +108,7 @@ export default function GrimoireDeMorgane() {
   const isGuestMode = isGuestModeRef.current;
 
   const [theme, setThemeState] = useState(() => getStoredTheme()); // "light" | "dark" | "system"
-  const { toast, showToast } = useToast();
+  const { toast, showToast, hideToast } = useToast();
   // L'écran de démarrage de index.html (#splash) s'efface dès ce premier
   // montage : quel que soit l'écran choisi plus bas (chargement, connexion,
   // app), il est déjà dessiné en dessous. Voir utils/splash.ts.
@@ -513,6 +513,7 @@ export default function GrimoireDeMorgane() {
           syncApi={syncApi}
           toast={toast}
           showToast={showToast}
+          hideToast={hideToast}
         />
       </IconStyleProvider>
     </LanguageProvider>

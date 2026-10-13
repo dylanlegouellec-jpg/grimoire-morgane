@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, lazy, Suspense } from "react";
+import { Activity, useEffect, useRef, useState, lazy, Suspense } from "react";
 import { AnimatePresence } from "motion/react";
 import { Wand2 } from "lucide-react";
 
@@ -14,6 +14,8 @@ import AppHeader from "./AppHeader";
 import TabBars from "./TabBars";
 import { RecipesView, RecipeForm, RecipeDetail, CookMode } from "../components/recipe";
 import type { Recipe } from "../hooks/useRecipes";
+import type { ShowToast, ToastState } from "../hooks/useToast";
+import Toast from "../components/common/Toast";
 import type { RecipesApi, PantryApi, MealPlanApi, ShoppingApi, SettingsApi, HouseholdApi, SyncApi } from "./appShellTypes";
 
 // Chargés à la demande (React.lazy), importés directement depuis leur
@@ -59,8 +61,9 @@ interface AppShellProps {
   settingsApi: SettingsApi;
   householdApi: HouseholdApi;
   syncApi: SyncApi;
-  toast?: string | null;
-  showToast: (msg: string) => void;
+  toast?: ToastState | null;
+  showToast: ShowToast;
+  hideToast?: () => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -85,11 +88,12 @@ export default function AppShell({
   householdApi,
   syncApi,
   toast,
+  hideToast,
   showToast,
 }: AppShellProps) {
   const { recipes, saveRecipe, importRecipe, deleteRecipe, toggleFavorite, exportGrimoire, handleImportFile } = recipesApi;
   const { pantry, setPantry, basics, moveBasicToVariable, removeBasic, resetPantry } = pantryApi;
-  const { mealPlan, addMealPlanEntry, removeMealPlanEntry, removeMealPlanEntries, updateMealPlanEntry, reorderMealPlanEntries, moveMealPlanSection } = mealPlanApi;
+  const { mealPlan, addMealPlanEntry, removeMealPlanEntries, restoreMealPlanEntries, updateMealPlanEntry, reorderMealPlanEntries, moveMealPlanSection } = mealPlanApi;
   const { t } = useTranslation();
   const {
     shoppingLists,
@@ -159,6 +163,9 @@ export default function AppShell({
   // retour en haut à la bascule) : voir hooks/useTabNavigation.ts.
   const appContentRef = useRef<HTMLElement | null>(null);
   const { tab, shownTab, tabExiting, tabSlideStyle, changeTab } = useTabNavigation(appContentRef);
+  // Onglets déjà affichés au moins une fois : gardés en mémoire (<Activity>).
+  const [visitedTabs, setVisitedTabs] = useState(() => new Set([shownTab]));
+  if (!visitedTabs.has(shownTab)) setVisitedTabs(new Set([...visitedTabs, shownTab]));
   const [filter, setFilter] = useState("tout");
   const [search, setSearch] = useState("");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
@@ -210,6 +217,32 @@ export default function AppShell({
   // Tuto « Modifier une recette » : ouvre un formulaire de création VIDE
   // derrière le tuto (rien n'est enregistré, aucune recette existante n'est
   // touchée) et le referme à la fin, quelle que soit la façon de quitter.
+  // Raccourcis de l'icône de l'app (manifest "shortcuts", vite.config.ts) :
+  // /?raccourci=nouvelle-recette | courses | planning. Lu une seule fois à
+  // l'ouverture puis retiré de l'adresse (un rechargement ne le rejoue pas).
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const shortcut = url.searchParams.get("raccourci");
+    if (!shortcut) return;
+    url.searchParams.delete("raccourci");
+    window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+    if (shortcut === "nouvelle-recette") setFormTarget("new");
+    else if (shortcut === "courses") changeTab("courses");
+    else if (shortcut === "planning") changeTab("plan");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- une seule fois, à l'ouverture
+  }, []);
+  // Retirer un ou plusieurs repas du planning : toast « Annuler » (5 s) qui
+  // les remet à leur place (voir restoreMealPlanEntries, hooks/useMealPlan.ts).
+  const removeMealsWithUndo = (ids: string[]) => {
+    const idSet = new Set(ids);
+    const removed = mealPlan.flatMap((entry, index) => (idSet.has(entry.id) ? [{ entry, index }] : []));
+    removeMealPlanEntries(ids);
+    if (!removed.length) return;
+    showToast(
+      removed.length === 1 ? t("messages.planning.mealRemoved") : t("messages.planning.mealsRemoved", { count: removed.length }),
+      { label: t("common.undo"), onAction: () => restoreMealPlanEntries(removed) }
+    );
+  };
   const startRecipeTour = () => {
     setFormTarget("new");
     setShowRecipeTour(true);
@@ -353,25 +386,28 @@ export default function AppShell({
       </div>
 
       <main className="app-content" ref={appContentRef}>
-        {/* key={shownTab} : une erreur dans un onglet ne doit emporter que son
-            propre contenu (en-tête/filtres/nav basse restent utilisables) —
-            et changer d'onglet remonte le filet (nouvelle `key`), donc
-            réinitialise l'erreur automatiquement plutôt que de rester
-            bloqué sur le message d'erreur en revenant sur cet onglet. */}
-        <ErrorBoundary compact key={shownTab}>
-        {/* Glissement horizontal léger entre onglets (voir .tab-transition,
+        {/* Chaque onglet déjà visité reste en mémoire dans son <Activity>
+            (React 19) : caché quand on n'est pas dessus, il garde son état
+            (recherche, sections dépliées…) et on y retrouve sa position de
+            défilement (voir hooks/useTabNavigation.ts). Un onglet jamais
+            ouvert n'est pas monté (chargement à la demande conservé).
+            Un ErrorBoundary par onglet : une erreur n'emporte que son propre
+            contenu (en-tête/filtres/nav basse restent utilisables).
+            Glissement horizontal léger à l'arrivée (voir .tab-transition,
             shell.css) — "left"/opacity, jamais "transform" : plusieurs
             onglets contiennent un élément position:fixed propre (.fab en
             Recettes, .planning-reorder-banner en Planification) qui
             deviendrait sinon ancré à CE calque le temps de l'animation
-            plutôt qu'au vrai viewport (même piège déjà documenté sur .view,
-            juste au-dessus dans le JSX d'origine — voir shell.css). Un
-            simple décalage "left" ne crée jamais ce problème. */}
-        <div
-          className={`tab-transition${tabExiting ? " tab-exit" : ""}`}
-          style={tabSlideStyle}
-        >
-        {shownTab === "recettes" && (
+            plutôt qu'au vrai viewport. Réafficher un onglet caché (display:
+            none -> visible) relance cette animation d'entrée d'elle-même. */}
+        {TABS.filter(({ key }) => visitedTabs.has(key)).map(({ key }) => (
+          <Activity key={key} mode={shownTab === key ? "visible" : "hidden"}>
+            <ErrorBoundary compact>
+              <div
+                className={`tab-transition${shownTab === key && tabExiting ? " tab-exit" : ""}`}
+                style={tabSlideStyle}
+              >
+                {key === "recettes" && (
           <RecipesView
             recipes={recipes}
             filter={filter}
@@ -379,6 +415,7 @@ export default function AppShell({
             favoritesOnly={favoritesOnly}
             onToggleFavorite={toggleFavorite}
             onAddRequest={() => setFormTarget("new")}
+            onImportRequest={() => setShowLinkImport(true)}
             onOpen={setOpenRecipe}
             openRecipeId={openRecipe ? openRecipe.id : null}
             onRequestDelete={setDeleteTarget}
@@ -389,15 +426,15 @@ export default function AppShell({
             householdId={householdId}
             showToast={showToast}
           />
-        )}
-        {shownTab === "plan" && (
+                )}
+                {key === "plan" && (
           <Suspense fallback={<ViewLoadingFallback />}>
             <PlanningView
               recipes={recipes}
               mealPlan={mealPlan}
               onAddMeal={addMealPlanEntry}
-              onRemoveMeal={removeMealPlanEntry}
-              onRemoveMeals={removeMealPlanEntries}
+              onRemoveMeal={(id) => removeMealsWithUndo([id])}
+              onRemoveMeals={removeMealsWithUndo}
               onUpdateMeal={updateMealPlanEntry}
               onReorderMeals={reorderMealPlanEntries}
               onMoveMealSection={moveMealPlanSection}
@@ -409,8 +446,8 @@ export default function AppShell({
               user={user}
             />
           </Suspense>
-        )}
-        {shownTab === "frigo" && (
+                )}
+                {key === "frigo" && (
           <Suspense fallback={<ViewLoadingFallback />}>
             <FridgeView
               recipes={recipes}
@@ -424,8 +461,8 @@ export default function AppShell({
               onOpen={setOpenRecipe}
             />
           </Suspense>
-        )}
-        {shownTab === "courses" && (
+                )}
+                {key === "courses" && (
           <Suspense fallback={<ViewLoadingFallback />}>
             <ShoppingView
               recipes={recipes}
@@ -444,9 +481,11 @@ export default function AppShell({
               pressDuration={pressDuration}
             />
           </Suspense>
-        )}
-        </div>
-        </ErrorBoundary>
+                )}
+              </div>
+            </ErrorBoundary>
+          </Activity>
+        ))}
       </main>
 
       <AnimatePresence>
@@ -660,7 +699,7 @@ export default function AppShell({
       </AnimatePresence>
       {/* Zone annoncée par les lecteurs d'écran (toujours présente, le
           message y apparaît) : sans elle, les confirmations restaient muettes. */}
-      <div role="status" aria-live="polite">{toast && <div className="toast">{toast}</div>}</div>
+      <Toast toast={toast} onHide={hideToast} />
     </div>
   );
 }

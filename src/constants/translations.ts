@@ -35,6 +35,7 @@ export const translations: Record<"fr" | "en", TranslationTree> = {
       save: "Enregistrer",
       edit: "Modifier",
       cancel: "Annuler",
+      undo: "Annuler",
       close: "Fermer",
     },
     app: {
@@ -56,6 +57,12 @@ export const translations: Record<"fr" | "en", TranslationTree> = {
     },
     recipes: {
       noMatch: "Aucune recette ne correspond à ta recherche.",
+      welcome: {
+        title: "Crée ta première recette",
+        body: "Ton grimoire est encore vide. Écris une recette à la main, ou importe-la depuis un lien.",
+        add: "Ajouter une recette",
+        import: "Importer depuis un lien",
+      },
       addRecipe: "Ajouter une recette",
       addFavorite: "Ajouter aux favoris",
       removeFavorite: "Retirer des favoris",
@@ -790,6 +797,12 @@ export const translations: Record<"fr" | "en", TranslationTree> = {
         saveChangeFailed: "Impossible d'enregistrer la modification de la liste.",
         generated: "Liste de courses générée !",
         reset: "Liste réinitialisée !",
+        itemDeleted: "« {name} » retiré",
+        listDeleted: "Liste supprimée",
+      },
+      planning: {
+        mealRemoved: "Repas retiré du planning",
+        mealsRemoved: "{count} repas retirés du planning",
       },
       recipes: {
         saveFailed: "Échec de la sauvegarde en base Supabase.",
@@ -841,6 +854,21 @@ export const translations: Record<"fr" | "en", TranslationTree> = {
         invalidResponse: "Réponse invalide du serveur.",
       },
     },
+    cookExtras: {
+      speech: {
+        read: "Lire cette étape à voix haute",
+        stop: "Arrêter la lecture",
+      },
+      timers: {
+        title: "Minuteurs en cours",
+        goToStep: "Aller à l'étape « {label} » ({time})",
+        done: "Terminé",
+        pause: "Mettre le minuteur en pause",
+        resume: "Reprendre le minuteur",
+        remove: "Retirer ce minuteur",
+        notificationBody: "{label} — {minutes} min écoulées",
+      },
+    },
   },
 
   en: {
@@ -863,6 +891,7 @@ export const translations: Record<"fr" | "en", TranslationTree> = {
       save: "Save",
       edit: "Edit",
       cancel: "Cancel",
+      undo: "Undo",
       close: "Close",
     },
     app: {
@@ -884,6 +913,12 @@ export const translations: Record<"fr" | "en", TranslationTree> = {
     },
     recipes: {
       noMatch: "No recipe matches your search.",
+      welcome: {
+        title: "Create your first recipe",
+        body: "Your grimoire is still empty. Write a recipe by hand, or import it from a link.",
+        add: "Add a recipe",
+        import: "Import from a link",
+      },
       addRecipe: "Add a recipe",
       addFavorite: "Add to favorites",
       removeFavorite: "Remove from favorites",
@@ -1615,6 +1650,12 @@ export const translations: Record<"fr" | "en", TranslationTree> = {
         saveChangeFailed: "Couldn't save your change to the list.",
         generated: "Shopping list conjured!",
         reset: "List cleared!",
+        itemDeleted: "“{name}” removed",
+        listDeleted: "List deleted",
+      },
+      planning: {
+        mealRemoved: "Meal removed from the plan",
+        mealsRemoved: "{count} meals removed from the plan",
       },
       recipes: {
         saveFailed: "Couldn't save to the Supabase database.",
@@ -1664,6 +1705,21 @@ export const translations: Record<"fr" | "en", TranslationTree> = {
         unreachable: "Couldn't reach the server — check your connection and try again.",
         serverError: "Server error ({status})",
         invalidResponse: "Invalid response from the server.",
+      },
+    },
+    cookExtras: {
+      speech: {
+        read: "Read this step aloud",
+        stop: "Stop reading",
+      },
+      timers: {
+        title: "Running timers",
+        goToStep: "Go to step “{label}” ({time})",
+        done: "Done",
+        pause: "Pause the timer",
+        resume: "Resume the timer",
+        remove: "Remove this timer",
+        notificationBody: "{label} — {minutes} min elapsed",
       },
     },
   },

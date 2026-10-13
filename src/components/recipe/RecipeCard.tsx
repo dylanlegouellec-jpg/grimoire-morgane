@@ -215,7 +215,7 @@ function RecipeCard({
             layoutId={!isOpenRecipe && !suppressMorph && !prefersReducedMotion ? `recipe-photo-${recipe.id}` : undefined}
             transition={SPRING_SHEET}
           >
-            <DishArt recipe={recipe} />
+            <DishArt recipe={recipe} size="thumb" />
             <button
               type="button"
               className={`fav-btn ${recipe.favorite ? "active" : ""}`}

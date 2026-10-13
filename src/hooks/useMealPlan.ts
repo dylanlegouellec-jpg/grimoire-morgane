@@ -89,6 +89,19 @@ export default function useMealPlan({ initialMealPlan = [] }: UseMealPlanParams)
   // Suppression groupée — menu "Tout supprimer" d'un sous-groupe de type de
   // plat entier (voir PlanningCourseGroup.jsx) : un seul setMealPlan/haptique
   // pour tout le groupe plutôt qu'un removeMealPlanEntry par entrée.
+  // Remet des entrées supprimées (bouton « Annuler » du toast) à leur place
+  // d'origine dans le tableau ; ignore celles déjà revenues.
+  const restoreMealPlanEntries = useCallback((removed: { entry: MealPlanEntry; index: number }[]) => {
+    setMealPlan((prev) => {
+      const next = [...prev];
+      for (const { entry, index } of [...removed].sort((a, b) => a.index - b.index)) {
+        if (next.some((e) => e.id === entry.id)) continue;
+        next.splice(Math.min(index, next.length), 0, entry);
+      }
+      return next;
+    });
+  }, []);
+
   const removeMealPlanEntries = useCallback((ids: string[]) => {
     triggerHaptic(20);
     const idSet = new Set(ids);
@@ -158,6 +171,7 @@ export default function useMealPlan({ initialMealPlan = [] }: UseMealPlanParams)
     addMealPlanEntry,
     removeMealPlanEntry,
     removeMealPlanEntries,
+    restoreMealPlanEntries,
     updateMealPlanEntry,
     reorderMealPlanEntries,
     moveMealPlanSection,

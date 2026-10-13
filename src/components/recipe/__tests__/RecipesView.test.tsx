@@ -259,3 +259,34 @@ describe("RecipesView — filtrage sans démontage", () => {
     expect(sucreCard.style.display).not.toBe("none");
   });
 });
+
+describe("RecipesView — grimoire vide", () => {
+  it("affiche l'accueil avec Ajouter / Importer au lieu de « aucune recette ne correspond »", async () => {
+    const onAddRequest = vi.fn();
+    const onImportRequest = vi.fn();
+    render(
+      <LanguageProvider language="fr">
+        <RecipesView
+          recipes={[]}
+          filter="tout"
+          search=""
+          favoritesOnly={false}
+          onToggleFavorite={noop}
+          onAddRequest={onAddRequest}
+          onImportRequest={onImportRequest}
+          onOpen={noop}
+          openRecipeId={null}
+          onRequestDelete={noop}
+          onUpdateRecipe={noop}
+          householdId={null}
+        />
+      </LanguageProvider>
+    );
+    expect(screen.getByText("Crée ta première recette")).toBeTruthy();
+    expect(screen.queryByText("Aucune recette ne correspond à ta recherche.")).toBeNull();
+    await userEvent.click(screen.getByText("Ajouter une recette", { selector: "button" }));
+    await userEvent.click(screen.getByText("Importer depuis un lien"));
+    expect(onAddRequest).toHaveBeenCalledTimes(1);
+    expect(onImportRequest).toHaveBeenCalledTimes(1);
+  });
+});

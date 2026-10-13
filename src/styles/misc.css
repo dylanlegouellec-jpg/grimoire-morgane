@@ -86,3 +86,10 @@
   animation: fadeIn 0.25s ease;
 }
 
+/* Toast avec action (« Annuler » après une suppression, voir hooks/useToast.ts). */
+.toast-with-action { display: flex; align-items: center; gap: 14px; padding: 6px 6px 6px 18px; white-space: nowrap; }
+.toast-action {
+  font-family: 'Cinzel', serif; font-size: 0.72rem; letter-spacing: 0.5px; text-transform: uppercase;
+  color: var(--chrome); background: var(--gold-light); border: none; border-radius: 999px;
+  padding: 8px 14px; min-height: 32px; cursor: pointer;
+}

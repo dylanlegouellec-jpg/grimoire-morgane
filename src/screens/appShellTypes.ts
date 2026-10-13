@@ -44,6 +44,7 @@ export interface MealPlanApi {
   ) => void;
   removeMealPlanEntry: (id: string) => void;
   removeMealPlanEntries: (ids: string[]) => void;
+  restoreMealPlanEntries: (removed: { entry: MealPlanEntry; index: number }[]) => void;
   updateMealPlanEntry: (id: string, updates: Partial<MealPlanEntry>) => void;
   reorderMealPlanEntries: (orderedIds: string[]) => void;
   moveMealPlanSection: (entryIds: string[], newMealType: string) => void;

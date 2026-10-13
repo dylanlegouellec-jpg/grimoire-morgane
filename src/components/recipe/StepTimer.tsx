@@ -1,77 +1,63 @@
-import { useState, useEffect, useRef, type MouseEvent } from "react";
+import type { MouseEvent } from "react";
 import { Clock, Pause, Play } from "lucide-react";
-import { requestNotificationPermission, showLocalNotification } from "../../utils/notifications";
+import { requestNotificationPermission } from "../../utils/notifications";
 import { useTranslation } from "../../contexts/LanguageContext";
+import {
+  cookTimerKey,
+  formatRemaining,
+  getRemainingMs,
+  startCookTimer,
+  toggleCookTimer,
+  useCookTimers,
+} from "../../utils/cookTimers";
 
 interface StepTimerProps {
   minutes: number;
+  /** Position de l'étape : sert de clé stable au minuteur (utils/cookTimers.ts). */
+  groupIndex?: number;
+  stepIndex?: number;
+  /** Texte de l'étape tel qu'affiché (bandeau des minuteurs, notification). */
+  label?: string;
 }
 
-export default function StepTimer({ minutes }: StepTimerProps) {
+// L'état du minuteur vit dans le magasin partagé (utils/cookTimers.ts), plus
+// dans ce composant : changer de groupe d'étapes puis revenir retrouve le
+// minuteur où on l'avait laissé, et la notification de fin part même quand
+// ce bouton n'est plus à l'écran.
+export default function StepTimer({ minutes, groupIndex = 0, stepIndex = 0, label = "" }: StepTimerProps) {
   const { t } = useTranslation();
-  const fullSeconds = minutes * 60;
-  const [seconds, setSeconds] = useState(fullSeconds);
-  const [running, setRunning] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const { timers, now } = useCookTimers();
+  const key = cookTimerKey(groupIndex, stepIndex, minutes);
+  const timer = timers.find((tm) => tm.key === key);
+  const status = timer?.status ?? "idle";
+  const remaining = timer ? getRemainingMs(timer, now) : minutes * 60_000;
 
-  useEffect(() => {
-    if (running && seconds > 0) {
-      intervalRef.current = setInterval(() => {
-        setSeconds((s) => {
-          if (s <= 1) {
-            if (intervalRef.current) clearInterval(intervalRef.current);
-            setRunning(false);
-            // Pour prévenir même quand le téléphone est ailleurs/l'écran
-            // éteint — l'ancien état "Terminé !" sur l'écran ne sert à rien
-            // si personne ne regarde le mode cuisine à cet instant précis.
-            showLocalNotification(t("recipeUi.timer.notificationTitle"), {
-              body: t("recipeUi.timer.notificationBody", { minutes }),
-              icon: "/Icon.jpeg",
-              tag: "grimoire-cookmode-timer",
-            });
-            return 0;
-          }
-          return s - 1;
-        });
-      }, 1000);
-    }
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-    // `seconds` lu seulement pour la condition de démarrage (`seconds > 0`)
-    // au moment où l'effet tourne — le décompte lui-même passe par la forme
-    // updater de setSeconds ci-dessus, qui lit toujours la valeur à jour
-    // sans avoir besoin de relancer l'effet à chaque tick. L'ajouter aux
-    // dépendances détruirait et recréerait l'intervalle chaque seconde.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running, minutes]);
-
-  const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-  const Icon = seconds === 0 ? Clock : running ? Pause : seconds === fullSeconds ? Clock : Play;
-  const label =
-    seconds === 0
+  const Icon = status === "running" ? Pause : status === "paused" ? Play : Clock;
+  const text =
+    status === "done"
       ? t("recipeUi.timer.done")
-      : running
-      ? fmt(seconds)
-      : seconds === fullSeconds
-      ? t("recipeUi.timer.start", { minutes })
-      : t("recipeUi.timer.resume", { time: fmt(seconds) });
+      : status === "running"
+      ? formatRemaining(remaining)
+      : status === "paused"
+      ? t("recipeUi.timer.resume", { time: formatRemaining(remaining) })
+      : t("recipeUi.timer.start", { minutes });
 
   return (
     <button
       type="button"
-      className={`step-timer-btn ${running ? "running" : ""} ${seconds === 0 ? "done" : ""}`}
+      className={`step-timer-btn ${status === "running" ? "running" : ""} ${status === "done" ? "done" : ""}`}
       onClick={(e: MouseEvent<HTMLButtonElement>) => {
         e.stopPropagation();
-        setRunning((r) => {
-          const next = !r;
-          // Doit rester synchrone avec CE clic (geste utilisateur direct) :
-          // iOS refuse silencieusement une demande de permission de
-          // notification si elle n'est pas déclenchée ainsi.
-          if (next) requestNotificationPermission();
-          return next;
-        });
+        if (status === "done") return;
+        // Doit rester synchrone avec CE clic (geste utilisateur direct) :
+        // iOS refuse silencieusement une demande de permission de
+        // notification si elle n'est pas déclenchée ainsi.
+        if (status !== "running") requestNotificationPermission();
+        if (status === "idle") startCookTimer({ groupIndex, stepIndex, minutes, label });
+        else toggleCookTimer(key);
       }}
     >
-      <Icon size={13} /> {label}
+      <Icon size={13} /> {text}
     </button>
   );
 }

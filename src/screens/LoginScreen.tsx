@@ -1,5 +1,7 @@
 import { triggerHaptic } from "../utils/helpers";
 import Seal from "../components/common/Seal";
+import Toast from "../components/common/Toast";
+import type { ToastState } from "../hooks/useToast";
 import { translateCurrent } from "../utils/i18n";
 
 /* ------------------------------------------------------------------ */
@@ -9,7 +11,7 @@ import { translateCurrent } from "../utils/i18n";
 interface LoginScreenProps {
   signInWithGoogle: () => Promise<void>;
   showToast: (msg: string) => void;
-  toast?: string | null;
+  toast?: ToastState | null;
 }
 
 export default function LoginScreen({ signInWithGoogle, showToast, toast }: LoginScreenProps) {
@@ -33,7 +35,7 @@ export default function LoginScreen({ signInWithGoogle, showToast, toast }: Logi
       </Seal>
       {/* Zone annoncée par les lecteurs d'écran (toujours présente, le
           message y apparaît) : sans elle, les confirmations restaient muettes. */}
-      <div role="status" aria-live="polite">{toast && <div className="toast">{toast}</div>}</div>
+      <Toast toast={toast} />
     </div>
   );
 }
