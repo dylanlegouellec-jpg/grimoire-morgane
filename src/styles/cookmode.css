@@ -260,3 +260,58 @@
   background: none; border: none; color: inherit; cursor: pointer;
 }
 .cookmode-timer-action::after { content: ""; position: absolute; inset: -6px -2px; }
+
+/* --- Photo du plat en fin de préparation (CookPhotoPrompt.tsx) ---
+   Le mode cuisine reste sombre quel que soit le thème (fond #2c221e) :
+   mêmes teintes que les cartes d'étapes, accentuées quand tout est coché. */
+.cookmode-photo {
+  flex-shrink: 0;
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 14px; border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px dashed rgba(217,180,92,0.45);
+  transition: background 0.25s ease, border-color 0.25s ease;
+}
+.cookmode-photo.ready {
+  background: rgba(217,180,92,0.12);
+  border-style: solid; border-color: var(--gold-light);
+}
+.cookmode-photo-title {
+  margin: 0; font-family: 'Cinzel', serif; font-size: 0.82rem; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--gold-light);
+}
+.cookmode-photo-text { margin: 0; font-size: 0.95rem; line-height: 1.4; color: var(--chrome-text); opacity: 0.85; }
+.cookmode-photo-saved { display: flex; align-items: center; gap: 6px; color: #8fbf7a; opacity: 1; }
+.cookmode-photo-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.cookmode-photo-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 44px; padding: 8px 14px; border-radius: 999px;
+  font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.5px; text-transform: uppercase;
+  border: 1px solid rgba(217,180,92,0.5);
+  background: rgba(217,180,92,0.12); color: var(--gold-light);
+  cursor: pointer;
+}
+.cookmode-photo-btn.primary { background: var(--gold-light); color: #2c221e; border-color: var(--gold-light); }
+.cookmode-photo-btn:disabled { opacity: 0.55; cursor: progress; }
+.cookmode-photo-btn:focus-visible,
+.cookmode-photo-link:focus-visible,
+.cookmode-photo .seal:focus-visible { outline: 2px solid var(--chrome-text); outline-offset: 3px; }
+.cookmode-photo-link {
+  min-height: 44px; padding: 8px 6px; background: none; border: none; cursor: pointer;
+  font-family: 'EB Garamond', serif; font-size: 1rem; color: var(--chrome-text);
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.cookmode-photo-link:disabled { opacity: 0.5; cursor: not-allowed; }
+.cookmode-photo-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cookmode-photo-compare figure { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.cookmode-photo-compare img {
+  width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px;
+  border: 1px solid rgba(217,180,92,0.35); background: rgba(255,255,255,0.06);
+}
+.cookmode-photo-compare figcaption {
+  font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.5px; text-transform: uppercase;
+  color: var(--chrome-text); opacity: 0.7; text-align: center;
+}
+.cookmode-photo-error { margin: 0; font-size: 0.92rem; color: #f2a39b; }
+/* Champs fichier réels mais invisibles : déclenchés par les boutons ci-dessus. */
+.cookmode-photo-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; overflow: hidden; clip: rect(0 0 0 0); }

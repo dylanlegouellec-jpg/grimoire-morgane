@@ -8,6 +8,8 @@ import useWakeLock from "../../hooks/useWakeLock";
 import Seal from "../common/Seal";
 import StepTimer from "./StepTimer";
 import PortionBadge from "./PortionBadge";
+import CookPhotoPrompt from "./CookPhotoPrompt";
+import type { ShowToast } from "../../hooks/useToast";
 import type { Recipe } from "../../hooks/useRecipes";
 import {
   clearCookTimers,
@@ -28,6 +30,11 @@ interface CookModeProps {
   recipe: Recipe;
   onClose: () => void;
   pressDuration?: number;
+  // Enregistrement de la recette (photo du plat en fin de préparation,
+  // voir CookPhotoPrompt) — absent : pas de proposition de photo.
+  onUpdateRecipe?: (recipe: Recipe) => Promise<void> | void;
+  householdId?: string | null;
+  showToast?: ShowToast;
 }
 
 // Contrairement à RecipeDetail.jsx/RecipeForm.jsx, ce composant ne passait
@@ -36,7 +43,7 @@ interface CookModeProps {
 // par translateRecipeText()/t() : tout restait en français quelle que soit
 // la langue choisie dans les Réglages, y compris pendant la préparation
 // elle-même (l'écran le plus consulté d'une recette en cuisinant).
-export default function CookMode({ recipe, onClose, pressDuration = 750 }: CookModeProps) {
+export default function CookMode({ recipe, onClose, pressDuration = 750, onUpdateRecipe, householdId = null, showToast }: CookModeProps) {
   const { t, language } = useTranslation();
   useWakeLock();
   const groups = groupSteps(recipe.steps);
@@ -266,6 +273,17 @@ export default function CookMode({ recipe, onClose, pressDuration = 750 }: CookM
             );
           })}
         </div>
+
+        {/* Fin de la liste d'étapes (dernier groupe) : photo du plat. */}
+        {onUpdateRecipe && groupIndex === groups.length - 1 && (
+          <CookPhotoPrompt
+            recipe={recipe}
+            onUpdateRecipe={onUpdateRecipe}
+            householdId={householdId}
+            showToast={showToast}
+            allDone={totalSteps > 0 && totalDone === totalSteps}
+          />
+        )}
 
         {groups.length > 1 && groupIndex < groups.length - 1 ? (
           <Seal tone="gold" onClick={goNextGroup}>{t("cookMode.nextGroup")} <ChevronRight size={16} /></Seal>

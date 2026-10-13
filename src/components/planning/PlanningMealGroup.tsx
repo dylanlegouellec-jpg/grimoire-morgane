@@ -11,6 +11,7 @@ import DeleteMealSectionConfirmModal from "./DeleteMealSectionConfirmModal";
 import MoveMealSectionModal from "./MoveMealSectionModal";
 import type { MealEntryLike } from "./PlanningMealItem";
 import type { MealTypeInfo } from "../../utils/planning";
+import { DROP_DATE_ATTR, DROP_MEAL_ATTR } from "./planningMove";
 
 const LONG_PRESS_DURATION_MS = 500;
 
@@ -34,6 +35,9 @@ interface PlanningMealGroupProps {
   onDeleteSection: (entries: MealEntryLike[]) => void;
   onAddToCourse: (courseKey: string) => void;
   onDeleteAllCourse: (entries: MealEntryLike[]) => void;
+  // Date ISO du jour qui contient ce bloc : en fait une zone de dépôt
+  // « ce jour + ce moment » pour le glisser-déposer (voir planningMove.ts).
+  dropDate?: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -72,6 +76,7 @@ export default function PlanningMealGroup({
   onDeleteSection,
   onAddToCourse,
   onDeleteAllCourse,
+  dropDate,
 }: PlanningMealGroupProps) {
   const { t } = useTranslation();
   const [showOptions, setShowOptions] = useState(false);
@@ -86,7 +91,10 @@ export default function PlanningMealGroup({
   const hasCourse = mealTypeHasCourse(mealType.key);
 
   return (
-    <div className="planning-meal-group">
+    <div
+      className="planning-meal-group"
+      {...(dropDate ? { [DROP_DATE_ATTR]: dropDate, [DROP_MEAL_ATTR]: mealType.key } : {})}
+    >
       <div
         ref={headerLongPress.ref}
         className={`planning-meal-group-header press-anim press-${headerLongPress.pressState}`}

@@ -1,6 +1,6 @@
 import { createPortal } from "react-dom";
 import { motion } from "motion/react";
-import { Pencil, Trash2, X } from "lucide-react";
+import { CalendarSync, Pencil, Trash2, X } from "lucide-react";
 import { triggerHaptic } from "../../utils/haptics";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
@@ -14,6 +14,9 @@ interface MealOptionsModalProps {
   onClose: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  // « Déplacer… » vers un autre jour/moment (voir MoveMealModal.tsx,
+  // planningMove.ts) — optionnel : absent, la ligne n'est pas affichée.
+  onMove?: () => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -26,7 +29,7 @@ interface MealOptionsModalProps {
 /*  Modal) — un nom générique de "feuille d'actions", pas propre aux       */
 /*  recettes malgré son préfixe historique.                                */
 /* ------------------------------------------------------------------ */
-export default function MealOptionsModal({ label, onClose, onEdit, onDelete }: MealOptionsModalProps) {
+export default function MealOptionsModal({ label, onClose, onEdit, onDelete, onMove }: MealOptionsModalProps) {
   const { t } = useTranslation();
   const modalRef = useFocusTrap<HTMLDivElement>(onClose);
   const sheet = useDismissibleSheet(onClose, { scrollRef: modalRef });
@@ -35,6 +38,11 @@ export default function MealOptionsModal({ label, onClose, onEdit, onDelete }: M
   const handleEdit = () => {
     triggerHaptic(15);
     onEdit();
+  };
+
+  const handleMove = () => {
+    triggerHaptic(15);
+    if (onMove) onMove();
   };
 
   const handleDelete = () => {
@@ -62,6 +70,13 @@ export default function MealOptionsModal({ label, onClose, onEdit, onDelete }: M
             <Pencil size={18} />
             <span>{t("planning.editMealOption")}</span>
           </button>
+
+          {onMove && (
+            <button type="button" className="recipe-option-row" onClick={handleMove}>
+              <CalendarSync size={18} />
+              <span>{t("planningMove.moveOption")}</span>
+            </button>
+          )}
 
           <button type="button" className="recipe-option-row danger" onClick={handleDelete}>
             <Trash2 size={18} />

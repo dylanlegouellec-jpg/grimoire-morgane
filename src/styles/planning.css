@@ -221,3 +221,59 @@
 .calendar-picker-day.selected { background: var(--chrome); color: var(--gold-light); font-weight: 600; }
 .calendar-picker-day:active { background: var(--surface-strong); }
 .calendar-picker-day.selected:active { background: var(--chrome); }
+
+/* --- Déplacer un plat vers un autre jour/moment (voir planningMove.ts) ---
+   Zone de dépôt survolée pendant un glissement à la poignée ⋮⋮ : la carte
+   du jour (.planning-day, dépôt « même moment ») ou le bloc d'un moment
+   (.planning-meal-group, dépôt « ce moment précis ») — classe posée
+   directement dans le DOM, sans re-rendu React (voir setDropHighlight).
+   Contour doré en `outline` (pas de bordure supplémentaire) : aucun
+   décalage de mise en page pendant le glissement. */
+.planning-day, .planning-meal-group { transition: outline-color 0.15s ease, background-color 0.15s ease; outline: 2px dashed transparent; outline-offset: 2px; }
+.planning-day.plan-drop-active, .planning-meal-group.plan-drop-active {
+  outline-color: var(--gold);
+  background: rgba(179,135,42,0.14);
+}
+/* Le plat glissé passe au-dessus des autres jours qu'il survole. */
+.planning-course-item, .planning-meal-flat-item { position: relative; }
+
+/* Feuille « Déplacer… » (voir MoveMealModal.tsx). */
+.planning-move-subtitle {
+  font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.6px; text-transform: uppercase;
+  color: var(--ink-soft); font-weight: normal; margin: 14px 0 8px;
+}
+.planning-move-modal .ios-row.selected { background: rgba(179,135,42,0.10); }
+.planning-move-modal .ios-row-check { color: var(--gold-text); flex-shrink: 0; }
+.planning-move-actions { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 16px; }
+.planning-move-summary {
+  margin: 0; text-align: center;
+  font-family: 'EB Garamond', serif; font-style: italic; font-size: 0.88rem; color: var(--ink-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planning-day, .planning-meal-group { transition: none; }
+}
+/* Ligne en cours de glissement (voir PlanningMealItem.tsx, `dragging`) :
+   fond opaque + ombre pour qu'elle reste lisible au-dessus des autres
+   jours qu'elle survole ; puce masquée (elle flotterait seule). */
+.planning-meal-dragging {
+  background: var(--surface-strong); border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.22);
+  list-style: none;
+}
+/* Pendant un glissement (voir setDragActive, planningMove.ts) : la
+   bannière et la barre de navigation fixes s'estompent et laissent passer
+   le doigt, pour voir — et viser — les jours qu'elles recouvrent. */
+body.plan-dragging .planning-reorder-banner,
+body.plan-dragging .bottom-nav,
+body.plan-dragging .fab { opacity: 0.25; pointer-events: none; transition: opacity 0.15s ease; }
+@media (prefers-reduced-motion: reduce) {
+  body.plan-dragging .planning-reorder-banner,
+  body.plan-dragging .bottom-nav,
+  body.plan-dragging .fab { transition: none; }
+}
+/* Toast (ex. « déplacé vers jeudi », voir PlanningView.tsx/moveEntryTo)
+   affiché pendant le mode réorganisation : même ancrage bas que la
+   bannière (.planning-reorder-banner, bottom: 112px) — il remonte juste
+   au-dessus d'elle au lieu de la recouvrir. */
+body:has(.planning-reorder-banner) .toast { bottom: 184px; }

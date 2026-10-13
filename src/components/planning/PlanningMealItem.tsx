@@ -1,9 +1,10 @@
-import { useState, type PointerEvent } from "react";
-import { AnimatePresence, Reorder, useDragControls } from "motion/react";
+import { useRef, useState, type PointerEvent } from "react";
+import { AnimatePresence, Reorder, useDragControls, useReducedMotion } from "motion/react";
 import { GripVertical } from "lucide-react";
 import { triggerHaptic } from "../../utils/haptics";
 import useLongPress from "../../hooks/useLongPress";
 import MealOptionsModal from "./MealOptionsModal";
+import { clientPointOf, findDropTargetAt, setDragActive, setDropHighlight, usePlanningMove } from "./planningMove";
 import { useTranslation } from "../../contexts/LanguageContext";
 
 const LONG_PRESS_DURATION_MS = 500;
@@ -56,6 +57,12 @@ export default function PlanningMealItem({ entry, bulleted, label, reorderMode, 
   const [showOptions, setShowOptions] = useState(false);
   const itemLongPress = useLongPress<HTMLDivElement>(() => setShowOptions(true), LONG_PRESS_DURATION_MS);
   const dragControls = useDragControls();
+  const move = usePlanningMove();
+  const itemRef = useRef<HTMLElement | null>(null);
+  const prefersReducedMotion = useReducedMotion();
+  // Ligne « soulevée » pendant le glissement (fond + ombre, voir
+  // .planning-meal-dragging) : elle passe au-dessus des autres jours.
+  const [dragging, setDragging] = useState(false);
 
   const closeOptions = () => {
     setShowOptions(false);
@@ -67,12 +74,41 @@ export default function PlanningMealItem({ entry, bulleted, label, reorderMode, 
     dragControls.start(e);
   };
 
+  // Glisser vers un AUTRE jour/moment (voir planningMove.ts) : pendant le
+  // glissement, la zone de dépôt survolée est mise en évidence (un léger
+  // retour haptique à chaque nouvelle zone) ; au relâchement, si le plat est
+  // lâché ailleurs que dans son propre jour+moment, il y est déplacé et le
+  // réordonnancement local est abandonné. Sinon, comportement d'origine.
+  type DragInfo = { point: { x: number; y: number } };
+  const handleDrag = (event: unknown, info: DragInfo) => {
+    if (!move) return;
+    const pt = clientPointOf(event, info && info.point);
+    const found = pt ? findDropTargetAt(pt.x, pt.y, itemRef.current) : null;
+    const hit = found && move.canDrop(entry, found.target) ? found : null;
+    if (setDropHighlight(hit ? hit.element : null) && hit) triggerHaptic(8);
+  };
+  const handleDragStart = () => {
+    setDragging(true);
+    setDragActive(true);
+  };
+  const handleDragEnd = (event: unknown, info: DragInfo) => {
+    setDragging(false);
+    setDragActive(false);
+    setDropHighlight(null);
+    if (move) {
+      const pt = clientPointOf(event, info && info.point);
+      const hit = pt ? findDropTargetAt(pt.x, pt.y, itemRef.current) : null;
+      if (hit && move.dropEntry(entry, hit.target)) return;
+    }
+    onCommitOrder();
+  };
+
   return (
     <>
       <Reorder.Item
         value={entry}
         as={bulleted ? "li" : "div"}
-        className={bulleted ? "planning-course-item" : "planning-meal-flat-item"}
+        className={`${bulleted ? "planning-course-item" : "planning-meal-flat-item"}${dragging ? " planning-meal-dragging" : ""}`}
         dragListener={false}
         dragControls={dragControls}
         // Un seul appel, au relâchement — voir le commentaire de fichier de
@@ -81,14 +117,19 @@ export default function PlanningMealItem({ entry, bulleted, label, reorderMode, 
         // à chaque appel de onReorder côté hooks/useMealPlan.js — dont le
         // retour haptique côté "fin de glissement", pas besoin de le
         // dupliquer ici).
-        onDragEnd={onCommitOrder}
+        // (ou un déplacement vers un autre jour/moment, voir handleDragEnd).
+        onDragStart={handleDragStart}
+        onDrag={handleDrag}
+        whileDrag={prefersReducedMotion ? undefined : { scale: 1.03 }}
+        onDragEnd={handleDragEnd}
+        ref={(el: HTMLElement | null) => { itemRef.current = el; }}
       >
         <div className="planning-meal-item-row">
           {reorderMode && (
             <button
               type="button"
               className="planning-meal-drag-handle"
-              aria-label={t("ui.planning.dragToReorder")}
+              aria-label={t(move ? "planningMove.dragHandleLabel" : "ui.planning.dragToReorder")}
               onPointerDown={startDrag}
             >
               <GripVertical size={16} />
@@ -129,6 +170,12 @@ export default function PlanningMealItem({ entry, bulleted, label, reorderMode, 
               setTimeout(() => onEdit(entry), 0);
             }}
             onDelete={() => { closeOptions(); onDelete(entry); }}
+            // « Déplacer… » : même délai que « Modifier » ci-dessus (une modale
+            // en remplace une autre, voir le commentaire juste au-dessus).
+            onMove={move ? () => {
+              closeOptions();
+              setTimeout(() => move.requestMove(entry), 0);
+            } : undefined}
           />
         )}
       </AnimatePresence>

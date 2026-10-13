@@ -423,3 +423,19 @@
 .recipes-welcome-title { font-family: 'Cinzel', serif; font-size: 1.3rem; font-weight: 600; color: var(--ink); margin: 0 0 6px; }
 .recipes-welcome-actions { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 18px; }
 .recipes-welcome-actions .seal { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Tri de la grille (RecipesView) : petite pastille alignée à droite. */
+.recipes-toolbar { display: flex; justify-content: flex-end; margin: -4px 0 10px; }
+.recipes-sort {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 4px 4px 12px;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--surface);
+  font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.5px; text-transform: uppercase; color: var(--ink-soft);
+}
+.recipes-sort select {
+  appearance: none; -webkit-appearance: none; border: none; background: transparent; color: var(--ink);
+  font-family: 'EB Garamond', serif; font-size: 0.92rem; font-style: italic; text-transform: none; letter-spacing: 0;
+  padding: 4px 22px 4px 4px; min-height: 32px; cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--gold) 50%), linear-gradient(135deg, var(--gold) 50%, transparent 50%);
+  background-position: calc(100% - 11px) 55%, calc(100% - 6px) 55%; background-size: 5px 5px; background-repeat: no-repeat;
+}
+.recipes-sort select:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 999px; }

@@ -541,7 +541,14 @@ export default function AppShell({
         )}
       </AnimatePresence>
       {cookingRecipe && (
-        <CookMode recipe={cookingRecipe} onClose={() => setCookingRecipe(null)} pressDuration={pressDuration} />
+        <CookMode
+          recipe={cookingRecipe}
+          onClose={() => setCookingRecipe(null)}
+          pressDuration={pressDuration}
+          onUpdateRecipe={saveRecipe}
+          householdId={householdId}
+          showToast={showToast}
+        />
       )}
       <AnimatePresence>
         {textModal && (

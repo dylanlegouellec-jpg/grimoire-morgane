@@ -403,3 +403,26 @@ export function storeIconStyle(style: IconStyle): void {
     /* rien à faire si le stockage échoue */
   }
 }
+
+/* --- Tri de la grille de recettes (voir utils/recipeSearch.ts) — local à l'appareil. */
+const RECIPE_SORT_KEY = "grimoire_recipe_sort";
+const VALID_RECIPE_SORTS = ["name", "recent", "quick"] as const;
+export type StoredRecipeSort = (typeof VALID_RECIPE_SORTS)[number];
+
+export function getStoredRecipeSort(): StoredRecipeSort {
+  try {
+    const v = localStorage.getItem(RECIPE_SORT_KEY);
+    if (v !== null && (VALID_RECIPE_SORTS as readonly string[]).includes(v)) return v as StoredRecipeSort;
+  } catch {
+    /* repli ci-dessous */
+  }
+  return "name";
+}
+
+export function storeRecipeSort(sort: StoredRecipeSort): void {
+  try {
+    localStorage.setItem(RECIPE_SORT_KEY, sort);
+  } catch {
+    /* rien à faire si le stockage échoue */
+  }
+}

@@ -203,3 +203,13 @@
   background: var(--surface-strong); color: var(--ink-soft); display: flex; align-items: center; justify-content: center; cursor: pointer;
 }
 
+/* Bouton « Partager la liste » (message lisible sans l'app, voir utils/shoppingShare.ts). */
+.shopping-share-row { display: flex; justify-content: center; margin: -4px 0 10px; }
+.shopping-share-btn {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 16px;
+  border: 1px solid rgba(179,135,42,0.45); border-radius: 999px; background: var(--surface); color: var(--ink);
+  font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.6px; text-transform: uppercase; cursor: pointer;
+}
+.shopping-share-btn svg { color: var(--gold-text); }
+.shopping-share-btn:active { transform: translateY(1px); }
+.shopping-share-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
