@@ -1,8 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { Plus } from "lucide-react";
-import { normalize, triggerHaptic } from "../../utils/helpers";
-import { buildSearchEntry, matchesSearch, parseQuery, sortRecipes, type RecipeSort } from "../../utils/recipeSearch";
+import { triggerHaptic } from "../../utils/helpers";
+import { buildSearchEntry, matchesRecipeView, parseQuery, sortRecipes, type RecipeSort } from "../../utils/recipeSearch";
 import { useTranslation } from "../../contexts/LanguageContext";
 import RecipeCard from "./RecipeCard";
 import BodyPortal from "../common/BodyPortal";
@@ -90,12 +90,10 @@ export default function RecipesView({
     const ids = new Set<string>();
     const indexById = new Map<string, number>();
     sorted.forEach((r) => {
-      if (applied.filter !== "tout" && normalize(r.category) !== applied.filter) return;
-      if (applied.favoritesOnly && !r.favorite) return;
-      if (terms.length) {
-        const entry = searchIndex.get(r.id);
-        if (!entry || !matchesSearch(entry, terms)) return;
-      }
+      // Même prédicat que la « vue livre » de la fiche (visibleRecipes,
+      // utils/recipeSearch.ts) : les pages qu'on feuillette sont exactement
+      // les cartes affichées ici.
+      if (!matchesRecipeView(r, { filter: applied.filter, favoritesOnly: applied.favoritesOnly, terms }, searchIndex.get(r.id))) return;
       indexById.set(r.id, ids.size);
       ids.add(r.id);
     });

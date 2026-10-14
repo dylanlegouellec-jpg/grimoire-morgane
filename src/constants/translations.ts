@@ -214,7 +214,7 @@ export const translations: Record<"fr" | "en", TranslationTree> = {
       soundEffects: "Effets sonores",
       soundEffectsHint: "Petits sons discrets sur les boutons et la navigation.",
       hapticFeedback: "Retour tactile",
-      hapticFeedbackHint: "Vibration sur Android, léger pulse visuel sur iPhone (pas de vibreur accessible).",
+      hapticFeedbackHint: "Vibration sur Android, petit « clic » sur iPhone (iOS 18 ou plus récent ; léger pulse visuel sinon).",
       backGesture: "Le geste retour ferme les fenêtres",
       backGestureHint: "Glisser depuis le bord de l'écran (iPhone) ou le bouton retour (Android) referme la fiche ou la fenêtre ouverte. Désactivé, ce geste ne fait plus rien dans l'app.",
       backupHint: "Sauvegarde ou fusionne l'intégralité de ton grimoire.",
@@ -655,10 +655,6 @@ export const translations: Record<"fr" | "en", TranslationTree> = {
         start: "Lancer ({minutes} min)",
         resume: "Reprendre ({time})",
       },
-      portionBadge: {
-        holdToAdjust: "Maintenir pour ajuster les portions",
-        confirm: "Valider",
-      },
     },
     modals: {
       unsaved: {
@@ -926,6 +922,33 @@ export const translations: Record<"fr" | "en", TranslationTree> = {
       stoppedByUser: "Estimation arrêtée : les recettes restantes n'ont pas été touchées.",
       stoppedOffline: "Connexion perdue : estimation interrompue. Les recettes restantes n'ont pas été touchées.",
     },
+    recipePager: {
+      nav: "Feuilleter le grimoire",
+      previous: "Recette précédente : {title}",
+      next: "Recette suivante : {title}",
+      previousNone: "Pas de recette précédente",
+      nextNone: "Pas de recette suivante",
+      position: "Recette {current} sur {total}",
+      announce: "{title}, recette {current} sur {total}",
+    },
+    cookPortions: {
+      adjust: "Changer le nombre de parts ({count})",
+      done: "Valider le nombre de parts",
+      group: "Nombre de parts",
+      decrease: "Une part de moins",
+      increase: "Une part de plus",
+      unitOne: "part",
+      unitOther: "parts",
+      qtyHint: "Touche pour ajuster le nombre de parts",
+      pill: {
+        openLabel: "Minuteur « {label} » : {time} restantes — rouvrir la préparation de {recipe}",
+        doneLabel: "Minuteur terminé : « {label} » — rouvrir la préparation de {recipe}",
+        othersLabel: "(et {count} autre(s) minuteur(s))",
+        more: "+{count}",
+        stopAll: "Arrêter tous les minuteurs",
+        ready: "Prêt !",
+      },
+    },
   },
 
   en: {
@@ -1127,7 +1150,7 @@ export const translations: Record<"fr" | "en", TranslationTree> = {
       soundEffects: "Sound effects",
       soundEffectsHint: "Subtle sounds on buttons and navigation.",
       hapticFeedback: "Haptic feedback",
-      hapticFeedbackHint: "Vibration on Android, a subtle visual pulse on iPhone (no vibration motor available).",
+      hapticFeedbackHint: "Vibration on Android, a light \u201cclick\u201d on iPhone (iOS 18 or later; a subtle visual pulse otherwise).",
       backGesture: "Back gesture closes windows",
       backGestureHint: "Swiping from the screen edge (iPhone) or the back button (Android) closes the open recipe or window. When off, this gesture does nothing in the app.",
       backupHint: "Back up or merge your entire grimoire.",
@@ -1565,10 +1588,6 @@ export const translations: Record<"fr" | "en", TranslationTree> = {
         start: "Start ({minutes} min)",
         resume: "Resume ({time})",
       },
-      portionBadge: {
-        holdToAdjust: "Hold to adjust servings",
-        confirm: "Confirm",
-      },
     },
     modals: {
       unsaved: {
@@ -1835,6 +1854,33 @@ export const translations: Record<"fr" | "en", TranslationTree> = {
       summarySkipped: "{count} recipe{plural} left as is: values were added in the meantime.",
       stoppedByUser: "Estimation stopped: the remaining recipes were left untouched.",
       stoppedOffline: "Connection lost: estimation interrupted. The remaining recipes were left untouched.",
+    },
+    recipePager: {
+      nav: "Leaf through the grimoire",
+      previous: "Previous recipe: {title}",
+      next: "Next recipe: {title}",
+      previousNone: "No previous recipe",
+      nextNone: "No next recipe",
+      position: "Recipe {current} of {total}",
+      announce: "{title}, recipe {current} of {total}",
+    },
+    cookPortions: {
+      adjust: "Change servings ({count})",
+      done: "Confirm servings",
+      group: "Servings",
+      decrease: "One serving less",
+      increase: "One serving more",
+      unitOne: "serving",
+      unitOther: "servings",
+      qtyHint: "Tap to adjust the servings",
+      pill: {
+        openLabel: "Timer “{label}”: {time} left — reopen {recipe}",
+        doneLabel: "Timer done: “{label}” — reopen {recipe}",
+        othersLabel: "(and {count} more timer(s))",
+        more: "+{count}",
+        stopAll: "Stop all timers",
+        ready: "Ready!",
+      },
     },
   },
 };

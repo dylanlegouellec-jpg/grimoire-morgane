@@ -243,6 +243,10 @@ export const CODE_DOCS: Record<string, string> = {
     "Fige le fond de la page pendant qu'une modale est ouverte, avec la technique qui fonctionne sur iOS. Un compteur partagé gère plusieurs modales empilées, et un second hook dit si une modale est ouverte.",
   "src/hooks/useConnectionStatus.ts":
     "Dit si l'app est vraiment en ligne, hors ligne ou en cours de vérification, grâce à un vrai ping Supabase (le simple « navigator.onLine » est faux sur certains téléphones).",
+  "src/hooks/usePageTurn.ts":
+    "Geste « tourner la page » de la fiche recette : reconnaît un glissement clairement horizontal, fait pivoter la feuille autour de sa reliure en suivant le doigt, valide au-delà d'un seuil ou d'une vitesse (sinon ressort), butée élastique aux bouts, simple fondu avec Réduire les animations.",
+  "src/hooks/useRecipePager.ts":
+    "Vue livre de la fiche recette côté AppShell : liste des recettes de la grille affichée (même tri, filtre, favoris, recherche) et clé de fiche figée à l'ouverture, pour qu'en tournant les pages la fiche ne soit ni remontée ni empilée dans l'historique.",
   "src/hooks/useWakeLock.ts":
     "Empêche l'écran de s'éteindre pendant le mode cuisine, et redemande le verrou quand on revient sur l'app. Sans effet si le navigateur ne sait pas le faire.",
   "src/hooks/useTabNavigation.ts":
@@ -336,7 +340,9 @@ export const CODE_DOCS: Record<string, string> = {
   "src/utils/chunkReload.ts":
     "Quand un écran chargé à la demande n'existe plus sur le serveur (app restée ouverte pendant une mise à jour), recharge la page une seule fois au lieu d'afficher l'écran d'erreur.",
   "src/utils/cookTimers.ts":
-    "Magasin partagé des minuteurs du mode cuisine : plusieurs minuteurs en même temps, basés sur une heure de fin (justes même onglet en veille), conservés d'un groupe d'étapes à l'autre et vidés à la fermeture. Envoie la notification de fin une seule fois par minuteur et se lit via useCookTimers().",
+    "Magasin partagé des minuteurs du mode cuisine : plusieurs minuteurs en même temps, rattachés à leur recette et basés sur une heure de fin (justes même onglet en veille) ; ils continuent quand on quitte le mode cuisine (minuteur flottant). Envoie la notification de fin une seule fois par minuteur et se lit via useCookTimers().",
+  "src/components/recipe/CookTimerPill.tsx":
+    "Minuteur flottant hors du mode cuisine : pastille compacte (temps restant du minuteur le plus proche, « +N », état « prêt » pulsé) rendue dans <body>, qui rouvre le mode cuisine de la bonne recette ; sa croix arrête tous les minuteurs.",
   "src/utils/thumbnails.ts":
     "Miniatures des photos de recettes : dérive le chemin et l'URL publique de la miniature (~480 px) d'une photo du bucket recipe-images, et retient pour la session les miniatures manquantes et les rattrapages déjà tentés.",
   "src/utils/nutritionBatch.ts":
@@ -385,6 +391,8 @@ export const CODE_DOCS: Record<string, string> = {
     "Styles de l'écran d'estimation nutritionnelle en lot (liste des recettes, barre de progression, états).",
   "src/styles/createAnimations.css":
     "Styles des animations de création et d'enregistrement d'une recette : tache d'encre, plume, champs en cascade, cachet de cire et halo de la carte.",
+  "src/styles/recipePager.css":
+    "Styles de la vue livre de la fiche recette : page voisine, ombres du tournage, folio « 3 / 24 » et ses flèches.",
   "src/styles/cookmode.css":
     "Les styles du mode cuisine : étapes en plein écran, molette de portions, feuille de quantité.",
   "src/styles/diagnostics.css":
@@ -424,7 +432,7 @@ export const CODE_DOCS: Record<string, string> = {
   "src/components/recipe/HeroTreatment.tsx":
     "Les décorations posées sur la photo de la fiche recette, selon l'habillage choisi dans les Réglages.",
   "src/components/recipe/PortionBadge.tsx":
-    "La pastille de portions : un appui long ouvre la molette pour changer le nombre.",
+    "La pastille des parts du mode cuisine : un simple appui l'étire en contrôle −/nombre/+, et les quantités des ingrédients suivent en défilant.",
   "src/components/recipe/PortionWheel.tsx":
     "La molette de choix du nombre de portions, validée automatiquement après un court délai sans mouvement.",
   "src/components/recipe/PublicRecipeView.tsx":
@@ -433,6 +441,12 @@ export const CODE_DOCS: Record<string, string> = {
     "Une carte de recette dans la grille : photo, favori, badges, appui long. Elle s'efface puis réapparaît en fondu quand le filtre change, sans jamais être démontée, pour que son image ne se recharge pas.",
   "src/components/recipe/CookPhotoPrompt.tsx":
     "Encadré de fin du mode cuisine qui propose de prendre le plat en photo (appareil photo ou galerie) et en fait la photo de la recette, en demandant avant de remplacer une photo déjà prise.",
+  "src/components/recipe/RecipePage.tsx":
+    "Contenu d'une page de fiche recette (photo, titre, portions, actions, folio précédent/suivant, ingrédients, étapes, notes), utilisé par la fiche ouverte et par la page voisine découverte en tournant la page.",
+  "src/components/recipe/RecipePageUnder.tsx":
+    "Décor du tournage de page : la page voisine posée sous la feuille qui tourne (voile, ombre portée du bord libre) et l'ombre de pliure posée sur la feuille.",
+  "src/components/recipe/recipePageData.ts":
+    "Données d'une page de fiche recette : portions de base, ingrédients normalisés et recalculés selon les portions choisies.",
   "src/components/recipe/RecipeDetail.tsx":
     "La fiche détail d'une recette : photo avec effet de parallaxe, ingrédients, étapes, et les actions (cuisiner, modifier, partager).",
   "src/components/recipe/RecipeForm.tsx":

@@ -51,37 +51,69 @@
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   flex-shrink: 0; position: relative;
 }
-.portion-badge-wrap { position: relative; flex-shrink: 0; }
+/* Pastille ronde des parts → contrôle − / nombre / + au simple appui
+   (PortionBadge.tsx). La largeur suit le contenu : motion anime le passage
+   de l'une à l'autre (layout), le rayon reste en style inline. */
 .portion-badge {
-  width: 32px; height: 32px; border-radius: 50%;
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  min-width: 32px; height: 32px; padding: 0;
   border: 1px solid rgba(217,180,92,0.5);
   background: rgba(217,180,92,0.15); color: var(--gold-light);
+}
+.portion-badge.open {
+  height: 40px; padding: 0 4px; gap: 2px;
+  background: #3a2c22; border-color: var(--gold-light);
+  box-shadow: 0 8px 22px rgba(0,0,0,0.45), 0 0 0 3px rgba(217,180,92,0.14);
+}
+.portion-badge-value {
+  position: relative; display: inline-flex; align-items: baseline; justify-content: center; gap: 5px;
+  min-width: 30px; height: 30px; padding: 0 2px; line-height: 30px;
+  background: none; border: none; color: inherit; cursor: pointer;
   font-family: 'Cinzel', serif; font-size: 0.92rem; font-weight: 600;
-  display: flex; align-items: center; justify-content: center; cursor: pointer;
-  transition: transform 0.2s ease, background 0.2s ease;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
 }
-.portion-badge.charging { animation: portionShake 0.4s ease forwards; background: rgba(217,180,92,0.3); }
-.portion-badge.open { transform: scale(1.15); background: rgba(217,180,92,0.35); }
-@keyframes portionShake {
-  0% { transform: scale(1) rotate(0deg); }
-  20% { transform: scale(1.05) rotate(-6deg); }
-  40% { transform: scale(1.08) rotate(5deg); }
-  60% { transform: scale(1.12) rotate(-3deg); }
-  80% { transform: scale(1.14) rotate(2deg); }
-  100% { transform: scale(1.15) rotate(0deg); }
+/* Zone de toucher de 44px autour de la petite pastille ronde. */
+.portion-badge-value::after { content: ""; position: absolute; inset: -7px; }
+.portion-badge.open .portion-badge-value { font-size: 1.15rem; padding: 0 6px; }
+.portion-badge-unit {
+  display: inline-block; overflow: hidden;
+  font-size: 0.62rem; font-weight: 400; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--chrome-text); opacity: 0.75;
 }
-.portion-badge-popover {
-  position: absolute; top: 42px; right: 0; z-index: 20;
-  background: #241a14; border: 1px solid rgba(217,180,92,0.4); border-radius: 14px;
-  padding: 8px 10px 12px; box-shadow: 0 10px 24px rgba(0,0,0,0.4);
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  animation: wheelPopIn 0.22s ease;
+.portion-badge-step {
+  flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: none; background: rgba(217,180,92,0.16); color: var(--gold-light); cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease, opacity 0.15s ease;
 }
-.portion-badge-popover .seal { padding: 8px 18px; font-size: 0.68rem; white-space: nowrap; }
-@keyframes wheelPopIn {
-  from { opacity: 0; transform: translateY(-6px) scale(0.92); }
-  to { opacity: 1; transform: none; }
+.portion-badge-step:active { background: rgba(217,180,92,0.32); }
+.portion-badge-step:disabled { opacity: 0.3; cursor: default; }
+.portion-badge-value:focus-visible, .portion-badge-step:focus-visible { outline: 2px solid var(--gold-light); outline-offset: 2px; }
+
+/* Fond du sélecteur de parts : léger voile flouté sur tout le mode
+   cuisine ; l'en-tête des ingrédients et leur liste passent au-dessus,
+   nets (voir CookMode.tsx). */
+.cookmode-portions-scrim {
+  position: fixed; inset: 0; z-index: 30;
+  background: rgba(20,14,10,0.42);
+  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
 }
+.cookmode.portions-open .cookmode-ingredients-header,
+.cookmode.portions-open .cookmode-ingredients-reveal { position: relative; z-index: 31; }
+.cookmode-ingredients-reveal { flex-shrink: 0; overflow: hidden; }
+/* Quantité d'ingrédient touchable (ouvre le sélecteur) : discrète, juste
+   soulignée en pointillé ; défile quand les parts changent. */
+.cookmode-qty {
+  display: inline; padding: 0; margin: 0; background: none; border: none;
+  font: inherit; font-weight: 600; color: var(--gold-light); cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  text-decoration: underline dotted rgba(217,180,92,0.55); text-underline-offset: 3px;
+  -webkit-tap-highlight-color: transparent;
+}
+.cookmode-qty:focus-visible { outline: 2px solid var(--gold-light); outline-offset: 2px; border-radius: 3px; }
+
 .portion-wheel-wrap {
   position: relative;
   display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -244,6 +276,8 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .cookmode-step-card { transition: none; }
+  .portion-badge-step { transition: none; }
+  .cookmode-portions-scrim { -webkit-backdrop-filter: none; backdrop-filter: none; }
   .cookmode-step-card.speaking { animation: none; }
 }
 
@@ -360,4 +394,91 @@
   /* Toute la hauteur restante de la colonne pour la liste d'ingrédients. */
   .cookmode-ingredients { max-height: none; flex: 0 0 auto; }
   .cookmode-main > .seal { flex-shrink: 0; }
+}
+
+/* --- Minuteur flottant hors du mode cuisine (CookTimerPill.tsx) ---
+   Petite pastille « cuir » (mêmes teintes --chrome que la nav et les
+   toasts, identiques dans les deux thèmes), en haut à gauche : elle ne
+   touche que le tout début du titre de l'en-tête. Au-dessus du contenu, du
+   bouton « + » (.fab, 50) et du voile des feuilles (.modal-backdrop, 55) :
+   en quittant le mode cuisine on retombe sur la fiche recette, une feuille
+   qui laisse justement libre le haut de l'écran — sous ce voile, la
+   pastille aurait été éteinte au moment où on en a besoin. Reste sous le
+   mode cuisine (60), l'accueil (65) et les toasts (70). */
+.cook-timer-pill {
+  position: fixed; z-index: 56;
+  top: calc(env(safe-area-inset-top) + 6px); left: max(10px, env(safe-area-inset-left));
+  display: flex; align-items: center;
+  height: 32px; border-radius: 999px;
+  background: var(--chrome); color: var(--chrome-text);
+  border: 1px solid rgba(217,180,92,0.55);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.28);
+  -webkit-tap-highlight-color: transparent;
+}
+/* Mode cuisine d'une autre recette ouvert : juste à gauche de son bouton
+   fermer (mêmes hauteur et alignement), loin du compteur d'étapes. */
+.cook-timer-pill.over-cookmode {
+  z-index: 61; left: auto;
+  top: calc(13px + env(safe-area-inset-top)); right: calc(56px + env(safe-area-inset-right));
+  background: #3a2c22;
+}
+.cook-timer-pill.over-cookmode .cook-timer-pill-main { padding-right: 12px; }
+.cook-timer-pill-main {
+  display: flex; align-items: center; gap: 7px; height: 100%;
+  padding: 0 4px 0 11px; border-radius: 999px; background: none; border: none; color: inherit; cursor: pointer;
+}
+.cook-timer-pill-icon { display: inline-flex; color: var(--gold-light); }
+.cook-timer-pill-time {
+  font-family: 'Cinzel', serif; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.5px;
+  font-variant-numeric: tabular-nums; text-transform: uppercase; white-space: nowrap;
+}
+.cook-timer-pill-more {
+  font-family: 'Cinzel', serif; font-size: 0.66rem; font-weight: 600;
+  padding: 2px 6px; border-radius: 999px;
+  background: rgba(217,180,92,0.2); color: var(--gold-light);
+}
+.cook-timer-pill-stop {
+  position: relative; width: 30px; height: 30px; margin-right: 3px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.08); border: none; color: var(--chrome-text); cursor: pointer; opacity: 0.8;
+}
+/* Zone de toucher agrandie sans grossir la croix. */
+.cook-timer-pill-stop::after { content: ""; position: absolute; inset: -9px -8px; }
+.cook-timer-pill-main:focus-visible, .cook-timer-pill-stop:focus-visible { outline: 2px solid var(--gold-light); outline-offset: 2px; border-radius: 999px; }
+.cook-timer-pill.paused .cook-timer-pill-time { opacity: 0.7; }
+/* Terminé : vert forêt et liseré doré, halo qui respire doucement. */
+.cook-timer-pill.done {
+  background: #2f5a2a; border-color: var(--gold-light);
+  animation: cookTimerPillDone 1.6s ease-in-out infinite;
+}
+.cook-timer-pill.done .cook-timer-pill-icon { color: #f7e2bc; }
+@keyframes cookTimerPillDone {
+  0%, 100% { box-shadow: 0 6px 18px rgba(0,0,0,0.28), 0 0 0 0 rgba(217,180,92,0.5); }
+  50% { box-shadow: 0 6px 18px rgba(0,0,0,0.28), 0 0 0 6px rgba(217,180,92,0); }
+}
+@media (prefers-reduced-motion: reduce) { .cook-timer-pill.done { animation: none; } }
+/* Paysage (colonne latérale, voir responsive.css) : en haut à gauche, la
+   pastille masquerait le titre de la colonne. Elle se centre donc en haut
+   de la zone de contenu, à droite de la colonne. Les feuilles y occupent
+   presque toute la hauteur : la pastille repasse SOUS leur voile (54)
+   plutôt que de couvrir leur contenu. */
+@media (orientation: landscape) and (min-width: 768px) {
+  .cook-timer-pill:not(.over-cookmode) {
+    z-index: 54; top: calc(env(safe-area-inset-top) + 8px);
+    left: calc(300px + (100vw - 300px) / 2); translate: -50% 0;
+  }
+}
+/* Paysage sur téléphone : colonne plus étroite (--ls-sidebar) ; le bouton
+   fermer du mode cuisine est un peu plus haut et décalé de la zone sûre
+   (voir plus haut) — la pastille posée sur le mode cuisine suit. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .cook-timer-pill:not(.over-cookmode) {
+    /* 12px : entièrement caché sous le haut d'une feuille ouverte. */
+    z-index: 54; top: calc(env(safe-area-inset-top) + 12px);
+    left: calc(var(--ls-sidebar, 230px) + (100vw - var(--ls-sidebar, 230px)) / 2); translate: -50% 0;
+  }
+  .cook-timer-pill.over-cookmode {
+    top: calc(11px + env(safe-area-inset-top));
+    right: calc(54px + env(safe-area-inset-right));
+  }
 }

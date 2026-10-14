@@ -1,25 +1,19 @@
-import { useState, useRef, lazy, Suspense, type RefObject, type WheelEvent, type TouchEvent } from "react";
-import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform, useInView } from "motion/react";
+import { useState, useRef, useEffect, useLayoutEffect, lazy, Suspense, type WheelEvent, type TouchEvent, type KeyboardEvent } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import DocumentTitle from "../common/DocumentTitle";
-import { ChefHat, Clock, Minus, Plus, Share2, Users, Wheat, X } from "lucide-react";
-import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
+import { X } from "lucide-react";
 import { DEFAULT_HERO_TREATMENT } from "../../constants";
-import { categoryLabel, categoryClass, groupSteps, triggerHaptic } from "../../utils/helpers";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { translateRecipeText } from "../../utils/recipeTranslation";
-import { EASE_OUT, MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION, SPRING_SHEET } from "../../constants/motion";
+import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
-import DishArt from "../art/DishArt";
-import Flourish from "../common/Flourish";
-import Seal from "../common/Seal";
-import CategoryIcon from "../common/CategoryIcon";
-import AnimatedNumber from "../common/AnimatedNumber";
-import HeroTreatment, { heroTreatmentClassName, isLegendTreatment } from "./HeroTreatment";
+import usePageTurn, { type TurnDir } from "../../hooks/usePageTurn";
+import RecipePage, { type RecipeFolio } from "./RecipePage";
+import { baseServingsOf, rawIngredientsOf, scaleIngredients } from "./recipePageData";
+import { RecipePageFold, RecipePageUnder } from "./RecipePageUnder";
 import type { Recipe } from "../../hooks/useRecipes";
-import type { StepEntry } from "../../utils/helpers";
-import type { NutriscoreGrade } from "../../utils/nutriscoreClient";
 
 // Chargée à la demande : RecipeDetail est monté dès qu'on ouvre une seule
 // recette (voir AppShell.jsx), mais partager n'est qu'une action parmi
@@ -27,98 +21,46 @@ import type { NutriscoreGrade } from "../../utils/nutriscoreClient";
 // panneau que la plupart des visites n'ouvriront jamais.
 const ShareRecipeModal = lazy(() => import("../common/ShareRecipeModal"));
 
-// Décalage max (px) de la photo par rapport au défilement du panneau — voir
-// heroImageY plus bas. Doit rester sous la marge donnée à
-// .detail-hero-parallax (inset -12%, recipeCards.css) pour ne jamais
-// découvrir de bord vide de l'image pendant le glissement.
-const HERO_PARALLAX_RANGE_PX = 24;
-
-const FADE_ITEM_HIDDEN = { opacity: 0, y: 10 };
-const FADE_ITEM_VISIBLE = { opacity: 1, y: 0 };
-const FADE_ITEM_TRANSITION = { duration: 0.35, ease: EASE_OUT };
-
-interface FadeInItemProps {
-  root: RefObject<HTMLElement | null>;
-  reducedMotion?: boolean | null;
-  className?: string;
-  children: React.ReactNode;
-}
-
-// Ingrédient/étape qui apparaît en fondu dès qu'il entre dans la zone
-// visible du panneau qui défile ("root", voir RecipeDetail -> scrollRef) —
-// useInView() gère lui-même l'IntersectionObserver correspondant, plus
-// besoin d'en réimplémenter un à la main comme l'ancien handleTouchMove/
-// handleWheel de ce fichier pour le tirage en bas de page. "once: true" :
-// l'apparition ne se rejoue pas en remontant, seul le premier passage
-// compte. Composant à part (pas inline dans le .map()) parce que
-// useInView() est un hook et ne peut pas être appelé un nombre variable de
-// fois à l'intérieur d'une boucle — même contrainte que useDragControls()
-// pour IngredientRow/StepRow (voir RecipeForm.jsx).
-function FadeInItem({ root, reducedMotion, className, children }: FadeInItemProps) {
-  const ref = useRef<HTMLLIElement>(null);
-  const inView = useInView(ref, { root, once: true, margin: "0px 0px -60px 0px" });
-  if (reducedMotion) {
-    return <li className={className}>{children}</li>;
-  }
-  return (
-    <motion.li
-      ref={ref}
-      className={className}
-      initial={FADE_ITEM_HIDDEN}
-      animate={inView ? FADE_ITEM_VISIBLE : FADE_ITEM_HIDDEN}
-      transition={FADE_ITEM_TRANSITION}
-    >
-      {children}
-    </motion.li>
-  );
-}
-
-// Formes d'ingrédient/étape gérées défensivement ci-dessous, en plus de
-// NormalizedIngredient/StepEntry "propres" (déjà normalisés à l'écriture,
-// voir utils/ingredients.ts) — jamais supprimées ici pour ne pas changer le
-// comportement existant face à d'éventuelles données plus anciennes/moins
-// strictes (ex. `amount` au lieu de `qty`, une étape `{ text }` plutôt
-// qu'une simple chaîne).
-interface LooseIngredient {
-  isSection?: boolean;
-  title?: string;
-  qty?: number | string | null;
-  amount?: number | string | null;
-  unit?: string;
-  name?: string;
-}
-type FlexibleIngredient = string | LooseIngredient;
-
-interface LooseStep {
-  text?: string;
-  title?: string;
-}
-type FlexibleStep = string | LooseStep;
-
 interface RecipeDetailProps {
   recipe: Recipe | null;
   onClose: () => void;
-  onCook?: (recipe: Recipe) => void;
+  /** `servings` : parts choisies sur la fiche, reprises par le mode cuisine. */
+  onCook?: (recipe: Recipe, servings?: number) => void;
   onEdit?: (recipe: Recipe) => void;
   shareText: (text: string, label: string) => void;
   showToast: (msg: string) => void;
   showNutriscore?: boolean;
   heroTreatment?: string;
+  /** « Vue livre » : recettes de la grille affichée, dans son ordre (voir
+   *  useRecipePager.ts). Vide ou absente : fiche seule, pas de pages. */
+  pages?: Recipe[];
+  /** Affiche une autre recette dans la même fiche (page tournée). */
+  onNavigate?: (recipe: Recipe) => void;
 }
 
-export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareText, showToast, showNutriscore = true, heroTreatment = DEFAULT_HERO_TREATMENT }: RecipeDetailProps) {
+const NO_PAGES: Recipe[] = [];
+
+// Éléments où les flèches gauche/droite du clavier gardent leur rôle
+// habituel (curseur dans un champ…) au lieu de tourner la page.
+const KEEP_ARROWS_SELECTOR = "input, textarea, select, [contenteditable], [role='slider']";
+
+export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareText, showToast, showNutriscore = true, heroTreatment = DEFAULT_HERO_TREATMENT, pages = NO_PAGES, onNavigate }: RecipeDetailProps) {
   // Sécurisation du nombre de portions initiales
-  const baseServings = Number(recipe?.servings) || 1;
+  const baseServings = baseServingsOf(recipe);
   const [servings, setServings] = useState(() => baseServings);
   // La fiche reste ouverte pendant une modification (le formulaire s'empile
   // par-dessus) : si le nombre de portions de la recette change, on repart
   // de la nouvelle valeur, sinon les quantités affichées seraient fausses.
-  const [servingsBase, setServingsBase] = useState(baseServings);
-  if (servingsBase !== baseServings) {
-    setServingsBase(baseServings);
-    setServings(baseServings);
-  }
+  // Idem en tournant la page (vue livre) : chaque recette repart de ses
+  // propres portions — d'où l'id dans la clé, pas seulement le nombre.
+  const servingsKey = `${recipe?.id ?? ""}|${baseServings}`;
+  const [servingsBase, setServingsBase] = useState(servingsKey);
   const [showShare, setShowShare] = useState(false);
+  if (servingsBase !== servingsKey) {
+    setServingsBase(servingsKey);
+    setServings(baseServings);
+    setShowShare(false);
+  }
   const scrollRef = useRef<HTMLDivElement | null>(null);
   // Trois refs à poser sur le même conteneur (scrollRef pour le geste de
   // fermeture par glissement ET pour l'appui prolongé en bas de page,
@@ -140,30 +82,72 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
   };
   const overscrollRef = useRef(0);
   const touchYRef = useRef<number | null>(null);
-  // Parallax léger sur la photo pendant le défilement du panneau : la photo
-  // se déplace un peu MOINS vite que le contenu qui défile autour d'elle,
-  // donnant une impression de profondeur au lieu de suivre le scroll au
-  // pixel près. offset ["start start", "end start"] : la progression va de
-  // 0 (photo en haut du panneau, position de départ) à 1 (photo entièrement
-  // sortie par le haut) — tout l'effet se joue donc pendant que la photo
-  // quitte l'écran, jamais après. N'a d'effet que dans la mise en page
-  // mobile à une colonne (voir responsive.css) : en paysage/desktop, la
-  // colonne photo est fixe et ne défile pas, "scrollYProgress" reste à 0.
-  const heroRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress: heroScrollProgress } = useScroll({
-    container: scrollRef,
-    target: heroRef,
-    offset: ["start start", "end start"],
-  });
-  const heroImageY = useTransform(heroScrollProgress, [0, 1], [0, HERO_PARALLAX_RANGE_PX]);
+  const { language, t } = useTranslation();
+  const prefersReducedMotion = !!useReducedMotion();
 
-  // Garantit qu'ingredients est toujours un tableau
-  const rawIngredients: FlexibleIngredient[] = Array.isArray(recipe?.ingredients) ? (recipe.ingredients as unknown as FlexibleIngredient[]) : [];
-  // Même principe que RecipeCard : valeur stockée, calculée une seule
-  // fois côté serveur à la création/édition — aucun appel réseau ici.
-  const nutri = (recipe?.nutriscoreGrade || estimateNutriscoreLocal(rawIngredients as never, recipe?.category)) as NutriscoreGrade;
-  const { language, dict, t } = useTranslation();
-  const prefersReducedMotion = useReducedMotion();
+  // --- Vue livre : glisser à gauche/droite tourne la page (voir
+  // usePageTurn.ts). Position de la recette affichée dans la grille ; -1
+  // (pas dans la liste, ex. ouverte depuis le Frigo) = pas de pages.
+  const pageIndex = recipe ? pages.findIndex((r) => r.id === recipe.id) : -1;
+  const neighbor = (dir: TurnDir): Recipe | null => {
+    if (pageIndex < 0) return null;
+    return pages[pageIndex + dir] ?? null;
+  };
+  // Vrai dès la première page tournée : les pages suivantes s'affichent
+  // d'emblée (ni morphing de photo depuis la grille, ni fondu des lignes),
+  // exactement comme la page découverte dessous pendant le geste.
+  const [hasTurned, setHasTurned] = useState(false);
+  const refocusDirRef = useRef<TurnDir | null>(null);
+  const pageTurn = usePageTurn<Recipe>(scrollRef, {
+    getTarget: neighbor,
+    onTurn: (target, dir) => {
+      // Le contenu de la page est remonté pour la nouvelle recette : si le
+      // focus clavier y était (flèche du folio…), on le reposera sur la
+      // flèche du même sens de la nouvelle page (voir l'effet plus bas).
+      const active = document.activeElement;
+      refocusDirRef.current = active && scrollRef.current?.querySelector(".detail-columns")?.contains(active) ? dir : null;
+      setHasTurned(true);
+      if (onNavigate) onNavigate(target);
+    },
+    reducedMotion: prefersReducedMotion,
+    // « Tirer pour fermer » déjà en cours (son drapeau touch-action) — pas
+    // `sheet.y`, que l'animation d'entrée de la feuille anime aussi.
+    isBlocked: () => sheet.panHandlers.style.touchAction === "none",
+  });
+  // Nouvelle page affichée : on la reprend en haut, et la feuille revient à
+  // plat (avant d'être peinte : la page découverte dessous était déjà
+  // identique, la bascule ne se voit pas).
+  const recipeId = recipe?.id;
+  const shownIdRef = useRef(recipeId);
+  useLayoutEffect(() => {
+    if (shownIdRef.current === recipeId) return;
+    shownIdRef.current = recipeId;
+    const sheetEl = scrollRef.current;
+    if (sheetEl) sheetEl.scrollTop = 0;
+    pageTurn.settle();
+    const dir = refocusDirRef.current;
+    refocusDirRef.current = null;
+    if (dir && sheetEl) {
+      // Flèche du même sens, ou l'autre si on vient d'atteindre un bout.
+      const arrows = Array.from(sheetEl.querySelectorAll<HTMLButtonElement>(".recipe-pager-arrow"));
+      const same = arrows[dir === 1 ? 1 : 0];
+      const target = same && !same.disabled ? same : arrows.find((a) => !a.disabled);
+      target?.focus({ preventScroll: true });
+    }
+  });
+
+  // Photos des pages voisines chargées à l'avance : la page découverte
+  // dessous pendant le geste montre déjà sa photo, pas un voile d'attente.
+  const prevUrl = pageIndex > 0 ? pages[pageIndex - 1]?.imageUrl : null;
+  const nextUrl = pageIndex >= 0 ? pages[pageIndex + 1]?.imageUrl : null;
+  useEffect(() => {
+    for (const url of [prevUrl, nextUrl]) {
+      if (!url) continue;
+      const img = new Image();
+      img.decoding = "async";
+      img.src = url;
+    }
+  }, [prevUrl, nextUrl]);
 
   // Fige le <body> (technique position:fixed, fiable sur iOS Safari —
   // overflow:hidden seul ne suffit pas) tant que la fiche recette est
@@ -173,20 +157,20 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
 
   if (!recipe) return null;
 
-  // Calcul du ratio sécurisé
-  const ratio = servings / baseServings;
-
-  // Rendu et calcul robuste des ingrédients (gère les chaînes brutes et les objets de section)
-  const scaledIngredients: FlexibleIngredient[] = rawIngredients.map((ing) => {
-    if (typeof ing === "string") return ing;
-    if (ing?.isSection) return ing;
-
-    const qty = Number(ing?.qty || ing?.amount) || 0;
+  const folioFor = (r: Recipe): RecipeFolio | null => {
+    const index = pages.findIndex((p) => p.id === r.id);
+    if (index < 0 || pages.length < 2) return null;
     return {
-      ...ing,
-      qty: qty ? Math.round(qty * ratio * 100) / 100 : "",
+      current: index + 1,
+      total: pages.length,
+      prev: pages[index - 1] ?? null,
+      next: pages[index + 1] ?? null,
+      onPrev: () => pageTurn.turn(-1),
+      onNext: () => pageTurn.turn(1),
     };
-  });
+  };
+
+  const scaledIngredients = scaleIngredients(rawIngredientsOf(recipe), servings / baseServings);
 
   const triggerEdit = () => {
     overscrollRef.current = 0;
@@ -205,6 +189,18 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
     }
   };
 
+  // Flèches gauche/droite du clavier : page précédente/suivante.
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    const target = e.target as Element | null;
+    if (target && typeof target.closest === "function" && target.closest(KEEP_ARROWS_SELECTOR)) return;
+    const dir: TurnDir = e.key === "ArrowRight" ? 1 : -1;
+    if (!neighbor(dir)) return;
+    e.preventDefault();
+    pageTurn.turn(dir);
+  };
+
   // Ne gère plus QUE le tirage vers le haut en bas de page (déclenche
   // l'édition) — le tirage vers le bas en haut de page (fermeture) est
   // désormais entièrement délégué à useDismissibleSheet.js (voir `sheet`
@@ -217,6 +213,9 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
   // sur l'élément plus bas), `{...sheet.panHandlers}` finissait par
   // remplacer purement et simplement ces deux gestionnaires-ci, désactivant
   // le "tirer pour éditer" en bas de page (régression signalée).
+  // (Le glissement horizontal de la vue livre, lui, passe par des écouteurs
+  // natifs — usePageTurn.ts — qui arrêtent l'événement avant qu'il
+  // n'atteigne ces deux gestionnaires-ci dès que le geste est horizontal.)
   const handleTouchStart = (e: TouchEvent<HTMLDivElement>) => {
     touchYRef.current = e.touches[0].clientY;
   };
@@ -237,8 +236,6 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
     }
   };
 
-  const safeSteps: FlexibleStep[] = Array.isArray(recipe.steps) ? (recipe.steps as unknown as FlexibleStep[]) : [];
-
   // Fait tourner les deux systèmes de geste tactile en même temps sur ce
   // même nœud (voir commentaire au-dessus de handleTouchStart) — sans ça,
   // `{...sheet.panHandlers}` écrase silencieusement onTouchStart/onTouchMove
@@ -252,8 +249,26 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
     sheet.panHandlers.onTouchMove(e);
   };
 
+  const turning = pageTurn.turning;
+
   return (
     <motion.div className="modal-backdrop" onClick={onClose} {...MODAL_BACKDROP_MOTION} style={isPresent ? undefined : { pointerEvents: "none" }}>
+      {turning && (
+        <RecipePageUnder dir={turning.dir} geom={turning.geom} angle={pageTurn.angle}>
+          <RecipePage
+            recipe={turning.target}
+            servings={baseServingsOf(turning.target)}
+            scrollRef={scrollRef}
+            heroTreatment={heroTreatment}
+            showNutriscore={showNutriscore}
+            reducedMotion={prefersReducedMotion}
+            morph="none"
+            animateItems={false}
+            folio={folioFor(turning.target)}
+            preview
+          />
+        </RecipePageUnder>
+      )}
       <motion.div
         className="modal grimoire-page detail-scroll modal-swipeable"
         role="dialog"
@@ -261,8 +276,10 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
         onClick={(e) => e.stopPropagation()}
         ref={setScrollRef}
         onWheel={handleWheel}
+        onKeyDown={handleKeyDown}
         {...MODAL_SHEET_MOTION}
         {...sheet.panHandlers}
+        style={{ ...sheet.panHandlers.style, ...pageTurn.pageStyle }}
         onTouchStart={composedTouchStart}
         onTouchMove={composedTouchMove}
       >
@@ -270,125 +287,30 @@ export default function RecipeDetail({ recipe, onClose, onCook, onEdit, shareTex
         <div className="detail-drag-handle" aria-hidden="true" />
         <button className="modal-close" onClick={onClose} aria-label={t("common.close")}><X size={20} /></button>
 
-        <div className="detail-columns">
-          <div className="detail-info-col">
-            {/* Même layoutId Framer Motion que la carte source (voir
-                RecipeCard.jsx/AppShell.jsx) — porté en continu tant que la
-                fiche reste montée : sans risque, la carte correspondante
-                dans la grille a déjà relâché ce layoutId au moment où cette
-                fiche apparaît (voir `isOpenRecipe`), c'est justement ce
-                passage de témoin qui déclenche le morphing. Absent avec
-                "Réduire les animations" système, comme côté carte. */}
-            <motion.div
-              ref={heroRef}
-              className={`detail-hero ${heroTreatmentClassName(heroTreatment)}`}
-              layoutId={prefersReducedMotion ? undefined : `recipe-photo-${recipe.id}`}
-              transition={SPRING_SHEET}
-            >
-              <motion.div
-                className="detail-hero-parallax"
-                style={prefersReducedMotion ? undefined : { y: heroImageY }}
-              >
-                <DishArt recipe={recipe} />
-              </motion.div>
-              <HeroTreatment treatment={heroTreatment} />
-              {isLegendTreatment(heroTreatment) && (
-                <div className="hero-legende-caption">
-                  <div className="card-top-row">
-                    <span className={`chip ${categoryClass(recipe)}`}>{(dict.labels as Record<string, string>)[categoryLabel(recipe)] || categoryLabel(recipe)}</span>
-                    {showNutriscore && (
-                      <span className="nutri-badge" style={{ background: NUTRI_COLORS[nutri] }}>{nutri}</span>
-                    )}
-                  </div>
-                  <h2 className="dropcap-title">{translateRecipeText(recipe.title, language)}</h2>
-                </div>
-              )}
-            </motion.div>
-            {!isLegendTreatment(heroTreatment) && (
-              <>
-                <div className="card-top-row" style={{ marginTop: 16 }}>
-                  <span className={`chip ${categoryClass(recipe)}`}>{(dict.labels as Record<string, string>)[categoryLabel(recipe)] || categoryLabel(recipe)}</span>
-                  {showNutriscore && (
-                    <span className="nutri-badge" style={{ background: NUTRI_COLORS[nutri] }}>{nutri}</span>
-                  )}
-                </div>
-                <h2 className="dropcap-title">{translateRecipeText(recipe.title, language)}</h2>
-              </>
-            )}
-            <div className="card-meta" style={{ marginBottom: 10 }}>
-              <span><Clock size={13} /> {recipe.time || 0} min</span>
-              {recipe.carbs ? (
-                <span className="carbs-badge"><CategoryIcon emoji="🍞" icon={Wheat} size={13} /> {t("recipeUi.detail.carbs", { value: Math.round(recipe.carbs * servings) })}</span>
-              ) : null}
-            </div>
-            <div className="portions-adjuster">
-              <span><Users size={14} /> {t("recipeUi.detail.servings")}</span>
-              <div className="portions-stepper">
-                <motion.button type="button" whileTap={{ scale: 0.85 }} onClick={() => { triggerHaptic(10); setServings((s) => Math.max(1, Number(s) - 1)); }} aria-label={t("recipeUi.detail.decreaseServings")}><Minus size={14} /></motion.button>
-                <AnimatedNumber value={servings} />
-                <motion.button type="button" whileTap={{ scale: 0.85 }} onClick={() => { triggerHaptic(10); setServings((s) => Number(s) + 1); }} aria-label={t("recipeUi.detail.increaseServings")}><Plus size={14} /></motion.button>
-              </div>
-            </div>
-            <div className="detail-actions">
-              <Seal tone="gold" onClick={() => onCook && onCook(recipe)}>
-                <ChefHat size={16} /> {t("recipeUi.detail.startCooking")}
-              </Seal>
-              <Seal tone="gold" onClick={() => setShowShare(true)}>
-                <Share2 size={16} /> {t("recipeUi.detail.shareRecipe")}
-              </Seal>
-            </div>
-            <Flourish />
-          </div>
-
-          <div className="detail-body-col">
-            <h4>{t("recipeUi.detail.ingredients")} {ratio !== 1 && <span className="scaled-note">{t("recipeUi.detail.scaledFor", { count: servings })}</span>}</h4>
-            <ul className="ingredient-list">
-              {scaledIngredients.map((ing, i) => {
-                if (typeof ing === "string") {
-                  return (
-                    <FadeInItem key={i} root={scrollRef} reducedMotion={prefersReducedMotion}>
-                      {translateRecipeText(ing, language)}
-                    </FadeInItem>
-                  );
-                }
-                if (ing?.isSection) {
-                  return (
-                    <FadeInItem key={i} root={scrollRef} reducedMotion={prefersReducedMotion} className="ingredient-section-title">
-                      {translateRecipeText(ing.title || "", language)}
-                    </FadeInItem>
-                  );
-                }
-                return (
-                  <FadeInItem key={i} root={scrollRef} reducedMotion={prefersReducedMotion}>
-                    {ing.qty ? `${ing.qty} ` : ""}{ing.unit ? translateRecipeText(ing.unit, language) : ""} {translateRecipeText(ing.name || ing.title || "", language)}
-                  </FadeInItem>
-                );
-              })}
-            </ul>
-            <h4>{t("recipeUi.detail.preparation")}</h4>
-            {groupSteps(safeSteps as unknown as StepEntry[]).map((group, gi) => (
-              <div key={gi} className="steps-group">
-                {group.title && <h5 className="steps-group-title">{translateRecipeText(group.title, language)}</h5>}
-                <ol className="steps-list">
-                  {group.steps.map((s, si) => (
-                    <FadeInItem key={si} root={scrollRef} reducedMotion={prefersReducedMotion}>
-                      {translateRecipeText(typeof s === "string" ? s : (s as unknown as LooseStep).text || (s as unknown as LooseStep).title || "", language)}
-                    </FadeInItem>
-                  ))}
-                </ol>
-              </div>
-            ))}
-            {recipe.notes && (
-              <>
-                <h4>{t("recipeUi.detail.notes")}</h4>
-                <p className="recipe-notes">{translateRecipeText(recipe.notes, language)}</p>
-              </>
-            )}
-          </div>
+        <motion.div style={prefersReducedMotion ? { opacity: pageTurn.contentOpacity } : undefined}>
+          <RecipePage
+            key={recipe.id}
+            recipe={recipe}
+            servings={servings}
+            onServingsChange={setServings}
+            onCook={() => onCook && onCook(recipe, servings)}
+            onShare={() => setShowShare(true)}
+            scrollRef={scrollRef}
+            heroTreatment={heroTreatment}
+            showNutriscore={showNutriscore}
+            reducedMotion={prefersReducedMotion}
+            morph={hasTurned ? "paged" : "open"}
+            animateItems={!hasTurned}
+            folio={folioFor(recipe)}
+          />
+          <div className="detail-scroll-hint">· · ·</div>
+        </motion.div>
+        {/* Annonce la nouvelle page aux lecteurs d'écran. */}
+        <div className="recipe-pager-sr" aria-live="polite">
+          {hasTurned && pageIndex >= 0 ? t("recipePager.announce", { title: translateRecipeText(recipe.title, language), current: pageIndex + 1, total: pages.length }) : ""}
         </div>
-
-        <div className="detail-scroll-hint">· · ·</div>
       </motion.div>
+      {turning && <RecipePageFold dir={turning.dir} geom={turning.geom} angle={pageTurn.angle} pageStyle={pageTurn.pageStyle} />}
       <AnimatePresence>
         {showShare && (
           <Suspense fallback={null}>

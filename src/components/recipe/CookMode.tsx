@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, type KeyboardEvent, type MouseEvent } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Check, ChevronRight, Pause, Play, X } from "lucide-react";
 import { groupSteps, parseDurationMinutes, triggerHaptic } from "../../utils/helpers";
 import { useTranslation } from "../../contexts/LanguageContext";
@@ -10,13 +11,20 @@ import Seal from "../common/Seal";
 import StepTimer from "./StepTimer";
 import PortionBadge from "./PortionBadge";
 import CookPhotoPrompt from "./CookPhotoPrompt";
+import AnimatedNumber from "../common/AnimatedNumber";
+import { formatQuantity, scaleQuantity } from "../../utils/ingredients";
 import type { ShowToast } from "../../hooks/useToast";
 import type { Recipe } from "../../hooks/useRecipes";
 import {
-  clearCookTimers,
   formatRemaining,
+  getCookSession,
+  getCookTimersSnapshot,
   getRemainingMs,
+  isActiveCookTimer,
+  releaseCookTimers,
   removeCookTimer,
+  saveCookSession,
+  type CookSession,
   toggleCookTimer,
   useCookTimers,
 } from "../../utils/cookTimers";
@@ -30,6 +38,10 @@ function speechAvailable(): boolean {
 
 // Même condition que la mise en page deux colonnes de cookmode.css.
 const LANDSCAPE_QUERY = "(orientation: landscape) and (max-height: 500px)";
+
+// Durée de défilement des quantités quand les parts changent : un peu plus
+// longue que le nombre de parts lui-même, pour que l'œil suive la cascade.
+const QTY_ROLL_S = 0.45;
 
 /* ------------------------------------------------------------------ */
 /*  CARTE D'ÉTAPE — appui court : cocher ; appui long : lire à voix     */
@@ -49,6 +61,7 @@ interface CookStepCardProps {
   groupIndex: number;
   stepIndex: number;
   pressDuration: number;
+  recipeId: string | null;
   onToggle: () => void;
   onSpeak: () => void;
 }
@@ -61,7 +74,7 @@ interface CookStepCardProps {
 // qu'il vient d'être déclenché — le clic qui suit cocherait alors l'étape.
 const TOUCH_MOUSE_GUARD_MS = 1000;
 
-function CookStepCard({ text, done, speaking, canSpeak, duration, groupIndex, stepIndex, pressDuration, onToggle, onSpeak }: CookStepCardProps) {
+function CookStepCard({ text, done, speaking, canSpeak, duration, groupIndex, stepIndex, pressDuration, recipeId, onToggle, onSpeak }: CookStepCardProps) {
   const { t } = useTranslation();
   const longPress = useLongPress<HTMLDivElement>(onSpeak, pressDuration);
   const lastTouchRef = useRef(0);
@@ -100,7 +113,7 @@ function CookStepCard({ text, done, speaking, canSpeak, duration, groupIndex, st
         <p className="cookmode-step-text">{text}</p>
         {duration != null && (
           <div className="cookmode-step-actions">
-            <StepTimer minutes={duration} groupIndex={groupIndex} stepIndex={stepIndex} label={text} />
+            <StepTimer minutes={duration} groupIndex={groupIndex} stepIndex={stepIndex} label={text} recipeId={recipeId} />
           </div>
         )}
       </div>
@@ -117,6 +130,9 @@ interface CookModeProps {
   onUpdateRecipe?: (recipe: Recipe) => Promise<void> | void;
   householdId?: string | null;
   showToast?: ShowToast;
+  // Parts choisies sur la fiche recette au lancement ; absent : celles d'une
+  // préparation reprise (voir getCookSession), sinon celles de la recette.
+  initialServings?: number;
 }
 
 // Contrairement à RecipeDetail.jsx/RecipeForm.jsx, ce composant ne passait
@@ -125,19 +141,37 @@ interface CookModeProps {
 // par translateRecipeText()/t() : tout restait en français quelle que soit
 // la langue choisie dans les Réglages, y compris pendant la préparation
 // elle-même (l'écran le plus consulté d'une recette en cuisinant).
-export default function CookMode({ recipe, onClose, pressDuration = 750, onUpdateRecipe, householdId = null, showToast }: CookModeProps) {
+export default function CookMode({ recipe, onClose, pressDuration = 750, onUpdateRecipe, householdId = null, showToast, initialServings }: CookModeProps) {
   const { t, language } = useTranslation();
+  const reduceMotion = useReducedMotion();
   useWakeLock();
   const groups = groupSteps(recipe.steps);
-  const [groupIndex, setGroupIndex] = useState(0);
-  const [done, setDone] = useState(() => groups.map((g) => g.steps.map(() => false)));
+  const recipeId = recipe.id || null;
+  // Préparation reprise : quitter le mode cuisine alors qu'un minuteur
+  // tourne ne la termine plus (voir utils/cookTimers.ts, CookTimerPill) —
+  // parts, groupe affiché et étapes cochées sont retrouvés en rouvrant.
+  // On repart de zéro si la recette n'a plus aucun minuteur (tous arrêtés
+  // depuis la pastille) ou si ses étapes ont changé entre-temps.
+  const [resumed] = useState(() => {
+    const hasTimers = getCookTimersSnapshot().timers.some((tm) => tm.recipeId === recipeId);
+    const saved = recipeId && hasTimers ? getCookSession(recipeId) : undefined;
+    return saved && saved.done.length === groups.length && saved.done.every((g, i) => g.length === groups[i].steps.length)
+      ? saved : undefined;
+  });
+  const [groupIndex, setGroupIndex] = useState(() => resumed?.groupIndex ?? 0);
+  const [done, setDone] = useState(() => resumed?.done ?? groups.map((g) => g.steps.map(() => false)));
   // En paysage sur téléphone (deux colonnes, voir cookmode.css), la
   // colonne de gauche a la place d'afficher les ingrédients d'emblée.
   const [showIngredients, setShowIngredients] = useState(() =>
     typeof window !== "undefined" && typeof window.matchMedia === "function"
     && window.matchMedia(LANDSCAPE_QUERY).matches);
-  const [servings, setServings] = useState(() => Number(recipe.servings) || 1);
-  const { timers, now } = useCookTimers();
+  const baseServings = Number(recipe.servings) || 1;
+  const [servings, setServings] = useState(() => Math.max(1, Math.round(Number(initialServings) || resumed?.servings || baseServings)));
+  const [portionsOpen, setPortionsOpen] = useState(false);
+  const { timers: allTimers, now } = useCookTimers();
+  // Le bandeau ne montre que les minuteurs de CETTE recette ; ceux d'une
+  // autre préparation restent sur la pastille flottante (CookTimerPill).
+  const timers = allTimers.filter((tm) => tm.recipeId === recipeId);
   // Photo du plat proposée seulement si la recette n'en a AUCUNE (ni
   // personnelle, ni illustration IA) à l'ouverture du mode cuisine — figé
   // ici pour que l'encart ne disparaisse pas juste après l'envoi.
@@ -187,17 +221,37 @@ export default function CookMode({ recipe, onClose, pressDuration = 750, onUpdat
     if (speechAvailable()) window.speechSynthesis.cancel();
   }, [groupIndex]);
 
-  // Les minuteurs vivent le temps du mode cuisine (comme avant, quand ils
-  // disparaissaient avec lui) : on les vide à la fermeture.
-  useEffect(() => () => clearCookTimers(), []);
+  // Fermeture : les minuteurs terminés de la recette sont retirés, ceux qui
+  // tournent continuent (pastille flottante) — et la préparation (parts,
+  // groupe, étapes cochées) est gardée pour la reprendre en rouvrant.
+  const sessionRef = useRef<CookSession>({ servings, groupIndex, done });
+  useEffect(() => { sessionRef.current = { servings, groupIndex, done }; }, [servings, groupIndex, done]);
+  useEffect(() => () => {
+    releaseCookTimers(recipeId);
+    if (!recipeId) return;
+    const stillActive = getCookTimersSnapshot().timers.some((tm) => tm.recipeId === recipeId && isActiveCookTimer(tm));
+    saveCookSession(recipeId, stillActive ? sessionRef.current : null);
+  }, [recipeId]);
+
+  // Sélecteur de parts ouvert : les ingrédients s'affichent (on voit les
+  // quantités changer), Échap referme.
+  const openPortions = () => {
+    triggerHaptic(10);
+    setShowIngredients(true);
+    setPortionsOpen(true);
+  };
+  useEffect(() => {
+    if (!portionsOpen) return undefined;
+    const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === "Escape") setPortionsOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [portionsOpen]);
 
   const goPrevGroup = () => { triggerHaptic(10); setGroupIndex((i) => Math.max(0, i - 1)); };
   const goNextGroup = () => { triggerHaptic(10); setGroupIndex((i) => Math.min(groups.length - 1, i + 1)); };
 
-  const baseServings = Number(recipe.servings) || 1;
-  const ratio = servings / baseServings;
   const scaledIngredients = recipe.ingredients.map((ing) =>
-    "isSection" in ing ? ing : { ...ing, qty: Math.round((ing.qty ?? 0) * ratio * 100) / 100 }
+    "isSection" in ing ? ing : { ...ing, qty: scaleQuantity(ing.qty, servings, baseServings) }
   );
 
   // Le mode cuisine est sombre et doit bloquer tout scroll de l'arrière-plan :
@@ -254,7 +308,24 @@ export default function CookMode({ recipe, onClose, pressDuration = 750, onUpdat
 
   return (
     <div className="cookmode-backdrop">
-      <div className="cookmode cookmode-list">
+      <div className={`cookmode cookmode-list ${portionsOpen ? "portions-open" : ""}`}>
+        {/* Fond flouté du sélecteur de parts : seuls l'en-tête des
+            ingrédients et leur liste restent nets, au-dessus (cookmode.css).
+            Un appui à côté referme. */}
+        <AnimatePresence>
+          {portionsOpen && (
+            <motion.div
+              key="portions-scrim"
+              className="cookmode-portions-scrim"
+              aria-hidden="true"
+              onClick={() => setPortionsOpen(false)}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: reduceMotion ? 0 : 0.22 }}
+            />
+          )}
+        </AnimatePresence>
         <button className="modal-close" onClick={onClose} aria-label={t("common.close")}><X size={22} /></button>
         {/* Deux colonnes en paysage (voir cookmode.css) ; en portrait, ces
             enveloppes sont en display: contents — mise en page inchangée. */}
@@ -305,21 +376,50 @@ export default function CookMode({ recipe, onClose, pressDuration = 750, onUpdat
             >
               {t("cookMode.ingredients")} {showIngredients ? "▲" : "▼"}
             </button>
-            <PortionBadge value={servings} onChange={setServings} pressDuration={pressDuration} />
+            <PortionBadge
+              value={servings}
+              onChange={setServings}
+              open={portionsOpen}
+              onOpenChange={(next) => (next ? openPortions() : setPortionsOpen(false))}
+            />
           </div>
-          {showIngredients && (
-            <div className="cookmode-ingredients">
-              <ul>
-                {scaledIngredients.map((ing, i) =>
-                  "isSection" in ing ? (
-                    <li key={i} className="ingredient-section-title">{translateRecipeText(ing.title, language)}</li>
-                  ) : (
-                    <li key={i}>{ing.qty} {ing.unit ? `${translateRecipeText(ing.unit, language)} ` : ""}— {translateRecipeText(ing.name, language)}</li>
-                  )
-                )}
-              </ul>
-            </div>
-          )}
+          <AnimatePresence initial={false}>
+            {showIngredients && (
+              <motion.div
+                key="ingredients"
+                className="cookmode-ingredients-reveal"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={reduceMotion ? { duration: 0 } : { duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <div className="cookmode-ingredients">
+                  <ul>
+                    {scaledIngredients.map((ing, i) =>
+                      "isSection" in ing ? (
+                        <li key={i} className="ingredient-section-title">{translateRecipeText(ing.title, language)}</li>
+                      ) : (
+                        <li key={i}>
+                          {/* Toucher une quantité ouvre aussi le sélecteur de parts. */}
+                          {ing.qty != null && (
+                            <button
+                              type="button"
+                              className="cookmode-qty"
+                              onClick={() => { if (!portionsOpen) openPortions(); }}
+                              aria-description={t("cookPortions.qtyHint")}
+                            >
+                              <AnimatedNumber value={ing.qty} format={formatQuantity} duration={QTY_ROLL_S} />
+                            </button>
+                          )}
+                          {ing.qty != null ? " " : ""}{ing.unit ? `${translateRecipeText(ing.unit, language)} ` : ""}{ing.qty != null || ing.unit ? "— " : ""}{translateRecipeText(ing.name, language)}
+                        </li>
+                      )
+                    )}
+                  </ul>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {groups.length > 1 && (
             <div className="group-nav">
@@ -350,6 +450,7 @@ export default function CookMode({ recipe, onClose, pressDuration = 750, onUpdat
                   groupIndex={groupIndex}
                   stepIndex={i}
                   pressDuration={pressDuration}
+                  recipeId={recipeId}
                   onToggle={() => toggleDone(i)}
                   onSpeak={() => toggleSpeak(i, text)}
                 />

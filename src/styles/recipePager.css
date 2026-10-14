@@ -1,0 +1,77 @@
+/* ------------------------------------------------------------------ */
+/*  « VUE LIVRE » DE LA FICHE RECETTE — tourner les pages               */
+/*  (RecipeDetail.tsx, usePageTurn.ts, RecipePageUnder.tsx)             */
+/* ------------------------------------------------------------------ */
+
+/* Page voisine, posée SOUS la feuille qui tourne : même place et même
+   taille que la feuille (mesurées au début du geste, style en ligne), même
+   apparence (.modal/.grimoire-page/.detail-scroll), mais figée — ni
+   défilement, ni clic. */
+.modal.recipe-pager-under {
+  position: absolute;
+  max-height: none; max-width: none;
+  overflow: hidden;
+  pointer-events: none;
+}
+/* Voile d'ombre de la page encore couverte (s'estompe à mesure qu'elle se
+   découvre) et ombre portée du bord libre de la page qui se soulève. */
+.recipe-pager-veil {
+  position: absolute; inset: 0;
+  background: rgba(20,14,4,0.9);
+  pointer-events: none;
+}
+.recipe-pager-cast {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 38px;
+  pointer-events: none;
+}
+/* Page suivante : le bord libre est à droite de la page qui tourne, son
+   ombre tombe à sa droite. Précédente : l'inverse. */
+.recipe-pager-cast-next { background: linear-gradient(90deg, rgba(20,14,4,0.45), rgba(20,14,4,0)); }
+.recipe-pager-cast-prev { margin-left: -38px; background: linear-gradient(270deg, rgba(20,14,4,0.45), rgba(20,14,4,0)); }
+
+/* Ombre de pliure posée SUR la page qui tourne (même rotation qu'elle) :
+   sombre côté reliure, s'éclaircit vers le bord libre. */
+.recipe-pager-fold {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 18px 18px 0 0;
+}
+.recipe-pager-fold-next { background: linear-gradient(90deg, rgba(20,14,4,0.38) 0%, rgba(20,14,4,0.08) 22%, rgba(255,250,235,0.06) 70%, rgba(20,14,4,0.16) 100%); }
+.recipe-pager-fold-prev { background: linear-gradient(270deg, rgba(20,14,4,0.38) 0%, rgba(20,14,4,0.08) 22%, rgba(255,250,235,0.06) 70%, rgba(20,14,4,0.16) 100%); }
+
+/* Folio « 3 / 24 » sous l'ornement, entre deux fines flèches. */
+.recipe-pager-folio {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  margin: -4px 0 6px;
+  color: var(--gold-text);
+}
+.recipe-pager-folio-num {
+  font-family: 'Cinzel', serif; font-size: 0.72rem; letter-spacing: 1.5px;
+  font-variant-numeric: lining-nums tabular-nums;
+  min-width: 52px; text-align: center;
+}
+.recipe-pager-folio-sep { margin: 0 5px; opacity: 0.6; }
+.recipe-pager-arrow {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 50%;
+  border: none; background: transparent; color: inherit;
+  opacity: 0.75; cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.recipe-pager-arrow:active:not(:disabled) { transform: scale(0.88); }
+.recipe-pager-arrow:disabled { opacity: 0.22; cursor: default; }
+@media (hover: hover) {
+  .recipe-pager-arrow:hover:not(:disabled) { opacity: 1; }
+}
+
+/* Texte réservé aux lecteurs d'écran. */
+.recipe-pager-sr {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* Paysage téléphone : la feuille est en deux colonnes, l'ornement resserré. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .recipe-pager-folio { margin: -6px 0 2px; }
+  .recipe-pager-arrow { width: 28px; height: 28px; }
+}

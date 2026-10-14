@@ -13,13 +13,21 @@ import { translateCurrent } from "./i18n";
 /*  et repose sur une HEURE DE FIN (Date.now()), pas sur un compteur décrémenté :     */
 /*  un onglet mis en veille (intervalles ralentis ou gelés) retombe juste au réveil.    */
 /*  La notification de fin part d'ici, une seule fois par minuteur, que son bouton        */
-/*  soit affiché à l'écran ou non. Le mode cuisine vide le magasin à sa fermeture.          */
+/*  soit affiché à l'écran ou non.                                                          */
+/*                                                                                            */
+/*  Chaque minuteur retient sa recette (recipeId) : quitter le mode cuisine ne les              */
+/*  arrête plus. Ceux qui tournent (ou sont en pause) continuent, affichés par la                */
+/*  pastille flottante (components/recipe/CookTimerPill.tsx) qui rouvre la bonne                  */
+/*  recette ; seuls les minuteurs déjà terminés de la recette qu'on quitte sont                    */
+/*  retirés (releaseCookTimers). Sans recette connue, on vide comme avant.                          */
 /* ------------------------------------------------------------------ */
 
 export type CookTimerStatus = "running" | "paused" | "done";
 
 export interface CookTimer {
   key: string;
+  /** Recette d'origine (rouvrir le bon mode cuisine) ; null si inconnue. */
+  recipeId: string | null;
   groupIndex: number;
   stepIndex: number;
   /** Début du texte de l'étape (bandeau, notification). */
@@ -45,6 +53,7 @@ export interface StartTimerInput {
   stepIndex: number;
   minutes: number;
   label?: string;
+  recipeId?: string | null;
 }
 
 // Rafraîchissement de l'affichage tant qu'un minuteur tourne. Le temps
@@ -57,8 +66,15 @@ let snapshot: CookTimersSnapshot = { timers: [], now: Date.now() };
 let ticker: ReturnType<typeof setInterval> | null = null;
 const listeners = new Set<() => void>();
 
-export function cookTimerKey(groupIndex: number, stepIndex: number, minutes: number): string {
-  return `${groupIndex}:${stepIndex}:${minutes}`;
+export function cookTimerKey(groupIndex: number, stepIndex: number, minutes: number, recipeId?: string | null): string {
+  const base = `${groupIndex}:${stepIndex}:${minutes}`;
+  // Préfixe de recette : la même étape de deux recettes = deux minuteurs.
+  return recipeId ? `${recipeId}|${base}` : base;
+}
+
+/** Minuteur encore « vivant » : il tourne ou attend en pause. */
+export function isActiveCookTimer(timer: CookTimer): boolean {
+  return timer.status === "running" || timer.status === "paused";
 }
 
 /** Début du texte de l'étape, tronqué proprement pour le bandeau. */
@@ -126,12 +142,12 @@ function update(key: string, fn: (timer: CookTimer, now: number) => CookTimer): 
 }
 
 /** Lance le minuteur d'une étape (sans effet s'il existe déjà). */
-export function startCookTimer({ groupIndex, stepIndex, minutes, label = "" }: StartTimerInput): string {
-  const key = cookTimerKey(groupIndex, stepIndex, minutes);
+export function startCookTimer({ groupIndex, stepIndex, minutes, label = "", recipeId = null }: StartTimerInput): string {
+  const key = cookTimerKey(groupIndex, stepIndex, minutes, recipeId);
   if (snapshot.timers.some((t) => t.key === key)) return key;
   const now = Date.now();
   const timer: CookTimer = {
-    key, groupIndex, stepIndex, minutes,
+    key, recipeId, groupIndex, stepIndex, minutes,
     label: shortStepLabel(label),
     status: "running",
     endsAt: now + minutes * 60_000,
@@ -168,10 +184,71 @@ export function removeCookTimer(key: string): void {
   emit(snapshot.timers.filter((t) => t.key !== key));
 }
 
-/** Vide tous les minuteurs (fermeture du mode cuisine). */
-export function clearCookTimers(): void {
+/** Vide tous les minuteurs — ou seulement ceux des recettes indiquées. */
+export function clearCookTimers(recipeIds?: ReadonlyArray<string | null>): void {
   if (!snapshot.timers.length) return;
-  emit([]);
+  if (!recipeIds) { emit([]); return; }
+  const kept = snapshot.timers.filter((t) => !recipeIds.includes(t.recipeId));
+  if (kept.length !== snapshot.timers.length) emit(kept);
+}
+
+/** Fermeture du mode cuisine d'une recette : ses minuteurs terminés (déjà
+ *  vus dans le bandeau) sont retirés, ceux qui tournent ou sont en pause
+ *  continuent hors du mode cuisine. Sans recette connue (recipeId null),
+ *  rien ne permettrait d'y revenir : on les retire tous, comme avant. */
+export function releaseCookTimers(recipeId: string | null): void {
+  const kept = snapshot.timers.filter((t) =>
+    t.recipeId !== recipeId || (recipeId != null && isActiveCookTimer(t)));
+  if (kept.length !== snapshot.timers.length) emit(kept);
+}
+
+export interface CookTimersSummary {
+  /** Minuteurs résumés (ceux des recettes autres que celle exclue). */
+  timers: CookTimer[];
+  /** Minuteur mis en avant : un terminé d'abord, sinon le plus proche de sa fin. */
+  lead: CookTimer;
+  /** Nombre d'autres minuteurs (le « +N » de la pastille). */
+  others: number;
+  /** Au moins un minuteur résumé est terminé. */
+  done: boolean;
+}
+
+/** Résumé pour la pastille flottante : minuteurs rattachés à une recette,
+ *  hors celle dont le mode cuisine est ouvert (son bandeau les montre déjà).
+ *  null quand il n'y a rien à afficher. */
+export function summarizeCookTimers(
+  timers: CookTimer[],
+  now: number = Date.now(),
+  excludeRecipeId: string | null = null,
+): CookTimersSummary | null {
+  const shown = timers.filter((t) => t.recipeId != null && t.recipeId !== excludeRecipeId);
+  if (!shown.length) return null;
+  const finished = shown.find((t) => t.status === "done");
+  // Ceux qui tournent avant ceux en pause, puis du plus proche au plus lointain.
+  const active = shown
+    .filter(isActiveCookTimer)
+    .sort((a, b) =>
+      (a.status === b.status ? 0 : a.status === "running" ? -1 : 1)
+      || getRemainingMs(a, now) - getRemainingMs(b, now));
+  const lead = finished ?? active[0] ?? shown[0];
+  return { timers: shown, lead, others: shown.length - 1, done: Boolean(finished) };
+}
+
+/* Préparation en cours d'une recette (parts, groupe affiché, étapes
+   cochées), gardée par le mode cuisine à sa fermeture tant qu'un de ses
+   minuteurs tourne encore : la rouvrir (pastille flottante, fiche) la
+   reprend où on l'avait laissée. */
+export interface CookSession { servings: number; groupIndex: number; done: boolean[][] }
+const sessions = new Map<string, CookSession>();
+
+/** Garde (ou oublie, avec null) la préparation d'une recette. */
+export function saveCookSession(recipeId: string, session: CookSession | null): void {
+  if (session) sessions.set(recipeId, session);
+  else sessions.delete(recipeId);
+}
+
+export function getCookSession(recipeId: string): CookSession | undefined {
+  return sessions.get(recipeId);
 }
 
 export function getCookTimer(key: string): CookTimer | undefined {
@@ -199,4 +276,5 @@ export function resetCookTimersForTests(): void {
   if (ticker) clearInterval(ticker);
   ticker = null;
   snapshot = { timers: [], now: Date.now() };
+  sessions.clear();
 }
