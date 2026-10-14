@@ -49,3 +49,6 @@ button, a, input, select, textarea, label, summary, [role="button"] {
 .row-drag-handle::after { inset: -7px -3px; }
 .fav-btn::after,
 .modal-close::after { inset: -7px; }
+
+/* Bouton « Tester le retour tactile » (Réglages > Accessibilité) et son résultat. */
+.settings-row-test { flex-direction: column; align-items: flex-start; gap: 4px; }

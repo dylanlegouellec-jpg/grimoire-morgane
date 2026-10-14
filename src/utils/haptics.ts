@@ -60,66 +60,57 @@ export function triggerHaptic(pattern: VibratePattern = 15): boolean {
 /* --- iPhone : « clic » du Taptic Engine via un interrupteur natif -------
    Pas d'API de vibration dans Safari, MAIS depuis iOS 18 basculer un
    interrupteur natif (<input type="checkbox" switch>) produit le petit
-   retour haptique du système. On garde donc un interrupteur invisible hors
-   écran, et on le bascule via son <label> (un clic programmé sur le label
-   est celui que Safari accepte). Ne marche que pendant/peu après un geste
-   de l'utilisateur, ce qui est le cas de tous nos appels (appui, glisser…).
-   Un motif [on, off, on, …] donne un clic par « on » (au plus 3). Sur un
-   iOS plus ancien, le basculement est sans effet : le repli visuel de
-   triggerHapticFeedback prend le relais si on renvoie false — impossible de
-   savoir si le clic a été ressenti, donc on ne le renvoie que sur iOS 18+. */
+   retour haptique du système. Recette éprouvée (bibliothèque ios-haptics) :
+   à CHAQUE clic, un <label> neuf contenant l'interrupteur, masqué
+   (display: none), ajouté à <head>, cliqué par programme puis retiré.
+   Safari n'accepte ce clic que PENDANT un geste de l'utilisateur
+   (navigator.userActivation.isActive) : hors geste (appui long déclenché
+   par un minuteur…), on renvoie false pour que le repli visuel prenne le
+   relais au lieu d'un silence total. Un motif [on, off, on, …] donne un
+   clic par « on » (au plus 3). */
 const IS_IOS =
   typeof navigator !== "undefined" &&
   (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
-// iOS 18+ : version lue dans « OS 18_0 like Mac OS X » (iPhone) ou « Version/18.0 » (iPad/Safari).
-const IOS_MAJOR = (() => {
+// Version d'iOS : « OS 18_0 like Mac OS X » (iPhone, PWA comprise) ou « Version/18.0 ».
+export const IOS_MAJOR = (() => {
   if (typeof navigator === "undefined") return 0;
   const m = navigator.userAgent.match(/OS (\d+)_/) || navigator.userAgent.match(/Version\/(\d+)/);
   return m ? Number(m[1]) : 0;
 })();
+// Interrupteur natif connu du navigateur (Safari 17.4+ expose input.switch).
+const HAS_SWITCH = typeof HTMLInputElement !== "undefined" && "switch" in HTMLInputElement.prototype;
 const IOS_SWITCH_HAPTICS = IS_IOS && IOS_MAJOR >= 18;
 
-let switchLabel: HTMLLabelElement | null = null;
-let switchInput: HTMLInputElement | null = null;
+function hasUserActivation(): boolean {
+  const ua = (typeof navigator !== "undefined" ? (navigator as Navigator & { userActivation?: { isActive: boolean } }).userActivation : undefined);
+  // Navigateur sans cette API : on tente quand même.
+  return ua ? ua.isActive : true;
+}
 
-function ensureSwitch(): HTMLLabelElement | null {
-  if (switchLabel && switchLabel.isConnected) return switchLabel;
-  if (typeof document === "undefined" || !document.body) return null;
+function tickOnce(): void {
+  if (typeof document === "undefined") return;
   const label = document.createElement("label");
   label.setAttribute("aria-hidden", "true");
-  label.className = "haptic-switch";
+  label.style.display = "none";
   const input = document.createElement("input");
   input.type = "checkbox";
   input.setAttribute("switch", "");
   input.tabIndex = -1;
   label.appendChild(input);
-  document.body.appendChild(label);
-  switchLabel = label;
-  switchInput = input;
-  return label;
-}
-
-function tickOnce(): void {
-  const label = ensureSwitch();
-  if (!label) return;
-  // Ne jamais voler le focus d'un champ en cours de saisie (le clavier se
-  // refermerait) : on le rend aussitôt à l'élément qui l'avait.
-  const active = typeof document !== "undefined" ? (document.activeElement as HTMLElement | null) : null;
-  label.click();
-  if (active && document.activeElement !== active && typeof active.focus === "function") {
-    active.focus({ preventScroll: true });
-  } else if (document.activeElement === switchInput) {
-    switchInput?.blur();
+  (document.head || document.body).appendChild(label);
+  try {
+    label.click();
+  } finally {
+    label.remove();
   }
 }
 
 export function triggerIosTick(pattern: VibratePattern = 15): boolean {
-  if (!IOS_SWITCH_HAPTICS) return false;
+  if (!IOS_SWITCH_HAPTICS || !hasUserActivation()) return false;
   try {
     const ticks = Array.isArray(pattern) ? pattern.filter((_, i) => i % 2 === 0).length : 1;
     const gaps = Array.isArray(pattern) ? pattern : [];
     tickOnce();
-    // Clics suivants d'un motif : espacés comme les « on » du motif.
     let delay = 0;
     for (let i = 1; i < Math.min(ticks, 3); i++) {
       delay += (gaps[2 * i - 2] || 0) + (gaps[2 * i - 1] || 0);
@@ -129,6 +120,18 @@ export function triggerIosTick(pattern: VibratePattern = 15): boolean {
   } catch {
     return false;
   }
+}
+
+/** Ce que l'app détecte, pour le bouton « Tester » des Réglages. */
+export function hapticsDiagnostic() {
+  return {
+    vibrationApi: CAN_VIBRATE,
+    ios: IS_IOS,
+    iosVersion: IOS_MAJOR,
+    nativeSwitch: HAS_SWITCH,
+    iosClick: IOS_SWITCH_HAPTICS,
+    enabled: getStoredHapticFeedback(),
+  };
 }
 
 // Repli visuel pour les plateformes sans vibreur accessible (iOS) : ajoute

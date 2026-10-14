@@ -137,10 +137,6 @@
    vibreur matériel accessible, donc une micro-pulsation de luminosité sert
    de substitut perceptif au moment où l'action se déclenche. */
 .haptic-pulse { animation: hapticPulse 0.18s ease; }
-/* Interrupteur natif invisible qui déclenche le « clic » haptique d'iOS 18+
-   (voir triggerIosTick, utils/haptics.ts) : hors écran, jamais visible ni
-   touchable, mais toujours dans la page (un display: none le désactiverait). */
-.haptic-switch { position: fixed; left: -9999px; top: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; overflow: hidden; }
 @keyframes hapticPulse { 0% { filter: brightness(1); } 45% { filter: brightness(1.12); } 100% { filter: brightness(1); } }
 
 .card-body { padding: 10px 12px 14px; }
