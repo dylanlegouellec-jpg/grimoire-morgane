@@ -1,11 +1,18 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMotionValue, animate, useReducedMotion } from "motion/react";
 import { EASE_OUT } from "../../constants/motion";
 
 interface AnimatedNumberProps {
   value: number;
   className?: string;
+  /** Mise en forme du nombre affiché (défaut : entier arrondi). Ex. les
+   *  quantités d'ingrédients du mode cuisine, qui gardent leurs décimales. */
+  format?: (value: number) => string;
+  /** Durée de la transition (s). */
+  duration?: number;
 }
+
+const formatInteger = (n: number) => String(Math.round(n));
 
 /* ------------------------------------------------------------------ */
 /*  NOMBRE ANIMÉ — anime la transition entre deux valeurs numériques      */
@@ -15,10 +22,10 @@ interface AnimatedNumberProps {
 /*  — on garde donc un <span> normal dont le contenu texte est mis à jour        */
 /*  à la main, à chaque frame, via l'abonnement ("on(\"change\", ...)") à la      */
 /*  valeur motion sous-jacente pendant qu'elle s'anime avec animate().             */
-/*  "Math.round" : ce composant n'affiche que des entiers (portions, nombre         */
-/*  d'articles...) — jamais appelé avec une valeur à décimales dans cette app.       */
+/*  Par défaut "Math.round" : entiers (portions, nombre d'articles...). La prop      */
+/*  "format" permet d'afficher des décimales (quantités du mode cuisine).            */
 /* ------------------------------------------------------------------ */
-export default function AnimatedNumber({ value, className }: AnimatedNumberProps) {
+export default function AnimatedNumber({ value, className, format = formatInteger, duration = 0.35 }: AnimatedNumberProps) {
   const prefersReducedMotion = useReducedMotion();
   const spanRef = useRef<HTMLSpanElement>(null);
   const motionVal = useMotionValue(value);
@@ -31,16 +38,25 @@ export default function AnimatedNumber({ value, className }: AnimatedNumberProps
       motionVal.jump(value);
       return undefined;
     }
-    const controls = animate(motionVal, value, { duration: 0.35, ease: EASE_OUT });
+    const controls = animate(motionVal, value, { duration, ease: EASE_OUT });
     return () => controls.stop();
-  }, [value, prefersReducedMotion, motionVal]);
+  }, [value, prefersReducedMotion, motionVal, duration]);
+
+  // Dernière mise en forme connue, lue par l'abonnement ci-dessous sans le
+  // réabonner à chaque rendu (une fonction fléchée change à chaque fois).
+  const formatRef = useRef(format);
+  formatRef.current = format;
 
   useEffect(() => {
-    if (spanRef.current) spanRef.current.textContent = String(Math.round(motionVal.get()));
+    if (spanRef.current) spanRef.current.textContent = formatRef.current(motionVal.get());
     return motionVal.on("change", (latest) => {
-      if (spanRef.current) spanRef.current.textContent = String(Math.round(latest));
+      if (spanRef.current) spanRef.current.textContent = formatRef.current(latest);
     });
   }, [motionVal]);
 
-  return <span ref={spanRef} className={className}>{Math.round(value)}</span>;
+  // Texte initial figé : React ne doit plus jamais réécrire ce contenu
+  // (sinon la valeur FINALE s'affichait une image avant de défiler depuis
+  // l'ancienne) — seul l'abonnement ci-dessus le met à jour ensuite.
+  const [initialText] = useState(() => format(value));
+  return <span ref={spanRef} className={className}>{initialText}</span>;
 }

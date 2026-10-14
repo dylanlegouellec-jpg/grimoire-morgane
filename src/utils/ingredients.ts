@@ -82,3 +82,21 @@ export function parseQuantity(input: unknown): number {
   const value = Number(text);
   return Number.isFinite(value) && value >= 0 ? value : 0;
 }
+
+/**
+ * Quantité d'un ingrédient mise à l'échelle d'un nombre de parts : même
+ * calcul que la fiche recette (arrondi au centième) — partagé avec le mode
+ * cuisine pour que les deux écrans affichent toujours la même valeur.
+ * Renvoie null quand l'ingrédient n'a pas de quantité (« sel », « poivre »).
+ */
+export function scaleQuantity(qty: unknown, servings: number, baseServings: number): number | null {
+  const value = toQty(qty);
+  if (!value) return null;
+  const base = Number(baseServings) || 1;
+  return Math.round(value * (servings / base) * 100) / 100;
+}
+
+/** Affichage d'une quantité : au plus deux décimales, sans zéros inutiles. */
+export function formatQuantity(value: number): string {
+  return String(Math.round(value * 100) / 100);
+}

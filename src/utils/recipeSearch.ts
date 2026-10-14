@@ -85,3 +85,41 @@ export function sortRecipes(recipes: Recipe[], sort: RecipeSort): Recipe[] {
   if (sort === "quick") return [...recipes].sort((a, b) => (Number(a.time) || 0) - (Number(b.time) || 0) || byName(a, b));
   return [...recipes].sort(byName);
 }
+
+/* --- Liste visible (grille ET « vue livre » de la fiche) ------------- */
+
+export interface RecipeViewFilters {
+  /** Clé du filtre de catégorie (« tout », « sale », « sucre »…, voir FILTERS). */
+  filter: string;
+  favoritesOnly: boolean;
+  /** Termes déjà passés par parseQuery(). */
+  terms: string[];
+}
+
+/**
+ * La recette passe-t-elle le filtre de catégorie, les favoris et la
+ * recherche de la grille ? Seule source de vérité de « ce que montre la
+ * grille » : utilisée par RecipesView (cartes affichées) ET par
+ * visibleRecipes() ci-dessous (pages de la fiche, voir useRecipePager.ts).
+ * `entry` : texte recherchable déjà préparé (index de RecipesView), sinon
+ * calculé ici.
+ */
+export function matchesRecipeView(recipe: Recipe, { filter, favoritesOnly, terms }: RecipeViewFilters, entry?: SearchIndexEntry): boolean {
+  if (filter !== "tout" && normalize(recipe.category) !== filter) return false;
+  if (favoritesOnly && !recipe.favorite) return false;
+  if (terms.length && !matchesSearch(entry ?? buildSearchEntry(recipe), terms)) return false;
+  return true;
+}
+
+/**
+ * Recettes affichées par la grille, dans son ordre exact (même tri, même
+ * filtre, mêmes favoris, même recherche) — l'ordre des pages quand on
+ * feuillette la fiche recette d'un glissement horizontal.
+ */
+export function visibleRecipes(
+  recipes: Recipe[],
+  { filter, favoritesOnly, search, sort }: { filter: string; favoritesOnly: boolean; search: string; sort: RecipeSort }
+): Recipe[] {
+  const terms = parseQuery(search);
+  return sortRecipes(recipes, sort).filter((r) => matchesRecipeView(r, { filter, favoritesOnly, terms }));
+}

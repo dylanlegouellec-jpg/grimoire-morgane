@@ -7,6 +7,7 @@ import { nextId, copyText } from "../utils/helpers";
 import { useTranslation } from "../contexts/LanguageContext";
 import useTabNavigation from "../hooks/useTabNavigation";
 import useFilterSwipe from "../hooks/useFilterSwipe";
+import useRecipePager from "../hooks/useRecipePager";
 
 import NavButton from "../components/common/NavButton";
 import NavPill from "../components/common/NavPill";
@@ -15,7 +16,7 @@ import type { RecipeSort } from "../utils/recipeSearch";
 import ErrorBoundary from "../components/common/ErrorBoundary";
 import AppHeader from "./AppHeader";
 import TabBars from "./TabBars";
-import { RecipesView, RecipeForm, RecipeDetail, CookMode } from "../components/recipe";
+import { RecipesView, RecipeForm, RecipeDetail, CookMode, CookTimerPill } from "../components/recipe";
 import type { InkOrigin } from "../components/recipe/form/createAnimations";
 import type { Recipe } from "../hooks/useRecipes";
 import type { ShowToast, ToastState } from "../hooks/useToast";
@@ -189,6 +190,9 @@ export default function AppShell({
   if (!formTarget && formInkOrigin) setFormInkOrigin(null);
   const [openRecipe, setOpenRecipe] = useState<Recipe | null>(null);
   const [cookingRecipe, setCookingRecipe] = useState<Recipe | null>(null);
+  // Parts choisies sur la fiche au lancement du mode cuisine (undefined :
+  // reprise depuis le minuteur flottant, voir CookMode/CookTimerPill).
+  const [cookServings, setCookServings] = useState<number | undefined>(undefined);
   const [textModal, setTextModal] = useState<{ title: string; text: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Recipe | null>(null);
   const [showTemplateImport, setShowTemplateImport] = useState(false);
@@ -328,6 +332,9 @@ export default function AppShell({
   // Balayage horizontal sur la grille : passe au filtre voisin (voir
   // hooks/useFilterSwipe.ts).
   useFilterSwipe(appContentRef, tab, filterIndex, setFilter);
+
+  // « Vue livre » de la fiche : pages = grille affichée (voir hooks/useRecipePager.ts).
+  const recipePager = useRecipePager({ recipes, openRecipe, enabled: shownTab === "recettes", filter, favoritesOnly, search, sort: recipeSort });
 
   // Arrivée de l'app au lancement (voir .app-intro, shell.css) : classe
   // posée au premier rendu puis retirée une fois les animations terminées
@@ -525,10 +532,12 @@ export default function AppShell({
       <AnimatePresence>
         {openRecipe && (
           <RecipeDetail
-            key={openRecipe.id}
+            key={recipePager.detailKey ?? openRecipe.id}
             recipe={recipes.find((r) => r.id === openRecipe.id) || openRecipe}
+            pages={recipePager.pages}
+            onNavigate={setOpenRecipe}
             onClose={() => setOpenRecipe(null)}
-            onCook={(r) => setCookingRecipe(r)}
+            onCook={(r, servings?: number) => { setCookServings(servings); setCookingRecipe(r); }}
             onEdit={(r) => setFormTarget(r)}
             shareText={shareText}
             showToast={showToast}
@@ -561,7 +570,9 @@ export default function AppShell({
       </AnimatePresence>
       {cookingRecipe && (
         <CookMode
+          key={cookingRecipe.id}
           recipe={cookingRecipe}
+          initialServings={cookServings}
           onClose={() => setCookingRecipe(null)}
           pressDuration={pressDuration}
           onUpdateRecipe={saveRecipe}
@@ -569,6 +580,11 @@ export default function AppShell({
           showToast={showToast}
         />
       )}
+      <CookTimerPill
+        recipes={recipes}
+        cookingRecipeId={cookingRecipe?.id ?? null}
+        onOpenRecipe={(r) => { setCookServings(undefined); setCookingRecipe(r); }}
+      />
       <AnimatePresence>
         {textModal && (
           <Suspense fallback={null}>

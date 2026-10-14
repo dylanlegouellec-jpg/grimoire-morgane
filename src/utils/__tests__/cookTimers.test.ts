@@ -12,8 +12,12 @@ import {
   formatRemaining,
   getCookTimer,
   getCookTimersSnapshot,
+  getCookSession,
   getRemainingMs,
   pauseCookTimer,
+  releaseCookTimers,
+  saveCookSession,
+  summarizeCookTimers,
   removeCookTimer,
   resetCookTimersForTests,
   resumeCookTimer,
@@ -138,5 +142,77 @@ describe("cookTimers", () => {
     const long = shortStepLabel("Faire revenir les oignons émincés dans le beurre pendant 10 min");
     expect(long.length).toBeLessThanOrEqual(32);
     expect(long.endsWith("…")).toBe(true);
+  });
+});
+
+describe("cookTimers — minuteurs rattachés à une recette (hors mode cuisine)", () => {
+  it("la même étape de deux recettes donne deux minuteurs distincts", () => {
+    const a = startCookTimer({ groupIndex: 0, stepIndex: 0, minutes: 5, recipeId: "r1" });
+    const b = startCookTimer({ groupIndex: 0, stepIndex: 0, minutes: 5, recipeId: "r2" });
+    expect(a).not.toBe(b);
+    expect(a).toBe(cookTimerKey(0, 0, 5, "r1"));
+    expect(getCookTimer(a)?.recipeId).toBe("r1");
+    expect(getCookTimersSnapshot().timers).toHaveLength(2);
+  });
+
+  it("fermer le mode cuisine garde les minuteurs actifs et retire les terminés", () => {
+    const running = startCookTimer({ groupIndex: 0, stepIndex: 0, minutes: 10, recipeId: "r1" });
+    const paused = startCookTimer({ groupIndex: 0, stepIndex: 1, minutes: 10, recipeId: "r1" });
+    const finished = startCookTimer({ groupIndex: 0, stepIndex: 2, minutes: 1, recipeId: "r1" });
+    const other = startCookTimer({ groupIndex: 0, stepIndex: 0, minutes: 1, recipeId: "r2" });
+    pauseCookTimer(paused);
+    vi.advanceTimersByTime(61_000);
+    releaseCookTimers("r1");
+    const keys = getCookTimersSnapshot().timers.map((t) => t.key);
+    expect(keys).toEqual([running, paused, other]);
+    // Le minuteur qui tourne continue (et finit) hors du mode cuisine.
+    vi.advanceTimersByTime(10 * 60_000);
+    expect(getCookTimer(running)?.status).toBe("done");
+    expect(getCookTimer(finished)).toBeUndefined();
+  });
+
+  it("sans recette connue, la fermeture retire tout, comme avant", () => {
+    startCookTimer({ groupIndex: 0, stepIndex: 0, minutes: 10 });
+    startCookTimer({ groupIndex: 0, stepIndex: 0, minutes: 10, recipeId: "r1" });
+    releaseCookTimers(null);
+    expect(getCookTimersSnapshot().timers.map((t) => t.recipeId)).toEqual(["r1"]);
+  });
+
+  it("vide seulement les recettes demandées", () => {
+    startCookTimer({ groupIndex: 0, stepIndex: 0, minutes: 10, recipeId: "r1" });
+    startCookTimer({ groupIndex: 0, stepIndex: 0, minutes: 10, recipeId: "r2" });
+    clearCookTimers(["r2"]);
+    expect(getCookTimersSnapshot().timers.map((t) => t.recipeId)).toEqual(["r1"]);
+  });
+
+  it("résume pour la pastille : le plus proche, « +N », terminé en priorité, recette ouverte exclue", () => {
+    expect(summarizeCookTimers([], Date.now())).toBeNull();
+    const long = startCookTimer({ groupIndex: 0, stepIndex: 0, minutes: 10, recipeId: "r1" });
+    const short = startCookTimer({ groupIndex: 0, stepIndex: 1, minutes: 3, recipeId: "r2" });
+    const pausedShort = startCookTimer({ groupIndex: 0, stepIndex: 2, minutes: 1, recipeId: "r2" });
+    pauseCookTimer(pausedShort);
+    // Un minuteur sans recette n'est jamais résumé (impossible à rouvrir).
+    startCookTimer({ groupIndex: 0, stepIndex: 3, minutes: 1 });
+    let summary = summarizeCookTimers(getCookTimersSnapshot().timers, Date.now())!;
+    expect(summary.lead.key).toBe(short); // ceux qui tournent avant ceux en pause
+    expect(summary.others).toBe(2);
+    expect(summary.done).toBe(false);
+
+    summary = summarizeCookTimers(getCookTimersSnapshot().timers, Date.now(), "r2")!;
+    expect(summary.lead.key).toBe(long);
+    expect(summary.others).toBe(0);
+    expect(summarizeCookTimers(getCookTimersSnapshot().timers, Date.now(), "r1")!.timers).toHaveLength(2);
+
+    vi.advanceTimersByTime(3 * 60_000 + 1_000);
+    summary = summarizeCookTimers(getCookTimersSnapshot().timers, Date.now())!;
+    expect(summary.done).toBe(true);
+    expect(summary.lead.key).toBe(short);
+  });
+
+  it("garde puis oublie la préparation d'une recette", () => {
+    saveCookSession("r1", { servings: 6, groupIndex: 1, done: [[true], [false]] });
+    expect(getCookSession("r1")?.servings).toBe(6);
+    saveCookSession("r1", null);
+    expect(getCookSession("r1")).toBeUndefined();
   });
 });
