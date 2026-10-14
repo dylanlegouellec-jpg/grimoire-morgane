@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { getStoredSoundEffects, storeSoundEffects, getStoredHapticFeedback, storeHapticFeedback, getStoredBackGestureCloses, storeBackGestureCloses } from "../../utils/localSettings";
 import { playClickSound } from "../../utils/audioUtils";
-import { triggerHaptic } from "../../utils/haptics";
+import { triggerHaptic, triggerHapticFeedback, hapticsDiagnostic } from "../../utils/haptics";
 import Flourish from "./Flourish";
 import SegmentedControl from "./SegmentedControl";
 import Switch from "./Switch";
@@ -56,6 +56,20 @@ export default function AccessibilitySettingsModal({
     if (value) triggerHaptic(15);
   };
 
+  // Bouton « Tester » : déclenche le retour tactile et dit ce que l'app a pu
+  // faire sur CET appareil (clic iPhone, vibration Android, ou seulement le
+  // pulse visuel) — pour vérifier sans deviner.
+  const [hapticTestResult, setHapticTestResult] = useState<string | null>(null);
+  const testHaptic = (target: HTMLElement) => {
+    const d = hapticsDiagnostic();
+    const felt = triggerHapticFeedback(target, [30, 60, 30]);
+    if (!d.enabled) setHapticTestResult(t("settings.hapticTestOff"));
+    else if (d.vibrationApi) setHapticTestResult(t(felt ? "settings.hapticTestVibrated" : "settings.hapticTestNone"));
+    else if (d.iosClick) setHapticTestResult(t(felt ? "settings.hapticTestIosClick" : "settings.hapticTestIosNoGesture", { version: d.iosVersion }));
+    else if (d.ios) setHapticTestResult(t("settings.hapticTestIosOld", { version: d.iosVersion || "?" }));
+    else setHapticTestResult(t("settings.hapticTestNone"));
+  };
+
   const [backGesture, setBackGestureState] = useState(() => getStoredBackGestureCloses());
   const setBackGesture = (value: boolean) => {
     storeBackGestureCloses(value);
@@ -104,6 +118,12 @@ export default function AccessibilitySettingsModal({
             <span className="settings-row-sub">{t("settings.hapticFeedbackHint")}</span>
           </div>
           <Switch checked={hapticFeedback} onChange={setHapticFeedback} label={t("settings.hapticFeedback")} />
+        </div>
+        <div className="settings-row settings-row-test">
+          <button type="button" className="link-btn" onClick={(e) => testHaptic(e.currentTarget)}>
+            {t("settings.hapticTest")}
+          </button>
+          {hapticTestResult && <span className="settings-row-sub" role="status">{hapticTestResult}</span>}
         </div>
         <div className="settings-row">
           <div className="settings-row-label">
