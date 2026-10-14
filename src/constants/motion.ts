@@ -62,17 +62,23 @@ export const SCOPE_SWITCH_SLIDE_PX = 14;
 // --- Modales et feuilles ----------------------------------------------
 interface FadeMotion {
   initial: { opacity: number };
-  animate: { opacity: number };
-  exit: { opacity: number };
+  animate: { opacity: number; pointerEvents: "auto" };
+  exit: { opacity: number; pointerEvents: "none" };
   transition: { duration: number };
 }
 
 // Fond assombri derrière la feuille — simple fondu, pas de ressort (un
 // fond qui "rebondit" n'aurait aucun sens visuel).
+// pointerEvents "none" dès le DÉBUT de la sortie (valeur non animable,
+// appliquée tout de suite) : le fond et sa feuille, encore visibles le temps
+// de s'effacer, laissent passer les touchers. Avant, après avoir fermé une
+// fenêtre (Réglages…), la page restait intouchable ~0,5 s, le temps de
+// l'animation de sortie. Le verrou de défilement est, lui, rendu au même
+// moment (voir hooks/useBodyScrollLock.ts).
 export const MODAL_BACKDROP_MOTION: FadeMotion = {
   initial: { opacity: 0 },
-  animate: { opacity: 1 },
-  exit: { opacity: 0 },
+  animate: { opacity: 1, pointerEvents: "auto" },
+  exit: { opacity: 0, pointerEvents: "none" },
   transition: { duration: 0.22 },
 };
 
