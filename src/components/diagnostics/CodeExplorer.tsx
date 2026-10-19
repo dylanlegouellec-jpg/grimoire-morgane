@@ -147,7 +147,19 @@ export default function CodeExplorer() {
   const linesLabel = (count: number) => t("diagnostics.codeLines", { count: count.toLocaleString(), plural: plural(count) });
   const moreLabel = (count: number) => t("diagnostics.codeMore", { count });
 
+  // Toute la section tient dans UN bloc repliable, fermé par défaut : le
+  // panneau de diagnostic reste court, et rien n'est rendu tant qu'on ne
+  // l'ouvre pas.
   return (
+    <Disclosure
+      className="code-disclosure--root"
+      header={() => (
+        <>
+          <span className="code-disclosure-title"><span className="code-group-title">{t("diagnostics.codeTitle")}</span></span>
+          <span className="code-meta">{filesLabel(files.length)} · {linesLabel(totalLines)}</span>
+        </>
+      )}
+    >
     <div className="code-explorer">
       <p className="hint code-intro">{t("diagnostics.codeIntro")}</p>
       <p className="code-total">
@@ -230,5 +242,6 @@ export default function CodeExplorer() {
         );
       })}
     </div>
+    </Disclosure>
   );
 }

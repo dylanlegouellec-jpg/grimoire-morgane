@@ -51,6 +51,10 @@
 .code-total { margin: 0 6px 4px; font-size: 0.85rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 .code-disclosure { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); }
 .code-disclosure--file { border-radius: 10px; background: var(--surface-strong); }
+/* Bloc unique « Code de l'app » (replié par défaut) : même écart au-dessus
+   que les titres de section du panneau. */
+.code-disclosure--root { margin-top: 18px; }
+.code-disclosure--root > .code-panel > .code-explorer { padding: 0 8px 10px; }
 .code-disclosure-header {
   display: flex; align-items: center; gap: 10px; width: 100%;
   background: none; border: none; padding: 11px 14px; cursor: pointer; text-align: left; color: var(--ink);

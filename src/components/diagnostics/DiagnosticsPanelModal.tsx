@@ -352,8 +352,7 @@ export default function DiagnosticsPanelModal({ onClose, showToast, onResetOnboa
             </div>
             <p className="hint code-intro">{t("diagnostics.forceUpdateHint")}</p>
 
-            {/* --- Code de l'app : menus déroulants par dossier puis par fichier --- */}
-            <p className="ios-group-title">{t("diagnostics.codeTitle")}</p>
+            {/* --- Code de l'app : un seul bloc repliable (dossiers puis fichiers dedans) --- */}
             <CodeExplorer />
 
             {/* --- Stockage appareil --- */}
