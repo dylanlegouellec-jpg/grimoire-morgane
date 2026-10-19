@@ -94,3 +94,31 @@ describe("ShareRecipeModal — Fiche PDF", () => {
     expect(config.showSteps).toBe(true);
   });
 });
+
+describe("ShareRecipeModal — texte partagé : ligne des portions", () => {
+  const shareTextOf = async (recipe: Recipe, servings: number) => {
+    const share = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "share", { value: share, configurable: true, writable: true });
+    render(
+      <LanguageProvider language="fr">
+        <ShareRecipeModal recipe={recipe} servings={servings} ingredients={recipe.ingredients} onClose={() => {}} shareText={vi.fn()} showToast={vi.fn()} />
+      </LanguageProvider>
+    );
+    await userEvent.click(screen.getByText("Texte Épuré"));
+    await waitFor(() => expect(share).toHaveBeenCalled());
+    const text = (share.mock.calls[0][0] as { text: string }).text;
+    Object.defineProperty(navigator, "share", { value: undefined, configurable: true, writable: true });
+    return text.split("\n");
+  };
+
+  it("recette à l'unité : « Pour 20 cookies » sous le titre", async () => {
+    const lines = await shareTextOf({ ...RECIPE, title: "Cookies", servingsUnit: "cookies" } as Recipe, 20);
+    expect(lines.slice(0, 2)).toEqual(["Cookies", "Pour 20 cookies"]);
+  });
+
+  it("recette en personnes : « Pour 6 personnes » (et « 1 personne »)", async () => {
+    expect((await shareTextOf(RECIPE, 6))[1]).toBe("Pour 6 personnes");
+    cleanup();
+    expect((await shareTextOf(RECIPE, 1))[1]).toBe("Pour 1 personne");
+  });
+});

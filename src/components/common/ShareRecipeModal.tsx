@@ -27,6 +27,7 @@ import Switch from "./Switch";
 import type { Recipe } from "../../hooks/useRecipes";
 import type { NormalizedIngredient } from "../../utils/ingredients";
 import type { NutriscoreGrade } from "../../utils/nutriscoreClient";
+import { unitServingsText } from "../../utils/servingsUnit";
 
 interface ShareRecipeModalProps {
   recipe: Recipe;
@@ -56,7 +57,11 @@ function buildShareText(
   ingredients: NormalizedIngredient[],
   includeNotes: boolean
 ): string {
-  const lines = [translateRecipeText(recipe.title, language), "", t("share.shareTextIngredients")];
+  // « Pour 20 cookies » / « Pour 4 personnes » : les portions affichées sur la
+  // fiche au moment du partage (quantités ci-dessous calculées pour elles).
+  const servingsText = unitServingsText(t, servings, recipe.servingsUnit, language)
+    ?? t(servings === 1 ? "share.shareTextPeopleOne" : "share.shareTextPeople", { count: servings });
+  const lines = [translateRecipeText(recipe.title, language), t("share.shareTextFor", { value: servingsText }), "", t("share.shareTextIngredients")];
   groupIngredients(ingredients).forEach((g) => {
     if (g.title) lines.push(`— ${translateRecipeText(g.title, language)} —`);
     g.items.forEach((it) => lines.push(`• ${[it.qty, it.unit ? translateRecipeText(it.unit, language) : ""].filter(Boolean).join(" ")} ${translateRecipeText(it.name, language)}`.trim()));
