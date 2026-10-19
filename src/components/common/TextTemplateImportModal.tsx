@@ -48,7 +48,7 @@ export default function TextTemplateImportModal({ onClose, onImport }: TextTempl
         <h2 className="dropcap-title">{t("modals.textTemplate.title")}</h2>
         <Flourish />
         <p className="hint" style={{ fontStyle: "normal" }}>
-          {t("modals.textTemplate.hint")}
+          {t("modals.textTemplate.hint")} {t("servingsUnit.templateHint")}
         </p>
         <textarea
           rows={12}

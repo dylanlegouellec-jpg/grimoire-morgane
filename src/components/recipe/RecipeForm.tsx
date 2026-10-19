@@ -30,6 +30,8 @@ import {
 } from "./form/recipeFormRows";
 import { IngredientsEditor, StepsEditor } from "./form/RowEditors";
 import NutritionSection from "./form/NutritionSection";
+import ServingsPickerModal from "./form/ServingsPickerModal";
+import { normalizeServingsUnit, servingsUnitFor, unitServingsText } from "../../utils/servingsUnit";
 import {
   FLIGHT_MS,
   INK_INTRO_MS,
@@ -81,12 +83,14 @@ interface RecipeFormProps {
 
 export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, pressDuration = 750, inkOrigin }: RecipeFormProps) {
   const isPresent = useBodyScrollLock(true);
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const isEdit = !!initialRecipe;
   const [title, setTitle] = useState<string>(initialRecipe ? initialRecipe.title : "");
   const [category, setCategory] = useState<string>(initialRecipe ? initialRecipe.category : "Salé");
   const [time, setTime] = useState<number>(initialRecipe ? initialRecipe.time : 30);
   const [servings, setServings] = useState<number>(initialRecipe ? initialRecipe.servings : 4);
+  // null = « personnes » ; sinon unité libre (« cookies »...), voir utils/servingsUnit.ts.
+  const [servingsUnit, setServingsUnit] = useState<string | null>(() => normalizeServingsUnit(initialRecipe?.servingsUnit));
   const [nutrition, setNutrition] = useState<NutritionValues>(() => nutritionFromRecipe(initialRecipe));
   const [notes, setNotes] = useState<string>(initialRecipe && initialRecipe.notes ? initialRecipe.notes : "");
   const [newIngredientId] = useState(() => makeRowIdFactory("ing"));
@@ -137,7 +141,7 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
   // État "modifié" (dirty) : compare un instantané JSON des champs
   // pertinents à leur valeur au tout premier rendu (voir rowsSnapshot).
   const buildSnapshot = () =>
-    JSON.stringify({ title, category, time, servings, nutrition, notes, ...rowsSnapshot(ingredientRows, stepRows) });
+    JSON.stringify({ title, category, time, servings, servingsUnit, nutrition, notes, ...rowsSnapshot(ingredientRows, stepRows) });
   const initialSnapshotRef = useRef<string | null>(null);
   if (initialSnapshotRef.current === null) initialSnapshotRef.current = buildSnapshot();
   const isDirty = initialSnapshotRef.current !== buildSnapshot();
@@ -214,6 +218,7 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
       category,
       time: Number(time) || 30,
       servings: Number(servings) || 4,
+      servingsUnit,
       carbs: toNumberOrNull(nutrition.carbs),
       calories: toNumberOrNull(nutrition.calories),
       protein: toNumberOrNull(nutrition.protein),
@@ -357,11 +362,13 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
               className="wheel-trigger-btn"
               onClick={() => { triggerHaptic(15); setShowServingsWheel(true); }}
             >
-              {t("recipeUi.form.servingsValue", { count: Number(servings) || 1 })}
+              {unitServingsText(t, Number(servings) || 1, servingsUnit, language) ?? t("recipeUi.form.servingsValue", { count: Number(servings) || 1 })}
             </button>
           </label>
         </div>
         <NutritionSection
+          // « par cookie » plutôt que « par portion » pour une recette à l'unité.
+          toggleLabel={servingsUnit ? t("servingsUnit.nutritionToggle", { unit: servingsUnitFor(servingsUnit, 1) }) : undefined}
           values={nutrition}
           onChange={setNutrition}
           getEstimateInput={() => ({ ingredients: ingredientsFromRows(ingredientRows), servings: Number(servings) || 4 })}
@@ -416,11 +423,10 @@ export default function RecipeForm({ onClose, onSave, onDelete, initialRecipe, p
     </AnimatePresence>
     <AnimatePresence>
       {showServingsWheel && (
-        <WheelPickerModal
-          title={t("recipeUi.form.servingsLabel")}
-          hint={t("recipeUi.form.servingsWheelHint")}
-          columns={[{ key: "servings", initialValue: Number(servings) || 1, min: 1, max: 24, suffix: t("recipeUi.form.servingsSuffix") }]}
-          onSave={({ servings: s }) => setServings(s)}
+        <ServingsPickerModal
+          servings={Number(servings) || 1}
+          unit={servingsUnit}
+          onSave={({ servings: s, unit }) => { setServings(s); setServingsUnit(unit); }}
           onClose={() => setShowServingsWheel(false)}
         />
       )}

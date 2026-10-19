@@ -26,9 +26,12 @@ interface PortionBadgeProps {
   onOpenChange: (open: boolean) => void;
   min?: number;
   max?: number;
+  /** Unité déjà accordée et traduite (« cookies »), à la place de « parts » ;
+   *  absente = recette en personnes (voir utils/servingsUnit.ts). */
+  unitLabel?: string | null;
 }
 
-export default function PortionBadge({ value, onChange, open, onOpenChange, min = 1, max = 24 }: PortionBadgeProps) {
+export default function PortionBadge({ value, onChange, open, onOpenChange, min = 1, max = 24, unitLabel = null }: PortionBadgeProps) {
   const { t } = useTranslation();
   const reduceMotion = useReducedMotion();
   const transition = reduceMotion ? { duration: 0 } : SPRING_BADGE;
@@ -78,7 +81,9 @@ export default function PortionBadge({ value, onChange, open, onOpenChange, min 
         className="portion-badge-value"
         onClick={() => { triggerHaptic(10); onOpenChange(!open); }}
         aria-expanded={open}
-        aria-label={open ? t("cookPortions.done") : t("cookPortions.adjust", { count: value })}
+        aria-label={open
+          ? t("cookPortions.done")
+          : unitLabel ? t("servingsUnit.cookAdjust", { count: value, unit: unitLabel }) : t("cookPortions.adjust", { count: value })}
       >
         <AnimatedNumber value={value} className="portion-badge-number" />
         <AnimatePresence initial={false}>
@@ -91,7 +96,7 @@ export default function PortionBadge({ value, onChange, open, onOpenChange, min 
               exit={{ opacity: 0, width: 0 }}
               transition={reduceMotion ? { duration: 0 } : { duration: 0.2 }}
             >
-              {value > 1 ? t("cookPortions.unitOther") : t("cookPortions.unitOne")}
+              {unitLabel || (value > 1 ? t("cookPortions.unitOther") : t("cookPortions.unitOne"))}
             </motion.span>
           )}
         </AnimatePresence>

@@ -167,6 +167,13 @@ const CULINARY_FR_EN: [string, string][] = [
   ["sachets", "packets"],
   ["sachet", "packet"],
   ["unité", "unit"],
+  // Unités qu'un foyer ajoute volontiers (Réglages > Unités des ingrédients,
+  // voir utils/units.ts — suggestions en un appui) ; une unité ajoutée
+  // inconnue d'ici s'affiche simplement telle qu'écrite.
+  ["tranches", "slices"],
+  ["tranche", "slice"],
+  ["verres", "glasses"],
+  ["verre", "glass"],
 
   // Ingrédients courants
   ["farine", "flour"],

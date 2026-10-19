@@ -21,9 +21,11 @@ interface NutritionSectionProps {
   onChange: (values: NutritionValues) => void;
   /** Ingrédients actuels du formulaire et nombre de parts, pour l'estimation en ligne. */
   getEstimateInput: () => { ingredients: Parameters<typeof estimateNutritionOnline>[0]; servings: number };
+  /** Libellé du bouton dépliant ; absent = « Valeurs nutritionnelles (par portion) ». */
+  toggleLabel?: string;
 }
 
-export default function NutritionSection({ values, onChange, getEstimateInput }: NutritionSectionProps) {
+export default function NutritionSection({ values, onChange, getEstimateInput, toggleLabel }: NutritionSectionProps) {
   const { t } = useTranslation();
   // Repliée par défaut, sauf si la recette a déjà au moins une valeur
   // nutritionnelle renseignée (édition) — pas de raison de la cacher dans
@@ -74,7 +76,7 @@ export default function NutritionSection({ values, onChange, getEstimateInput }:
         data-tour="recipe-nutrition"
         onClick={() => { triggerHaptic(10); setOpen((v) => !v); }}
       >
-        <span>{t("recipeUi.form.nutritionToggle")}</span>
+        <span>{toggleLabel || t("recipeUi.form.nutritionToggle")}</span>
         <ChevronDown size={16} className={`nutrition-chevron ${open ? "open" : ""}`} />
       </button>
       {open && (

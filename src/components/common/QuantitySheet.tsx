@@ -4,6 +4,8 @@ import { motion } from "motion/react";
 import { triggerHaptic } from "../../utils/haptics";
 import { MODAL_BACKDROP_MOTION, MODAL_SHEET_MOTION } from "../../constants/motion";
 import { useTranslation } from "../../contexts/LanguageContext";
+import { useUnits } from "../../contexts/UnitsContext";
+import { shoppingUnitOptions } from "../../utils/units";
 import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 import useFocusTrap from "../../hooks/useFocusTrap";
 import useDismissibleSheet from "../../hooks/useDismissibleSheet";
@@ -19,6 +21,10 @@ import type { ShoppingItem } from "../../hooks/useShoppingLists";
 /*  Ici : un champ de saisie direct + des raccourcis courants + un          */
 /*  sélecteur d'unité, façon bottom sheet iOS.                              */
 /* ------------------------------------------------------------------ */
+// Liste PROPRE aux courses (« L », « unité » générique des raccourcis
+// 1/2 ci-dessous), ajustée par les réglages du foyer (Réglages > Unités des
+// ingrédients) : unités de base masquées retirées, unités ajoutées en plus
+// — voir shoppingUnitOptions, utils/units.ts.
 const UNIT_OPTIONS = ["g", "kg", "ml", "cl", "L", "sachet", "unité"];
 const QUICK_PICKS = [
   { value: 1, unit: "unité", label: "1" },
@@ -43,6 +49,9 @@ export default function QuantitySheet({ item, onChange, onClose }: QuantitySheet
   const sheet = useDismissibleSheet(onClose, { scrollRef: modalRef });
   const [value, setValue] = useState(item.qty > 0 ? String(Math.round(item.qty * 100) / 100) : "");
   const [unit, setUnit] = useState(item.unit || "unité");
+  const { unitSettings } = useUnits();
+  // L'unité d'origine de l'article reste proposée même si le foyer l'a masquée.
+  const unitOptions = shoppingUnitOptions(unitSettings, UNIT_OPTIONS, item.unit || "unité", ["unité"]);
 
   const applyQuickPick = (qp: typeof QUICK_PICKS[number]) => {
     triggerHaptic(12);
@@ -90,7 +99,7 @@ export default function QuantitySheet({ item, onChange, onClose }: QuantitySheet
 
         <p className="ios-group-title">{t("modals.quantity.quickPicks")}</p>
         <div className="qty-sheet-quick-picks">
-          {QUICK_PICKS.map((qp) => (
+          {QUICK_PICKS.filter((qp) => unitOptions.includes(qp.unit)).map((qp) => (
             <button key={qp.label} type="button" className="qty-sheet-chip" onClick={() => applyQuickPick(qp)}>
               {qp.label}
             </button>
@@ -99,7 +108,7 @@ export default function QuantitySheet({ item, onChange, onClose }: QuantitySheet
 
         <p className="ios-group-title">{t("modals.quantity.unit")}</p>
         <div className="qty-sheet-units">
-          {UNIT_OPTIONS.map((u) => (
+          {unitOptions.map((u) => (
             <button
               key={u}
               type="button"

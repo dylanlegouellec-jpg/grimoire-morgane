@@ -120,6 +120,9 @@ export default function ShareRecipeModal({ recipe, servings, ingredients, onClos
       category: recipe.category,
       time: recipe.time,
       servings,
+      // Absente (= personnes) plutôt que null : lien inchangé pour une
+      // recette en personnes, et ancien lien toujours lisible tel quel.
+      servingsUnit: recipe.servingsUnit || undefined,
       ingredients,
       steps: recipe.steps,
       imageUrl: includePhoto && hasPhoto ? recipe.imageUrl : undefined,

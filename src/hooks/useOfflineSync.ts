@@ -18,6 +18,8 @@ import { getOfflineQueueSize } from "../utils/offlineQueue";
 import { saveLocalCache } from "../utils/localCache";
 import { prefetchRecipeImages } from "../utils/imageCache";
 import { translateCurrent } from "../utils/i18n";
+import { normalizeUnitSettings } from "../utils/units";
+import type { UnitSettings } from "../utils/units";
 import type { Dispatch, SetStateAction } from "react";
 import type { LocalCacheData } from "../utils/localCache";
 import type { ConnectionStatus } from "./useConnectionStatus";
@@ -65,6 +67,11 @@ interface UseOfflineSyncParams {
   setBasics: Dispatch<SetStateAction<string[]>>;
   mealPlan: MealPlanEntry[];
   setMealPlan: Dispatch<SetStateAction<MealPlanEntry[]>>;
+  // Unités d'ingrédients du foyer (app_state.units, voir utils/units.ts) —
+  // optionnelles : sans elles (anciens harnais de test), rien n'est
+  // synchronisé pour cette tranche.
+  units?: UnitSettings | null;
+  setUnits?: Dispatch<SetStateAction<UnitSettings | null>>;
   shoppingLists: ShoppingList[];
   setShoppingLists: Dispatch<SetStateAction<ShoppingList[]>>;
   activeListId: string | null;
@@ -87,6 +94,8 @@ export default function useOfflineSync({
   setBasics,
   mealPlan,
   setMealPlan,
+  units = null,
+  setUnits,
   shoppingLists,
   setShoppingLists,
   activeListId,
@@ -118,6 +127,7 @@ export default function useOfflineSync({
   const lastSyncedPantryRef = useRef<string | undefined>(undefined);
   const lastSyncedBasicsRef = useRef<string | undefined>(undefined);
   const lastSyncedMealPlanRef = useRef<string | undefined>(undefined);
+  const lastSyncedUnitsRef = useRef<string | undefined>(undefined);
 
   // Bug réel corrigé ici (pas juste théorique — "je coche un ingrédient du
   // frigo et parfois ça le décoche tout seul, je dois recliquer") : entre
@@ -143,6 +153,7 @@ export default function useOfflineSync({
   const pantryDirtyRef = useRef(false);
   const basicsDirtyRef = useRef(false);
   const mealPlanDirtyRef = useRef(false);
+  const unitsDirtyRef = useRef(false);
 
   // Second filet de sécurité (indépendant du mécanisme d'écho ci-dessus) :
   // un vrai debounce sur l'envoi réseau lui-même. Quelle qu'en soit la
@@ -154,6 +165,7 @@ export default function useOfflineSync({
   const pantrySaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const basicsSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mealPlanSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const unitsSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Cadence du filet de sécurité périodique de rejeu de la file hors-ligne
   // (voir l'effet plus bas) — alignée sur PING_INTERVAL_MS de
@@ -173,6 +185,7 @@ export default function useOfflineSync({
       pantryDirtyRef.current = false;
       basicsDirtyRef.current = false;
       mealPlanDirtyRef.current = false;
+      unitsDirtyRef.current = false;
       loadedHouseholdRef.current = householdId;
     }
     const hasCache = Array.isArray(localCache.recipes) && localCache.recipes.length > 0;
@@ -228,6 +241,12 @@ export default function useOfflineSync({
         if (!mealPlanDirtyRef.current) {
           setMealPlan(loadedMealPlan);
           lastSyncedMealPlanRef.current = JSON.stringify(loadedMealPlan);
+        }
+        // `null` (colonne vide) = liste d'unités par défaut, voir utils/units.ts.
+        if (setUnits && !unitsDirtyRef.current) {
+          const loadedUnits = normalizeUnitSettings(state && state.units);
+          setUnits(loadedUnits);
+          lastSyncedUnitsRef.current = JSON.stringify(loadedUnits);
         }
         const mappedLists = ((listRows || []).map(mapRowToShoppingList) as ShoppingList[]).map(withPendingShoppingOps);
         setShoppingLists(mappedLists);
@@ -300,9 +319,9 @@ export default function useOfflineSync({
   // ligne (voir hooks/useSupabaseAuth.js, getStoredActiveHouseholdId).
   useEffect(() => {
     if (!ready) return;
-    saveLocalCache({ recipes, pantry, basics, mealPlan, shoppingLists, activeListId, householdId });
+    saveLocalCache({ recipes, pantry, basics, mealPlan, units, shoppingLists, activeListId, householdId });
     setOfflineQueueSize(getOfflineQueueSize());
-  }, [ready, recipes, pantry, basics, mealPlan, shoppingLists, activeListId, householdId]);
+  }, [ready, recipes, pantry, basics, mealPlan, units, shoppingLists, activeListId, householdId]);
 
   // Persistance du frigo/basiques/plan de repas dans app_state. Gatée sur
   // `ready` : tant que le chargement initial n'est pas terminé, on ne veut
@@ -375,6 +394,24 @@ export default function useOfflineSync({
     }, SAVE_DEBOUNCE_MS);
     return () => { if (mealPlanSaveTimerRef.current) clearTimeout(mealPlanSaveTimerRef.current); };
   }, [mealPlan, ready, householdId, showToast]);
+  // Unités d'ingrédients (Réglages > Unités) : même protocole que les trois
+  // tranches ci-dessus (debounce, drapeau « en cours », baseline de conflit).
+  useEffect(() => {
+    if (!ready || !SUPABASE_READY || !householdId || !setUnits) return undefined;
+    const serialized = JSON.stringify(units);
+    if (serialized === lastSyncedUnitsRef.current) return undefined;
+    unitsDirtyRef.current = true;
+    if (unitsSaveTimerRef.current) clearTimeout(unitsSaveTimerRef.current);
+    unitsSaveTimerRef.current = setTimeout(() => {
+      saveAppState(householdId, { units }, { units: parseBaseline(lastSyncedUnitsRef.current) })
+        .then(() => { lastSyncedUnitsRef.current = serialized; unitsDirtyRef.current = false; })
+        .catch((err) => {
+          console.error("Échec de sauvegarde des unités :", err);
+          showToast(translateCurrent("unitsSettings.saveFailed"));
+        });
+    }, SAVE_DEBOUNCE_MS);
+    return () => { if (unitsSaveTimerRef.current) clearTimeout(unitsSaveTimerRef.current); };
+  }, [units, setUnits, ready, householdId, showToast]);
 
   // Rejoue la file d'attente hors-ligne, puis rafraîchit depuis Supabase —
   // no-op immédiat si la file est déjà vide (appelé aussi bien à chaque
@@ -410,6 +447,7 @@ export default function useOfflineSync({
           if (Array.isArray(state.pantry) && !pantryDirtyRef.current) { setPantry(state.pantry); lastSyncedPantryRef.current = JSON.stringify(state.pantry); }
           if (state.basics && !basicsDirtyRef.current) { setBasics(state.basics); lastSyncedBasicsRef.current = JSON.stringify(state.basics); }
           if (Array.isArray(state.meal_plan) && !mealPlanDirtyRef.current) { setMealPlan(state.meal_plan); lastSyncedMealPlanRef.current = JSON.stringify(state.meal_plan); }
+          if (setUnits && "units" in state && !unitsDirtyRef.current) { const u = normalizeUnitSettings(state.units); setUnits(u); lastSyncedUnitsRef.current = JSON.stringify(u); }
         }
       } catch (err) {
         console.error("Rafraîchissement après conflit impossible :", err);
@@ -430,7 +468,7 @@ export default function useOfflineSync({
         );
       }
       if (conflicts && conflicts.length) {
-        const labels: Record<string, string> = { pantry: translateCurrent("messages.sync.fieldPantry"), basics: translateCurrent("messages.sync.fieldBasics"), meal_plan: translateCurrent("messages.sync.fieldMealPlan") };
+        const labels: Record<string, string> = { pantry: translateCurrent("messages.sync.fieldPantry"), basics: translateCurrent("messages.sync.fieldBasics"), meal_plan: translateCurrent("messages.sync.fieldMealPlan"), units: translateCurrent("unitsSettings.syncField") };
         const fields = [...new Set(conflicts.flatMap((c) => c.keys))].map((k) => labels[k] || k);
         parts.push(translateCurrent("messages.sync.conflict", { fields: fields.join(translateCurrent("messages.sync.fieldsJoiner")) }));
       }
@@ -447,7 +485,7 @@ export default function useOfflineSync({
     } catch (err) {
       console.error("Rafraîchissement après reconnexion impossible :", err);
     }
-  }, [householdId, showToast, setRecipes, setShoppingLists, setPantry, setBasics, setMealPlan]);
+  }, [householdId, showToast, setRecipes, setShoppingLists, setPantry, setBasics, setMealPlan, setUnits]);
 
   // Réaction à un changement de statut de connexion RÉEL (voir
   // `connectionStatus`, hooks/useConnectionStatus.js — un vrai ping
@@ -587,6 +625,13 @@ export default function useOfflineSync({
         if (Array.isArray(row.meal_plan) && !mealPlanDirtyRef.current) {
           lastSyncedMealPlanRef.current = JSON.stringify(row.meal_plan);
           setMealPlan(row.meal_plan);
+        }
+        // Colonne présente dans la ligne (même à null = liste par défaut) :
+        // c'est la valeur du foyer, à appliquer sauf modification locale en cours.
+        if (setUnits && "units" in row && !unitsDirtyRef.current) {
+          const incomingUnits = normalizeUnitSettings(row.units);
+          lastSyncedUnitsRef.current = JSON.stringify(incomingUnits);
+          setUnits(incomingUnits);
         }
       })
       .subscribe();

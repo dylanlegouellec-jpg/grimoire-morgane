@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Activity, BookOpen, ChevronLeft, ChevronRight, Compass, Home, LogOut, Palette, Pencil, Save, SlidersHorizontal, Sparkles, UserCircle2, X } from "lucide-react";
+import { Activity, BookOpen, ChevronLeft, ChevronRight, Compass, Home, LogOut, Palette, Pencil, Save, Scale, SlidersHorizontal, Sparkles, UserCircle2, X } from "lucide-react";
 import { triggerHaptic } from "../../utils/helpers";
 import { getCachedProfile, getProfile } from "../../utils/profile";
 import type { ProfileRow } from "../../utils/profile";
@@ -16,13 +16,14 @@ import ProfileEditor from "./ProfileEditor";
 import AppearanceSettingsModal from "./AppearanceSettingsModal";
 import AccessibilitySettingsModal from "./AccessibilitySettingsModal";
 import DataBackupModal from "./DataBackupModal";
+import UnitsSettingsModal from "./UnitsSettingsModal";
 import NutritionBatchModal from "./NutritionBatchModal";
 import type { Recipe } from "../../hooks/useRecipes";
 import type { SaveRecipeFn } from "../../utils/nutritionBatch";
 import HouseholdManagerModal from "./HouseholdManagerModal";
 import type { Household } from "../../utils/auth";
 
-type SettingsView = "main" | "appearance" | "accessibility" | "backup" | "household" | "nutrition";
+type SettingsView = "main" | "appearance" | "accessibility" | "units" | "backup" | "household" | "nutrition";
 
 interface SecretSettingsModalUser {
   id: string;
@@ -313,6 +314,11 @@ export default function SecretSettingsModal({
               <span className="ios-row-title">{t("settings.accessibility")}</span>
               <ChevronRight size={18} className="ios-chevron" />
             </button>
+            <button type="button" className="ios-row" onClick={() => { triggerHaptic(15); setActiveView("units"); }}>
+              <span className="ios-row-icon" style={{ background: "var(--forest)" }}><Scale size={16} /></span>
+              <span className="ios-row-title">{t("unitsSettings.settingsRow")}</span>
+              <ChevronRight size={18} className="ios-chevron" />
+            </button>
           </div>
 
           <p className="ios-group-title">{t("settings.dataHousehold")}</p>
@@ -440,6 +446,7 @@ export default function SecretSettingsModal({
               onSetTextSize={onSetTextSize}
             />
           )}
+          {activeView === "units" && <UnitsSettingsModal />}
           {activeView === "backup" && (
             <DataBackupModal
               onExport={onExport}

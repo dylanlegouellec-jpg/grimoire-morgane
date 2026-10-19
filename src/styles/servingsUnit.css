@@ -1,0 +1,45 @@
+/* ------------------------------------------------------------------ */
+/*  UNITÉ DES PORTIONS — « pour 20 cookies » (utils/servingsUnit.ts)     */
+/*  Feuille de choix du formulaire (form/ServingsPickerModal.tsx), unité  */
+/*  après le nombre sur la fiche et sur la carte de la grille.            */
+/* ------------------------------------------------------------------ */
+
+/* --- Feuille Portions du formulaire --- */
+.servings-picker .segmented { margin: 2px 0 10px; }
+.servings-picker-hint { font-style: normal; margin-bottom: 4px; }
+/* L'unité saisie sert de suffixe à la roue : bornée, jamais sur deux lignes. */
+.servings-picker .portion-wheel-suffix {
+  max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.servings-picker-unit { text-align: left; margin-top: 12px; }
+.servings-picker-unit .field { margin-bottom: 8px; }
+.servings-picker-suggestions { display: flex; flex-wrap: wrap; gap: 7px; }
+.servings-picker-chip {
+  font-family: 'EB Garamond', serif; font-size: 0.88rem; color: var(--ink);
+  background: var(--surface-strong); border: 1px solid var(--line); border-radius: 999px;
+  padding: 6px 13px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.servings-picker-chip:active { background: var(--surface); }
+.servings-picker-chip.active {
+  color: var(--gold-text); border-color: var(--gold); background: rgba(179,135,42,0.14); font-weight: 600;
+}
+.servings-picker-save { margin-top: 18px; }
+
+/* --- Fiche : « − 20 cookies + » --- */
+.portions-unit {
+  font-family: 'EB Garamond', serif; font-style: italic; font-size: 0.95rem; color: var(--gold-text);
+  max-width: 9.5em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  margin-left: -4px;
+}
+
+/* --- Carte de la grille : « 20 cookies » tronqué si l'unité est longue --- */
+.card-servings-unit { min-width: 0; max-width: 100%; }
+.card-servings-unit > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+/* Téléphone en paysage : la feuille est basse, on resserre. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .servings-picker .segmented { margin-bottom: 4px; }
+  .servings-picker-hint { display: none; }
+  .servings-picker-unit { margin-top: 6px; }
+  .servings-picker-save { margin-top: 10px; }
+}

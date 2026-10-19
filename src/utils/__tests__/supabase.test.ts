@@ -12,7 +12,7 @@ vi.mock("../supabaseClient", () => ({
   getSupabaseClient: () => null,
 }));
 
-import { saveAppState, flushOfflineQueue, fetchTable, updateRow } from "../supabase";
+import { saveAppState, flushOfflineQueue, fetchTable, updateRow, loadAppState, APP_STATE_COLUMNS } from "../supabase";
 import { getLastSyncAt, resetSyncStatusForTests } from "../syncStatus";
 import { enqueueOfflineAction, getOfflineQueue, clearOfflineQueue } from "../offlineQueue";
 
@@ -281,5 +281,32 @@ describe("appel de fonction SQL (rpc) dans la file hors ligne", () => {
     expect(result.flushed).toBe(1);
     expect(fetchMock.mock.calls[0][0]).toMatch(/\/rest\/v1\/rpc\/shopping_list_apply$/);
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ p_list_id: "l1", p_ops: [{ op: "clear" }] });
+  });
+});
+
+describe("app_state.units (unités des ingrédients du foyer)", () => {
+  it("est lue avec le reste de app_state", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse({ body: [{ household_id: "h1", units: { custom: ["sachet"], hidden: [] } }] }));
+    vi.stubGlobal("fetch", fetchMock);
+    expect(APP_STATE_COLUMNS.split(",")).toEqual(expect.arrayContaining(["pantry", "basics", "meal_plan", "units"]));
+    const state = await loadAppState("h1");
+    expect(String(fetchMock.mock.calls[0][0])).toContain("units");
+    expect(state.units).toEqual({ custom: ["sachet"], hidden: [] });
+  });
+
+  it("est écrite par PATCH et détectée en conflit au rejeu comme les autres champs", async () => {
+    const patchMock = vi.fn().mockResolvedValueOnce(jsonResponse({ body: [{ household_id: "h1" }] }));
+    vi.stubGlobal("fetch", patchMock);
+    await saveAppState("h1", { units: { custom: ["sachet"], hidden: [] } });
+    expect(JSON.parse(patchMock.mock.calls[0][1].body)).toEqual({ units: { custom: ["sachet"], hidden: [] } });
+
+    enqueueOfflineAction({
+      table: "app_state", type: "app_state", recordId: "h1",
+      payload: { units: { custom: ["gousse"], hidden: [] } },
+      baseline: { units: null },
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(jsonResponse({ body: [{ household_id: "h1", units: { custom: ["verre"], hidden: [] } }] })));
+    const result = await flushOfflineQueue();
+    expect(result.conflicts).toEqual([{ table: "app_state", keys: ["units"] }]);
   });
 });

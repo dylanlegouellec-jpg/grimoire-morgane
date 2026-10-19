@@ -233,6 +233,8 @@ export const CODE_DOCS: Record<string, string> = {
     "L'écran de connexion avec Google (via Supabase Auth).",
 
   /* --- Contextes ------------------------------------------------------ */
+  "src/contexts/UnitsContext.tsx":
+    "Contexte qui redistribue la liste d'unités du foyer (app_state.units) au formulaire de recette, à la saisie de quantité des courses et aux Réglages, sans passer de props par AppShell.",
   "src/contexts/IconStyleContext.tsx":
     "Redistribue le réglage « style des icônes » (emoji ou vectoriel) à tous les composants qui affichent une icône de catégorie, sans le faire descendre de composant en composant.",
   "src/contexts/LanguageContext.tsx":
@@ -351,6 +353,10 @@ export const CODE_DOCS: Record<string, string> = {
     "Recherche et tri de la grille de recettes : recherche sans accents, mot par mot, dans le titre et les ingrédients, qui tolère une petite faute de frappe ; tri par nom, plus récentes ou plus rapides.",
   "src/utils/shoppingShare.ts":
     "Texte d'une liste de courses à envoyer par message à quelqu'un qui n'a pas l'app : un bloc par rayon avec son emoji, une case par article, les articles déjà pris à la fin.",
+  "src/utils/units.ts":
+    "Unités des ingrédients du foyer (Réglages > Unités) : unités de base, unités ajoutées et masquées, règles d'ajout (doublons sans accents ni majuscules, longueur), menu du formulaire qui garde toujours l'unité d'une ligne, et pastilles d'unité des courses.",
+  "src/utils/servingsUnit.ts":
+    "Unité des portions d'une recette (« pour 20 cookies ») : nettoyage de l'unité saisie (null = personnes), accord singulier/pluriel simple et texte affiché « 20 cookies ». La mise à l'échelle des quantités reste proportionnelle au nombre.",
   "src/utils/shoppingOps.ts":
     "Les modifications d'articles d'une liste de courses (ajouter, cocher, quantité, retirer, vider) : les applique sur l'appareil comme le fait le serveur, et garde de côté celles pas encore confirmées pour les réappliquer sur ce que le serveur renvoie.",
   "src/utils/i18n.ts":
@@ -393,6 +399,10 @@ export const CODE_DOCS: Record<string, string> = {
     "Styles des animations de création et d'enregistrement d'une recette : tache d'encre, plume, champs en cascade, cachet de cire et halo de la carte.",
   "src/styles/recipePager.css":
     "Styles de la vue livre de la fiche recette : page voisine, ombres du tournage, folio « 3 / 24 » et ses flèches.",
+  "src/styles/unitsSettings.css":
+    "Styles de la sous-vue « Unités des ingrédients » des Réglages : rangées, bouton de suppression, champ d'ajout et suggestions.",
+  "src/styles/servingsUnit.css":
+    "Styles de l'unité des portions : feuille de choix du formulaire, unité après le nombre sur la fiche et sur la carte de la grille, version paysage téléphone.",
   "src/styles/cookmode.css":
     "Les styles du mode cuisine : étapes en plein écran, molette de portions, feuille de quantité.",
   "src/styles/diagnostics.css":
@@ -455,6 +465,8 @@ export const CODE_DOCS: Record<string, string> = {
     "Mécanique des animations de création et d'enregistrement d'une recette : minutages, tache d'encre depuis le bouton « + », vol de la feuille vers sa carte et halo doré de la carte scellée.",
   "src/components/recipe/form/QuillAndSeal.tsx":
     "Dessins animés du formulaire de recette : le titre écrit à la plume lettre par lettre et le cachet de cire qui tombe à l'enregistrement.",
+  "src/components/recipe/form/ServingsPickerModal.tsx":
+    "Feuille Portions du formulaire de recette : choix Personnes / À l'unité, roue du nombre, champ d'unité libre avec suggestions en un appui.",
   "src/components/recipe/form/recipeFormRows.ts":
     "Données du formulaire de recette : unités proposées, forme des rangées d'ingrédients et d'étapes, et passage recette <-> rangées (ouverture, enregistrement, détection des modifications).",
   "src/components/recipe/form/FormRows.tsx":
@@ -579,6 +591,8 @@ export const CODE_DOCS: Record<string, string> = {
     "Le titre de l'onglet du navigateur : affiche le nom de la recette ouverte (balise <title> de React 19), et le titre normal revient à la fermeture.",
   "src/components/common/NutritionBatchModal.tsx":
     "Écran des Réglages « Estimer la nutrition des recettes » : liste les recettes sans valeurs nutritionnelles, lance leur estimation avec une barre de progression et l'état de chaque recette, puis affiche un résumé.",
+  "src/components/common/UnitsSettingsModal.tsx":
+    "Sous-vue des Réglages « Unités des ingrédients » : masquer ou afficher les unités de base, supprimer ou ajouter des unités (avec suggestions en un appui), partagées avec tout le foyer.",
   "src/components/common/NavPill.tsx":
     "La pastille sombre sous l'onglet actif de la barre de navigation : elle glisse d'un onglet à l'autre, sa position étant mesurée dans la barre elle-même (le défilement de la page ne la fait plus sauter).",
   "src/components/common/Seal.tsx":
@@ -655,6 +669,8 @@ export const CODE_DOCS: Record<string, string> = {
     "Ferme une faille trouvée à l'audit : une simple demande pour rejoindre un foyer donnait déjà accès à ses recettes, listes et planning. Seuls les membres acceptés y ont droit, la liste des membres ne se modifie plus que par les fonctions prévues, et les photos sont limitées au dossier de son foyer (5 Mo, images seulement).",
   "supabase/migrations/20261013170000_shopping_list_item_ops.sql":
     "Crée la fonction shopping_list_apply : le serveur applique une modification d'article (ajouter, cocher, changer la quantité, retirer, vider) sur sa propre version de la liste, au lieu de recevoir toute la liste. Deux personnes qui font les courses en même temps ne s'écrasent plus.",
+  "supabase/migrations/20261019120000_servings_unit_and_household_units.sql":
+    "Ajoute l'unité des portions d'une recette (recipes.servings_unit, ex. « cookies » ; vide = personnes) et les unités d'ingrédients du foyer (app_state.units).",
   "scripts/countLoc.ts":
     "Compte les lignes de code de src/ au moment du build, pour le chiffre « lignes de code » du Panneau de Diagnostics.",
   "scripts/buildInfo.ts":

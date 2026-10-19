@@ -1,4 +1,5 @@
 import { normalizeIngredientList, parseQuantity } from "../../../utils/ingredients";
+import { DEFAULT_UNITS, preferredDefaultUnit } from "../../../utils/units";
 import type { Recipe } from "../../../hooks/useRecipes";
 
 /* ------------------------------------------------------------------ */
@@ -8,22 +9,16 @@ import type { Recipe } from "../../../hooks/useRecipes";
 /*  des modifications non enregistrées). Aucune dépendance à React.     */
 /* ------------------------------------------------------------------ */
 
-export const UNIT_OPTIONS = [
-  { value: "g", label: "g" },
-  { value: "kg", label: "kg" },
-  { value: "ml", label: "ml" },
-  { value: "cl", label: "cl" },
-  { value: "l", label: "l" },
-  { value: "pièce", label: "pièce(s)" },
-  { value: "pincée", label: "pincée(s)" },
-  { value: "c. à soupe", label: "c. à soupe" },
-  { value: "c. à café", label: "c. à café" },
-  { value: "", label: "Sans unité" },
-];
+// Unités de BASE (avant réglages du foyer) — la liste réellement proposée
+// dans le menu vient de buildUnitOptions (utils/units.ts : unités de base
+// non masquées + unités ajoutées dans Réglages > Unités des ingrédients).
+// Gardé ici pour les anciens imports (components/recipe/index.ts).
+export const UNIT_OPTIONS = DEFAULT_UNITS;
 
 // Libellé AFFICHÉ de chaque unité selon la langue active — la `value`
 // enregistrée avec la recette (ci-dessus) ne change jamais. Les unités
-// absentes de cette table (g, kg, ml...) s'affichent telles quelles.
+// absentes de cette table (g, kg, ml..., et les unités ajoutées par le
+// foyer) s'affichent telles quelles.
 export const UNIT_LABEL_KEYS: Record<string, string> = {
   "pièce": "recipeUi.form.units.piece",
   "pincée": "recipeUi.form.units.pinch",
@@ -64,8 +59,10 @@ export function makeRowIdFactory(prefix: string): () => string {
   return () => `${prefix}-${n++}`;
 }
 
-export function newIngredientRow(id: string): IngredientDataRow {
-  return { id, qty: "", unit: "g", name: "" };
+// Unité pré-remplie : « g », sauf si le foyer l'a masquée (voir
+// preferredDefaultUnit, utils/units.ts) — alors la première proposée.
+export function newIngredientRow(id: string, unit: string = preferredDefaultUnit()): IngredientDataRow {
+  return { id, qty: "", unit, name: "" };
 }
 
 export function ingredientRowsFromRecipe(recipe: Recipe | null | undefined, newId: () => string): IngredientRowT[] {
