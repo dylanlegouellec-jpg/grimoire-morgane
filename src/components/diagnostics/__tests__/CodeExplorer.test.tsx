@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { render, screen, cleanup, waitFor, within } from "@testing-library/react";
+import { render, screen, cleanup, waitFor, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import CodeExplorer from "../CodeExplorer";
 import { LanguageProvider } from "../../../contexts/LanguageContext";
@@ -13,21 +13,36 @@ import { CODE_DOCS, shortRole } from "../../../constants/codeMap";
 const TOAST_PATH = "src/hooks/useToast.ts";
 const toastFile = __GRIMOIRE_CODE__.files.find((f) => f.path === TOAST_PATH)!;
 
-function renderExplorer(language = "fr") {
-  return render(
+// Toute la section est un seul bloc repliable, fermé au départ : la plupart
+// des tests l'ouvrent d'abord (open = false pour tester l'état fermé).
+function renderExplorer(language = "fr", open = true) {
+  const result = render(
     <LanguageProvider language={language}>
       <CodeExplorer />
     </LanguageProvider>
   );
+  if (open) fireEvent.click(screen.getByRole("button", { name: language === "fr" ? /^Code de l'app/ : /^App code/ }));
+  return result;
 }
 
 afterEach(() => cleanup());
 
 describe("CodeExplorer", () => {
+  it("tient dans un seul bloc, replié au départ, avec le total dans son en-tête", () => {
+    renderExplorer("fr", false);
+    const root = screen.getByRole("button", { name: /^Code de l'app/ });
+    expect(root).toHaveAttribute("aria-expanded", "false");
+    expect(root.textContent).toContain(`${__GRIMOIRE_CODE__.files.length} fichiers`);
+    expect(screen.queryByRole("button", { name: /src\/hooks\// })).not.toBeInTheDocument();
+    fireEvent.click(root);
+    expect(root).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: /src\/hooks\/ — logique et données/ })).toBeInTheDocument();
+  });
+
   it("affiche le total de fichiers et de lignes, et le nombre de tests non listés", () => {
     renderExplorer();
     const totalLines = __GRIMOIRE_CODE__.files.reduce((sum, f) => sum + f.lines, 0);
-    const total = screen.getByText((text) => text.includes(`${__GRIMOIRE_CODE__.files.length} fichiers`) && text.includes(totalLines.toLocaleString()));
+    const total = screen.getByText((text, el) => el?.classList.contains("code-total") === true && text.includes(`${__GRIMOIRE_CODE__.files.length} fichiers`) && text.includes(totalLines.toLocaleString()));
     expect(total).toBeInTheDocument();
     expect(total.textContent).toContain(`${__GRIMOIRE_CODE__.testFileCount} fichiers de tests non listés`);
   });
