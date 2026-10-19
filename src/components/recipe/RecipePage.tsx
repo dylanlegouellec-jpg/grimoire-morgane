@@ -1,10 +1,11 @@
 import { useRef, type RefObject } from "react";
 import { motion, useScroll, useTransform, useInView } from "motion/react";
-import { ChefHat, ChevronLeft, ChevronRight, Clock, Minus, Plus, Share2, Users, Wheat } from "lucide-react";
+import { ChefHat, ChevronLeft, ChevronRight, Clock, Minus, Plus, Share2, Users, Utensils, Wheat } from "lucide-react";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
 import { categoryLabel, categoryClass, groupSteps, triggerHaptic } from "../../utils/helpers";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { translateRecipeText } from "../../utils/recipeTranslation";
+import { unitServingsText, unitWord } from "../../utils/servingsUnit";
 import { EASE_OUT, SPRING_SHEET } from "../../constants/motion";
 import DishArt from "../art/DishArt";
 import Flourish from "../common/Flourish";
@@ -191,6 +192,9 @@ export default function RecipePage({
   const safeSteps: FlexibleStep[] = Array.isArray(recipe.steps) ? (recipe.steps as unknown as FlexibleStep[]) : [];
   const staticItems = reducedMotion || !animateItems || preview;
   const title = translateRecipeText(recipe.title, language);
+  // Recette à l'unité (« 20 cookies ») : l'unité suit le nombre ; null =
+  // personnes, affichage inchangé (voir utils/servingsUnit.ts).
+  const servingsWord = unitWord(servings, recipe.servingsUnit, language);
 
   return (
     <div className="detail-columns">
@@ -222,10 +226,11 @@ export default function RecipePage({
           ) : null}
         </div>
         <div className="portions-adjuster">
-          <span><Users size={14} /> {t("recipeUi.detail.servings")}</span>
-          <div className="portions-stepper">
+          <span>{servingsWord ? <Utensils size={14} /> : <Users size={14} />} {t("recipeUi.detail.servings")}</span>
+          <div className={`portions-stepper${servingsWord ? " portions-stepper--unit" : ""}`}>
             <motion.button type="button" whileTap={{ scale: 0.85 }} onClick={() => { triggerHaptic(10); onServingsChange?.((s) => Math.max(1, Number(s) - 1)); }} aria-label={t("recipeUi.detail.decreaseServings")}><Minus size={14} /></motion.button>
             {preview ? <span>{servings}</span> : <AnimatedNumber value={servings} />}
+            {servingsWord && <em className="portions-unit">{servingsWord}</em>}
             <motion.button type="button" whileTap={{ scale: 0.85 }} onClick={() => { triggerHaptic(10); onServingsChange?.((s) => Number(s) + 1); }} aria-label={t("recipeUi.detail.increaseServings")}><Plus size={14} /></motion.button>
           </div>
         </div>
@@ -270,7 +275,7 @@ export default function RecipePage({
       </div>
 
       <div className="detail-body-col">
-        <h4>{t("recipeUi.detail.ingredients")} {ratio !== 1 && <span className="scaled-note">{t("recipeUi.detail.scaledFor", { count: servings })}</span>}</h4>
+        <h4>{t("recipeUi.detail.ingredients")} {ratio !== 1 && <span className="scaled-note">{servingsWord ? t("servingsUnit.scaledFor", { text: unitServingsText(t, servings, recipe.servingsUnit, language) }) : t("recipeUi.detail.scaledFor", { count: servings })}</span>}</h4>
         <ul className="ingredient-list">
           {scaledIngredients.map((ing, i) => {
             if (typeof ing === "string") {

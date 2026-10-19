@@ -5,6 +5,7 @@ import { getStoredLanguage } from "../../utils/localSettings";
 import { translateRecipeText } from "../../utils/recipeTranslation";
 import { categoryLabel, groupIngredients, groupSteps, formatDurationMinutes } from "../../utils/helpers";
 import { formatIngredientLine } from "../cookbook/CookbookDocument";
+import { unitServingsText } from "../../utils/servingsUnit";
 import { NUTRI_COLORS } from "../../utils/nutriscore";
 import { getResolvedPhotoDataUrl } from "../../utils/imageCache";
 import type { NormalizedIngredient } from "../../utils/ingredients";
@@ -21,6 +22,8 @@ export interface PublicRecipe {
   time?: number;
   prep_time?: number;
   servings?: number | string;
+  /** Absente dans les liens créés avant l'unité des portions : « personnes ». */
+  servingsUnit?: string | null;
   ingredients?: NormalizedIngredient[];
   steps?: StepEntry[];
   notes?: string | null;
@@ -110,7 +113,7 @@ function RecipeContent({ recipe }: { recipe: PublicRecipe }) {
       <div className="cookbook-recipe-meta">
         <span>{formatDurationMinutes(recipe.time || recipe.prep_time || 0)}</span>
         <span className="cookbook-recipe-meta-dot" aria-hidden="true" />
-        <span>{servings} {t("share.servingsShort")}</span>
+        <span>{unitServingsText(t, servings, recipe.servingsUnit, language) ?? `${servings} ${t("share.servingsShort")}`}</span>
       </div>
       <div className="cookbook-recipe-flourish" aria-hidden="true">❦</div>
       <div className="cookbook-recipe-columns">

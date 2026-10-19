@@ -1,5 +1,6 @@
 import { normalize, parseDurationMinutes } from "./helpers";
 import { normalizeIngredientList } from "./ingredients";
+import { normalizeServingsUnit } from "./servingsUnit";
 import type { NormalizedIngredient } from "./ingredients";
 
 export interface ParsedRecipe {
@@ -7,6 +8,8 @@ export interface ParsedRecipe {
   category: string;
   time: number;
   servings: number;
+  /** « Pour : 20 cookies » -> "cookies" ; « 4 personnes » ou rien -> null. */
+  servingsUnit: string | null;
   carbs: null;
   notes: string | null;
   ingredients: NormalizedIngredient[];
@@ -19,7 +22,13 @@ export interface ParsedRecipe {
 
 export const TEMPLATE_SECTIONS = [
   { key: "title", test: /^recette\s*(de|:)?\s*:?\s*/i },
-  { key: "servings", test: /^nombre\s*de\s*parts?\s*:?\s*/i },
+  { key: "servings", test: /^nombre\s*de\s*(parts?|portions?|personnes?)\s*:?\s*/i },
+  // « Pour : 20 cookies », « Pour 6 personnes », « Portions : 8 » — une
+  // ligne COURTE faite seulement d'un nombre et d'une unité : jamais
+  // « Pour la pâte : » (titre de sous-section, voir isSectionHeaderLine) ni
+  // une étape « Pour 4 personnes, doubler le beurre » (qui ferait sinon
+  // basculer toute la suite de la préparation dans les portions).
+  { key: "servings", test: /^(?:pour|portions?)\s*:?\s*(?=\d+\s*[\p{L}'’. -]{0,30}$)/iu },
   { key: "time", test: /^temps\s*de\s*pr[ée]paration\s*:?\s*/i },
   { key: "equipment", test: /^mat[ée]riel\s*(sp[ée]cifique)?\s*:?\s*/i },
   { key: "ingredients", test: /^ingr[ée]dients?\s*:?\s*/i },
@@ -133,8 +142,12 @@ export function parseRecipeTemplate(raw: string): ParsedRecipe | null {
   const title = (sections.title || "").split("\n")[0].trim();
   if (!title) return null;
 
-  const servingsMatch = (sections.servings || "").match(/\d+/);
-  const servings = servingsMatch ? parseInt(servingsMatch[0], 10) : 4;
+  // Le nombre, puis ce qui le suit sur la même ligne comme unité
+  // (« 20 cookies » -> "cookies", « 4 personnes » -> null, voir
+  // normalizeServingsUnit).
+  const servingsMatch = (sections.servings || "").match(/(\d+)\s*([^\n]*)/);
+  const servings = servingsMatch ? parseInt(servingsMatch[1], 10) : 4;
+  const servingsUnit = servingsMatch ? normalizeServingsUnit(servingsMatch[2].replace(/[.,;:!)]+$/, "")) : null;
 
   const timeText = sections.time || "";
   const timeDigitsMatch = timeText.match(/\d+/);
@@ -178,6 +191,7 @@ export function parseRecipeTemplate(raw: string): ParsedRecipe | null {
     category: guessCategoryFromText(`${title} ${ingredientLines.join(" ")}`),
     time: time || 30,
     servings: servings || 4,
+    servingsUnit,
     carbs: null,
     notes,
     ingredients: ingredients.length ? normalizeIngredientList(ingredients) : [{ qty: 1, unit: "", name: "Ingrédient à préciser" }],

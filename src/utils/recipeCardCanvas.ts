@@ -1,6 +1,8 @@
 import { groupIngredients, groupSteps, categoryLabel } from "./helpers";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "./nutriscore";
 import { translateCurrent } from "./i18n";
+import { getStoredLanguage } from "./localSettings";
+import { unitServingsText } from "./servingsUnit";
 import type { StepEntry } from "./helpers";
 import type { NormalizedIngredient, Ingredient } from "./ingredients";
 import type { NutriscoreGrade } from "./nutriscoreClient";
@@ -15,6 +17,7 @@ interface CanvasRecipe {
   notes?: string | null;
   imageUrl?: string | null;
   nutriscoreGrade?: NutriscoreGrade | null;
+  servingsUnit?: string | null;
 }
 
 type ThemeName = "light" | "dark";
@@ -292,7 +295,7 @@ function buildBlocks(
   push({ type: "title", lines: titleLines.length ? titleLines : [recipe.title || ""], height: (titleLines.length || 1) * 62 });
   push({ type: "spacer", height: 14 });
 
-  const metaText = `⏱ ${recipe.time || 0} ${translateCurrent("share.minutesShort")}     👥 ${servings} ${translateCurrent("share.servingsShort")}`;
+  const metaText = `⏱ ${recipe.time || 0} ${translateCurrent("share.minutesShort")}     👥 ${unitServingsText(translateCurrent, servings, recipe.servingsUnit, getStoredLanguage()) ?? `${servings} ${translateCurrent("share.servingsShort")}`}`;
   push({ type: "meta", text: metaText, height: 42 });
   push({ type: "spacer", height: 20 });
   push({ type: "flourish", height: 46 });

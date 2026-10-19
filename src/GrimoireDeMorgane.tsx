@@ -45,6 +45,9 @@ import LoginScreen from "./screens/LoginScreen";
 import AppShell from "./screens/AppShell";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { IconStyleProvider } from "./contexts/IconStyleContext";
+import { UnitsProvider } from "./contexts/UnitsContext";
+import { normalizeUnitSettings } from "./utils/units";
+import type { UnitSettings } from "./utils/units";
 import { translateCurrent } from "./utils/i18n";
 import type { Recipe } from "./hooks/useRecipes";
 import type { ShoppingList } from "./hooks/useShoppingLists";
@@ -245,6 +248,10 @@ export default function GrimoireDeMorgane() {
   const mealPlanApi = useMealPlan({
     initialMealPlan: Array.isArray(localCache.mealPlan) ? (localCache.mealPlan as MealPlanEntry[]) : [],
   });
+  // Unités d'ingrédients du FOYER (Réglages > Unités des ingrédients, voir
+  // utils/units.ts) : comme pantry/basics, cache local d'abord puis
+  // app_state.units via useOfflineSync — en mode invité, local seulement.
+  const [unitSettings, setUnitSettings] = useState<UnitSettings | null>(() => normalizeUnitSettings(localCache.units));
 
   // Statut de connexion RÉEL (ping Supabase, pas juste navigator.onLine —
   // voir hooks/useConnectionStatus.js) : alimente la bannière "Hors ligne"
@@ -269,6 +276,8 @@ export default function GrimoireDeMorgane() {
     setBasics: pantryApi.setBasics,
     mealPlan: mealPlanApi.mealPlan,
     setMealPlan: mealPlanApi.setMealPlan,
+    units: unitSettings,
+    setUnits: setUnitSettings,
     shoppingLists: shoppingApi.shoppingLists,
     setShoppingLists: shoppingApi.setShoppingLists,
     activeListId: shoppingApi.activeListId,
@@ -498,6 +507,7 @@ export default function GrimoireDeMorgane() {
   return (
     <LanguageProvider language={language}>
       <IconStyleProvider iconStyle={iconStyle}>
+        <UnitsProvider unitSettings={unitSettings} setUnitSettings={setUnitSettings}>
         <AppShell
           recipesApi={recipesApi}
           pantryApi={pantryApi}
@@ -515,6 +525,7 @@ export default function GrimoireDeMorgane() {
           showToast={showToast}
           hideToast={hideToast}
         />
+        </UnitsProvider>
       </IconStyleProvider>
     </LanguageProvider>
   );

@@ -1,6 +1,7 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_READY } from "../constants";
 import { enqueueOfflineAction, getOfflineQueue, removeFromOfflineQueue, incrementOfflineActionFailCount } from "./offlineQueue";
 import { normalizeIngredientList } from "./ingredients";
+import { normalizeServingsUnit } from "./servingsUnit";
 import { getSupabaseClient } from "./supabaseClient";
 import { markSyncSuccess } from "./syncStatus";
 import type { NewOfflineAction } from "./offlineQueue";
@@ -45,9 +46,9 @@ const PING_TIMEOUT_MS = 8000;
 /*  nettoyage de app_state) à chaque démarrage de l'app.                */
 /* ------------------------------------------------------------------ */
 export const RECIPE_COLUMNS =
-  "id,title,category,time,servings,carbs,calories,protein,fat,notes,illustration_key,is_favorite,ingredients,steps,image_url,image_source,nutriscore_grade,created_at";
+  "id,title,category,time,servings,servings_unit,carbs,calories,protein,fat,notes,illustration_key,is_favorite,ingredients,steps,image_url,image_source,nutriscore_grade,created_at";
 export const SHOPPING_LIST_COLUMNS = "id,name,items,scope,user_id,created_at";
-export const APP_STATE_COLUMNS = "household_id,pantry,basics,meal_plan,updated_at";
+export const APP_STATE_COLUMNS = "household_id,pantry,basics,meal_plan,units,updated_at";
 
 // Dernier statut de connectivité RÉEL connu, mesuré par un ping Supabase
 // (voir pingSupabase ci-dessous et hooks/useConnectionStatus.js) — `null`
@@ -421,7 +422,7 @@ export async function flushOfflineQueue(): Promise<FlushOfflineQueueResult> {
   }
 }
 
-// Un seul champ (`app_state.pantry`/`.basics`/`.meal_plan`) est un JSON
+// Un seul champ (`app_state.pantry`/`.basics`/`.meal_plan`/`.units`) est un JSON
 // complet remplacé en bloc à chaque PATCH, jamais fusionné ligne à ligne —
 // si un autre appareil l'a modifié PENDANT que celui-ci était hors-ligne,
 // rejouer notre PATCH écraserait purement et simplement son changement.
@@ -568,6 +569,9 @@ export function mapRowToRecipe(row: Record<string, unknown>) {
     category: row.category,
     time: row.time,
     servings: row.servings,
+    // null = « personnes » (recettes d'avant ce champ comprises), sinon
+    // l'unité libre saisie (« cookies »...) — voir utils/servingsUnit.ts.
+    servingsUnit: normalizeServingsUnit(row.servings_unit),
     carbs: row.carbs,
     calories: row.calories,
     protein: row.protein,
@@ -594,6 +598,7 @@ export function mapRecipeToRow(recipe: Record<string, unknown>, householdId?: st
     category: recipe.category,
     time: recipe.time,
     servings: recipe.servings,
+    servings_unit: normalizeServingsUnit(recipe.servingsUnit),
     carbs: recipe.carbs,
     calories: recipe.calories,
     protein: recipe.protein,

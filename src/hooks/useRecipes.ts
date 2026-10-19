@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { SUPABASE_READY } from "../constants";
 import { nextId } from "../utils/helpers";
 import { normalizeIngredientList } from "../utils/ingredients";
+import { normalizeServingsUnit } from "../utils/servingsUnit";
 import { resolveIllustrationKey } from "../components/art";
 import { insertRow, updateRow, deleteRow, mapRecipeToRow } from "../utils/supabase";
 import { translateCurrent } from "../utils/i18n";
@@ -18,6 +19,8 @@ export interface Recipe {
   category: string;
   time: number;
   servings: number;
+  /** Unité des portions (« cookies », « parts »...) ; null/absent = personnes. Voir utils/servingsUnit.ts. */
+  servingsUnit?: string | null;
   carbs: number | null;
   calories: number | null;
   protein: number | null;
@@ -42,6 +45,7 @@ interface ImportedRecipeInput {
   title?: string;
   time?: unknown;
   servings?: unknown;
+  servingsUnit?: unknown;
   carbs?: unknown;
   calories?: unknown;
   protein?: unknown;
@@ -100,6 +104,7 @@ export default function useRecipes({ householdId, initialRecipes = [], showToast
       category,
       time: Number(parsed.time) || 30,
       servings: Number(parsed.servings) || 4,
+      servingsUnit: normalizeServingsUnit(parsed.servingsUnit),
       carbs: parsed.carbs != null && !Number.isNaN(Number(parsed.carbs)) ? Number(parsed.carbs) : null,
       calories: parsed.calories != null && !Number.isNaN(Number(parsed.calories)) ? Number(parsed.calories) : null,
       protein: parsed.protein != null && !Number.isNaN(Number(parsed.protein)) ? Number(parsed.protein) : null,

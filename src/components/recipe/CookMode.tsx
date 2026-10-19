@@ -4,6 +4,7 @@ import { Check, ChevronRight, Pause, Play, X } from "lucide-react";
 import { groupSteps, parseDurationMinutes, triggerHaptic } from "../../utils/helpers";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { translateRecipeText } from "../../utils/recipeTranslation";
+import { SERVINGS_MAX_PEOPLE, SERVINGS_MAX_UNITS, unitWord } from "../../utils/servingsUnit";
 import { overrideStatusBarColor } from "../../utils/theme";
 import useWakeLock from "../../hooks/useWakeLock";
 import useLongPress from "../../hooks/useLongPress";
@@ -167,6 +168,8 @@ export default function CookMode({ recipe, onClose, pressDuration = 750, onUpdat
     && window.matchMedia(LANDSCAPE_QUERY).matches);
   const baseServings = Number(recipe.servings) || 1;
   const [servings, setServings] = useState(() => Math.max(1, Math.round(Number(initialServings) || resumed?.servings || baseServings)));
+  // « 20 COOKIES » plutôt que « 20 PARTS » pour une recette à l'unité.
+  const servingsWord = unitWord(servings, recipe.servingsUnit, language);
   const [portionsOpen, setPortionsOpen] = useState(false);
   const { timers: allTimers, now } = useCookTimers();
   // Le bandeau ne montre que les minuteurs de CETTE recette ; ceux d'une
@@ -379,6 +382,8 @@ export default function CookMode({ recipe, onClose, pressDuration = 750, onUpdat
             <PortionBadge
               value={servings}
               onChange={setServings}
+              unitLabel={servingsWord}
+              max={servingsWord ? SERVINGS_MAX_UNITS : SERVINGS_MAX_PEOPLE}
               open={portionsOpen}
               onOpenChange={(next) => (next ? openPortions() : setPortionsOpen(false))}
             />

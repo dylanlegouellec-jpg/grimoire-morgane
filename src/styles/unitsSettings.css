@@ -1,0 +1,44 @@
+/* ------------------------------------------------------------------ */
+/*  RÉGLAGES > UNITÉS DES INGRÉDIENTS (UnitsSettingsModal.tsx)           */
+/*  Rangées .settings-row des cartes .ios-group (settingsIos.css), plus   */
+/*  le champ « Ajouter une unité » et ses suggestions en un appui          */
+/*  (pastilles .qty-sheet-chip de la saisie de quantité, cookmode.css).     */
+/* ------------------------------------------------------------------ */
+.units-settings-row { min-height: 48px; padding-top: 6px; padding-bottom: 6px; }
+.units-settings-custom-name { overflow-wrap: anywhere; min-width: 0; }
+.units-settings-empty { margin: 0; }
+.units-settings-remove {
+  flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; margin: -6px -10px -6px 0;
+  border: none; border-radius: 10px; background: none; color: var(--wine); cursor: pointer;
+}
+.units-settings-remove:active { background: var(--surface); }
+
+.units-settings-add { display: flex; gap: 8px; align-items: stretch; }
+/* 16px minimum : en dessous, Safari iOS zoome toute la page au focus. */
+.units-settings-input {
+  flex: 1; min-width: 0; font-family: 'EB Garamond', serif; font-size: 16px; color: var(--ink);
+  background: var(--surface-strong); border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px 12px;
+}
+.units-settings-input::placeholder { color: var(--ink-soft); opacity: 0.8; }
+.units-settings-add-btn {
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px;
+  font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 0.5px; text-transform: uppercase;
+  color: var(--gold-text); background: var(--surface); border: 1px solid var(--gold); border-radius: 10px;
+  padding: 0 14px; min-height: 44px; cursor: pointer;
+}
+.units-settings-add-btn:disabled { opacity: 0.45; cursor: default; }
+
+.units-settings-suggestions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+.units-settings-suggestions-label {
+  font-family: 'EB Garamond', serif; font-style: italic; font-size: 0.82rem; color: var(--ink-soft);
+}
+.units-settings-chip { padding: 6px 13px; }
+
+.units-settings-feedback {
+  margin: 8px 6px 0; font-family: 'EB Garamond', serif; font-size: 0.85rem; color: var(--gold-text);
+}
+.units-settings-feedback.is-error { color: var(--wine); }
+.ios-group-padded .units-settings-feedback { margin: 10px 2px 0; }
+.units-settings-hint { font-style: normal; margin: 14px 6px 4px; }

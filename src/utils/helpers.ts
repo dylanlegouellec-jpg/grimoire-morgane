@@ -2,6 +2,8 @@ import { Beef, Carrot, CupSoda, Milk, Package, SprayCan, Wheat } from "lucide-re
 import type { LucideIcon } from "lucide-react";
 import type { NormalizedIngredient, Ingredient } from "./ingredients";
 import { translateCurrent } from "./i18n";
+import { getStoredLanguage } from "./localSettings";
+import { unitServingsText } from "./servingsUnit";
 
 /* ------------------------------------------------------------------ */
 /*  RAYONS DE COURSES                                                  */
@@ -424,6 +426,7 @@ export interface PrintableRecipe {
   notes?: string | null;
   imageUrl?: string | null;
   carbs?: number | null;
+  servingsUnit?: string | null;
   steps: StepEntry[];
 }
 
@@ -511,7 +514,7 @@ export function buildPrintHTML(
     </div>
     <h1>${escapeHtml(recipe.title)}</h1>
     <p class="type">${escapeHtml(translateCurrent("share.printSignature"))}</p>
-    <div class="meta"><span>⏱ ${recipe.time} ${escapeHtml(translateCurrent("share.minutesShort"))}</span><span>👥 ${servings} ${escapeHtml(translateCurrent("share.servingsShort"))}</span>${carbsLine}</div>
+    <div class="meta"><span>⏱ ${recipe.time} ${escapeHtml(translateCurrent("share.minutesShort"))}</span><span>👥 ${escapeHtml(unitServingsText(translateCurrent, servings, recipe.servingsUnit, getStoredLanguage()) ?? `${servings} ${translateCurrent("share.servingsShort")}`)}</span>${carbsLine}</div>
     <div class="flourish">❦</div>
     <div class="columns">
       <div>

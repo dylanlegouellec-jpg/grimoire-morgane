@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { translateRecipeText } from "../../utils/recipeTranslation";
+import { unitServingsText } from "../../utils/servingsUnit";
 import { categoryLabel, groupIngredients, groupSteps, formatDurationMinutes } from "../../utils/helpers";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
 import { getResolvedPhotoDataUrl } from "../../utils/imageCache";
@@ -235,7 +236,7 @@ export function RecipePage({ recipe, config, t, language, pageNumber, isLast, ru
               pictogrammes qui détonnaient avec le reste du document. */}
           <span>{formatDurationMinutes(recipe.time || 0)}</span>
           <span className="cookbook-recipe-meta-dot" aria-hidden="true" />
-          <span>{servings} {t("share.servingsShort")}</span>
+          <span>{unitServingsText(t, servings, recipe.servingsUnit, language) ?? `${servings} ${t("share.servingsShort")}`}</span>
         </div>
       )}
       <div className="cookbook-recipe-flourish" aria-hidden="true">❦</div>

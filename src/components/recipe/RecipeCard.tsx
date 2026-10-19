@@ -1,11 +1,12 @@
 import { memo, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
 import { AnimatePresence, motion, useAnimate, useReducedMotion } from "motion/react";
-import { Clock, Heart, Users } from "lucide-react";
+import { Clock, Heart, Users, Utensils } from "lucide-react";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
 import { categoryLabel, categoryClass } from "../../utils/helpers";
 import { triggerHaptic } from "../../utils/haptics";
 import { useTranslation } from "../../contexts/LanguageContext";
 import { translateRecipeText } from "../../utils/recipeTranslation";
+import { unitServingsText } from "../../utils/servingsUnit";
 import useLongPress from "../../hooks/useLongPress";
 import DishArt from "../art/DishArt";
 import RecipeOptionsModal from "../common/RecipeOptionsModal";
@@ -58,6 +59,7 @@ function RecipeCard({
   // champ (démo, recettes créées avant l'ajout de la colonne).
   const nutri = (recipe.nutriscoreGrade || estimateNutriscoreLocal(recipe.ingredients, recipe.category)) as NutriscoreGrade;
   const { language, dict, t } = useTranslation();
+  const unitServings = unitServingsText(t, Number(recipe.servings) || 1, recipe.servingsUnit, language);
   const [showOptions, setShowOptions] = useState(false);
 
   // Même appui long, au geste près, que celui des membres du foyer, de la
@@ -245,7 +247,12 @@ function RecipeCard({
             <h3>{translateRecipeText(recipe.title, language)}</h3>
             <div className="card-meta">
               <span><Clock size={13} /> {recipe.time} min</span>
-              <span><Users size={13} /> {recipe.servings}</span>
+              {/* Personnes : l'icône 👥 et le nombre, comme toujours ; à l'unité :
+                  « 20 cookies » en toutes lettres (icône de couverts neutre),
+                  tronqué si l'unité est longue. */}
+              {unitServings
+                ? <span className="card-servings-unit"><Utensils size={13} /> <span>{unitServings}</span></span>
+                : <span><Users size={13} /> {recipe.servings}</span>}
             </div>
           </div>
         </div>

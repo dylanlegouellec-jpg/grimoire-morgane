@@ -20,6 +20,8 @@ export interface LocalCacheData {
   pantry?: unknown[];
   basics?: unknown[];
   mealPlan?: unknown[];
+  // Unités d'ingrédients du foyer (voir utils/units.ts) — `null` = par défaut.
+  units?: unknown;
   shoppingLists?: unknown[];
   activeListId?: string | null;
   householdId?: string | null;

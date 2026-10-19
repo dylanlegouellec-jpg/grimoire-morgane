@@ -2,7 +2,9 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 import { Reorder, useDragControls } from "motion/react";
 import { triggerHaptic } from "../../../utils/helpers";
 import { useTranslation } from "../../../contexts/LanguageContext";
-import { UNIT_OPTIONS, UNIT_LABEL_KEYS, type IngredientRowT, type StepRowT } from "./recipeFormRows";
+import { useUnits } from "../../../contexts/UnitsContext";
+import { buildUnitOptions } from "../../../utils/units";
+import { UNIT_LABEL_KEYS, type IngredientRowT, type StepRowT } from "./recipeFormRows";
 
 /* ------------------------------------------------------------------ */
 /*  RANGÉE D'INGRÉDIENT/D'ÉTAPE RÉORDONNABLE — extraite en composant       */
@@ -34,6 +36,7 @@ interface IngredientRowProps {
 
 export function IngredientRow({ row, onUpdateRow, onRemoveRow, canRemove }: IngredientRowProps) {
   const { t } = useTranslation();
+  const { unitSettings } = useUnits();
   const dragControls = useDragControls();
   const startDrag = (e: ReactPointerEvent<HTMLButtonElement>) => { triggerHaptic(15); dragControls.start(e); };
   const commitDrag = () => triggerHaptic(12);
@@ -74,8 +77,13 @@ export function IngredientRow({ row, onUpdateRow, onRemoveRow, canRemove }: Ingr
         value={row.unit}
         onChange={(e) => onUpdateRow(row.id, "unit", e.target.value)}
       >
-        {UNIT_OPTIONS.map((u) => (
-          <option key={u.label} value={u.value}>{u.value in UNIT_LABEL_KEYS ? t(UNIT_LABEL_KEYS[u.value]) : u.label}</option>
+        {/* Liste du foyer (Réglages > Unités des ingrédients, voir
+            utils/units.ts) — l'unité actuelle de CETTE ligne y reste
+            toujours, même masquée/supprimée depuis ou venue d'un import :
+            sinon elle serait perdue à l'enregistrement. Les unités ajoutées
+            s'affichent telles qu'écrites, jamais traduites. */}
+        {buildUnitOptions(unitSettings, row.unit).map((u) => (
+          <option key={u.value || "none"} value={u.value}>{u.isDefault && u.value in UNIT_LABEL_KEYS ? t(UNIT_LABEL_KEYS[u.value]) : u.value}</option>
         ))}
       </select>
       <input
