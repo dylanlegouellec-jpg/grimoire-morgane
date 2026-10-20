@@ -1,0 +1,141 @@
+/* ------------------------------------------------------------------ */
+/*  ÉDITEUR DE RECADRAGE D'UNE PHOTO (PhotoCropModal.tsx)               */
+/*  Feuille plein écran, au-dessus de tout (y compris du mode cuisine,    */
+/*  z-index 60) : en-tête fixe, contenu qui défile, boutons Annuler /     */
+/*  Enregistrer toujours visibles en bas. Sélecteurs en ".modal.xxx" :    */
+/*  doivent passer devant les règles ".modal" de responsive.css (paysage).*/
+/* ------------------------------------------------------------------ */
+.modal-backdrop.photo-crop-backdrop { z-index: 70; }
+
+.modal.photo-crop-modal {
+  display: flex; flex-direction: column;
+  max-width: 560px;
+  height: var(--app-vvh, 100dvh); max-height: var(--app-vvh, 100dvh);
+  overflow: hidden;
+  border-radius: 0;
+  padding: calc(14px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
+  touch-action: auto;
+}
+/* Écran large : une vraie feuille, arrondie, qui ne colle plus au haut. */
+@media (min-width: 600px) and (min-height: 700px) {
+  .modal.photo-crop-modal {
+    height: auto; max-height: min(94dvh, var(--app-vvh, 94dvh));
+    border-radius: 18px 18px 0 0;
+    padding-top: 18px;
+  }
+}
+
+.photo-crop-header { flex-shrink: 0; padding-right: 40px; }
+.photo-crop-header .dropcap-title { margin: 2px 0 10px; }
+
+.photo-crop-body {
+  flex: 1 1 auto; min-height: 0;
+  overflow-y: auto; overflow-x: hidden;
+  overscroll-behavior: contain; touch-action: pan-y;
+  padding-bottom: 10px;
+}
+
+/* --- Cadre d'édition : la proportion de la carte de la grille (4:3) --- */
+.photo-crop-frame {
+  position: relative; width: 100%; aspect-ratio: 4 / 3;
+  overflow: hidden; border-radius: 10px;
+  background: var(--parchment-deep);
+  box-shadow: 0 0 0 1px var(--line), 0 6px 16px rgba(42,32,19,0.18);
+  /* Le geste appartient au cadre : ni défilement ni zoom de page. */
+  touch-action: none;
+  -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none;
+  cursor: grab;
+}
+.photo-crop-frame:active { cursor: grabbing; }
+.photo-crop-frame:focus-visible { outline: 3px solid var(--gold-light); outline-offset: 3px; }
+.photo-crop-img {
+  position: absolute; top: 0; left: 0;
+  max-width: none; display: block;
+  transform-origin: 0 0; will-change: transform;
+  pointer-events: none;
+  -webkit-user-drag: none; user-select: none;
+}
+.photo-crop-frame.is-animating .photo-crop-img { transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .photo-crop-frame.is-animating .photo-crop-img { transition: none; }
+}
+/* Bande gardée par le haut de la fiche (voir heroWindow, utils/photoCrop.ts). */
+.photo-crop-hero-band {
+  position: absolute; pointer-events: none;
+  border-top: 1.5px dashed rgba(255,255,255,0.9);
+  border-bottom: 1.5px dashed rgba(255,255,255,0.9);
+  filter: drop-shadow(0 0 1px rgba(0,0,0,0.7));
+}
+.photo-crop-hint { font-size: 0.85rem; margin: 8px 0 6px; }
+
+.photo-crop-tools { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
+.photo-crop-zoom {
+  flex: 1 1 180px; display: flex; align-items: center; gap: 8px;
+  color: var(--ink-soft); min-height: 44px;
+}
+.photo-crop-zoom input { flex: 1; min-width: 0; accent-color: var(--gold); height: 32px; }
+.photo-crop-recenter {
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 44px; padding: 8px 16px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface);
+  font-family: 'EB Garamond', serif; font-size: 0.98rem; color: var(--gold-text);
+  cursor: pointer;
+}
+.photo-crop-recenter:disabled { opacity: 0.5; cursor: default; }
+
+/* --- Aperçus : la carte de la grille et le haut de la fiche ------------ */
+.photo-crop-previews h4 { margin: 14px 0 8px; }
+.photo-crop-preview-row {
+  display: grid; grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+  gap: 12px; align-items: start;
+}
+.photo-crop-preview { margin: 0; min-width: 0; }
+.photo-crop-preview figcaption {
+  margin-top: 6px; text-align: center;
+  font-size: 0.78rem; font-style: italic; color: var(--ink-soft);
+}
+.photo-crop-card { overflow: hidden; }
+.photo-crop-card .card-body { padding: 8px 10px 10px; }
+.photo-crop-card h3 {
+  font-family: 'Cinzel', serif; font-size: 0.85rem; margin: 2px 0 0; line-height: 1.25;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.photo-crop-window { position: relative; width: 100%; aspect-ratio: 4 / 3; overflow: hidden; background: var(--parchment); }
+.photo-crop-preview-img { position: absolute; display: block; max-width: none; pointer-events: none; }
+.photo-crop-hero .hero-legende-caption { padding: 8px 10px 10px; }
+.photo-crop-hero .hero-legende-caption .dropcap-title { font-size: 0.85rem; margin: 0; }
+
+.photo-crop-error { color: #B33A2E; text-align: center; margin: 6px 0 0; font-size: 0.92rem; flex-shrink: 0; }
+[data-theme="dark"] .photo-crop-error { color: #f0897c; }
+
+.photo-crop-actions {
+  flex-shrink: 0; margin-top: 0;
+  padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+  background: var(--parchment);
+}
+
+/* --- Téléphone en paysage : éditeur à gauche, aperçus à droite --------- */
+@media (orientation: landscape) and (max-height: 500px) {
+  .modal.photo-crop-modal {
+    max-width: 100%; height: var(--app-vvh, 100dvh); max-height: var(--app-vvh, 100dvh);
+    border-radius: 0;
+    padding: max(8px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
+  }
+  .photo-crop-header .dropcap-title { font-size: 1rem; margin: 2px 0 6px; }
+  .photo-crop-body {
+    display: grid; grid-template-columns: auto minmax(0, 1fr);
+    gap: 18px; align-items: start;
+  }
+  /* Le cadre tient dans la hauteur restante (en-tête, outils, boutons). */
+  .photo-crop-editor { width: min(52vw, calc((var(--app-vvh, 100dvh) - 180px) * 4 / 3)); }
+  .photo-crop-hint { display: none; }
+  /* Glissière et Recentrer sur une seule ligne, sous le cadre. */
+  .photo-crop-tools { margin-top: 4px; flex-wrap: nowrap; gap: 8px; }
+  .photo-crop-zoom { flex: 1 1 0; min-width: 0; gap: 4px; }
+  .photo-crop-recenter { flex-shrink: 0; padding: 6px 12px; font-size: 0.9rem; }
+  .photo-crop-previews h4 { margin-top: 0; }
+  .photo-crop-actions { padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); }
+  .photo-crop-actions .seal { padding-top: 8px; padding-bottom: 8px; }
+}

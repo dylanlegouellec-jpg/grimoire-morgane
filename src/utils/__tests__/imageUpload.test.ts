@@ -81,6 +81,34 @@ describe("uploadRecipeImage", () => {
     await expect(uploadRecipeImage(file, "foyer-1")).resolves.toMatch(/r1\.webp$/);
   });
 
+  it("avec un recadrage : la photo ET la miniature ne gardent que la zone choisie", async () => {
+    const calls: unknown[][] = [];
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(function (this: HTMLCanvasElement) {
+      const { width, height } = this;
+      return {
+        drawImage: (...args: unknown[]) => {
+          drawn.push([width, height]);
+          calls.push(args.slice(1));
+        },
+      } as unknown as CanvasRenderingContext2D;
+    } as never);
+    upload.mockResolvedValue({ error: null });
+    // Source 2400×1800 ; zone 4:3 de 800×600 (valeurs non entières arrondies, débord ramené dans la photo).
+    await uploadRecipeImage(file, "foyer-1", { crop: { x: 1700.4, y: 99.6, w: 800.2, h: 600.1 } });
+    expect(upload.mock.calls[0][0]).toBe("foyer-1/r1.webp");
+    // Plus petite que 1200 px : jamais agrandie.
+    expect(drawn).toEqual([[800, 600], [480, 360]]);
+    expect(calls[0]).toEqual([1600, 100, 800, 600, 0, 0, 800, 600]);
+    expect(calls[1]).toEqual([1600, 100, 800, 600, 0, 0, 480, 360]);
+  });
+
+  it("accepte une image déjà en mémoire (Blob), dossier du foyer inchangé", async () => {
+    upload.mockResolvedValue({ error: null });
+    await uploadRecipeImage(new Blob(["x"], { type: "image/jpeg" }), "foyer-2", { crop: { x: 0, y: 0, w: 2400, h: 1800 } });
+    expect(upload.mock.calls[0][0]).toBe("foyer-2/r1.webp");
+    expect(drawn).toEqual([[1200, 900], [480, 360]]);
+  });
+
   it("échoue toujours si la photo elle-même ne part pas (sans tenter de miniature)", async () => {
     upload.mockResolvedValueOnce({ error: new Error("refusé") });
     await expect(uploadRecipeImage(file, "foyer-1")).rejects.toThrow("refusé");
