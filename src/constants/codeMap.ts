@@ -661,6 +661,8 @@ export const CODE_DOCS: Record<string, string> = {
     "Le point d'entrée du dossier : il ré-exporte les composants d'illustration.",
 
   /* --- Serveur, base de données, outils ------------------------------------- */
+  "api/keep-alive.ts":
+    "Appelée chaque jour par Vercel (vercel.json, crons) : une petite lecture dans la base Supabase pour qu'elle ne soit jamais mise en pause après 7 jours sans activité (plan gratuit), même si personne n'ouvre l'app.",
   "api/extract-recipe-from-link.ts":
     "Fonction serveur : récupère la légende publique d'un post Instagram ou TikTok à partir de son lien (TikTok par son API oEmbed, Instagram en lecture best-effort). Sans IA : le texte est renvoyé tel quel pour être recopié dans une recette.",
   "api/generate-illustration.ts":
