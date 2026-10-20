@@ -111,10 +111,15 @@
 
 .photo-crop-actions {
   flex-shrink: 0; margin-top: 0;
-  padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+  /* max(…) : sans viewport-fit=cover (index.html), env(safe-area-inset-bottom)
+     vaut 0 sur iPhone et les boutons collaient au bas de l'écran. */
+  padding: 12px 0 max(24px, calc(12px + env(safe-area-inset-bottom)));
   border-top: 1px solid var(--line);
   background: var(--parchment);
 }
+/* App installée (iPhone) : la barre d'accueil recouvre le bas, comme pour
+   .bottom-nav (modalsBase.css). */
+:where(html[data-standalone="true"]) .photo-crop-actions { padding-bottom: max(34px, calc(14px + env(safe-area-inset-bottom))); }
 
 /* --- Téléphone en paysage : éditeur à gauche, aperçus à droite --------- */
 @media (orientation: landscape) and (max-height: 500px) {
@@ -136,6 +141,7 @@
   .photo-crop-zoom { flex: 1 1 0; min-width: 0; gap: 4px; }
   .photo-crop-recenter { flex-shrink: 0; padding: 6px 12px; font-size: 0.9rem; }
   .photo-crop-previews h4 { margin-top: 0; }
-  .photo-crop-actions { padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); }
+  .photo-crop-actions,
+  :where(html[data-standalone="true"]) .photo-crop-actions { padding: 8px 0 max(10px, calc(8px + env(safe-area-inset-bottom))); }
   .photo-crop-actions .seal { padding-top: 8px; padding-bottom: 8px; }
 }

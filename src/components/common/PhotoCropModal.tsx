@@ -111,13 +111,16 @@ export default function PhotoCropModal({ source, recipe, saving = false, error =
   const animTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Largeur du cadre à l'écran (change avec la rotation du téléphone) ;
-  // l'état, lui, est en pixels source et ne bouge pas.
+  // l'état, lui, est en pixels source et ne bouge pas. clientWidth et non
+  // getBoundingClientRect : à l'ouverture la feuille est encore réduite
+  // (scale 0.98, MODAL_SHEET_MOTION) et la largeur « transformée » laissait
+  // une bande vide à droite une fois l'animation finie.
   const frameRef = useRef<HTMLDivElement>(null);
   const [frameWidth, setFrameWidth] = useState(0);
   useLayoutEffect(() => {
     const frame = frameRef.current;
     if (!frame) return undefined;
-    const measure = () => setFrameWidth(frame.getBoundingClientRect().width);
+    const measure = () => setFrameWidth(frame.clientWidth);
     measure();
     if (typeof ResizeObserver === "undefined") return undefined;
     const ro = new ResizeObserver(measure);
@@ -214,7 +217,7 @@ export default function PhotoCropModal({ source, recipe, saving = false, error =
     const frame = frameRef.current;
     if (!frame) return undefined;
     const onWheel = (e: WheelEvent) => {
-      const width = frame.getBoundingClientRect().width;
+      const width = frame.clientWidth;
       if (!width) return;
       e.preventDefault();
       const rect = frame.getBoundingClientRect();
