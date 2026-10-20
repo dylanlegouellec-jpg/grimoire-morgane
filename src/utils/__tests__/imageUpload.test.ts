@@ -9,8 +9,10 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 const upload = vi.fn();
 const getSession = vi.fn();
+const rpc = vi.fn();
 const client = {
   auth: { getSession },
+  rpc,
   storage: {
     from: () => ({
       upload,
@@ -31,6 +33,8 @@ beforeEach(() => {
   clientAvailable = true;
   upload.mockReset();
   getSession.mockReset();
+  rpc.mockReset();
+  localStorage.clear();
   getSession.mockResolvedValue({ data: { session: { user: { id: "u" } } } });
   drawn.length = 0;
   resetThumbSessionState();
@@ -115,5 +119,32 @@ describe("backfillThumbnail", () => {
     upload.mockResolvedValue({ error: { message: "new row violates row-level security policy" } });
     await expect(backfillThumbnail(img, photo)).resolves.toBe(false);
     expect(warn).not.toHaveBeenCalled();
+  });
+});
+
+describe("uploadRecipeImage — foyer absent à l'envoi (bug signalé sur Android)", () => {
+  it("reprend le foyer du cache local au lieu de « sans-foyer »", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    localStorage.setItem("grimoire_local_cache_v1", JSON.stringify({ householdId: "foyer-cache" }));
+    upload.mockResolvedValue({ error: null });
+    await uploadRecipeImage(file, null);
+    expect(upload.mock.calls[0][0]).toBe("foyer-cache/r1.webp");
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("sinon le redemande au serveur (foyers dont on est membre accepté)", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    rpc.mockResolvedValue({ data: ["foyer-serveur"], error: null });
+    upload.mockResolvedValue({ error: null });
+    await uploadRecipeImage(file, undefined);
+    expect(rpc).toHaveBeenCalledWith("get_my_household_ids");
+    expect(upload.mock.calls[0][0]).toBe("foyer-serveur/r1.webp");
+  });
+
+  it("sans session ni cache (mode invité) : dossier « sans-foyer » comme avant", async () => {
+    getSession.mockResolvedValue({ data: { session: null } });
+    upload.mockResolvedValue({ error: null });
+    await uploadRecipeImage(file, null);
+    expect(upload.mock.calls[0][0]).toBe("sans-foyer/r1.webp");
   });
 });

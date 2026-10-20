@@ -1,5 +1,6 @@
 import { getSupabaseClient } from "./supabaseClient";
 import { nextId } from "./helpers";
+import { loadLocalCache } from "./localCache";
 import {
   RECIPE_IMAGE_BUCKET,
   NO_HOUSEHOLD_FOLDER,
@@ -127,6 +128,41 @@ export async function compressImageToBlob(
 // JSON (voir utils/offlineQueue.js) — en cas d'échec réseau, l'appelant
 // doit informer l'utilisateur plutôt que de faire semblant d'avoir
 // réussi.
+// Dossier du foyer où ranger la photo. Normalement reçu de l'écran appelant ;
+// s'il manque (signalé sur Android : au retour de l'appareil photo ou de la
+// galerie, la page reprend et l'app revérifie session et foyer — l'envoi
+// partait alors vers « sans-foyer », refusé par le stockage), on le
+// retrouve : foyer mémorisé sur l'appareil, sinon demandé au serveur
+// (get_my_household_ids, foyers dont on est membre accepté). « sans-foyer »
+// ne reste que pour le mode invité / sans compte.
+async function resolveUploadFolder(client: NonNullable<ReturnType<typeof getSupabaseClient>>, householdId: string | null | undefined): Promise<string> {
+  if (householdId) return householdId;
+  try {
+    const cached = (loadLocalCache() || {}).householdId;
+    if (cached) {
+      console.warn("[photo] foyer absent à l'envoi : repris du cache local");
+      return cached;
+    }
+  } catch {
+    /* cache illisible : on demande au serveur ci-dessous */
+  }
+  try {
+    const { data: auth } = await client.auth.getSession();
+    if (auth && auth.session) {
+      const { data } = await client.rpc("get_my_household_ids");
+      const first: unknown = Array.isArray(data) ? data[0] : data;
+      const id = typeof first === "string" ? first : (first as { get_my_household_ids?: string } | null)?.get_my_household_ids;
+      if (id) {
+        console.warn("[photo] foyer absent à l'envoi : redemandé au serveur");
+        return id;
+      }
+    }
+  } catch {
+    /* hors-ligne ou refus : dossier par défaut */
+  }
+  return NO_HOUSEHOLD_FOLDER;
+}
+
 export async function uploadRecipeImage(file: File, householdId: string | null | undefined): Promise<string> {
   const client = getSupabaseClient();
   if (!client) throw new Error("Supabase non configuré — upload d'image impossible.");
@@ -135,7 +171,7 @@ export async function uploadRecipeImage(file: File, householdId: string | null |
   const bitmap = await loadBitmap(file);
   const [w, h] = bitmapSize(bitmap);
   const { blob, mimeType, extension } = await encodeToBlob(bitmap, w, h, { maxWidth: MAX_WIDTH, quality: JPEG_QUALITY });
-  const folder = householdId || NO_HOUSEHOLD_FOLDER;
+  const folder = await resolveUploadFolder(client, householdId);
   const path = `${folder}/${nextId()}.${extension}`;
 
   const { error } = await client.storage.from(RECIPE_IMAGE_BUCKET).upload(path, blob, {
