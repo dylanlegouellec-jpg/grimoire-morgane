@@ -242,7 +242,7 @@ export default function RecipePage({
             <Share2 size={16} /> {t("recipeUi.detail.shareRecipe")}
           </Seal>
         </div>
-        <Flourish />
+        <Flourish undrawn={preview} />
         {folio && folio.total > 1 && (
           // Folio du grimoire : « 3 / 24 » entre deux fines flèches — indice
           // discret qu'on peut tourner les pages, et seule commande

@@ -20,12 +20,20 @@ import { EASE_OUT } from "../../constants/motion";
 const DRAW_TRANSITION: { duration: number; ease: [number, number, number, number] } = { duration: 0.55, ease: EASE_OUT };
 const DOT_TRANSITION = { delay: DRAW_TRANSITION.duration * 0.75, duration: 0.2 };
 
-export default function Flourish() {
+// "undrawn" : ornement laissé NON dessiné (traits et point masqués) — pour
+// la page voisine découverte pendant qu'on tourne une page de la fiche
+// (RecipePage "preview") : sans lui, il s'y dessinait sous le doigt et
+// avait déjà fini quand on la voyait ; il se dessine désormais une fois la
+// page lâchée, quand la vraie page se monte à sa place.
+const UNDRAWN_PATH = { pathLength: 0 };
+const UNDRAWN_DOT = { opacity: 0, scale: 0 };
+
+export default function Flourish({ undrawn = false }: { undrawn?: boolean }) {
   const prefersReducedMotion = useReducedMotion();
   const Path = prefersReducedMotion ? "path" : motion.path;
   const Circle = prefersReducedMotion ? "circle" : motion.circle;
-  const drawProps = prefersReducedMotion ? {} : { initial: { pathLength: 0 }, animate: { pathLength: 1 }, transition: DRAW_TRANSITION };
-  const dotProps = prefersReducedMotion ? {} : { initial: { opacity: 0, scale: 0 }, animate: { opacity: 1, scale: 1 }, transition: DOT_TRANSITION };
+  const drawProps = prefersReducedMotion ? {} : { initial: UNDRAWN_PATH, animate: undrawn ? UNDRAWN_PATH : { pathLength: 1 }, transition: DRAW_TRANSITION };
+  const dotProps = prefersReducedMotion ? {} : { initial: UNDRAWN_DOT, animate: undrawn ? UNDRAWN_DOT : { opacity: 1, scale: 1 }, transition: DOT_TRANSITION };
   return (
     <div className="flourish" aria-hidden="true">
       <svg viewBox="0 0 100 20" width="70" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
