@@ -10,6 +10,7 @@ import {
   storagePathFromPublicUrl,
   thumbPathFor,
 } from "./thumbnails";
+import { roundCrop, type CropRect } from "./photoCrop";
 
 /* ------------------------------------------------------------------ */
 /*  IMAGES DE RECETTES — compression + Supabase Storage                */
@@ -46,7 +47,7 @@ export interface CompressedImage {
 // second) et peuvent être passés tels quels à CanvasRenderingContext2D.drawImage.
 type LoadedBitmap = ImageBitmap | HTMLImageElement;
 
-function loadBitmap(file: File): Promise<LoadedBitmap> {
+function loadBitmap(file: Blob): Promise<LoadedBitmap> {
   if (typeof createImageBitmap === "function") return createImageBitmap(file);
   // Repli pour les navigateurs sans createImageBitmap (rare aujourd'hui,
   // mais évite un plantage sec plutôt qu'une dégradation silencieuse).
@@ -68,21 +69,25 @@ function supportsWebp(canvas: HTMLCanvasElement): boolean {
 
 // Dessine une source déjà décodée dans un canvas (largeur max, ratio
 // conservé) et l'encode. `mimeType` impose le format (miniature : même
-// format que la photo) ; sinon WebP si supporté, JPEG à défaut.
+// format que la photo) ; sinon WebP si supporté, JPEG à défaut. `crop` :
+// seule cette zone (pixels source, déjà arrondie) est dessinée — voir
+// l'éditeur de recadrage (PhotoCropModal).
 function encodeToBlob(
   source: CanvasImageSource,
   sourceWidth: number,
   sourceHeight: number,
-  { maxWidth, quality, mimeType: forcedMime, smooth = false }: {
+  { maxWidth, quality, mimeType: forcedMime, smooth = false, crop }: {
     maxWidth: number;
     quality: number;
     mimeType?: CompressedImage["mimeType"];
     smooth?: boolean;
+    crop?: CropRect;
   }
 ): Promise<CompressedImage> {
-  const scale = Math.min(1, maxWidth / sourceWidth);
-  const width = Math.max(1, Math.round(sourceWidth * scale));
-  const height = Math.max(1, Math.round(sourceHeight * scale));
+  const area = crop || { x: 0, y: 0, w: sourceWidth, h: sourceHeight };
+  const scale = Math.min(1, maxWidth / area.w);
+  const width = Math.max(1, Math.round(area.w * scale));
+  const height = Math.max(1, Math.round(area.h * scale));
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -91,7 +96,8 @@ function encodeToBlob(
   // Réduction forte (÷2.5 pour une miniature) : le lissage "high" évite
   // l'aspect crénelé d'un sous-échantillonnage naïf.
   if (smooth) ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(source, 0, 0, width, height);
+  if (crop) ctx.drawImage(source, area.x, area.y, area.w, area.h, 0, 0, width, height);
+  else ctx.drawImage(source, 0, 0, width, height);
 
   const mimeType: CompressedImage["mimeType"] = forcedMime || (supportsWebp(canvas) ? "image/webp" : "image/jpeg");
   return new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, mimeType, quality)).then((blob) => {
@@ -163,14 +169,25 @@ async function resolveUploadFolder(client: NonNullable<ReturnType<typeof getSupa
   return NO_HOUSEHOLD_FOLDER;
 }
 
-export async function uploadRecipeImage(file: File, householdId: string | null | undefined): Promise<string> {
+export interface UploadRecipeImageOptions {
+  // Zone à garder, en pixels de l'image reçue (voir utils/photoCrop.ts) :
+  // la photo ET sa miniature sont découpées à cette zone avant compression.
+  crop?: CropRect;
+}
+
+export async function uploadRecipeImage(
+  file: Blob,
+  householdId: string | null | undefined,
+  { crop }: UploadRecipeImageOptions = {}
+): Promise<string> {
   const client = getSupabaseClient();
   if (!client) throw new Error("Supabase non configuré — upload d'image impossible.");
 
   // Décodée une seule fois : la photo ET sa miniature en sont tirées.
   const bitmap = await loadBitmap(file);
   const [w, h] = bitmapSize(bitmap);
-  const { blob, mimeType, extension } = await encodeToBlob(bitmap, w, h, { maxWidth: MAX_WIDTH, quality: JPEG_QUALITY });
+  const area = crop ? roundCrop(crop, { width: w, height: h }) : undefined;
+  const { blob, mimeType, extension } = await encodeToBlob(bitmap, w, h, { maxWidth: MAX_WIDTH, quality: JPEG_QUALITY, crop: area });
   const folder = await resolveUploadFolder(client, householdId);
   const path = `${folder}/${nextId()}.${extension}`;
 
@@ -190,6 +207,7 @@ export async function uploadRecipeImage(file: File, householdId: string | null |
       quality: THUMB_QUALITY,
       mimeType,
       smooth: true,
+      crop: area,
     });
     const { error: thumbError } = await client.storage
       .from(RECIPE_IMAGE_BUCKET)

@@ -249,6 +249,8 @@ export const CODE_DOCS: Record<string, string> = {
     "Geste « tourner la page » de la fiche recette : reconnaît un glissement clairement horizontal, fait pivoter la feuille autour de sa reliure en suivant le doigt, valide au-delà d'un seuil ou d'une vitesse (sinon ressort), butée élastique aux bouts, simple fondu avec Réduire les animations.",
   "src/hooks/useRecipePager.ts":
     "Vue livre de la fiche recette côté AppShell : liste des recettes de la grille affichée (même tri, filtre, favoris, recherche) et clé de fiche figée à l'ouverture, pour qu'en tournant les pages la fiche ne soit ni remontée ni empilée dans l'historique.",
+  "src/hooks/usePhotoCropSource.ts":
+    "Garde la photo en cours de recadrage pour l'écran qui ouvre l'éditeur (ouverture depuis un fichier ou une URL, type d'erreur, libération de l'URL locale).",
   "src/hooks/useWakeLock.ts":
     "Empêche l'écran de s'éteindre pendant le mode cuisine, et redemande le verrou quand on revient sur l'app. Sans effet si le navigateur ne sait pas le faire.",
   "src/hooks/useTabNavigation.ts":
@@ -349,6 +351,10 @@ export const CODE_DOCS: Record<string, string> = {
     "Miniatures des photos de recettes : dérive le chemin et l'URL publique de la miniature (~480 px) d'une photo du bucket recipe-images, et retient pour la session les miniatures manquantes et les rattrapages déjà tentés.",
   "src/utils/nutritionBatch.ts":
     "Estimation nutritionnelle en lot : trouve les recettes sans aucune valeur nutritionnelle et les estime une par une (avec pause, progression et arrêt possible), sans jamais toucher une recette déjà renseignée.",
+  "src/utils/photoCrop.ts":
+    "Calculs du recadrage d'une photo de recette : bornes (la photo couvre toujours le cadre 4:3), déplacement et zoom autour d'un point, conversion en pixels source, et fenêtres visibles dans la carte et le haut de la fiche pour les aperçus.",
+  "src/utils/photoCropSource.ts":
+    "Décode la photo à recadrer (fichier choisi ou photo déjà en ligne, chargée en CORS) et la redessine en JPEG de 2400 px max ; lève une erreur typée si elle est illisible (HEIC, réseau, CORS).",
   "src/utils/recipeSearch.ts":
     "Recherche et tri de la grille de recettes : recherche sans accents, mot par mot, dans le titre et les ingrédients, qui tolère une petite faute de frappe ; tri par nom, plus récentes ou plus rapides.",
   "src/utils/shoppingShare.ts":
@@ -403,6 +409,8 @@ export const CODE_DOCS: Record<string, string> = {
     "Styles de la sous-vue « Unités des ingrédients » des Réglages : rangées, bouton de suppression, champ d'ajout et suggestions.",
   "src/styles/servingsUnit.css":
     "Styles de l'unité des portions : feuille de choix du formulaire, unité après le nombre sur la fiche et sur la carte de la grille, version paysage téléphone.",
+  "src/styles/photoCrop.css":
+    "Styles de l'éditeur de recadrage d'une photo : feuille plein écran, cadre tactile, aperçus, et mise en page côte à côte en paysage téléphone.",
   "src/styles/cookmode.css":
     "Les styles du mode cuisine : étapes en plein écran, molette de portions, feuille de quantité.",
   "src/styles/diagnostics.css":
@@ -593,6 +601,8 @@ export const CODE_DOCS: Record<string, string> = {
     "Écran des Réglages « Estimer la nutrition des recettes » : liste les recettes sans valeurs nutritionnelles, lance leur estimation avec une barre de progression et l'état de chaque recette, puis affiche un résumé.",
   "src/components/common/UnitsSettingsModal.tsx":
     "Sous-vue des Réglages « Unités des ingrédients » : masquer ou afficher les unités de base, supprimer ou ajouter des unités (avec suggestions en un appui), partagées avec tout le foyer.",
+  "src/components/common/PhotoCropModal.tsx":
+    "Éditeur de recadrage plein écran avant l'envoi d'une photo : déplacement au doigt, pincement, glissière et molette pour zoomer, Recentrer, et aperçus en direct de la carte de la grille et du haut de la fiche.",
   "src/components/common/NavPill.tsx":
     "La pastille sombre sous l'onglet actif de la barre de navigation : elle glisse d'un onglet à l'autre, sa position étant mesurée dans la barre elle-même (le défilement de la page ne la fait plus sauter).",
   "src/components/common/Seal.tsx":
