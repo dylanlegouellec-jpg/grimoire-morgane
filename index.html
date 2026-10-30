@@ -180,22 +180,79 @@
         color: #d97706;
       }
       #splash.splash-leaving { opacity: 0; pointer-events: none; }
-      #splash svg { animation: splashBreathe 1.6s ease-in-out infinite; }
-      @keyframes splashBreathe {
-        0%, 100% { opacity: 0.55; transform: scale(0.94); }
-        50% { opacity: 1; transform: scale(1); }
+      /* Le cookie (même que l'icône de l'app) arrive, se fait croquer trois
+         fois — chaque bouchée fait trembler le cookie et tomber des miettes —
+         puis respire doucement si l'app n'est pas encore prête. Les bouchées
+         sont des disques de la couleur du fond posés sur le bord droit (là où
+         le dégradé du fond est transparent, donc d'une seule teinte) : plus
+         robuste qu'un <mask> animé, que Safari repeint mal. Durée totale
+         alignée sur data-min-ms (#splash) : dismissSplash() attend la fin
+         de la dernière bouchée avant le fondu. */
+      #splash .cookie { width: 112px; height: 112px; overflow: visible;
+        animation: cookieIn 0.35s cubic-bezier(.2,.9,.3,1.3) both, cookieBreathe 1.6s ease-in-out 1.7s infinite; }
+      #splash .cookie-body { transform-box: fill-box; transform-origin: center; animation: cookieCrunch 1.5s linear both; }
+      #splash .bite { fill: #f1e6c8; transform-box: fill-box; transform-origin: center; transform: scale(0);
+        animation: biteIn 0.14s cubic-bezier(.3,1.4,.5,1) forwards; }
+      html[data-theme="dark"] #splash .bite { fill: #1c1917; }
+      #splash .b1 { animation-delay: 0.5s; }
+      #splash .b2 { animation-delay: 0.9s; }
+      #splash .b3 { animation-delay: 1.3s; }
+      #splash .crumb { opacity: 0; animation: crumbFall 0.7s ease-in forwards; }
+      #splash .c1 { animation-delay: 0.52s; }
+      #splash .c2 { animation-delay: 0.92s; }
+      #splash .c3 { animation-delay: 1.32s; }
+      @keyframes cookieIn { from { opacity: 0; transform: scale(0.7) rotate(-12deg); } to { opacity: 1; transform: none; } }
+      @keyframes biteIn { to { transform: scale(1); } }
+      @keyframes crumbFall {
+        0% { opacity: 1; transform: translate(0, 0); }
+        100% { opacity: 0; transform: translate(var(--dx, 4px), 34px); }
+      }
+      /* Un petit tremblement à chaque bouchée (0,5 s, 0,9 s, 1,3 s sur 1,5 s). */
+      @keyframes cookieCrunch {
+        0%, 32%, 42%, 59%, 69%, 86%, 96%, 100% { transform: none; }
+        34%, 61%, 88% { transform: rotate(-4deg) scale(0.96); }
+        37%, 64%, 91% { transform: rotate(3deg) scale(0.98); }
+      }
+      @keyframes cookieBreathe {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(0.95); }
       }
       @media (prefers-reduced-motion: reduce) {
         #splash { transition: none; }
-        #splash svg { animation: none; }
+        #splash .cookie, #splash .cookie-body, #splash .bite, #splash .crumb { animation: none; }
       }
     </style>
   </head>
   <body>
-    <div id="splash" aria-hidden="true">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/>
-        <path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/>
+    <div id="splash" aria-hidden="true" data-min-ms="1750">
+      <svg class="cookie" viewBox="0 0 100 100">
+        <defs>
+          <radialGradient id="splashDough" cx="40%" cy="35%" r="70%">
+            <stop offset="0" stop-color="#f0d9a8"/>
+            <stop offset="0.7" stop-color="#ddb87a"/>
+            <stop offset="1" stop-color="#b98a4c"/>
+          </radialGradient>
+        </defs>
+        <g class="cookie-body">
+          <circle cx="50" cy="50" r="40" fill="url(#splashDough)" stroke="#9c6f37" stroke-width="1.2"/>
+          <g fill="#c49a5e" opacity="0.55">
+            <circle cx="30" cy="62" r="1.6"/><circle cx="58" cy="30" r="1.3"/><circle cx="46" cy="72" r="1.4"/>
+            <circle cx="66" cy="66" r="1.2"/><circle cx="24" cy="40" r="1.2"/><circle cx="52" cy="50" r="1.1"/>
+          </g>
+          <g fill="#4a2c1a">
+            <circle cx="34" cy="32" r="5"/><circle cx="52" cy="24" r="5.5"/><path d="M71 30 l6 9 h-11 z"/>
+            <path d="M24 50 l9 -3 l2 8 l-9 3 z"/><path d="M54 44 l6 8 h-11 z"/>
+            <circle cx="33" cy="68" r="4.6"/><circle cx="58" cy="70" r="5"/><circle cx="80" cy="56" r="4.2"/>
+          </g>
+          <g class="bite b1"><circle cx="82" cy="18" r="12"/><circle cx="71" cy="12" r="8"/><circle cx="89" cy="29" r="8"/></g>
+          <g class="bite b2"><circle cx="94" cy="54" r="12"/><circle cx="92" cy="42" r="8"/><circle cx="92" cy="66" r="8"/></g>
+          <g class="bite b3"><circle cx="76" cy="88" r="12"/><circle cx="65" cy="93" r="8"/><circle cx="86" cy="79" r="8"/></g>
+        </g>
+        <g fill="#c49a5e">
+          <circle class="crumb c1" cx="76" cy="26" r="1.8" style="--dx:6px"/><circle class="crumb c1" cx="72" cy="22" r="1.2" style="--dx:-3px"/><circle class="crumb c1" cx="80" cy="30" r="1.4" style="--dx:10px"/>
+          <circle class="crumb c2" cx="84" cy="52" r="1.8" style="--dx:7px"/><circle class="crumb c2" cx="82" cy="58" r="1.3" style="--dx:-2px"/><circle class="crumb c2" cx="86" cy="46" r="1.2" style="--dx:11px"/>
+          <circle class="crumb c3" cx="72" cy="80" r="1.7" style="--dx:5px"/><circle class="crumb c3" cx="68" cy="84" r="1.2" style="--dx:-4px"/><circle class="crumb c3" cx="78" cy="78" r="1.3" style="--dx:9px"/>
+        </g>
       </svg>
     </div>
     <div id="root"></div>
