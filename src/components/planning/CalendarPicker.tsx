@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toISODate, isSameDay, localeFor } from "../../utils/planning";
 import { triggerHaptic } from "../../utils/haptics";
 import { useTranslation } from "../../contexts/LanguageContext";
+import { dateFormatter } from "../../utils/intlCache";
 
 /* ------------------------------------------------------------------ */
 /*  CALENDRIER MENSUEL — sélection libre de n'importe quel jour de       */
@@ -33,7 +34,7 @@ function getWeekdayLetters(locale: string): string[] {
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday);
     d.setDate(d.getDate() + i);
-    return new Intl.DateTimeFormat(locale, { weekday: "narrow" }).format(d);
+    return dateFormatter(locale, { weekday: "narrow" }).format(d);
   });
 }
 
@@ -49,7 +50,7 @@ export default function CalendarPicker({ viewMonth, onChangeMonth, selectedDate,
   const locale = localeFor(language);
   const days = getMonthGrid(viewMonth);
   const today = new Date();
-  const monthLabel = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(viewMonth);
+  const monthLabel = dateFormatter(locale, { month: "long", year: "numeric" }).format(viewMonth);
   const weekdayLetters = getWeekdayLetters(locale);
 
   const goPrevMonth = () => {

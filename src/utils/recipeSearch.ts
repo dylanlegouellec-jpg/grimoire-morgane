@@ -1,5 +1,6 @@
 import { normalize } from "./helpers";
 import type { Recipe } from "../hooks/useRecipes";
+import { compareFr } from "./intlCache";
 
 /* ------------------------------------------------------------------ */
 /*  RECHERCHE ET TRI DES RECETTES (grille)                             */
@@ -80,7 +81,7 @@ export const RECIPE_SORTS: RecipeSort[] = ["name", "recent", "quick"];
  * ajoutée en tête (hooks/useRecipes.ts) — pas besoin d'une date en plus.
  */
 export function sortRecipes(recipes: Recipe[], sort: RecipeSort): Recipe[] {
-  const byName = (a: Recipe, b: Recipe) => a.title.localeCompare(b.title, "fr");
+  const byName = (a: Recipe, b: Recipe) => compareFr(a.title, b.title);
   if (sort === "recent") return [...recipes];
   if (sort === "quick") return [...recipes].sort((a, b) => (Number(a.time) || 0) - (Number(b.time) || 0) || byName(a, b));
   return [...recipes].sort(byName);

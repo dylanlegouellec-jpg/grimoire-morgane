@@ -315,6 +315,8 @@ export const CODE_DOCS: Record<string, string> = {
     "Compresse les photos de recettes avant l'envoi puis les envoie dans Supabase Storage, au lieu de les glisser en base64 dans la base de données.",
   "src/utils/ingredients.ts":
     "Garantit qu'un ingrédient a toujours la même forme (quantité, unité, nom, ou titre de section), quelle que soit sa provenance : fiche texte, formulaire, base de données, import.",
+  "src/utils/intlCache.ts":
+    "Garde une seule fois en mémoire les outils de tri alphabétique français et de mise en forme des dates, au lieu d'en recréer un à chaque comparaison ou à chaque date affichée, ce qui ralentissait le planning et les tris.",
   "src/utils/localCache.ts":
     "Copie l'état de l'app (recettes, frigo, listes) dans le stockage local, pour redémarrer instantanément sur les dernières données connues et fonctionner sans réseau.",
   "src/utils/localSettings.ts":

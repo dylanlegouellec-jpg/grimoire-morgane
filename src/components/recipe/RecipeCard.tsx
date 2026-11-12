@@ -1,4 +1,4 @@
-import { memo, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
+import { memo, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { AnimatePresence, motion, useAnimate, useReducedMotion } from "motion/react";
 import { Clock, Heart, Users, Utensils } from "lucide-react";
 import { NUTRI_COLORS, estimateNutriscoreLocal } from "../../utils/nutriscore";
@@ -56,8 +56,13 @@ function RecipeCard({
   // de la recette (voir utils/nutriscoreClient.js + api/nutriscore.js) et
   // stocké dans recipe.nutriscoreGrade — plus aucun appel réseau ici.
   // Le repli local ne sert que pour les recettes qui n'ont pas encore ce
-  // champ (démo, recettes créées avant l'ajout de la colonne).
-  const nutri = (recipe.nutriscoreGrade || estimateNutriscoreLocal(recipe.ingredients, recipe.category)) as NutriscoreGrade;
+  // champ (démo, recettes créées avant l'ajout de la colonne) — mémorisé :
+  // sinon recalculé à chaque rendu de CHAQUE carte (un changement de filtre
+  // redessine toute la grille).
+  const nutri = useMemo(
+    () => (recipe.nutriscoreGrade || estimateNutriscoreLocal(recipe.ingredients, recipe.category)) as NutriscoreGrade,
+    [recipe.nutriscoreGrade, recipe.ingredients, recipe.category]
+  );
   const { language, dict, t } = useTranslation();
   const unitServings = unitServingsText(t, Number(recipe.servings) || 1, recipe.servingsUnit, language);
   const [showOptions, setShowOptions] = useState(false);

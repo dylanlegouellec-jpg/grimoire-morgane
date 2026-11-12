@@ -10,6 +10,7 @@ import DishArt from "../art/DishArt";
 import SwipeFlourish from "../shopping/SwipeFlourish";
 import CategoryIcon from "../common/CategoryIcon";
 import type { Recipe } from "../../hooks/useRecipes";
+import { compareFr } from "../../utils/intlCache";
 
 // Icône des "basiques" (sel/poivre/huile...) — pas une vraie catégorie
 // FRIDGE_CATEGORIES, mais la même famille que "epices" (voir pantryUtils.js).
@@ -89,7 +90,7 @@ export default function FridgeView({ recipes, pantry, setPantry, basics, search,
   const grouped = FRIDGE_CATEGORIES.reduce<Record<string, PantryOption[]>>((acc, cat) => { acc[cat.key] = []; return acc; }, {});
   filteredOptions.forEach((opt) => { (grouped[opt.category] || grouped.epicerie).push(opt); });
 
-  const sortedBasics = useMemo(() => [...basics].sort((a, b) => a.localeCompare(b, "fr")), [basics]);
+  const sortedBasics = useMemo(() => [...basics].sort((a, b) => compareFr(a, b)), [basics]);
   const filteredBasics = q ? sortedBasics.filter((name) => name.toLowerCase().includes(q)) : sortedBasics;
 
   // Deuxième calcul coûteux de la vue : missingIngredients tourne une fois
@@ -99,7 +100,7 @@ export default function FridgeView({ recipes, pantry, setPantry, basics, search,
   const ranked = useMemo(() => {
     return recipes
       .map((r) => ({ recipe: r, missing: missingIngredients(r, ownedSet) }))
-      .sort((a, b) => a.missing.length - b.missing.length || a.recipe.title.localeCompare(b.recipe.title, "fr"));
+      .sort((a, b) => a.missing.length - b.missing.length || compareFr(a.recipe.title, b.recipe.title));
   }, [recipes, ownedSet]);
   const visibleRanked = showAllRecipes ? ranked : ranked.filter(({ missing }) => missing.length <= MAX_MISSING_SHOWN);
   const hiddenCount = ranked.length - visibleRanked.length;
