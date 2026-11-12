@@ -194,5 +194,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 // lui-même à son premier montage ; ces deux appels couvrent les cas où il ne
 // monte pas — la page de partage d'une recette (aucune app derrière), et un
 // plantage avant ce montage (sans ce filet, le splash masquerait à jamais
-// l'écran d'erreur de l'ErrorBoundary).
-window.setTimeout(dismissSplash, isShareLink ? 50 : 8000)
+// l'écran d'erreur de l'ErrorBoundary). Pour un lien de partage, la recette
+// est déjà là : on retire le splash sans attendre la fin du cookie croqué.
+if (isShareLink) window.setTimeout(() => dismissSplash({ immediate: true }), 50)
+else window.setTimeout(() => dismissSplash(), 8000)
