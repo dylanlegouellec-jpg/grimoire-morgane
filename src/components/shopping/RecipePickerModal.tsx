@@ -12,6 +12,7 @@ import Flourish from "../common/Flourish";
 import Seal from "../common/Seal";
 import { useTranslation } from "../../contexts/LanguageContext";
 import type { Recipe } from "../../hooks/useRecipes";
+import { compareFr } from "../../utils/intlCache";
 
 interface RecipePickerModalProps {
   recipes: Recipe[];
@@ -51,7 +52,7 @@ export default function RecipePickerModal({ recipes, onGenerate, onClose }: Reci
 
   const filtered = [...recipes]
     .filter((r) => filter === "tout" || normalize(r.category) === filter)
-    .sort((a, b) => a.title.localeCompare(b.title, "fr"));
+    .sort((a, b) => compareFr(a.title, b.title));
 
   const handleGenerate = () => {
     if (!selected.length) return;

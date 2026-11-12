@@ -1,5 +1,6 @@
 import { Cookie, Moon, Salad, Soup, Sun, Sunrise, CakeSlice, Wine } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { dateFormatter } from "./intlCache";
 
 /* ------------------------------------------------------------------ */
 /*  PLANIFICATION DES REPAS — utilitaires de semaine (lundi -> dimanche)  */
@@ -122,7 +123,7 @@ export function formatWeekRange(weekStart: Date, language: string | null | undef
   const end = days[6];
   const sameYear = start.getFullYear() === end.getFullYear();
   const fmt = (d: Date, withYear: boolean) =>
-    new Intl.DateTimeFormat(locale, { day: "2-digit", month: "short", year: withYear ? "numeric" : undefined }).format(d);
+    dateFormatter(locale, { day: "2-digit", month: "short", year: withYear ? "numeric" : undefined }).format(d);
   return `${fmt(start, !sameYear)} - ${fmt(end, true)}`;
 }
 
@@ -131,5 +132,5 @@ export function formatWeekRange(weekStart: Date, language: string | null | undef
 // pas à distinguer, par exemple, "lundi" cette semaine de "lundi" la
 // semaine prochaine une fois qu'on a navigué.
 export function formatDayLabel(date: Date, language: string | null | undefined): string {
-  return new Intl.DateTimeFormat(localeFor(language), { weekday: "long", day: "numeric", month: "long" }).format(date);
+  return dateFormatter(localeFor(language), { weekday: "long", day: "numeric", month: "long" }).format(date);
 }

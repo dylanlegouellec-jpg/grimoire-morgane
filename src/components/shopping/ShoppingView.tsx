@@ -19,6 +19,7 @@ import ShoppingAisleBlock from "./ShoppingAisleBlock";
 import type { Recipe } from "../../hooks/useRecipes";
 import type { ShoppingItem, ShoppingList } from "../../hooks/useShoppingLists";
 import { EASE_OUT, SCOPE_SWITCH_DURATION_S, SCOPE_SWITCH_SLIDE_PX } from "../../constants/motion";
+import { compareFr } from "../../utils/intlCache";
 
 // "shopping.recap" reste une SEULE phrase traduite interpolée (voir
 // translations.js, "{bought}/{total} article{plural}...") — t() ne rend
@@ -120,13 +121,13 @@ export default function ShoppingView({
   // tournait sur toute la liste à chaque rendu, quelle qu'en soit la cause.
   const { bought, grouped, aisleCount } = useMemo(() => {
     const unchecked = items.filter((i) => !i.checked);
-    const bought = [...items.filter((i) => i.checked)].sort((a, b) => a.name.localeCompare(b.name, "fr"));
+    const bought = [...items.filter((i) => i.checked)].sort((a, b) => compareFr(a.name, b.name));
     const grouped = unchecked.reduce<Record<string, ShoppingItem[]>>((acc, item) => {
       acc[item.aisle] = acc[item.aisle] || [];
       acc[item.aisle].push(item);
       return acc;
     }, {});
-    Object.values(grouped).forEach((list) => list.sort((a, b) => a.name.localeCompare(b.name, "fr")));
+    Object.values(grouped).forEach((list) => list.sort((a, b) => compareFr(a.name, b.name)));
     return { unchecked, bought, grouped, aisleCount: Object.keys(grouped).length };
   }, [items]);
 

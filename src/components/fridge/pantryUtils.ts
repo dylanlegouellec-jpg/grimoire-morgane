@@ -3,6 +3,7 @@ import { ingredientKey } from "../../utils/helpers";
 import type { LucideIcon } from "lucide-react";
 import type { Recipe } from "../../hooks/useRecipes";
 import type { Ingredient } from "../../utils/ingredients";
+import { compareFr } from "../../utils/intlCache";
 
 /* ------------------------------------------------------------------ */
 /*  VUE MON FRIGO — utilitaires de gestion des basiques & du pantry    */
@@ -205,7 +206,7 @@ export function collectPantryOptions(recipes: Recipe[]): PantryOption[] {
   });
   return Array.from(seen.entries())
     .map(([key, label]) => ({ key, label, category: categorizeIngredient(label) }))
-    .sort((a, b) => a.label.localeCompare(b.label, "fr"));
+    .sort((a, b) => compareFr(a.label, b.label));
 }
 
 // Utilise le même pipeline de normalisation que collectPantryOptions ci-

@@ -14,6 +14,7 @@ import CategoryIcon from "../common/CategoryIcon";
 import CalendarPicker from "./CalendarPicker";
 import type { Recipe } from "../../hooks/useRecipes";
 import type { MealPlanEntry } from "../../hooks/useMealPlan";
+import { compareFr } from "../../utils/intlCache";
 
 type Step = "date" | "meal" | "recipe";
 
@@ -136,7 +137,7 @@ export default function AddMealModal({
   const q = search.trim().toLowerCase();
   const filtered = [...recipes]
     .filter((r) => !q || r.title.toLowerCase().includes(q))
-    .sort((a, b) => a.title.localeCompare(b.title, "fr"));
+    .sort((a, b) => compareFr(a.title, b.title));
 
   const titles: Record<Step, string> = {
     date: t("planning.dateStepTitle"),
