@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ILLUSTRATIONS, resolveIllustrationKey } from "./illustrations";
 import { translateCurrent } from "../../utils/i18n";
 import { isThumbKnownMissing, markThumbMissing, thumbUrlFor } from "../../utils/thumbnails";
@@ -33,6 +33,15 @@ interface DishArtProps {
 // Source initiale : la miniature en mode "thumb" quand la photo en a une
 // (bucket recipe-images uniquement) et qu'elle n'a pas déjà manqué
 // pendant cette session ; la photo elle-même sinon.
+// Fiche recette ("full") : la miniature déjà chargée et décodée par la
+// carte de la grille, affichée SOUS la pleine taille le temps que celle-ci
+// arrive — la photo est donc visible dès la première image de l'ouverture
+// (et pendant le morphing carte -> fiche), puis devient nette en fondu.
+function previewSrc(rawUrl: string | null | undefined, size: DishArtProps["size"]): string | null {
+  if (size !== "full" || !rawUrl || isThumbKnownMissing(rawUrl)) return null;
+  return thumbUrlFor(rawUrl);
+}
+
 function initialSrc(rawUrl: string | null | undefined, size: DishArtProps["size"]): string | null | undefined {
   if (size !== "thumb" || !rawUrl || isThumbKnownMissing(rawUrl)) return rawUrl;
   return thumbUrlFor(rawUrl) || rawUrl;
@@ -65,6 +74,10 @@ export default function DishArt({ recipe, size = "full" }: DishArtProps) {
   // que la photo n'a pas fini de se décoder — évite le passage brutal
   // "zone vide -> image nette" quand le réseau ou le cache sont lents.
   const [photoLoaded, setPhotoLoaded] = useState(false);
+  const preview = previewSrc(rawUrl, size);
+  const [previewLoaded, setPreviewLoaded] = useState(false);
+  const [previewFailed, setPreviewFailed] = useState(false);
+  const previewElRef = useRef<HTMLImageElement | null>(null);
   const retryCountRef = useRef(0);
   // Délai avant le retry ci-dessous (handleImgError) — jamais démarré sur
   // une <img> démontée/remontée entre-temps, ni laissé courir après un
@@ -83,6 +96,8 @@ export default function DishArt({ recipe, size = "full" }: DishArtProps) {
     setImgSrc(nextSrc);
     setImgFailed(false);
     setPhotoLoaded(false);
+    setPreviewLoaded(false);
+    setPreviewFailed(false);
     retryCountRef.current = 0;
   }
   // Une image déjà en cache HTTP peut être "complete" dès son tout premier
@@ -106,12 +121,19 @@ export default function DishArt({ recipe, size = "full" }: DishArtProps) {
       void backfillThumbnail(node, rawUrl);
     }
   };
-  useEffect(() => {
+  // useLayoutEffect (pas useEffect) : vérifié AVANT que le navigateur ne
+  // peigne, pour qu'une photo déjà en cache ne montre jamais, même une
+  // seule image, le voile de chargement par-dessus elle.
+  useLayoutEffect(() => {
     const node = imgElRef.current;
     if (node && node.complete && node.naturalWidth > 0) handlePhotoReady();
     // handlePhotoReady ne lit que des refs et rawUrl, déjà lié à imgSrc.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imgSrc]);
+  useLayoutEffect(() => {
+    const node = previewElRef.current;
+    if (node && node.complete && node.naturalWidth > 0) setPreviewLoaded(true);
+  }, [preview]);
   const handleImgError = () => {
     // Miniature introuvable (photo envoyée avant les miniatures -> 400/404)
     // ou momentanément injoignable : bascule IMMÉDIATE sur la pleine
@@ -197,6 +219,27 @@ export default function DishArt({ recipe, size = "full" }: DishArtProps) {
         className="illus illus-art illus-photo-frame"
         onContextMenu={(e) => e.preventDefault()}
       >
+        {/* Reste en place sous la photo nette : la retirer pile au début du
+            fondu laisserait voir le parchemin à travers. */}
+        {preview && !previewFailed && (
+          <img
+            ref={previewElRef}
+            crossOrigin="anonymous"
+            src={preview}
+            alt=""
+            aria-hidden="true"
+            className="illus-photo-preview"
+            draggable="false"
+            decoding="sync"
+            onLoad={() => setPreviewLoaded(true)}
+            onError={() => {
+              // Miniature absente (ancienne photo) : retenue pour la session,
+              // comme pour les cartes ; la fiche garde son voile habituel.
+              if (rawUrl) markThumbMissing(rawUrl);
+              setPreviewFailed(true);
+            }}
+          />
+        )}
         <img
           ref={imgElRef}
           // crossOrigin AVANT src, jamais après : React applique les
@@ -216,15 +259,17 @@ export default function DishArt({ recipe, size = "full" }: DishArtProps) {
           crossOrigin="anonymous"
           src={imgSrc ?? undefined}
           alt={recipe.title || translateCurrent("recipeUi.detail.illustrationAlt")}
-          className="illus-photo"
+          className={`illus-photo${preview && !photoLoaded ? " illus-photo-pending" : ""}`}
           draggable="false"
-          loading="lazy"
+          // La fiche est toujours à l'écran quand elle s'affiche : aucun
+          // intérêt à différer son chargement (contrairement aux cartes).
+          loading={size === "full" ? "eager" : "lazy"}
           decoding="async"
           onLoad={handlePhotoReady}
           onError={handleImgError}
         />
         <div className="illus-photo-guard" aria-hidden="true" />
-        {!photoLoaded && <div className="illus-shimmer" aria-hidden="true" />}
+        {!photoLoaded && !(previewLoaded && !previewFailed) && <div className="illus-shimmer" aria-hidden="true" />}
       </div>
     );
   }

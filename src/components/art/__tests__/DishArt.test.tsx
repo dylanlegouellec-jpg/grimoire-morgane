@@ -98,3 +98,40 @@ describe("DishArt — miniatures", () => {
     expect(backfillThumbnail).not.toHaveBeenCalled();
   });
 });
+
+describe("DishArt — fiche recette instantanée", () => {
+  const getPreview = (container: HTMLElement) => container.querySelector("img.illus-photo-preview") as HTMLImageElement | null;
+
+  it("affiche la miniature sous la pleine taille, sans voile, dès qu'elle est prête", () => {
+    const { container } = render(<DishArt recipe={{ title: "Tarte", imageUrl: photo }} />);
+    const preview = getPreview(container)!;
+    expect(preview.getAttribute("src")).toBe(thumb);
+    expect(getImg(container).getAttribute("src")).toBe(photo);
+    expect(getImg(container).classList.contains("illus-photo-pending")).toBe(true);
+    expect(container.querySelector(".illus-shimmer")).not.toBeNull();
+    fireEvent.load(preview);
+    expect(container.querySelector(".illus-shimmer")).toBeNull();
+    fireEvent.load(getImg(container));
+    expect(getImg(container).classList.contains("illus-photo-pending")).toBe(false);
+  });
+
+  it("charge la pleine taille sans différer (pas de loading=lazy)", () => {
+    const { container } = render(<DishArt recipe={{ title: "Tarte", imageUrl: photo }} />);
+    expect(getImg(container).getAttribute("loading")).toBe("eager");
+  });
+
+  it("retire la miniature manquante et garde le voile jusqu'à la pleine taille", () => {
+    const { container } = render(<DishArt recipe={{ title: "Tarte", imageUrl: photo }} />);
+    fireEvent.error(getPreview(container)!);
+    expect(getPreview(container)).toBeNull();
+    expect(container.querySelector(".illus-shimmer")).not.toBeNull();
+    expect(getImg(container).classList.contains("illus-photo-pending")).toBe(false);
+  });
+
+  it("aucune miniature pour les cartes (thumb) ni pour Pollinations", () => {
+    const a = render(<DishArt recipe={{ title: "Tarte", imageUrl: photo }} size="thumb" />);
+    expect(getPreview(a.container)).toBeNull();
+    const b = render(<DishArt recipe={{ title: "Tarte", imageUrl: "https://image.pollinations.ai/prompt/tarte" }} />);
+    expect(getPreview(b.container)).toBeNull();
+  });
+});

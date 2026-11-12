@@ -9,6 +9,7 @@ import { translateRecipeText } from "../../utils/recipeTranslation";
 import { unitServingsText } from "../../utils/servingsUnit";
 import useLongPress from "../../hooks/useLongPress";
 import DishArt from "../art/DishArt";
+import { warmFullPhoto } from "../../utils/imageCache";
 import RecipeOptionsModal from "../common/RecipeOptionsModal";
 import type { Recipe } from "../../hooks/useRecipes";
 import type { NutriscoreGrade } from "../../utils/nutriscoreClient";
@@ -186,6 +187,9 @@ function RecipeCard({
         tabIndex={hidden ? -1 : 0}
         aria-label={translateRecipeText(recipe.title, language)}
         {...cardLongPress.handlers}
+        // Dès le contact du doigt : la photo pleine taille de la fiche
+        // commence à se préparer (voir warmFullPhoto) avant même le clic.
+        onPointerDown={() => warmFullPhoto(recipe.imageUrl)}
       >
         {/* Enveloppe dédiée au fondu/zoom d'entrée (voir useAnimate plus
             haut), jamais la carte elle-même — un simple <div>, sans

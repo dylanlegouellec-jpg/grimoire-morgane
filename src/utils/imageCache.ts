@@ -176,3 +176,29 @@ export async function prefetchRecipeImages(recipes: ImageSourceRecipe[]): Promis
   }
   await Promise.all(Array.from({ length: PREFETCH_CONCURRENCY }, worker));
 }
+
+// Photo pleine taille d'une recette, téléchargée et DÉCODÉE en avance dès
+// que le doigt touche sa carte (RecipeCard) : la fiche, qui s'ouvre une
+// fraction de seconde plus tard, trouve l'image déjà prête en mémoire au
+// lieu de la récupérer puis de la décoder à son tour. Même mode CORS que
+// l'<img> de DishArt (sinon le navigateur ne réutiliserait pas l'image).
+// Seules les dernières photos touchées sont gardées : une photo décodée
+// pèse plusieurs Mo en mémoire.
+const WARM_PHOTO_LIMIT = 3;
+const warmPhotos = new Map<string, HTMLImageElement>();
+
+export function warmFullPhoto(url: string | null | undefined): void {
+  if (!url || typeof Image === "undefined") return;
+  if (warmPhotos.has(url)) {
+    const img = warmPhotos.get(url)!;
+    warmPhotos.delete(url);
+    warmPhotos.set(url, img); // remis en tête : le plus récemment touché
+    return;
+  }
+  const img = new Image();
+  img.crossOrigin = "anonymous"; // AVANT src, comme dans DishArt
+  img.src = url;
+  img.decode?.().catch(() => undefined);
+  warmPhotos.set(url, img);
+  if (warmPhotos.size > WARM_PHOTO_LIMIT) warmPhotos.delete(warmPhotos.keys().next().value!);
+}
