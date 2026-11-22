@@ -693,7 +693,7 @@ export const translations: Record<"fr" | "en", TranslationTree> = {
       textTemplate: {
         parseError: "Impossible de lire cette fiche — vérifie qu'elle commence bien par \"Recette de : …\".",
         title: "Importer ma fiche texte",
-        hint: "Colle ta fiche telle quelle, avec les intitulés \"Recette de\", \"Nombre de parts\", \"Temps de préparation\", \"Matériel spécifique\", \"Ingrédients\", \"Préparation\" et \"Remarques\". Dans les ingrédients ou la préparation, une ligne comme \"Biscuit madeleine :\" ou \"Pour l'insert :\" devient automatiquement un titre de sous-section plutôt qu'un ingrédient ou une étape.",
+        hint: "Colle ta fiche telle quelle, avec les intitulés \"Recette de\", \"Nombre de parts\", \"Temps de préparation\", \"Matériel spécifique\", \"Ingrédients\", \"Préparation\" et \"Remarques\". Sans \"Recette de\", la première ligne sert de titre, et \"Procédé\" ou \"Étapes\" marchent aussi pour la préparation. Dans les ingrédients ou la préparation, une ligne comme \"Biscuit madeleine :\" ou \"Pour l'insert :\" devient automatiquement un titre de sous-section plutôt qu'un ingrédient ou une étape.",
         submit: "Analyser et importer",
       },
       profile: {
@@ -1700,7 +1700,7 @@ export const translations: Record<"fr" | "en", TranslationTree> = {
       textTemplate: {
         parseError: "Couldn't read this sheet — make sure it starts with \"Recette de : …\".",
         title: "Import my text recipe sheet",
-        hint: "Paste your sheet as is, with the French headings \"Recette de\", \"Nombre de parts\", \"Temps de préparation\", \"Matériel spécifique\", \"Ingrédients\", \"Préparation\" and \"Remarques\". In the ingredients or method, a line such as \"Biscuit madeleine :\" or \"Pour l'insert :\" automatically becomes a sub-section title rather than an ingredient or a step.",
+        hint: "Paste your sheet as is, with the French headings \"Recette de\", \"Nombre de parts\", \"Temps de préparation\", \"Matériel spécifique\", \"Ingrédients\", \"Préparation\" and \"Remarques\". Without \"Recette de\", the first line becomes the title, and \"Procédé\" or \"Étapes\" also work for the method. In the ingredients or method, a line such as \"Biscuit madeleine :\" or \"Pour l'insert :\" automatically becomes a sub-section title rather than an ingredient or a step.",
         submit: "Analyze and import",
       },
       profile: {

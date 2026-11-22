@@ -33,6 +33,11 @@ export const TEMPLATE_SECTIONS = [
   { key: "equipment", test: /^mat[ée]riel\s*(sp[ée]cifique)?\s*:?\s*/i },
   { key: "ingredients", test: /^ingr[ée]dients?\s*:?\s*/i },
   { key: "steps", test: /^pr[ée]paration\s*:?\s*/i },
+  // Autres façons courantes de titrer la préparation (« Procédé : »,
+  // « Étapes », « Instructions : »…) — seulement seules sur leur ligne ou
+  // suivies d'un deux-points, pour ne jamais prendre une étape ordinaire
+  // (« Réalisation du biscuit en deux temps ») pour un titre de section.
+  { key: "steps", test: /^(?:proc[ée]d[ée]s?|[ée]tapes?|instructions?|m[ée]thode|d[ée]roul[ée]|r[ée]alisation)\s*(?::\s*|$)/i },
   { key: "notes", test: /^remarques?\s*:?\s*/i },
 ];
 
@@ -93,17 +98,28 @@ function stripSectionColon(line: string): string {
   return line.replace(/:\s*$/, "").trim();
 }
 
+// Mots-indices comptés (pas seulement « présent ou non ») : une pincée de
+// sel ou un beurre demi-sel ne suffit plus à classer une bûche au chocolat
+// en « Salé ». Mots entiers seulement (« ail » ne se cache plus dans
+// « détail », « sel » dans « demi-sel » est retiré à part).
+const SWEET_WORDS = /\b(sucres?|chocolats?|vanille|desserts?|gateaux?|tartes?|patisseries?|miel|confitures?|biscuits?|creme patissiere|caramel|buche|glacage|entremets?|meringues?|praline|cacao|fruits? de la passion|crepes?)\b/g;
+const SAVORY_WORDS = /\b(poulets?|boeuf|porc|poissons?|legumes?|sel|poivre|fromages?|viandes?|sauce|oignons?|ail|lardons?|jambon|echalotes?)\b/g;
+
 export function guessCategoryFromText(text: string): string {
-  const t = normalize(text);
-  const sweet = /sucre|chocolat|vanille|dessert|gateau|tarte|patisserie|miel|confiture|biscuit|creme patissiere|caramel/.test(t);
-  const savory = /poulet|boeuf|porc|poisson|legume|sel|poivre|fromage|viande|sauce|oignon|ail/.test(t);
-  if (sweet && !savory) return "Sucré";
+  const t = normalize(text).replace(/demi[\s-]?sel/g, "");
+  const sweet = (t.match(SWEET_WORDS) || []).length;
+  const savory = (t.match(SAVORY_WORDS) || []).length;
+  if (sweet > savory) return "Sucré";
   return "Salé";
 }
 
 export function parseRecipeTemplate(raw: string): ParsedRecipe | null {
   const lines = (raw || "").split("\n");
   const sections: Record<string, string> = {};
+  // Lignes avant la toute première section reconnue : sans « Recette de : »,
+  // la première d'entre elles sert de titre (fiche qui commence simplement
+  // par le nom de la recette).
+  const preamble: string[] = [];
   let current: string | null = null;
   let buffer: string[] = [];
   const flush = () => {
@@ -135,11 +151,15 @@ export function parseRecipeTemplate(raw: string): ParsedRecipe | null {
       if (rest) buffer.push(rest);
     } else if (current) {
       buffer.push(line);
+    } else {
+      preamble.push(line);
     }
   });
   flush();
 
-  const title = (sections.title || "").split("\n")[0].trim();
+  const title = ((sections.title || "").split("\n")[0] || (sections.ingredients ? preamble[0] || "" : ""))
+    .replace(/:\s*$/, "")
+    .trim();
   if (!title) return null;
 
   // Le nombre, puis ce qui le suit sur la même ligne comme unité
@@ -163,7 +183,11 @@ export function parseRecipeTemplate(raw: string): ParsedRecipe | null {
     if (isSectionHeaderLine(line)) {
       return { isSection: true, title: stripSectionColon(line) };
     }
-    const m = line.match(/^([\d.,]+)\s*(g|kg|ml|cl|l|litres?|pi[e]?ces?|pincees?|c\.?\s*[aà]\s*soupe|c\.?\s*[aà]\s*caf[ée]|cuill[eè]res?\s*[aà]\s*soupe|cuill[eè]res?\s*[aà]\s*caf[ée])?\s*(?:de\s+|d')?(.+)$/i);
+    // « 60g (6cl) de crème » : l'équivalence entre parenthèses juste après
+    // l'unité est ignorée, pour garder « crème » comme nom. L'unité doit
+    // être un mot entier : « 2 gousses d'ail » n'est pas « 2 g » de
+    // « ousses d'ail », ni « 1 lime » « 1 l » de « ime ».
+    const m = line.match(/^([\d.,]+)\s*(?:(g|kg|ml|cl|l|litres?|pi[e]?ces?|pincees?|c\.?\s*[aà]\s*soupe|c\.?\s*[aà]\s*caf[ée]|cuill[eè]res?\s*[aà]\s*soupe|cuill[eè]res?\s*[aà]\s*caf[ée])(?![a-zà-ÿ])(?:\s*\([^)]*\))?)?\s*(?:de\s+|d['’])?(.+)$/i);
     if (m && m[3]) {
       return { qty: parseFloat(m[1].replace(",", ".")) || 0, unit: normalizeUnit(m[2] || ""), name: m[3].trim() };
     }
